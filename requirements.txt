@@ -1,0 +1,5 @@
+-e .
+
+mkdocs
+mkautodoc
+mkdocs-material
