@@ -21,7 +21,7 @@ class SyncDispatchInterface:
             Optional[float], Optional[float], Optional[float], Optional[float]
         ] = None,
     ) -> Tuple[
-        int, bytes, bytes, List[Tuple[bytes, bytes]], Iterator[bytes]
+        bytes, int, bytes, List[Tuple[bytes, bytes]], Iterator[bytes]
     ]:
         """
         The interface for sending a single HTTP request, and returning a response.
@@ -82,7 +82,7 @@ class SyncConnectionPool(SyncDispatchInterface):
         stream: Iterator[bytes] = None,
         timeout: Tuple[float, float, float, float] = None,
     ) -> Tuple[
-        int, bytes, bytes, List[Tuple[bytes, bytes]], Iterator[bytes]
+        bytes, int, bytes, List[Tuple[bytes, bytes]], Iterator[bytes]
     ]:
         pass
 
@@ -123,7 +123,7 @@ class SyncHTTPProxy(SyncDispatchInterface):
         stream: Iterator[bytes] = None,
         timeout: Tuple[float, float, float, float] = None,
     ) -> Tuple[
-        int, bytes, bytes, List[Tuple[bytes, bytes]], Iterator[bytes]
+        bytes, int, bytes, List[Tuple[bytes, bytes]], Iterator[bytes]
     ]:
         pass
 

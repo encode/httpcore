@@ -21,7 +21,7 @@ class AsyncDispatchInterface:
             Optional[float], Optional[float], Optional[float], Optional[float]
         ] = None,
     ) -> Tuple[
-        int, bytes, bytes, List[Tuple[bytes, bytes]], AsyncIterator[bytes]
+        bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncIterator[bytes]
     ]:
         """
         The interface for sending a single HTTP request, and returning a response.
@@ -82,7 +82,7 @@ class AsyncConnectionPool(AsyncDispatchInterface):
         stream: AsyncIterator[bytes] = None,
         timeout: Tuple[float, float, float, float] = None,
     ) -> Tuple[
-        int, bytes, bytes, List[Tuple[bytes, bytes]], AsyncIterator[bytes]
+        bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncIterator[bytes]
     ]:
         pass
 
@@ -123,7 +123,7 @@ class AsyncHTTPProxy(AsyncDispatchInterface):
         stream: AsyncIterator[bytes] = None,
         timeout: Tuple[float, float, float, float] = None,
     ) -> Tuple[
-        int, bytes, bytes, List[Tuple[bytes, bytes]], AsyncIterator[bytes]
+        bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncIterator[bytes]
     ]:
         pass
 
