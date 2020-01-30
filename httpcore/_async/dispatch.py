@@ -28,11 +28,21 @@ class AsyncDispatchInterface:
 
         **Parameters:**
 
-        * **method** - *bytes* The HTTP method, such as `b'GET'`.
-        * **url** - *(bytes, bytes, int, bytes)* The URL as a 4-tuple of (scheme, host, port, path).
-        * **headers** - *list of (bytes, bytes), optional* Any HTTP headers to send with the request.
-        * **stream** - *bytes async iterator, optional*
-        * **timeout** - *(float, float, float, float), all optional.* A tuple of timeout values for (read, write, connect, pool acquiry) operations.
+        * **method** - *bytes* - The HTTP method, such as `b'GET'`.
+        * **url** - *(bytes, bytes, int, bytes)* - The URL as a 4-tuple of (scheme, host, port, path).
+        * **headers** - *list of (bytes, bytes), optional* - Any HTTP headers to send with the request.
+        * **stream** - *bytes async iterator, optional* - The body of the HTTP request.
+        * **timeout** - *(float, float, float, float), all optional.* - A tuple of timeout values for (read, write, connect, pool acquiry) operations.
+
+        ** Returns:**
+
+        A five-tuple of:
+
+        * **http_version** - *bytes* - The HTTP version used by the server, such as `b'HTTP/1.1'`.
+        * **status_code** - *int* - The HTTP status code, such as `200`.
+        * **reason_phrase** - *bytes* - Any HTTP reason phrase, such as `b'OK'`.
+        * **headers** - *list of (bytes, bytes)* - Any HTTP headers included on the response.
+        * **stream** - *bytes async iterator* - The body of the HTTP response.
         """
         raise NotImplementedError()
 
@@ -61,9 +71,9 @@ class AsyncConnectionPool(AsyncDispatchInterface):
 
     **Parameters:**
 
-    * **ssl_context** - *SSLContext, optional* An SSL context to use for verifying connections.
-    * **max_keepalive** - *int, optional* The maximum number of keep alive connections to maintain in the pool.
-    * **max_connections** - *int, optional* The maximum number of HTTP connections to allow. Attempting to establish a connection beyond this limit will block for the duration specified in the pool acquiry timeout.
+    * **ssl_context** - *SSLContext, optional* - An SSL context to use for verifying connections.
+    * **max_keepalive** - *int, optional* - The maximum number of keep alive connections to maintain in the pool.
+    * **max_connections** - *int, optional* - The maximum number of HTTP connections to allow. Attempting to establish a connection beyond this limit will block for the duration specified in the pool acquiry timeout.
     """
 
     def __init__(
@@ -96,12 +106,12 @@ class AsyncHTTPProxy(AsyncDispatchInterface):
 
     **Parameters:**
 
-    * **proxy_url** - *(bytes, bytes, int, bytes)* The URL of the proxy service as a 4-tuple of (scheme, host, port, path).
-    * **proxy_headers** - *list of (bytes, bytes), optional* An SSL context to use for verifying connections.
-    * **proxy_mode** - *str, optional* A proxy mode to operate in. May be "DEFAULT", "FORWARD_ONLY", or "TUNNEL_ONLY".
-    * **ssl_context** - *SSLContext, optional* An SSL context to use for verifying connections.
-    * **max_keepalive** - *int, optional* The maximum number of keep alive connections to maintain in the pool.
-    * **max_connections** - *int, optional* The maximum number of HTTP connections to allow. Attempting to establish a connection beyond this limit will block for the duration specified in the pool acquiry timeout.
+    * **proxy_url** - *(bytes, bytes, int, bytes)* - The URL of the proxy service as a 4-tuple of (scheme, host, port, path).
+    * **proxy_headers** - *list of (bytes, bytes), optional* - An SSL context to use for verifying connections.
+    * **proxy_mode** - *str, optional* - A proxy mode to operate in. May be "DEFAULT", "FORWARD_ONLY", or "TUNNEL_ONLY".
+    * **ssl_context** - *SSLContext, optional* - An SSL context to use for verifying connections.
+    * **max_keepalive** - *int, optional* - The maximum number of keep alive connections to maintain in the pool.
+    * **max_connections** - *int, optional* - The maximum number of HTTP connections to allow. Attempting to establish a connection beyond this limit will block for the duration specified in the pool acquiry timeout.
     """
 
     def __init__(
