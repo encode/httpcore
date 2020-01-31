@@ -1,3 +1,8 @@
 #!/bin/sh -e
 
-venv/bin/python unasync.py ${@}
+export PREFIX=""
+if [ -d 'venv' ] ; then
+    export PREFIX="venv/bin/"
+fi
+
+${PREFIX}python unasync.py ${@}
