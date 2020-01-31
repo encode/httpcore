@@ -3,12 +3,27 @@ from typing import AsyncIterator, Tuple, List, Optional, Type
 from types import TracebackType
 
 
-class AsyncDispatchInterface:
+class AsyncByteStream:
     """
-    The base abstract interface for sending HTTP requests.
+    The base interface for request and response bodies.
+
+    Concrete implementations should subclass this class, and implement
+    the `__aiter__` method, and optionally the `close` method.
+    """
+
+    async def __aiter__(self) -> AsyncIterator[bytes]:
+        yield b''
+
+    async def close(self) -> None:
+        pass
+
+
+class AsyncHTTPTransport:
+    """
+    The base interface for sending HTTP requests.
 
     Concete implementations should subclass this class, and implement
-    the `request` method.
+    the `request` method, and optionally the `close` method.
     """
 
     async def request(
@@ -16,12 +31,12 @@ class AsyncDispatchInterface:
         method: bytes,
         url: Tuple[bytes, bytes, int, bytes],
         headers: List[Tuple[bytes, bytes]] = None,
-        stream: AsyncIterator[bytes] = None,
+        stream: AsyncByteStream = None,
         timeout: Tuple[
             Optional[float], Optional[float], Optional[float], Optional[float]
         ] = None,
     ) -> Tuple[
-        bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncIterator[bytes]
+        bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream
     ]:
         """
         The interface for sending a single HTTP request, and returning a response.
@@ -46,7 +61,7 @@ class AsyncDispatchInterface:
         """
         raise NotImplementedError()
 
-    async def close(self):
+    async def close(self) -> None:
         """
         Close the implementation, which should close any outstanding response streams,
         and any keep alive connections.
@@ -65,7 +80,7 @@ class AsyncDispatchInterface:
         await self.close()
 
 
-class AsyncConnectionPool(AsyncDispatchInterface):
+class AsyncConnectionPool(AsyncHTTPTransport):
     """
     A connection pool for making HTTP requests.
 
@@ -89,18 +104,18 @@ class AsyncConnectionPool(AsyncDispatchInterface):
         method: bytes,
         url: Tuple[bytes, bytes, int, bytes],
         headers: List[Tuple[bytes, bytes]] = None,
-        stream: AsyncIterator[bytes] = None,
+        stream: AsyncByteStream = None,
         timeout: Tuple[float, float, float, float] = None,
     ) -> Tuple[
-        bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncIterator[bytes]
+        bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream
     ]:
         pass
 
-    async def close(self):
+    async def close(self) -> None:
         pass
 
 
-class AsyncHTTPProxy(AsyncDispatchInterface):
+class AsyncHTTPProxy(AsyncHTTPTransport):
     """
     A connection pool for making HTTP requests via an HTTP proxy.
 
@@ -130,12 +145,12 @@ class AsyncHTTPProxy(AsyncDispatchInterface):
         method: bytes,
         url: Tuple[bytes, bytes, int, bytes],
         headers: List[Tuple[bytes, bytes]] = None,
-        stream: AsyncIterator[bytes] = None,
+        stream: AsyncByteStream = None,
         timeout: Tuple[float, float, float, float] = None,
     ) -> Tuple[
-        bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncIterator[bytes]
+        bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream
     ]:
         pass
 
-    async def close(self):
+    async def close(self) -> None:
         pass

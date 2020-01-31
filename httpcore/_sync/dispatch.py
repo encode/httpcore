@@ -3,12 +3,27 @@ from typing import Iterator, Tuple, List, Optional, Type
 from types import TracebackType
 
 
-class SyncDispatchInterface:
+class SyncByteStream:
     """
-    The base abstract interface for sending HTTP requests.
+    The base interface for request and response bodies.
+
+    Concrete implementations should subclass this class, and implement
+    the `__aiter__` method, and optionally the `close` method.
+    """
+
+    def __aiter__(self) -> Iterator[bytes]:
+        yield b''
+
+    def close(self) -> None:
+        pass
+
+
+class SyncHTTPTransport:
+    """
+    The base interface for sending HTTP requests.
 
     Concete implementations should subclass this class, and implement
-    the `request` method.
+    the `request` method, and optionally the `close` method.
     """
 
     def request(
@@ -16,12 +31,12 @@ class SyncDispatchInterface:
         method: bytes,
         url: Tuple[bytes, bytes, int, bytes],
         headers: List[Tuple[bytes, bytes]] = None,
-        stream: Iterator[bytes] = None,
+        stream: SyncByteStream = None,
         timeout: Tuple[
             Optional[float], Optional[float], Optional[float], Optional[float]
         ] = None,
     ) -> Tuple[
-        bytes, int, bytes, List[Tuple[bytes, bytes]], Iterator[bytes]
+        bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream
     ]:
         """
         The interface for sending a single HTTP request, and returning a response.
@@ -46,7 +61,7 @@ class SyncDispatchInterface:
         """
         raise NotImplementedError()
 
-    def close(self):
+    def close(self) -> None:
         """
         Close the implementation, which should close any outstanding response streams,
         and any keep alive connections.
@@ -65,7 +80,7 @@ class SyncDispatchInterface:
         self.close()
 
 
-class SyncConnectionPool(SyncDispatchInterface):
+class SyncConnectionPool(SyncHTTPTransport):
     """
     A connection pool for making HTTP requests.
 
@@ -89,18 +104,18 @@ class SyncConnectionPool(SyncDispatchInterface):
         method: bytes,
         url: Tuple[bytes, bytes, int, bytes],
         headers: List[Tuple[bytes, bytes]] = None,
-        stream: Iterator[bytes] = None,
+        stream: SyncByteStream = None,
         timeout: Tuple[float, float, float, float] = None,
     ) -> Tuple[
-        bytes, int, bytes, List[Tuple[bytes, bytes]], Iterator[bytes]
+        bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream
     ]:
         pass
 
-    def close(self):
+    def close(self) -> None:
         pass
 
 
-class SyncHTTPProxy(SyncDispatchInterface):
+class SyncHTTPProxy(SyncHTTPTransport):
     """
     A connection pool for making HTTP requests via an HTTP proxy.
 
@@ -130,12 +145,12 @@ class SyncHTTPProxy(SyncDispatchInterface):
         method: bytes,
         url: Tuple[bytes, bytes, int, bytes],
         headers: List[Tuple[bytes, bytes]] = None,
-        stream: Iterator[bytes] = None,
+        stream: SyncByteStream = None,
         timeout: Tuple[float, float, float, float] = None,
     ) -> Tuple[
-        bytes, int, bytes, List[Tuple[bytes, bytes]], Iterator[bytes]
+        bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream
     ]:
         pass
 
-    def close(self):
+    def close(self) -> None:
         pass
