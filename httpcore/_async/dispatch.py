@@ -1,6 +1,6 @@
 from ssl import SSLContext
 from types import TracebackType
-from typing import AsyncIterator, Dict, List, Tuple, Type
+from typing import AsyncIterator, Dict, List, Optional, Tuple, Type
 
 
 class AsyncByteStream:
