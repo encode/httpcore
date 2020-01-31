@@ -40,6 +40,7 @@ def unasync_dir(in_dir, out_dir):
             out_path = os.path.abspath(os.path.join(out_dir, rel_dir, filename))
             unasync_file(in_path, out_path)
 
+
 def main():
     unasync_dir("httpcore/_async", "httpcore/_sync")
 
