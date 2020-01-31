@@ -8,13 +8,19 @@ class SyncByteStream:
     The base interface for request and response bodies.
 
     Concrete implementations should subclass this class, and implement
-    the `__aiter__` method, and optionally the `close` method.
+    the `\\__iter__` method, and optionally the `close` method.
     """
 
-    def __aiter__(self) -> Iterator[bytes]:
+    def __iter__(self) -> Iterator[bytes]:
+        """
+        Yield bytes representing the request or response body.
+        """
         yield b''
 
     def close(self) -> None:
+        """
+        Must be called by the client to indicate that the stream has been closed.
+        """
         pass
 
 

@@ -7,8 +7,9 @@ SUBS = [
     ('Async([A-Z][A-Za-z_]*)', r'Sync\1'),
     ('async def', 'def'),
     ('await ', ''),
-    ('def __aenter__', 'def __enter__'),
-    ('def __aexit__', 'def __exit__'),
+    ('__aenter__', '__enter__'),
+    ('__aexit__', '__exit__'),
+    ('__aiter__', '__iter__'),
 ]
 COMPILED_SUBS = [
     (re.compile(r'\b' + regex + r'\b'), repl)

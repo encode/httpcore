@@ -1,12 +1,14 @@
-from ._async.dispatch import AsyncDispatchInterface, AsyncConnectionPool, AsyncHTTPProxy
-from ._sync.dispatch import SyncDispatchInterface, SyncConnectionPool, SyncHTTPProxy
+from ._async.dispatch import AsyncHTTPTransport, AsyncByteStream, AsyncConnectionPool, AsyncHTTPProxy
+from ._sync.dispatch import SyncHTTPTransport, SyncByteStream, SyncConnectionPool, SyncHTTPProxy
 
 
 __all__ = [
-    "AsyncDispatchInterface",
+    "AsyncHTTPTransport",
+    "AsyncByteStream",
     "AsyncConnectionPool",
     "AsyncHTTPProxy",
-    "SyncDispatchInterface",
+    "SyncHTTPTransport",
+    "SyncByteStream",
     "SyncConnectionPool",
     "SyncHTTPProxy",
 ]

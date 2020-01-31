@@ -8,13 +8,19 @@ class AsyncByteStream:
     The base interface for request and response bodies.
 
     Concrete implementations should subclass this class, and implement
-    the `__aiter__` method, and optionally the `close` method.
+    the `\\__aiter__` method, and optionally the `close` method.
     """
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
+        """
+        Yield bytes representing the request or response body.
+        """
         yield b''
 
     async def close(self) -> None:
+        """
+        Must be called by the client to indicate that the stream has been closed.
+        """
         pass
 
 
