@@ -5,3 +5,7 @@ mkautodoc
 mkdocs-material
 pytest
 pytest-asyncio
+black
+autoflake
+mypy
+isort
