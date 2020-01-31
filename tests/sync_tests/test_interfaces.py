@@ -3,6 +3,7 @@ import pytest
 import httpcore
 
 
+
 def test_connection_pool():
     with httpcore.SyncConnectionPool() as http:
         with pytest.raises(NotImplementedError):

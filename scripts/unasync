@@ -1,0 +1,3 @@
+#!/bin/sh -e
+
+venv/bin/python unasync.py ${@}
