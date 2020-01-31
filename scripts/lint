@@ -1,0 +1,13 @@
+#!/bin/sh -e
+
+export PREFIX=""
+if [ -d 'venv' ] ; then
+    export PREFIX="venv/bin/"
+fi
+export SOURCE_FILES="httpcore tests"
+
+set -x
+
+${PREFIX}autoflake --in-place --recursive $SOURCE_FILES
+${PREFIX}isort --project=httpcore --recursive --apply $SOURCE_FILES
+${PREFIX}black --exclude httpcore/_sync --exclude tests/sync_tests --target-version=py36 $SOURCE_FILES
