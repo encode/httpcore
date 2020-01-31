@@ -115,7 +115,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
     ) -> Tuple[
         bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream
     ]:
-        pass
+        raise NotImplementedError()
 
     async def close(self) -> None:
         pass
@@ -156,7 +156,7 @@ class AsyncHTTPProxy(AsyncHTTPTransport):
     ) -> Tuple[
         bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream
     ]:
-        pass
+        raise NotImplementedError()
 
     async def close(self) -> None:
         pass

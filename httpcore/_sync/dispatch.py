@@ -115,7 +115,7 @@ class SyncConnectionPool(SyncHTTPTransport):
     ) -> Tuple[
         bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream
     ]:
-        pass
+        raise NotImplementedError()
 
     def close(self) -> None:
         pass
@@ -156,7 +156,7 @@ class SyncHTTPProxy(SyncHTTPTransport):
     ) -> Tuple[
         bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream
     ]:
-        pass
+        raise NotImplementedError()
 
     def close(self) -> None:
         pass
