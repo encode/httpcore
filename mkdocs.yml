@@ -1,6 +1,6 @@
 site_name: HTTP Core
 site_description: Do one thing, and do it well.
-site_url: https://www.encode.org/httpcore
+site_url: https://www.encode.io/httpcore
 
 theme:
     name: 'material'
