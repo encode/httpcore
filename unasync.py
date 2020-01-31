@@ -4,15 +4,18 @@ import os
 
 SUBS = [
     ('AsyncIterator', 'Iterator'),
-    ('Async([A-Z][A-Za-z_]*)', r'Sync\1'),
+    ('Async([A-Z][A-Za-z_]*)', r'Sync\2'),
     ('async def', 'def'),
+    ('async with', 'with'),
+    ('async for', 'for'),
     ('await ', ''),
     ('__aenter__', '__enter__'),
     ('__aexit__', '__exit__'),
     ('__aiter__', '__iter__'),
+    ('@pytest.mark.asyncio', ''),
 ]
 COMPILED_SUBS = [
-    (re.compile(r'\b' + regex + r'\b'), repl)
+    (re.compile(r'(^|\b)' + regex + r'\b'), repl)
     for regex, repl in SUBS
 ]
 
@@ -44,6 +47,7 @@ def unasync_dir(in_dir, out_dir):
 
 def main():
     unasync_dir("httpcore/_async", "httpcore/_sync")
+    unasync_dir("tests/async_tests", "tests/sync_tests")
 
 
 if __name__ == '__main__':
