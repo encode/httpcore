@@ -1,6 +1,6 @@
 from ssl import SSLContext
-from typing import AsyncIterator, Tuple, List, Optional, Type
 from types import TracebackType
+from typing import AsyncIterator, List, Optional, Tuple, Type
 
 
 class AsyncByteStream:
@@ -15,13 +15,12 @@ class AsyncByteStream:
         """
         Yield bytes representing the request or response body.
         """
-        yield b''
+        yield b""
 
     async def close(self) -> None:
         """
         Must be called by the client to indicate that the stream has been closed.
         """
-        pass
 
 
 class AsyncHTTPTransport:
@@ -41,9 +40,7 @@ class AsyncHTTPTransport:
         timeout: Tuple[
             Optional[float], Optional[float], Optional[float], Optional[float]
         ] = None,
-    ) -> Tuple[
-        bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream
-    ]:
+    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         """
         The interface for sending a single HTTP request, and returning a response.
 
@@ -72,9 +69,8 @@ class AsyncHTTPTransport:
         Close the implementation, which should close any outstanding response streams,
         and any keep alive connections.
         """
-        pass
 
-    async def __aenter__(self) -> "AsyncDispatchInterface":
+    async def __aenter__(self) -> "AsyncHTTPTransport":
         return self
 
     async def __aexit__(
@@ -111,10 +107,10 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         url: Tuple[bytes, bytes, int, bytes],
         headers: List[Tuple[bytes, bytes]] = None,
         stream: AsyncByteStream = None,
-        timeout: Tuple[float, float, float, float] = None,
-    ) -> Tuple[
-        bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream
-    ]:
+        timeout: Tuple[
+            Optional[float], Optional[float], Optional[float], Optional[float]
+        ] = None,
+    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         raise NotImplementedError()
 
     async def close(self) -> None:
@@ -152,10 +148,10 @@ class AsyncHTTPProxy(AsyncHTTPTransport):
         url: Tuple[bytes, bytes, int, bytes],
         headers: List[Tuple[bytes, bytes]] = None,
         stream: AsyncByteStream = None,
-        timeout: Tuple[float, float, float, float] = None,
-    ) -> Tuple[
-        bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream
-    ]:
+        timeout: Tuple[
+            Optional[float], Optional[float], Optional[float], Optional[float]
+        ] = None,
+    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         raise NotImplementedError()
 
     async def close(self) -> None:

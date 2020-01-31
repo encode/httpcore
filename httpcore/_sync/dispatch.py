@@ -1,6 +1,6 @@
 from ssl import SSLContext
-from typing import Iterator, Tuple, List, Optional, Type
 from types import TracebackType
+from typing import Iterator, List, Optional, Tuple, Type
 
 
 class SyncByteStream:
@@ -15,13 +15,12 @@ class SyncByteStream:
         """
         Yield bytes representing the request or response body.
         """
-        yield b''
+        yield b""
 
     def close(self) -> None:
         """
         Must be called by the client to indicate that the stream has been closed.
         """
-        pass
 
 
 class SyncHTTPTransport:
@@ -41,9 +40,7 @@ class SyncHTTPTransport:
         timeout: Tuple[
             Optional[float], Optional[float], Optional[float], Optional[float]
         ] = None,
-    ) -> Tuple[
-        bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream
-    ]:
+    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         """
         The interface for sending a single HTTP request, and returning a response.
 
@@ -72,9 +69,8 @@ class SyncHTTPTransport:
         Close the implementation, which should close any outstanding response streams,
         and any keep alive connections.
         """
-        pass
 
-    def __enter__(self) -> "SyncDispatchInterface":
+    def __enter__(self) -> "SyncHTTPTransport":
         return self
 
     def __exit__(
@@ -111,10 +107,10 @@ class SyncConnectionPool(SyncHTTPTransport):
         url: Tuple[bytes, bytes, int, bytes],
         headers: List[Tuple[bytes, bytes]] = None,
         stream: SyncByteStream = None,
-        timeout: Tuple[float, float, float, float] = None,
-    ) -> Tuple[
-        bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream
-    ]:
+        timeout: Tuple[
+            Optional[float], Optional[float], Optional[float], Optional[float]
+        ] = None,
+    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         raise NotImplementedError()
 
     def close(self) -> None:
@@ -152,10 +148,10 @@ class SyncHTTPProxy(SyncHTTPTransport):
         url: Tuple[bytes, bytes, int, bytes],
         headers: List[Tuple[bytes, bytes]] = None,
         stream: SyncByteStream = None,
-        timeout: Tuple[float, float, float, float] = None,
-    ) -> Tuple[
-        bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream
-    ]:
+        timeout: Tuple[
+            Optional[float], Optional[float], Optional[float], Optional[float]
+        ] = None,
+    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         raise NotImplementedError()
 
     def close(self) -> None:

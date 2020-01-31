@@ -1,6 +1,15 @@
-from ._async.dispatch import AsyncHTTPTransport, AsyncByteStream, AsyncConnectionPool, AsyncHTTPProxy
-from ._sync.dispatch import SyncHTTPTransport, SyncByteStream, SyncConnectionPool, SyncHTTPProxy
-
+from ._async.dispatch import (
+    AsyncByteStream,
+    AsyncConnectionPool,
+    AsyncHTTPProxy,
+    AsyncHTTPTransport,
+)
+from ._sync.dispatch import (
+    SyncByteStream,
+    SyncConnectionPool,
+    SyncHTTPProxy,
+    SyncHTTPTransport,
+)
 
 __all__ = [
     "AsyncHTTPTransport",
@@ -12,4 +21,4 @@ __all__ = [
     "SyncConnectionPool",
     "SyncHTTPProxy",
 ]
-__version__ = '0.5.0'
+__version__ = "0.5.0"
