@@ -15,7 +15,7 @@ class SyncByteStream:
         """
         Yield bytes representing the request or response body.
         """
-        yield b""
+        yield b""  # Changed sync only. Should cause 'unasync --check' to fail.
 
     def close(self) -> None:
         """
