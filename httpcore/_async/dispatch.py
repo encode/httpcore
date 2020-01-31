@@ -37,7 +37,7 @@ class AsyncHTTPTransport:
         url: Tuple[bytes, bytes, int, bytes],
         headers: List[Tuple[bytes, bytes]] = None,
         stream: AsyncByteStream = None,
-        timeout: Dict[str, float] = None,
+        timeout: Dict[str, Optional[float]] = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         """
         The interface for sending a single HTTP request, and returning a response.
@@ -48,7 +48,7 @@ class AsyncHTTPTransport:
         * **url** - `Tuple[bytes, bytes, int, bytes]` - The URL as a 4-tuple of (scheme, host, port, path).
         * **headers** - `Optional[List[Tuple[bytes, bytes]]]` - Any HTTP headers to send with the request.
         * **stream** - `Optional[AsyncByteStream]` - The body of the HTTP request.
-        * **timeout** - `Optional[Dict[str, float]]` - A dictionary of timeout values for I/O operations.
+        * **timeout** - `Optional[Dict[str, Optional[float]]]` - A dictionary of timeout values for I/O operations.
 
         ** Returns:**
 
@@ -105,7 +105,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         url: Tuple[bytes, bytes, int, bytes],
         headers: List[Tuple[bytes, bytes]] = None,
         stream: AsyncByteStream = None,
-        timeout: Dict[str, float] = None,
+        timeout: Dict[str, Optional[float]] = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         raise NotImplementedError()
 
@@ -144,7 +144,7 @@ class AsyncHTTPProxy(AsyncHTTPTransport):
         url: Tuple[bytes, bytes, int, bytes],
         headers: List[Tuple[bytes, bytes]] = None,
         stream: AsyncByteStream = None,
-        timeout: Dict[str, float] = None,
+        timeout: Dict[str, Optional[float]] = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         raise NotImplementedError()
 
