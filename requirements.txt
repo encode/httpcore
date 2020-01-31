@@ -3,3 +3,5 @@
 mkdocs
 mkautodoc
 mkdocs-material
+pytest
+pytest-asyncio
