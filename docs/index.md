@@ -36,10 +36,12 @@ async with httpcore.AsyncConnectionPool() as http:
         headers=[(b'host': b'example.org'), (b'user-agent': 'httpcore')]
     )
 
-    body = b''
-    async for chunk in stream:
-        body += chunk
-    await stream.close()
+    try:
+        body = b''
+        async for chunk in stream:
+            body += chunk
+    finally:
+        await stream.close()
 
     print(status_code, body)
 ```
@@ -51,5 +53,8 @@ you're writing something like a proxy service in Python, and you just want
 something at the lowest possible level, but more typically you'll want to use
 a higher level client library, such as `httpx`.
 
-The motivation is for `httpcore` to provide a reusable low-level client library,
-that other packages can then build on top of.
+The motivation for `httpcore` is:
+
+* To provide a reusable low-level client library, that other packages can then build on top of.
+* To provide a *really clear interface split* between the networking code and client logic,
+  so that each is easier to understand and reason about in isolation.
