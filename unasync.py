@@ -15,9 +15,11 @@ SUBS = [
     ('__aexit__', '__exit__'),
     ('__aiter__', '__iter__'),
     ('@pytest.mark.asyncio', ''),
+    ('@pytest.mark.trio', ''),
+    ('@pytest.mark.usefixtures.*', ''),
 ]
 COMPILED_SUBS = [
-    (re.compile(r'(^|\b)' + regex + r'\b'), repl)
+    (re.compile(r'(^|\b)' + regex + r'($|\b)'), repl)
     for regex, repl in SUBS
 ]
 

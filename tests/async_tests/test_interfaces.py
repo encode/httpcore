@@ -13,7 +13,7 @@ async def read_body(stream):
         await stream.close()
 
 
-@pytest.mark.asyncio
+@pytest.mark.usefixtures("async_environment")
 async def test_connection_pool():
     async with httpcore.AsyncConnectionPool() as http:
         method = b"GET"

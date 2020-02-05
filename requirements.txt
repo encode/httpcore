@@ -11,6 +11,7 @@ mkdocs-material
 # Tests & Linting
 pytest
 pytest-asyncio
+pytest-trio
 black
 autoflake
 mypy
