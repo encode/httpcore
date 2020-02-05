@@ -1,8 +1,14 @@
 -e .
 
+# Optionals
+trio
+
+# Docs
 mkdocs
 mkautodoc
 mkdocs-material
+
+# Tests & Linting
 pytest
 pytest-asyncio
 black

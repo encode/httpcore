@@ -5,6 +5,7 @@ import sys
 
 SUBS = [
     ('AsyncIterator', 'Iterator'),
+    ('AutoBackend', 'SyncBackend'),
     ('Async([A-Z][A-Za-z_]*)', r'Sync\2'),
     ('async def', 'def'),
     ('async with', 'with'),
