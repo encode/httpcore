@@ -1,7 +1,8 @@
+import socket
 from ssl import SSLContext
 from typing import Dict, Optional
-import socket
-from .._exceptions import NetworkError, ConnectTimeout
+
+from .._exceptions import ConnectTimeout, NetworkError
 
 
 class SyncSocketStream:
@@ -10,6 +11,7 @@ class SyncSocketStream:
     interfaces into a more generic base class, that we can use with alternate
     backends, or for stand-alone test cases.
     """
+
     def __init__(self, sock: socket.socket) -> None:
         self.sock = sock
 
@@ -35,10 +37,12 @@ class SyncBackend:
     ) -> SyncSocketStream:
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(timeout.get('connect'))
-            sock.connect((hostname.decode('ascii'), port))
+            sock.settimeout(timeout.get("connect"))
+            sock.connect((hostname.decode("ascii"), port))
             if ssl_context is not None:
-                sock = ssl_context.wrap_socket(sock, server_hostname=hostname.decode('ascii'))
+                sock = ssl_context.wrap_socket(
+                    sock, server_hostname=hostname.decode("ascii")
+                )
         except socket.timeout:
             raise ConnectTimeout()
         except socket.error:
