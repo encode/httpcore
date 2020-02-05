@@ -1,5 +1,5 @@
 from ssl import SSLContext
-from typing import Iterator, Dict, List, Optional, Tuple, Union
+from typing import Iterator, Awaitable, Callable, Dict, List, Optional, Tuple, Union
 
 import h11
 
@@ -17,7 +17,7 @@ H11Event = Union[
 ]
 
 
-class AsyncHTTP11Connection(SyncHTTPTransport):
+class SyncHTTP11Connection(SyncHTTPTransport):
     READ_NUM_BYTES = 4096
 
     def __init__(
@@ -25,12 +25,14 @@ class AsyncHTTP11Connection(SyncHTTPTransport):
         origin: Tuple[bytes, bytes, int],
         socket: SyncSocketStream = None,
         ssl_context: SSLContext = None,
+        request_finished: Callable[['SyncHTTP11Connection'], Awaitable[None]] = None
     ):
         self.origin = origin
         self.socket = socket
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
         self.backend = SyncBackend()
         self.h11_state = h11.Connection(our_role=h11.CLIENT)
+        self.request_finished = request_finished
 
     def request(
         self,
@@ -57,7 +59,9 @@ class AsyncHTTP11Connection(SyncHTTPTransport):
             reason_phrase,
             headers,
         ) = self._receive_response(timeout)
-        stream = SyncByteStream(iterator=self._receive_response_data(timeout),)
+        stream = SyncByteStream(
+            iterator=self._receive_response_data(timeout),
+            close_func=self._response_closed)
         return (http_version, status_code, reason_phrase, headers, stream)
 
     def _connect(self, timeout: Dict[str, Optional[float]]) -> SyncSocketStream:
@@ -155,23 +159,20 @@ class AsyncHTTP11Connection(SyncHTTPTransport):
                 break  # pragma: no cover
         return event
 
-    def response_closed(self) -> None:
-        if (
-            self.h11_state.our_state is h11.DONE
-            and self.h11_state.their_state is h11.DONE
-        ):
-            # Get ready for another request/response cycle.
+    def _response_closed(self) -> None:
+        if self.h11_state.our_state is h11.DONE:
             self.h11_state.start_next_cycle()
         else:
             self.close()
 
-    def close(self) -> None:
-        assert self.socket is not None
+        if self.request_finished is not None:
+            self.request_finished(self)
 
-        event = h11.ConnectionClosed()
-        try:
+    def close(self) -> None:
+        if self.h11_state.our_state is h11.MUST_CLOSE:
+            event = h11.ConnectionClosed()
             self.h11_state.send(event)
-        except h11.LocalProtocolError:  # pragma: no cover
-            # Premature client disconnect
-            pass
-        self.socket.close()
+
+        if self.socket is not None:
+            self.socket.close()
+            self.socket = None

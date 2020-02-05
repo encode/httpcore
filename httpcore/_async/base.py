@@ -1,5 +1,5 @@
 from types import TracebackType
-from typing import AsyncIterator, Dict, List, Optional, Tuple, Type
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type
 
 
 async def empty():
@@ -14,8 +14,9 @@ class AsyncByteStream:
     the `\\__aiter__` method, and optionally the `close` method.
     """
 
-    def __init__(self, iterator: AsyncIterator[bytes] = None) -> None:
+    def __init__(self, iterator: AsyncIterator[bytes] = None, close_func: Any = None) -> None:
         self.iterator = empty() if iterator is None else iterator
+        self.close_func = close_func
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
         """
@@ -28,6 +29,8 @@ class AsyncByteStream:
         """
         Must be called by the client to indicate that the stream has been closed.
         """
+        if self.close_func is not None:
+            await self.close_func()
 
 
 class AsyncHTTPTransport:
@@ -67,7 +70,7 @@ class AsyncHTTPTransport:
         * **headers** - `List[Tuple[bytes, bytes]]` - Any HTTP headers included on the response.
         * **stream** - `AsyncByteStream` - The body of the HTTP response.
         """
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: nocover
 
     async def close(self) -> None:
         """

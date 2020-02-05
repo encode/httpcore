@@ -1,5 +1,5 @@
 from types import TracebackType
-from typing import Iterator, Dict, List, Optional, Tuple, Type
+from typing import Any, Iterator, Dict, List, Optional, Tuple, Type
 
 
 def empty():
@@ -14,8 +14,9 @@ class SyncByteStream:
     the `\\__iter__` method, and optionally the `close` method.
     """
 
-    def __init__(self, iterator: Iterator[bytes] = None) -> None:
+    def __init__(self, iterator: Iterator[bytes] = None, close_func: Any = None) -> None:
         self.iterator = empty() if iterator is None else iterator
+        self.close_func = close_func
 
     def __iter__(self) -> Iterator[bytes]:
         """
@@ -28,6 +29,8 @@ class SyncByteStream:
         """
         Must be called by the client to indicate that the stream has been closed.
         """
+        if self.close_func is not None:
+            self.close_func()
 
 
 class SyncHTTPTransport:
@@ -67,7 +70,7 @@ class SyncHTTPTransport:
         * **headers** - `List[Tuple[bytes, bytes]]` - Any HTTP headers included on the response.
         * **stream** - `SyncByteStream` - The body of the HTTP response.
         """
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: nocover
 
     def close(self) -> None:
         """
