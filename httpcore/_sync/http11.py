@@ -169,14 +169,11 @@ class SyncHTTP11Connection(SyncHTTPTransport):
                 event = self.h11_state.next_event()
 
             if event is h11.NEED_DATA:
-                try:
-                    data = self.socket.read(self.READ_NUM_BYTES, timeout)
-                except OSError:  # pragma: nocover
-                    data = b""
+                data = self.socket.read(self.READ_NUM_BYTES, timeout)
                 self.h11_state.receive_data(data)
             else:
                 assert event is not h11.NEED_DATA
-                break  # pragma: no cover
+                break
         return event
 
     def _response_closed(self) -> None:
