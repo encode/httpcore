@@ -18,9 +18,9 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         self, ssl_context: SSLContext = None,
     ):
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
-        self.connections = (
-            {}
-        )  # type: Dict[Tuple[bytes, bytes, int], Set[AsyncHTTP11Connection]]
+        self.connections: Dict[
+            Tuple[bytes, bytes, int], Set[AsyncHTTP11Connection]
+        ] = {}
 
     async def request(
         self,
@@ -31,9 +31,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         timeout: Dict[str, Optional[float]] = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         origin = url[:3]
-        connections = self.connections.get(
-            origin, set()
-        )  # type: Set[AsyncHTTP11Connection]
+        connections: Set[AsyncHTTP11Connection] = self.connections.get(origin, set())
 
         # Determine expired keep alive connections on this origin.
         reuse_connection = None

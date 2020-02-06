@@ -18,9 +18,9 @@ class SyncConnectionPool(SyncHTTPTransport):
         self, ssl_context: SSLContext = None,
     ):
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
-        self.connections = (
-            {}
-        )  # type: Dict[Tuple[bytes, bytes, int], Set[SyncHTTP11Connection]]
+        self.connections: Dict[
+            Tuple[bytes, bytes, int], Set[SyncHTTP11Connection]
+        ] = {}
 
     def request(
         self,
@@ -31,9 +31,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         timeout: Dict[str, Optional[float]] = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         origin = url[:3]
-        connections = self.connections.get(
-            origin, set()
-        )  # type: Set[SyncHTTP11Connection]
+        connections: Set[SyncHTTP11Connection] = self.connections.get(origin, set())
 
         # Determine expired keep alive connections on this origin.
         reuse_connection = None

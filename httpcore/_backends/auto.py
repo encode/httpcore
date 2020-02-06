@@ -16,7 +16,7 @@ class AutoBackend(AsyncBackend):
             if backend == "asyncio":
                 from .asyncio import AsyncioBackend
 
-                self._backend_implementation = AsyncioBackend()  # type: AsyncBackend
+                self._backend_implementation: AsyncBackend = AsyncioBackend()
             elif backend == "trio":
                 from .trio import TrioBackend
 
