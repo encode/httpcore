@@ -13,13 +13,9 @@ interface which transport classes need to implement.
     :docstring:
     :members: __aiter__ close
 
-The `AsyncConnectionPool` and `AsyncHTTPProxy` classes are concrete
-implementations of the `AsyncHTTPTransport` class.
+The `AsyncConnectionPool` class is a concrete implementation of `AsyncHTTPTransport`.
 
 ::: httpcore.AsyncConnectionPool
-    :docstring:
-
-::: httpcore.AsyncHTTPProxy
     :docstring:
 
 ---
@@ -37,11 +33,7 @@ interface which transport classes need to implement.
     :docstring:
     :members: __iter__ close
 
-The `SyncConnectionPool` and `SyncHTTPProxy` classes are concrete
-implementations of the `SyncHTTPTransport` class.
+The `SyncConnectionPool` class is a concrete implementation of `SyncHTTPTransport`.
 
 ::: httpcore.SyncConnectionPool
-    :docstring:
-
-::: httpcore.SyncHTTPProxy
     :docstring:
