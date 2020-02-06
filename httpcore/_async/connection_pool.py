@@ -1,6 +1,7 @@
 from ssl import SSLContext
 from typing import Dict, List, Optional, Set, Tuple
 
+from .._threadlock import ThreadLock
 from .base import AsyncByteStream, AsyncHTTPTransport
 from .http11 import AsyncHTTP11Connection, ConnectionState
 
@@ -21,6 +22,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         self.connections: Dict[
             Tuple[bytes, bytes, int], Set[AsyncHTTP11Connection]
         ] = {}
+        self.thread_lock = ThreadLock()
 
     async def request(
         self,
@@ -31,18 +33,27 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         timeout: Dict[str, Optional[float]] = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         origin = url[:3]
-        connections: Set[AsyncHTTP11Connection] = self.connections.get(origin, set())
 
         # Determine expired keep alive connections on this origin.
         reuse_connection = None
         connections_to_close = set()
-        for connection in list(connections):
-            if connection.state == ConnectionState.IDLE:
-                if connection.is_connection_dropped():
-                    connections_to_close.add(connection)
-                    connections.remove(connection)
-                else:
-                    reuse_connection = connection
+
+        async with self.thread_lock:
+            if origin in self.connections:
+                connections = self.connections[origin]
+                for connection in list(connections):
+                    if connection.state == ConnectionState.IDLE:
+                        if connection.is_connection_dropped():
+                            connections_to_close.add(connection)
+                            connections.remove(connection)
+                        else:
+                            reuse_connection = connection
+
+                if not connections:
+                    del self.connections[origin]
+
+            if reuse_connection is not None:
+                reuse_connection.state = ConnectionState.PENDING
 
         # Close any expired keep alive connections.
         for connection in connections_to_close:
@@ -57,24 +68,28 @@ class AsyncConnectionPool(AsyncHTTPTransport):
                 ssl_context=self.ssl_context,
                 request_finished=self.request_finished,
             )
-            self.connections.setdefault(origin, set())
-            self.connections[origin].add(connection)
+            async with self.thread_lock:
+                self.connections.setdefault(origin, set())
+                self.connections[origin].add(connection)
 
         return await connection.request(
             method, url, headers=headers, stream=stream, timeout=timeout
         )
 
     async def request_finished(self, connection: AsyncHTTP11Connection):
-        if connection.state == ConnectionState.CLOSED:
-            self.connections[connection.origin].remove(connection)
-            if not self.connections[connection.origin]:
-                self.connections.pop(connection.origin)
+        async with self.thread_lock:
+            if connection.state == ConnectionState.CLOSED:
+                self.connections[connection.origin].remove(connection)
+                if not self.connections[connection.origin]:
+                    del self.connections[connection.origin]
 
     async def close(self) -> None:
         connections_to_close = set()
-        for connection_set in self.connections.values():
-            connections_to_close.update(connection_set)
-        self.connections.clear()
+
+        async with self.thread_lock:
+            for connection_set in self.connections.values():
+                connections_to_close.update(connection_set)
+            self.connections.clear()
 
         # Close all connections
         for connection in connections_to_close:
