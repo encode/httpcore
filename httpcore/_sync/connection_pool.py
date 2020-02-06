@@ -15,8 +15,7 @@ class SyncConnectionPool(SyncHTTPTransport):
     """
 
     def __init__(
-        self,
-        ssl_context: SSLContext = None,
+        self, ssl_context: SSLContext = None,
     ):
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
         self.connections = (
@@ -68,7 +67,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         )
 
     def request_finished(self, connection: SyncHTTP11Connection):
-        if connection.socket is None:
+        if connection.state == ConnectionState.CLOSED:
             self.connections[connection.origin].remove(connection)
             if not self.connections[connection.origin]:
                 self.connections.pop(connection.origin)

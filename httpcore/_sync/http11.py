@@ -1,5 +1,4 @@
 import enum
-import time
 from ssl import SSLContext
 from typing import (
     Iterator,
@@ -15,7 +14,7 @@ from typing import (
 import h11
 
 from .._backends.auto import SyncSocketStream, SyncBackend
-from .._exceptions import map_exceptions, ProtocolError
+from .._exceptions import ProtocolError, map_exceptions
 from .base import SyncByteStream, SyncHTTPTransport
 
 H11Event = Union[
@@ -29,9 +28,10 @@ H11Event = Union[
 
 
 class ConnectionState(enum.IntEnum):
-    IDLE = 0
-    PENDING = 1
-    ACTIVE = 2
+    PENDING = 0
+    ACTIVE = 1
+    IDLE = 2
+    CLOSED = 3
 
 
 class SyncHTTP11Connection(SyncHTTPTransport):
@@ -190,13 +190,15 @@ class SyncHTTP11Connection(SyncHTTPTransport):
             self.request_finished(self)
 
     def close(self) -> None:
-        if self.h11_state.our_state is h11.MUST_CLOSE:
-            event = h11.ConnectionClosed()
-            self.h11_state.send(event)
+        if self.state != ConnectionState.CLOSED:
+            self.state = ConnectionState.CLOSED
 
-        if self.socket is not None:
-            self.socket.close()
-            self.socket = None
+            if self.h11_state.our_state is h11.MUST_CLOSE:
+                event = h11.ConnectionClosed()
+                self.h11_state.send(event)
+
+            if self.socket is not None:
+                self.socket.close()
 
     def is_connection_dropped(self) -> bool:
         return self.socket is not None and self.socket.is_connection_dropped()
