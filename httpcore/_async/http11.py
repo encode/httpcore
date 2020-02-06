@@ -1,5 +1,4 @@
 import enum
-import time
 from ssl import SSLContext
 from typing import (
     AsyncIterator,
@@ -15,7 +14,7 @@ from typing import (
 import h11
 
 from .._backends.auto import AsyncSocketStream, AutoBackend
-from .._exceptions import map_exceptions, ProtocolError
+from .._exceptions import ProtocolError, map_exceptions
 from .base import AsyncByteStream, AsyncHTTPTransport
 
 H11Event = Union[
@@ -29,9 +28,10 @@ H11Event = Union[
 
 
 class ConnectionState(enum.IntEnum):
-    IDLE = 0
-    PENDING = 1
-    ACTIVE = 2
+    PENDING = 0
+    ACTIVE = 1
+    IDLE = 2
+    CLOSED = 3
 
 
 class AsyncHTTP11Connection(AsyncHTTPTransport):
@@ -169,14 +169,11 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
                 event = self.h11_state.next_event()
 
             if event is h11.NEED_DATA:
-                try:
-                    data = await self.socket.read(self.READ_NUM_BYTES, timeout)
-                except OSError:  # pragma: nocover
-                    data = b""
+                data = await self.socket.read(self.READ_NUM_BYTES, timeout)
                 self.h11_state.receive_data(data)
             else:
                 assert event is not h11.NEED_DATA
-                break  # pragma: no cover
+                break
         return event
 
     async def _response_closed(self) -> None:
@@ -190,13 +187,15 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
             await self.request_finished(self)
 
     async def close(self) -> None:
-        if self.h11_state.our_state is h11.MUST_CLOSE:
-            event = h11.ConnectionClosed()
-            self.h11_state.send(event)
+        if self.state != ConnectionState.CLOSED:
+            self.state = ConnectionState.CLOSED
 
-        if self.socket is not None:
-            await self.socket.close()
-            self.socket = None
+            if self.h11_state.our_state is h11.MUST_CLOSE:
+                event = h11.ConnectionClosed()
+                self.h11_state.send(event)
+
+            if self.socket is not None:
+                await self.socket.close()
 
     def is_connection_dropped(self) -> bool:
         return self.socket is not None and self.socket.is_connection_dropped()

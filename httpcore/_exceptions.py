@@ -19,6 +19,7 @@ class ProtocolError(Exception):
 
 # Timeout errors
 
+
 class ConnectTimeout(Exception):
     pass
 
@@ -32,6 +33,7 @@ class WriteTimeout(Exception):
 
 
 # Network errors
+
 
 class NetworkError(Exception):
     pass
