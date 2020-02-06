@@ -3,9 +3,12 @@ from ssl import SSLContext
 from typing import Dict, Optional
 
 from .._exceptions import (
+    CloseError,
+    ConnectError,
     ConnectTimeout,
-    NetworkError,
+    ReadError,
     ReadTimeout,
+    WriteError,
     WriteTimeout,
     map_exceptions,
 )
@@ -45,28 +48,36 @@ class SocketStream(AsyncSocketStream):
         self.write_lock = asyncio.Lock()
 
     async def read(self, n: int, timeout: Dict[str, Optional[float]]) -> bytes:
-        try:
-            async with self.read_lock:
-                with map_exceptions(OSError, NetworkError):
-                    return await asyncio.wait_for(
-                        self.stream_reader.read(n), timeout.get("read")
-                    )
-        except asyncio.TimeoutError:
-            raise ReadTimeout() from None
+        exc_map = {asyncio.TimeoutError: ReadTimeout, OSError: ReadError}
+        async with self.read_lock:
+            with map_exceptions(exc_map):
+                return await asyncio.wait_for(
+                    self.stream_reader.read(n), timeout.get("read")
+                )
 
     async def write(self, data: bytes, timeout: Dict[str, Optional[float]]) -> None:
         if not data:
             return
 
-        try:
-            async with self.write_lock:
-                with map_exceptions(OSError, NetworkError):
-                    self.stream_writer.write(data)
-                    return await asyncio.wait_for(
-                        self.stream_writer.drain(), timeout.get("write")
-                    )
-        except asyncio.TimeoutError:
-            raise WriteTimeout() from None
+        exc_map = {asyncio.TimeoutError: WriteTimeout, OSError: WriteError}
+        async with self.write_lock:
+            with map_exceptions(exc_map):
+                self.stream_writer.write(data)
+                return await asyncio.wait_for(
+                    self.stream_writer.drain(), timeout.get("write")
+                )
+
+    async def close(self) -> None:
+        # NOTE: StreamWriter instances expose a '.wait_closed()' coroutine function,
+        # but using it has caused compatibility issues with certain sites in
+        # the past (see https://github.com/encode/httpx/issues/634), which is
+        # why we don't call it here.
+        # This is fine, though, because '.close()' schedules the actual closing of the
+        # stream, meaning that at best it will happen during the next event loop
+        # iteration, and at worst asyncio will take care of it on program exit.
+        async with self.write_lock:
+            with map_exceptions({OSError: CloseError}):
+                self.stream_writer.close()
 
     def is_connection_dropped(self) -> bool:
         # Counter-intuitively, what we really want to know here is whether the socket is
@@ -82,20 +93,7 @@ class SocketStream(AsyncSocketStream):
         # does not expose any public API to check for readability.
         # (For a solution that uses private asyncio APIs, see:
         # https://github.com/encode/httpx/pull/143#issuecomment-515202982)
-
         return self.stream_reader.at_eof()
-
-    async def close(self) -> None:
-        # NOTE: StreamWriter instances expose a '.wait_closed()' coroutine function,
-        # but using it has caused compatibility issues with certain sites in
-        # the past (see https://github.com/encode/httpx/issues/634), which is
-        # why we don't call it here.
-        # This is fine, though, because '.close()' schedules the actual closing of the
-        # stream, meaning that at best it will happen during the next event loop
-        # iteration, and at worst asyncio will take care of it on program exit.
-        async with self.write_lock:
-            with map_exceptions(OSError, NetworkError):
-                self.stream_writer.close()
 
 
 class AsyncioBackend(AsyncBackend):
@@ -113,15 +111,13 @@ class AsyncioBackend(AsyncBackend):
         ssl_context: Optional[SSLContext],
         timeout: Dict[str, Optional[float]],
     ) -> SocketStream:
-        try:
-            with map_exceptions(OSError, NetworkError):
-                stream_reader, stream_writer = await asyncio.wait_for(  # type: ignore
-                    asyncio.open_connection(
-                        hostname.decode("ascii"), port, ssl=ssl_context
-                    ),
-                    timeout.get("connect"),
-                )
-        except asyncio.TimeoutError:
-            raise ConnectTimeout()
-
-        return SocketStream(stream_reader=stream_reader, stream_writer=stream_writer)
+        host = hostname.decode("ascii")
+        connect_timeout = timeout.get("connect")
+        exc_map = {asyncio.TimeoutError: ConnectTimeout, OSError: ConnectError}
+        with map_exceptions(exc_map):
+            stream_reader, stream_writer = await asyncio.wait_for(
+                asyncio.open_connection(host, port, ssl=ssl_context), connect_timeout,
+            )
+            return SocketStream(
+                stream_reader=stream_reader, stream_writer=stream_writer
+            )

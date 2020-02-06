@@ -14,7 +14,9 @@ class SyncByteStream:
     the `\\__iter__` method, and optionally the `close` method.
     """
 
-    def __init__(self, iterator: Iterator[bytes] = None, close_func: Any = None) -> None:
+    def __init__(
+        self, iterator: Iterator[bytes] = None, close_func: Any = None
+    ) -> None:
         self.iterator = empty() if iterator is None else iterator
         self.close_func = close_func
 

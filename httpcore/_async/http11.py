@@ -1,10 +1,21 @@
+import enum
+import time
 from ssl import SSLContext
-from typing import AsyncIterator, Awaitable, Callable, Dict, List, Optional, Tuple, Union
+from typing import (
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import h11
 
 from .._backends.auto import AsyncSocketStream, AutoBackend
-from .._exceptions import ProtocolError
+from .._exceptions import map_exceptions, ProtocolError
 from .base import AsyncByteStream, AsyncHTTPTransport
 
 H11Event = Union[
@@ -17,6 +28,12 @@ H11Event = Union[
 ]
 
 
+class ConnectionState(enum.IntEnum):
+    IDLE = 0
+    PENDING = 1
+    ACTIVE = 2
+
+
 class AsyncHTTP11Connection(AsyncHTTPTransport):
     READ_NUM_BYTES = 4096
 
@@ -25,14 +42,17 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         origin: Tuple[bytes, bytes, int],
         socket: AsyncSocketStream = None,
         ssl_context: SSLContext = None,
-        request_finished: Callable[['AsyncHTTP11Connection'], Awaitable[None]] = None
+        request_finished: Callable[["AsyncHTTP11Connection"], Awaitable[None]] = None,
     ):
         self.origin = origin
         self.socket = socket
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
+        self.request_finished = request_finished
+
         self.backend = AutoBackend()
         self.h11_state = h11.Connection(our_role=h11.CLIENT)
-        self.request_finished = request_finished
+
+        self.state = ConnectionState.PENDING
 
     async def request(
         self,
@@ -48,6 +68,7 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
 
         assert url[:3] == self.origin
 
+        self.state = ConnectionState.ACTIVE
         if self.socket is None:
             self.socket = await self._connect(timeout)
 
@@ -61,7 +82,8 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         ) = await self._receive_response(timeout)
         stream = AsyncByteStream(
             iterator=self._receive_response_data(timeout),
-            close_func=self._response_closed)
+            close_func=self._response_closed,
+        )
         return (http_version, status_code, reason_phrase, headers, stream)
 
     async def _connect(self, timeout: Dict[str, Optional[float]]) -> AsyncSocketStream:
@@ -143,10 +165,8 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         assert self.socket is not None
 
         while True:
-            try:
+            with map_exceptions({h11.RemoteProtocolError: ProtocolError}):
                 event = self.h11_state.next_event()
-            except h11.RemoteProtocolError as exc:
-                raise ProtocolError(exc)
 
             if event is h11.NEED_DATA:
                 try:
@@ -162,6 +182,7 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
     async def _response_closed(self) -> None:
         if self.h11_state.our_state is h11.DONE:
             self.h11_state.start_next_cycle()
+            self.state = ConnectionState.IDLE
         else:
             await self.close()
 
@@ -176,3 +197,6 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         if self.socket is not None:
             await self.socket.close()
             self.socket = None
+
+    def is_connection_dropped(self) -> bool:
+        return self.socket is not None and self.socket.is_connection_dropped()

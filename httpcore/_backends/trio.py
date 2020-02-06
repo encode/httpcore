@@ -4,9 +4,12 @@ from typing import Dict, Optional, Union
 import trio
 
 from .._exceptions import (
+    CloseError,
+    ConnectError,
     ConnectTimeout,
-    NetworkError,
+    ReadError,
     ReadTimeout,
+    WriteError,
     WriteTimeout,
     map_exceptions,
 )
@@ -25,26 +28,32 @@ class SocketStream(AsyncSocketStream):
 
     async def read(self, n: int, timeout: Dict[str, Optional[float]]) -> bytes:
         read_timeout = none_as_inf(timeout.get("read"))
+        exc_map = {trio.TooSlowError: ReadTimeout, trio.BrokenResourceError: ReadError}
 
-        with trio.move_on_after(read_timeout):
-            async with self.read_lock:
-                with map_exceptions(trio.BrokenResourceError, NetworkError):
+        async with self.read_lock:
+            with map_exceptions(exc_map):
+                with trio.fail_after(read_timeout):
                     return await self.stream.receive_some(max_bytes=n)
-
-        raise ReadTimeout()
 
     async def write(self, data: bytes, timeout: Dict[str, Optional[float]]) -> None:
         if not data:
             return
 
         write_timeout = none_as_inf(timeout.get("write"))
+        exc_map = {
+            trio.TooSlowError: WriteTimeout,
+            trio.BrokenResourceError: WriteError,
+        }
 
-        with trio.move_on_after(write_timeout):
-            async with self.write_lock:
-                with map_exceptions(trio.BrokenResourceError, NetworkError):
+        async with self.write_lock:
+            with map_exceptions(exc_map):
+                with trio.fail_after(write_timeout):
                     return await self.stream.send_all(data)
 
-        raise WriteTimeout()
+    async def close(self) -> None:
+        async with self.write_lock:
+            with map_exceptions({trio.BrokenResourceError: CloseError}):
+                await self.stream.aclose()
 
     def is_connection_dropped(self) -> bool:
         # Adapted from: https://github.com/encode/httpx/pull/143#issuecomment-515202982
@@ -61,10 +70,6 @@ class SocketStream(AsyncSocketStream):
         # See: https://github.com/encode/httpx/pull/143#issuecomment-515181778
         return stream.socket.is_readable()
 
-    async def close(self) -> None:
-        async with self.write_lock:
-            await self.stream.aclose()
-
 
 class TrioBackend(AsyncBackend):
     async def open_tcp_stream(
@@ -75,16 +80,19 @@ class TrioBackend(AsyncBackend):
         timeout: Dict[str, Optional[float]],
     ) -> AsyncSocketStream:
         connect_timeout = none_as_inf(timeout.get("connect"))
+        exc_map = {
+            trio.TooSlowError: ConnectTimeout,
+            trio.BrokenResourceError: ConnectError,
+        }
 
-        with trio.move_on_after(connect_timeout):
-            with map_exceptions(OSError, NetworkError):
+        with map_exceptions(exc_map):
+            with trio.fail_after(connect_timeout):
                 stream: trio.SocketStream = await trio.open_tcp_stream(hostname, port)
 
-            if ssl_context is not None:
-                stream = trio.SSLStream(stream, ssl_context, server_hostname=hostname)
-                with map_exceptions(trio.BrokenResourceError, NetworkError):
+                if ssl_context is not None:
+                    stream = trio.SSLStream(
+                        stream, ssl_context, server_hostname=hostname
+                    )
                     await stream.do_handshake()
 
-            return SocketStream(stream=stream)
-
-        raise ConnectTimeout()
+                return SocketStream(stream=stream)
