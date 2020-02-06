@@ -30,10 +30,9 @@ Here's an example of making an HTTP GET request using `httpcore`...
 
 ```python
 async with httpcore.AsyncConnectionPool() as http:
-    status_code, http_version, reason_phrase, headers, stream = await http.request(
+    http_version, status_code, reason_phrase, headers, stream = await http.request(
         method=b'GET',
         url=(b'https', b'example.org', 433, b'/'),
-        headers=[(b'host': b'example.org'), (b'user-agent': 'httpcore')]
     )
 
     try:

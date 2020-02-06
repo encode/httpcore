@@ -5,7 +5,8 @@ import sys
 
 SUBS = [
     ('AsyncIterator', 'Iterator'),
-    ('Async([A-Z][A-Za-z_]*)', r'Sync\2'),
+    ('AutoBackend', 'SyncBackend'),
+    ('Async([A-Z][A-Za-z0-9_]*)', r'Sync\2'),
     ('async def', 'def'),
     ('async with', 'with'),
     ('async for', 'for'),
@@ -14,9 +15,11 @@ SUBS = [
     ('__aexit__', '__exit__'),
     ('__aiter__', '__iter__'),
     ('@pytest.mark.asyncio', ''),
+    ('@pytest.mark.trio', ''),
+    ('@pytest.mark.usefixtures.*', ''),
 ]
 COMPILED_SUBS = [
-    (re.compile(r'(^|\b)' + regex + r'\b'), repl)
+    (re.compile(r'(^|\b)' + regex + r'($|\b)'), repl)
     for regex, repl in SUBS
 ]
 
