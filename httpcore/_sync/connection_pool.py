@@ -1,9 +1,45 @@
 from ssl import SSLContext
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .._threadlock import ThreadLock
 from .base import SyncByteStream, SyncHTTPTransport
 from .http11 import SyncHTTP11Connection, ConnectionState
+
+Origin = Tuple[bytes, bytes, int]
+URL = Tuple[bytes, bytes, int, bytes]
+Headers = List[Tuple[bytes, bytes]]
+
+
+class ResponseByteStream(SyncByteStream):
+    def __init__(
+        self,
+        stream: SyncByteStream,
+        connection: SyncHTTP11Connection,
+        callback: Callable,
+    ) -> None:
+        """
+        A wrapper around the response stream that we return from `.request()`.
+
+        Ensures that when `stream.close()` is called, the connection pool
+        is notified via a callback.
+        """
+        self.stream = stream
+        self.connection = connection
+        self.callback = callback
+
+    def __iter__(self):
+        for chunk in self.stream:
+            yield chunk
+
+    def close(self):
+        try:
+            #  Call the underlying stream close callback.
+            # This will be a call to `SyncHTTP11Connection._response_closed()``.
+            self.stream.close()
+        finally:
+            #  Call the connection pool close callback.
+            # This will be a call to `SyncConnectionPool._response_closed()``.
+            self.callback(self.connection)
 
 
 class SyncConnectionPool(SyncHTTPTransport):
@@ -19,19 +55,17 @@ class SyncConnectionPool(SyncHTTPTransport):
         self, ssl_context: SSLContext = None,
     ):
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
-        self.connections: Dict[
-            Tuple[bytes, bytes, int], Set[SyncHTTP11Connection]
-        ] = {}
+        self.connections: Dict[Origin, Set[SyncHTTP11Connection]] = {}
         self.thread_lock = ThreadLock()
 
     def request(
         self,
         method: bytes,
-        url: Tuple[bytes, bytes, int, bytes],
-        headers: List[Tuple[bytes, bytes]] = None,
+        url: URL,
+        headers: Headers = None,
         stream: SyncByteStream = None,
         timeout: Dict[str, Optional[float]] = None,
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
+    ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
         origin = url[:3]
 
         # Determine expired keep alive connections on this origin.
@@ -53,7 +87,7 @@ class SyncConnectionPool(SyncHTTPTransport):
                     del self.connections[origin]
 
             if reuse_connection is not None:
-                reuse_connection.state = ConnectionState.PENDING
+                reuse_connection.state = ConnectionState.ACTIVE
 
         # Close any expired keep alive connections.
         for connection in connections_to_close:
@@ -64,19 +98,22 @@ class SyncConnectionPool(SyncHTTPTransport):
             connection = reuse_connection
         else:
             connection = SyncHTTP11Connection(
-                origin=origin,
-                ssl_context=self.ssl_context,
-                request_finished=self.request_finished,
+                origin=origin, ssl_context=self.ssl_context,
             )
             with self.thread_lock:
                 self.connections.setdefault(origin, set())
                 self.connections[origin].add(connection)
 
-        return connection.request(
+        response = connection.request(
             method, url, headers=headers, stream=stream, timeout=timeout
         )
+        (http_version, status_code, reason_phrase, headers, stream,) = response
+        stream = ResponseByteStream(
+            stream, connection=connection, callback=self._response_closed
+        )
+        return http_version, status_code, reason_phrase, headers, stream
 
-    def request_finished(self, connection: SyncHTTP11Connection):
+    def _response_closed(self, connection: SyncHTTP11Connection):
         with self.thread_lock:
             if connection.state == ConnectionState.CLOSED:
                 self.connections[connection.origin].remove(connection)
@@ -93,7 +130,6 @@ class SyncConnectionPool(SyncHTTPTransport):
 
         # Close all connections
         for connection in connections_to_close:
-            connection.request_finished = None
             connection.close()
 
 

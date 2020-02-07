@@ -42,12 +42,10 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         origin: Tuple[bytes, bytes, int],
         socket: SyncSocketStream = None,
         ssl_context: SSLContext = None,
-        request_finished: Callable[["SyncHTTP11Connection"], Awaitable[None]] = None,
     ):
         self.origin = origin
         self.socket = socket
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
-        self.request_finished = request_finished
 
         self.backend = SyncBackend()
         self.h11_state = h11.Connection(our_role=h11.CLIENT)
@@ -182,9 +180,6 @@ class SyncHTTP11Connection(SyncHTTPTransport):
             self.state = ConnectionState.IDLE
         else:
             self.close()
-
-        if self.request_finished is not None:
-            self.request_finished(self)
 
     def close(self) -> None:
         if self.state != ConnectionState.CLOSED:
