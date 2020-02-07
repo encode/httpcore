@@ -42,12 +42,10 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         origin: Tuple[bytes, bytes, int],
         socket: AsyncSocketStream = None,
         ssl_context: SSLContext = None,
-        request_finished: Callable[["AsyncHTTP11Connection"], Awaitable[None]] = None,
     ):
         self.origin = origin
         self.socket = socket
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
-        self.request_finished = request_finished
 
         self.backend = AutoBackend()
         self.h11_state = h11.Connection(our_role=h11.CLIENT)
@@ -182,9 +180,6 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
             self.state = ConnectionState.IDLE
         else:
             await self.close()
-
-        if self.request_finished is not None:
-            await self.request_finished(self)
 
     async def close(self) -> None:
         if self.state != ConnectionState.CLOSED:

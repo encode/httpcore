@@ -1,9 +1,45 @@
 from ssl import SSLContext
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .._threadlock import ThreadLock
 from .base import AsyncByteStream, AsyncHTTPTransport
 from .http11 import AsyncHTTP11Connection, ConnectionState
+
+Origin = Tuple[bytes, bytes, int]
+URL = Tuple[bytes, bytes, int, bytes]
+Headers = List[Tuple[bytes, bytes]]
+
+
+class ResponseByteStream(AsyncByteStream):
+    def __init__(
+        self,
+        stream: AsyncByteStream,
+        connection: AsyncHTTP11Connection,
+        callback: Callable,
+    ) -> None:
+        """
+        A wrapper around the response stream that we return from `.request()`.
+
+        Ensures that when `stream.close()` is called, the connection pool
+        is notified via a callback.
+        """
+        self.stream = stream
+        self.connection = connection
+        self.callback = callback
+
+    async def __aiter__(self):
+        async for chunk in self.stream:
+            yield chunk
+
+    async def close(self):
+        try:
+            #  Call the underlying stream close callback.
+            # This will be a call to `AsyncHTTP11Connection._response_closed()``.
+            await self.stream.close()
+        finally:
+            #  Call the connection pool close callback.
+            # This will be a call to `AsyncConnectionPool._response_closed()``.
+            await self.callback(self.connection)
 
 
 class AsyncConnectionPool(AsyncHTTPTransport):
@@ -19,19 +55,17 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         self, ssl_context: SSLContext = None,
     ):
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
-        self.connections: Dict[
-            Tuple[bytes, bytes, int], Set[AsyncHTTP11Connection]
-        ] = {}
+        self.connections: Dict[Origin, Set[AsyncHTTP11Connection]] = {}
         self.thread_lock = ThreadLock()
 
     async def request(
         self,
         method: bytes,
-        url: Tuple[bytes, bytes, int, bytes],
-        headers: List[Tuple[bytes, bytes]] = None,
+        url: URL,
+        headers: Headers = None,
         stream: AsyncByteStream = None,
         timeout: Dict[str, Optional[float]] = None,
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
+    ) -> Tuple[bytes, int, bytes, Headers, AsyncByteStream]:
         origin = url[:3]
 
         # Determine expired keep alive connections on this origin.
@@ -53,7 +87,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
                     del self.connections[origin]
 
             if reuse_connection is not None:
-                reuse_connection.state = ConnectionState.PENDING
+                reuse_connection.state = ConnectionState.ACTIVE
 
         # Close any expired keep alive connections.
         for connection in connections_to_close:
@@ -64,19 +98,22 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             connection = reuse_connection
         else:
             connection = AsyncHTTP11Connection(
-                origin=origin,
-                ssl_context=self.ssl_context,
-                request_finished=self.request_finished,
+                origin=origin, ssl_context=self.ssl_context,
             )
             async with self.thread_lock:
                 self.connections.setdefault(origin, set())
                 self.connections[origin].add(connection)
 
-        return await connection.request(
+        response = await connection.request(
             method, url, headers=headers, stream=stream, timeout=timeout
         )
+        (http_version, status_code, reason_phrase, headers, stream,) = response
+        stream = ResponseByteStream(
+            stream, connection=connection, callback=self._response_closed
+        )
+        return http_version, status_code, reason_phrase, headers, stream
 
-    async def request_finished(self, connection: AsyncHTTP11Connection):
+    async def _response_closed(self, connection: AsyncHTTP11Connection):
         async with self.thread_lock:
             if connection.state == ConnectionState.CLOSED:
                 self.connections[connection.origin].remove(connection)
@@ -93,7 +130,6 @@ class AsyncConnectionPool(AsyncHTTPTransport):
 
         # Close all connections
         for connection in connections_to_close:
-            connection.request_finished = None
             await connection.close()
 
 
