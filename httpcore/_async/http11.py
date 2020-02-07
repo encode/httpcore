@@ -66,9 +66,9 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
 
         assert url[:3] == self.origin
 
-        self.state = ConnectionState.ACTIVE
-        if self.socket is None:
+        if self.state == ConnectionState.PENDING:
             self.socket = await self._connect(timeout)
+        self.state = ConnectionState.ACTIVE
 
         await self._send_request(method, url, headers, timeout)
         await self._send_request_body(stream, timeout)

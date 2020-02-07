@@ -66,9 +66,9 @@ class SyncHTTP11Connection(SyncHTTPTransport):
 
         assert url[:3] == self.origin
 
-        self.state = ConnectionState.ACTIVE
-        if self.socket is None:
+        if self.state == ConnectionState.PENDING:
             self.socket = self._connect(timeout)
+        self.state = ConnectionState.ACTIVE
 
         self._send_request(method, url, headers, timeout)
         self._send_request_body(stream, timeout)
