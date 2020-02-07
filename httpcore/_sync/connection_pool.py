@@ -67,36 +67,9 @@ class SyncConnectionPool(SyncHTTPTransport):
         timeout: Dict[str, Optional[float]] = None,
     ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
         origin = url[:3]
+        connection = self._get_connection_from_pool(origin)
 
-        # Determine expired keep alive connections on this origin.
-        reuse_connection = None
-        connections_to_close = set()
-
-        with self.thread_lock:
-            if origin in self.connections:
-                connections = self.connections[origin]
-                for connection in list(connections):
-                    if connection.state == ConnectionState.IDLE:
-                        if connection.is_connection_dropped():
-                            connections_to_close.add(connection)
-                            connections.remove(connection)
-                        else:
-                            reuse_connection = connection
-
-                if not connections:
-                    del self.connections[origin]
-
-            if reuse_connection is not None:
-                reuse_connection.state = ConnectionState.ACTIVE
-
-        # Close any expired keep alive connections.
-        for connection in connections_to_close:
-            connection.close()
-
-        # Either reuse an unexpired keep alive connection, or create a new one.
-        if reuse_connection is not None:
-            connection = reuse_connection
-        else:
+        if connection is None:
             connection = SyncHTTP11Connection(
                 origin=origin, ssl_context=self.ssl_context,
             )
@@ -112,6 +85,44 @@ class SyncConnectionPool(SyncHTTPTransport):
             stream, connection=connection, callback=self._response_closed
         )
         return http_version, status_code, reason_phrase, headers, stream
+
+    def _get_connection_from_pool(
+        self, origin: Origin
+    ) -> Optional[SyncHTTP11Connection]:
+        # Determine expired keep alive connections on this origin.
+        reuse_connection = None
+        connections_to_close = set()
+
+        with self.thread_lock:
+            if origin in self.connections:
+                connections = self.connections[origin]
+                for connection in list(connections):
+                    if connection.state == ConnectionState.IDLE:
+                        if connection.is_connection_dropped():
+                            # IDLE connections that have been dropped should be
+                            # removed from the pool.
+                            connections_to_close.add(connection)
+                            connections.remove(connection)
+                        else:
+                            # IDLE connections that are still maintained may
+                            # be reused.
+                            reuse_connection = connection
+
+                # Clean up the connections mapping if we've no connections
+                # remaining for this origin.
+                if not connections:
+                    del self.connections[origin]
+
+            #  Mark the connection as ACTIVE before we return it, so that it
+            # will not be re-acquired.
+            if reuse_connection is not None:
+                reuse_connection.state = ConnectionState.ACTIVE
+
+        # Close any dropped connections.
+        for connection in connections_to_close:
+            connection.close()
+
+        return reuse_connection
 
     def _response_closed(self, connection: SyncHTTP11Connection):
         with self.thread_lock:
