@@ -2,6 +2,7 @@ from ssl import SSLContext
 from typing import Dict, List, Optional, Tuple
 
 from .._exceptions import ProxyError
+from .._url import normalize_url, url_as_bytes
 from .base import AsyncByteStream, AsyncHTTPTransport
 from .connection_pool import AsyncConnectionPool, ResponseByteStream
 from .http11 import AsyncHTTP11Connection
@@ -40,7 +41,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
     ):
         assert proxy_mode in ("DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY")
 
-        self.proxy_origin = proxy_origin
+        self.proxy_origin = normalize_url(proxy_origin + (b"/",))[:3]
         self.proxy_headers = [] if proxy_headers is None else proxy_headers
         self.proxy_mode = proxy_mode
         super().__init__(ssl_context=ssl_context)
@@ -53,6 +54,8 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         stream: AsyncByteStream = None,
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, Headers, AsyncByteStream]:
+        url = normalize_url(url)
+
         if (
             self.proxy_mode == "DEFAULT" and url[0] == b"http"
         ) or self.proxy_mode == "FORWARD_ONLY":
@@ -94,7 +97,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         # GET https://www.example.org/path HTTP/1.1
         # [proxy headers]
         # [headers]
-        target = b"%b://%b:%d%b" % url
+        target = url_as_bytes(url)
         url = self.proxy_origin + (target,)
         headers = self.proxy_headers + ([] if headers is None else headers)
 
@@ -153,7 +156,10 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                     self.connections[connection.origin].remove(connection)
                     if not self.connections[connection.origin]:
                         del self.connections[connection.origin]
-                msg = "%d %s" % (proxy_status_code, proxy_reason_phrase.decode("ascii"))
+                msg = "%d %s" % (
+                    proxy_status_code,
+                    proxy_reason_phrase.decode("latin-1"),
+                )
                 raise ProxyError(msg)
 
             # Upgrade to TLS.

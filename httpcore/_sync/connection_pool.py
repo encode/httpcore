@@ -2,6 +2,7 @@ from ssl import SSLContext
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .._threadlock import ThreadLock
+from .._url import normalize_url
 from .base import SyncByteStream, SyncHTTPTransport
 from .http11 import SyncHTTP11Connection, ConnectionState
 
@@ -67,6 +68,8 @@ class SyncConnectionPool(SyncHTTPTransport):
         stream: SyncByteStream = None,
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
+        url = normalize_url(url)
+
         origin = url[:3]
         connection = self._get_connection_from_pool(origin)
 
