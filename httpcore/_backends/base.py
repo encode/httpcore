@@ -9,6 +9,14 @@ class AsyncSocketStream:
     backends, or for stand-alone test cases.
     """
 
+    async def start_tls(
+        self,
+        hostname: bytes,
+        ssl_context: SSLContext,
+        timeout: Dict[str, Optional[float]],
+    ) -> "AsyncSocketStream":
+        raise NotImplementedError()  # pragma: no cover
+
     async def read(self, n: int, timeout: Dict[str, Optional[float]]) -> bytes:
         raise NotImplementedError()  # pragma: no cover
 

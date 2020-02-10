@@ -17,6 +17,10 @@ class ProtocolError(Exception):
     pass
 
 
+class ProxyError(Exception):
+    pass
+
+
 # Timeout errors
 
 

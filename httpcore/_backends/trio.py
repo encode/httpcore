@@ -26,6 +26,26 @@ class SocketStream(AsyncSocketStream):
         self.read_lock = trio.Lock()
         self.write_lock = trio.Lock()
 
+    async def start_tls(
+        self,
+        hostname: bytes,
+        ssl_context: SSLContext,
+        timeout: Dict[str, Optional[float]],
+    ) -> "SocketStream":
+        connect_timeout = none_as_inf(timeout.get("connect"))
+        exc_map = {
+            trio.TooSlowError: ConnectTimeout,
+            trio.BrokenResourceError: ConnectError,
+        }
+        ssl_stream = trio.SSLStream(
+            self.stream, ssl_context=ssl_context, server_hostname=hostname
+        )
+
+        with map_exceptions(exc_map):
+            with trio.fail_after(connect_timeout):
+                await ssl_stream.do_handshake()
+            return SocketStream(ssl_stream)
+
     async def read(self, n: int, timeout: Dict[str, Optional[float]]) -> bytes:
         read_timeout = none_as_inf(timeout.get("read"))
         exc_map = {trio.TooSlowError: ReadTimeout, trio.BrokenResourceError: ReadError}

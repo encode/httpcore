@@ -38,6 +38,43 @@ def ssl_monkey_patch() -> None:
     MonkeyPatch.write = _fixed_write
 
 
+async def backport_start_tls(
+    transport: asyncio.BaseTransport,
+    protocol: asyncio.BaseProtocol,
+    ssl_context: SSLContext,
+    *,
+    server_side: bool = False,
+    server_hostname: str = None,
+    ssl_handshake_timeout: float = None,
+) -> asyncio.Transport:  # pragma: nocover (Since it's not used on all Python versions.)
+    """
+    Python 3.6 asyncio doesn't have a start_tls() method on the loop
+    so we use this function in place of the loop's start_tls() method.
+    Adapted from this comment:
+    https://github.com/urllib3/urllib3/issues/1323#issuecomment-362494839
+    """
+    import asyncio.sslproto
+
+    loop = asyncio.get_event_loop()
+    waiter = loop.create_future()
+    ssl_protocol = asyncio.sslproto.SSLProtocol(
+        loop,
+        protocol,
+        ssl_context,
+        waiter,
+        server_side=False,
+        server_hostname=server_hostname,
+        call_connection_made=False,
+    )
+
+    transport.set_protocol(ssl_protocol)
+    loop.call_soon(ssl_protocol.connection_made, transport)
+    loop.call_soon(transport.resume_reading)  # type: ignore
+
+    await waiter
+    return ssl_protocol._app_transport
+
+
 class SocketStream(AsyncSocketStream):
     def __init__(
         self, stream_reader: asyncio.StreamReader, stream_writer: asyncio.StreamWriter,
@@ -46,6 +83,42 @@ class SocketStream(AsyncSocketStream):
         self.stream_writer = stream_writer
         self.read_lock = asyncio.Lock()
         self.write_lock = asyncio.Lock()
+
+    async def start_tls(
+        self,
+        hostname: bytes,
+        ssl_context: SSLContext,
+        timeout: Dict[str, Optional[float]],
+    ) -> "SocketStream":
+        loop = asyncio.get_event_loop()
+
+        stream_reader = asyncio.StreamReader()
+        protocol = asyncio.StreamReaderProtocol(stream_reader)
+        transport = self.stream_writer.transport
+
+        loop_start_tls = getattr(loop, "start_tls", backport_start_tls)
+
+        transport = await asyncio.wait_for(
+            loop_start_tls(
+                transport=transport,
+                protocol=protocol,
+                sslcontext=ssl_context,
+                server_hostname=hostname.decode("ascii"),
+            ),
+            timeout=timeout.get("connect"),
+        )
+
+        stream_reader.set_transport(transport)
+        stream_writer = asyncio.StreamWriter(
+            transport=transport, protocol=protocol, reader=stream_reader, loop=loop
+        )
+
+        ssl_stream = SocketStream(stream_reader, stream_writer)
+        # When we return a new SocketStream with new StreamReader/StreamWriter instances
+        # we need to keep references to the old StreamReader/StreamWriter so that they
+        # are not garbage collected and closed while we're still using them.
+        ssl_stream._inner = self  # type: ignore
+        return ssl_stream
 
     async def read(self, n: int, timeout: Dict[str, Optional[float]]) -> bytes:
         exc_map = {asyncio.TimeoutError: ReadTimeout, OSError: ReadError}
