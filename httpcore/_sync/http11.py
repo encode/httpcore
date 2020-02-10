@@ -84,6 +84,13 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         )
         return (http_version, status_code, reason_phrase, headers, stream)
 
+    def _start_tls(
+        self, hostname: bytes, timeout: Dict[str, Optional[float]] = None
+    ):
+        assert self.socket is not None
+        timeout = {} if timeout is None else timeout
+        self.socket = self.socket.start_tls(hostname, self.ssl_context, timeout)
+
     def _connect(self, timeout: Dict[str, Optional[float]]) -> SyncSocketStream:
         scheme, hostname, port = self.origin
         ssl_context = self.ssl_context if scheme == b"https" else None

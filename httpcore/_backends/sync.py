@@ -28,6 +28,23 @@ class SyncSocketStream:
         self.read_lock = threading.Lock()
         self.write_lock = threading.Lock()
 
+    def start_tls(
+        self,
+        hostname: bytes,
+        ssl_context: SSLContext,
+        timeout: Dict[str, Optional[float]],
+    ) -> "SyncSocketStream":
+        connect_timeout = timeout.get("connect")
+        exc_map = {socket.timeout: ConnectTimeout, socket.error: ConnectError}
+
+        with map_exceptions(exc_map):
+            self.sock.settimeout(connect_timeout)
+            wrapped = ssl_context.wrap_socket(
+                self.sock, server_hostname=hostname.decode("ascii")
+            )
+
+        return SyncSocketStream(wrapped)
+
     def read(self, n: int, timeout: Dict[str, Optional[float]]) -> bytes:
         read_timeout = timeout.get("read")
         exc_map = {socket.timeout: ReadTimeout, socket.error: ReadError}
