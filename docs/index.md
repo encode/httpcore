@@ -37,9 +37,7 @@ async with httpcore.AsyncConnectionPool() as http:
     )
 
     try:
-        body = b''
-        async for chunk in stream:
-            body += chunk
+        body = b''.join(chunk async for chunk in stream)
     finally:
         await stream.close()
 
