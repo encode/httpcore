@@ -13,7 +13,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
-from .base import AsyncBackend, AsyncSocketStream
+from .base import AsyncBackend, AsyncLock, AsyncSocketStream
 
 
 def none_as_inf(value: Optional[float]) -> float:
@@ -91,6 +91,17 @@ class SocketStream(AsyncSocketStream):
         return stream.socket.is_readable()
 
 
+class Lock(AsyncLock):
+    def __init__(self) -> None:
+        self._lock = trio.Lock()
+
+    def release(self) -> None:
+        self._lock.release()
+
+    async def acquire(self) -> None:
+        await self._lock.acquire()
+
+
 class TrioBackend(AsyncBackend):
     async def open_tcp_stream(
         self,
@@ -116,3 +127,6 @@ class TrioBackend(AsyncBackend):
                     await stream.do_handshake()
 
                 return SocketStream(stream=stream)
+
+    def create_lock(self) -> AsyncLock:
+        return Lock()

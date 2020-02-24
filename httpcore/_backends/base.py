@@ -1,5 +1,6 @@
 from ssl import SSLContext
-from typing import Dict, Optional
+from types import TracebackType
+from typing import Dict, Optional, Type
 
 
 class AsyncSocketStream:
@@ -30,6 +31,29 @@ class AsyncSocketStream:
         raise NotImplementedError()  # pragma: no cover
 
 
+class AsyncLock:
+    """
+    An abstract interface for Lock classes.
+    """
+
+    async def __aenter__(self) -> None:
+        await self.acquire()
+
+    async def __aexit__(
+        self,
+        exc_type: Type[BaseException] = None,
+        exc_value: BaseException = None,
+        traceback: TracebackType = None,
+    ) -> None:
+        self.release()
+
+    def release(self) -> None:
+        raise NotImplementedError()  # pragma: no cover
+
+    async def acquire(self) -> None:
+        raise NotImplementedError()  # pragma: no cover
+
+
 class AsyncBackend:
     async def open_tcp_stream(
         self,
@@ -38,4 +62,7 @@ class AsyncBackend:
         ssl_context: Optional[SSLContext],
         timeout: Dict[str, Optional[float]],
     ) -> AsyncSocketStream:
+        raise NotImplementedError()  # pragma: no cover
+
+    def create_lock(self) -> AsyncLock:
         raise NotImplementedError()  # pragma: no cover

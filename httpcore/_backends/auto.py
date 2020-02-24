@@ -3,8 +3,8 @@ from typing import Dict, Optional
 
 import sniffio
 
-from .base import AsyncBackend, AsyncSocketStream
-from .sync import SyncBackend, SyncSocketStream
+from .base import AsyncBackend, AsyncLock, AsyncSocketStream
+from .sync import SyncBackend, SyncLock, SyncSocketStream
 
 
 class AutoBackend(AsyncBackend):
@@ -33,3 +33,6 @@ class AutoBackend(AsyncBackend):
         timeout: Dict[str, Optional[float]],
     ) -> AsyncSocketStream:
         return await self.backend.open_tcp_stream(hostname, port, ssl_context, timeout)
+
+    def create_lock(self) -> AsyncLock:
+        return self.backend.create_lock()

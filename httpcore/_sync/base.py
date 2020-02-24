@@ -1,9 +1,17 @@
+import enum
 from types import TracebackType
 from typing import Any, Iterator, Dict, List, Optional, Tuple, Type
 
 
 def empty():
     yield b""
+
+
+class ConnectionState(enum.IntEnum):
+    PENDING = 0
+    ACTIVE = 1
+    IDLE = 2
+    CLOSED = 3
 
 
 class SyncByteStream:

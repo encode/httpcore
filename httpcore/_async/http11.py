@@ -1,4 +1,3 @@
-import enum
 from ssl import SSLContext
 from typing import (
     AsyncIterator,
@@ -15,7 +14,7 @@ import h11
 
 from .._backends.auto import AsyncSocketStream, AutoBackend
 from .._exceptions import ProtocolError, map_exceptions
-from .base import AsyncByteStream, AsyncHTTPTransport
+from .base import AsyncByteStream, AsyncHTTPTransport, ConnectionState
 
 H11Event = Union[
     h11.Request,
@@ -25,13 +24,6 @@ H11Event = Union[
     h11.EndOfMessage,
     h11.ConnectionClosed,
 ]
-
-
-class ConnectionState(enum.IntEnum):
-    PENDING = 0
-    ACTIVE = 1
-    IDLE = 2
-    CLOSED = 3
 
 
 class AsyncHTTP11Connection(AsyncHTTPTransport):

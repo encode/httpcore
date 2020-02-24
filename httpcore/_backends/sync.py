@@ -2,7 +2,8 @@ import select
 import socket
 import threading
 from ssl import SSLContext
-from typing import Dict, Optional
+from types import TracebackType
+from typing import Dict, Optional, Type
 
 from .._exceptions import (
     CloseError,
@@ -75,6 +76,28 @@ class SyncSocketStream:
         return bool(rready)
 
 
+class SyncLock:
+    def __init__(self):
+        self._lock = threading.Lock()
+
+    def __enter__(self) -> None:
+        self.acquire()
+
+    def __exit__(
+        self,
+        exc_type: Type[BaseException] = None,
+        exc_value: BaseException = None,
+        traceback: TracebackType = None,
+    ) -> None:
+        self.release()
+
+    def release(self) -> None:
+        self._lock.release()
+
+    def acquire(self) -> None:
+        self._lock.acquire()
+
+
 class SyncBackend:
     def open_tcp_stream(
         self,
@@ -95,3 +118,6 @@ class SyncBackend:
                     sock, server_hostname=hostname.decode("ascii")
                 )
             return SyncSocketStream(sock=sock)
+
+    def create_lock(self) -> SyncLock:
+        return SyncLock()

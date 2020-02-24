@@ -12,7 +12,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
-from .base import AsyncBackend, AsyncSocketStream
+from .base import AsyncBackend, AsyncLock, AsyncSocketStream
 
 SSL_MONKEY_PATCH_APPLIED = False
 
@@ -169,6 +169,17 @@ class SocketStream(AsyncSocketStream):
         return self.stream_reader.at_eof()
 
 
+class Lock(AsyncLock):
+    def __init__(self) -> None:
+        self._lock = asyncio.Lock()
+
+    def release(self) -> None:
+        self._lock.release()
+
+    async def acquire(self) -> None:
+        await self._lock.acquire()
+
+
 class AsyncioBackend(AsyncBackend):
     def __init__(self) -> None:
         global SSL_MONKEY_PATCH_APPLIED
@@ -194,3 +205,6 @@ class AsyncioBackend(AsyncBackend):
             return SocketStream(
                 stream_reader=stream_reader, stream_writer=stream_writer
             )
+
+    def create_lock(self) -> AsyncLock:
+        return Lock()
