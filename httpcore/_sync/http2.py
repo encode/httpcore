@@ -136,9 +136,11 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         return self.socket.is_connection_dropped()
 
     def close(self) -> None:
-        assert self.socket is not None
+        if self.state != ConnectionState.CLOSED:
+            self.state = ConnectionState.CLOSED
 
-        self.socket.close()
+            assert self.socket is not None
+            self.socket.close()
 
     def wait_for_outgoing_flow(
         self, stream_id: int, timeout: Dict[str, Optional[float]]
@@ -236,8 +238,11 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         del self.streams[stream_id]
         del self.events[stream_id]
 
-        if not self.streams and self.state == ConnectionState.ACTIVE:
-            self.state = ConnectionState.IDLE
+        if not self.streams:
+            if self.state == ConnectionState.ACTIVE:
+                self.state = ConnectionState.IDLE
+            elif self.state == ConnectionState.ACTIVE_NON_REUSABLE:
+                self.close()
 
 
 class SyncHTTP2Stream:
