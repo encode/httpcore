@@ -2,7 +2,7 @@ from ssl import SSLContext
 from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 
 from .._threadlock import ThreadLock
-from .base import SyncByteStream, SyncHTTPTransport, ConnectionState
+from .base import SyncByteStream, SyncHTTPTransport, ConnectionState, HTTPVersion
 from .http2 import SyncHTTP2Connection
 from .http11 import SyncHTTP11Connection
 
@@ -114,14 +114,19 @@ class SyncConnectionPool(SyncHTTPTransport):
                             # IDLE connections that are still maintained may
                             # be reused.
                             reuse_connection = connection
+                    elif (
+                        connection.state == ConnectionState.ACTIVE
+                        and connection.http_version == HTTPVersion.HTTP_2
+                    ):
+                        # HTTP/2 connections may be reused.
+                        reuse_connection = connection
 
                 # Clean up the connections mapping if we've no connections
                 # remaining for this origin.
                 if not connections:
                     del self.connections[origin]
 
-            #  Mark the connection as ACTIVE before we return it, so that it
-            # will not be re-acquired.
+            # Mark the connection as ACTIVE before we return it.
             if reuse_connection is not None:
                 reuse_connection.state = ConnectionState.ACTIVE
 

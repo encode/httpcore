@@ -17,7 +17,7 @@ from h2.settings import SettingCodes, Settings
 
 from .._backends.auto import SyncLock, SyncSocketStream, SyncBackend
 from .._exceptions import ProtocolError
-from .base import SyncByteStream, SyncHTTPTransport, ConnectionState
+from .base import SyncByteStream, SyncHTTPTransport, ConnectionState, HTTPVersion
 
 
 class SyncHTTP2Connection(SyncHTTPTransport):
@@ -41,6 +41,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         self.events = {}  # type: Dict[int, List[h2.events.Event]]
 
         self.state = ConnectionState.PENDING
+        self.http_version = HTTPVersion.HTTP_2
 
     @property
     def is_http2(self) -> bool:
