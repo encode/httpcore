@@ -1,9 +1,10 @@
 from ssl import SSLContext
-from typing import Callable, Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 
 from .._threadlock import ThreadLock
-from .base import SyncByteStream, SyncHTTPTransport
-from .http11 import SyncHTTP11Connection, ConnectionState
+from .base import SyncByteStream, SyncHTTPTransport, ConnectionState
+from .http2 import SyncHTTP2Connection
+from .http11 import SyncHTTP11Connection
 
 Origin = Tuple[bytes, bytes, int]
 URL = Tuple[bytes, bytes, int, bytes]
@@ -15,7 +16,7 @@ class ResponseByteStream(SyncByteStream):
     def __init__(
         self,
         stream: SyncByteStream,
-        connection: SyncHTTP11Connection,
+        connection: Union[SyncHTTP11Connection, SyncHTTP2Connection],
         callback: Callable,
     ) -> None:
         """
@@ -52,11 +53,12 @@ class SyncConnectionPool(SyncHTTPTransport):
     * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for verifying connections.
     """
 
-    def __init__(
-        self, ssl_context: SSLContext = None,
-    ):
+    def __init__(self, ssl_context: SSLContext = None, http2: bool = False):
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
-        self.connections: Dict[Origin, Set[SyncHTTP11Connection]] = {}
+        self.http2 = http2
+        self.connections: Dict[
+            Origin, Set[Union[SyncHTTP11Connection, SyncHTTP2Connection]]
+        ] = {}
         self.thread_lock = ThreadLock()
 
     def request(
@@ -71,9 +73,14 @@ class SyncConnectionPool(SyncHTTPTransport):
         connection = self._get_connection_from_pool(origin)
 
         if connection is None:
-            connection = SyncHTTP11Connection(
-                origin=origin, ssl_context=self.ssl_context,
-            )
+            if self.http2:
+                connection = SyncHTTP2Connection(
+                    origin=origin, ssl_context=self.ssl_context,
+                )
+            else:
+                connection = SyncHTTP11Connection(
+                    origin=origin, ssl_context=self.ssl_context,
+                )
             with self.thread_lock:
                 self.connections.setdefault(origin, set())
                 self.connections[origin].add(connection)
@@ -88,7 +95,7 @@ class SyncConnectionPool(SyncHTTPTransport):
 
     def _get_connection_from_pool(
         self, origin: Origin
-    ) -> Optional[SyncHTTP11Connection]:
+    ) -> Optional[Union[SyncHTTP11Connection, SyncHTTP2Connection]]:
         # Determine expired keep alive connections on this origin.
         reuse_connection = None
         connections_to_close = set()
@@ -124,7 +131,9 @@ class SyncConnectionPool(SyncHTTPTransport):
 
         return reuse_connection
 
-    def _response_closed(self, connection: SyncHTTP11Connection):
+    def _response_closed(
+        self, connection: Union[SyncHTTP11Connection, SyncHTTP2Connection]
+    ):
         with self.thread_lock:
             if connection.state == ConnectionState.CLOSED:
                 self.connections[connection.origin].remove(connection)

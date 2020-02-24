@@ -1,9 +1,10 @@
 from ssl import SSLContext
-from typing import Callable, Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 
 from .._threadlock import ThreadLock
-from .base import AsyncByteStream, AsyncHTTPTransport
-from .http11 import AsyncHTTP11Connection, ConnectionState
+from .base import AsyncByteStream, AsyncHTTPTransport, ConnectionState
+from .http2 import AsyncHTTP2Connection
+from .http11 import AsyncHTTP11Connection
 
 Origin = Tuple[bytes, bytes, int]
 URL = Tuple[bytes, bytes, int, bytes]
@@ -15,7 +16,7 @@ class ResponseByteStream(AsyncByteStream):
     def __init__(
         self,
         stream: AsyncByteStream,
-        connection: AsyncHTTP11Connection,
+        connection: Union[AsyncHTTP11Connection, AsyncHTTP2Connection],
         callback: Callable,
     ) -> None:
         """
@@ -52,11 +53,12 @@ class AsyncConnectionPool(AsyncHTTPTransport):
     * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for verifying connections.
     """
 
-    def __init__(
-        self, ssl_context: SSLContext = None,
-    ):
+    def __init__(self, ssl_context: SSLContext = None, http2: bool = False):
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
-        self.connections: Dict[Origin, Set[AsyncHTTP11Connection]] = {}
+        self.http2 = http2
+        self.connections: Dict[
+            Origin, Set[Union[AsyncHTTP11Connection, AsyncHTTP2Connection]]
+        ] = {}
         self.thread_lock = ThreadLock()
 
     async def request(
@@ -71,9 +73,14 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         connection = await self._get_connection_from_pool(origin)
 
         if connection is None:
-            connection = AsyncHTTP11Connection(
-                origin=origin, ssl_context=self.ssl_context,
-            )
+            if self.http2:
+                connection = AsyncHTTP2Connection(
+                    origin=origin, ssl_context=self.ssl_context,
+                )
+            else:
+                connection = AsyncHTTP11Connection(
+                    origin=origin, ssl_context=self.ssl_context,
+                )
             async with self.thread_lock:
                 self.connections.setdefault(origin, set())
                 self.connections[origin].add(connection)
@@ -88,7 +95,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
 
     async def _get_connection_from_pool(
         self, origin: Origin
-    ) -> Optional[AsyncHTTP11Connection]:
+    ) -> Optional[Union[AsyncHTTP11Connection, AsyncHTTP2Connection]]:
         # Determine expired keep alive connections on this origin.
         reuse_connection = None
         connections_to_close = set()
@@ -124,7 +131,9 @@ class AsyncConnectionPool(AsyncHTTPTransport):
 
         return reuse_connection
 
-    async def _response_closed(self, connection: AsyncHTTP11Connection):
+    async def _response_closed(
+        self, connection: Union[AsyncHTTP11Connection, AsyncHTTP2Connection]
+    ):
         async with self.thread_lock:
             if connection.state == ConnectionState.CLOSED:
                 self.connections[connection.origin].remove(connection)
