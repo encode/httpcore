@@ -1,6 +1,7 @@
 from ssl import SSLContext
 from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 
+from .._exceptions import NewConnectionRequired
 from .._threadlock import ThreadLock
 from .base import AsyncByteStream, AsyncHTTPTransport, ConnectionState, HTTPVersion
 from .http2 import AsyncHTTP2Connection
@@ -70,24 +71,31 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, Headers, AsyncByteStream]:
         origin = url[:3]
-        connection = await self._get_connection_from_pool(origin)
 
-        if connection is None:
-            if self.http2:
-                connection = AsyncHTTP2Connection(
-                    origin=origin, ssl_context=self.ssl_context,
-                )
-            else:
-                connection = AsyncHTTP11Connection(
-                    origin=origin, ssl_context=self.ssl_context,
-                )
-            async with self.thread_lock:
-                self.connections.setdefault(origin, set())
-                self.connections[origin].add(connection)
+        connection: Optional[Union[AsyncHTTP11Connection, AsyncHTTP2Connection]] = None
+        while connection is None:
+            connection = await self._get_connection_from_pool(origin)
 
-        response = await connection.request(
-            method, url, headers=headers, stream=stream, timeout=timeout
-        )
+            if connection is None:
+                if self.http2:
+                    connection = AsyncHTTP2Connection(
+                        origin=origin, ssl_context=self.ssl_context,
+                    )
+                else:
+                    connection = AsyncHTTP11Connection(
+                        origin=origin, ssl_context=self.ssl_context,
+                    )
+                async with self.thread_lock:
+                    self.connections.setdefault(origin, set())
+                    self.connections[origin].add(connection)
+
+            try:
+                response = await connection.request(
+                    method, url, headers=headers, stream=stream, timeout=timeout
+                )
+            except NewConnectionRequired:
+                connection = None
+
         wrapped_stream = ResponseByteStream(
             response[4], connection=connection, callback=self._response_closed
         )

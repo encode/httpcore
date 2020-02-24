@@ -13,10 +13,11 @@ from typing import (
 import h2.connection
 import h2.events
 from h2.config import H2Configuration
+from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
 from .._backends.auto import AsyncLock, AsyncSocketStream, AutoBackend
-from .._exceptions import ProtocolError
+from .._exceptions import NewConnectionRequired, ProtocolError
 from .base import AsyncByteStream, AsyncHTTPTransport, ConnectionState, HTTPVersion
 
 
@@ -73,7 +74,12 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
                 self.socket = await self._connect(timeout)
                 await self.send_connection_init(timeout)
             self.state = ConnectionState.ACTIVE
-            stream_id = self.h2_state.get_next_available_stream_id()
+
+            try:
+                stream_id = self.h2_state.get_next_available_stream_id()
+            except NoAvailableStreamIDError:
+                self.state = ConnectionState.ACTIVE_NON_REUSABLE
+                raise NewConnectionRequired()
 
         h2_stream = AsyncHTTP2Stream(stream_id=stream_id, connection=self)
         self.streams[stream_id] = h2_stream
@@ -230,7 +236,7 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
         del self.streams[stream_id]
         del self.events[stream_id]
 
-        if not self.streams:
+        if not self.streams and self.state == ConnectionState.ACTIVE:
             self.state = ConnectionState.IDLE
 
 

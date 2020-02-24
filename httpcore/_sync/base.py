@@ -10,8 +10,9 @@ def empty():
 class ConnectionState(enum.IntEnum):
     PENDING = 0
     ACTIVE = 1
-    IDLE = 2
-    CLOSED = 3
+    ACTIVE_NON_REUSABLE = 2
+    IDLE = 3
+    CLOSED = 4
 
 
 class HTTPVersion(enum.IntEnum):
