@@ -14,7 +14,7 @@ import h11
 
 from .._backends.auto import SyncSocketStream, SyncBackend
 from .._exceptions import ProtocolError, map_exceptions
-from .base import SyncByteStream, SyncHTTPTransport, ConnectionState
+from .base import SyncByteStream, SyncHTTPTransport, ConnectionState, HTTPVersion
 
 H11Event = Union[
     h11.Request,
@@ -43,6 +43,7 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         self.h11_state = h11.Connection(our_role=h11.CLIENT)
 
         self.state = ConnectionState.PENDING
+        self.http_version = HTTPVersion.HTTP_11
 
     def request(
         self,

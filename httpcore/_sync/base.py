@@ -14,6 +14,11 @@ class ConnectionState(enum.IntEnum):
     CLOSED = 3
 
 
+class HTTPVersion(enum.IntEnum):
+    HTTP_11 = 1
+    HTTP_2 = 2
+
+
 class SyncByteStream:
     """
     The base interface for request and response bodies.

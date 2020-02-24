@@ -17,7 +17,7 @@ from h2.settings import SettingCodes, Settings
 
 from .._backends.auto import AsyncLock, AsyncSocketStream, AutoBackend
 from .._exceptions import ProtocolError
-from .base import AsyncByteStream, AsyncHTTPTransport, ConnectionState
+from .base import AsyncByteStream, AsyncHTTPTransport, ConnectionState, HTTPVersion
 
 
 class AsyncHTTP2Connection(AsyncHTTPTransport):
@@ -41,6 +41,7 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
         self.events = {}  # type: Dict[int, List[h2.events.Event]]
 
         self.state = ConnectionState.PENDING
+        self.http_version = HTTPVersion.HTTP_2
 
     @property
     def is_http2(self) -> bool:
