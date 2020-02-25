@@ -75,10 +75,12 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         self,
         ssl_context: SSLContext = None,
         max_connections: int = None,
+        max_keepalive: int = None,
         http2: bool = False,
     ):
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
         self.max_connections = max_connections
+        self.max_keepalive = max_keepalive
         self.http2 = http2
         self.connections: Dict[Origin, Set[AsyncHTTPConnection]] = {}
         self.thread_lock = ThreadLock()
@@ -201,12 +203,32 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         return reuse_connection
 
     async def _response_closed(self, connection: AsyncHTTPConnection):
+        remove_from_pool = False
+        close_connection = False
+
         async with self.thread_lock:
             if connection.state == ConnectionState.CLOSED:
-                self.connection_semaphore.release()
-                self.connections[connection.origin].remove(connection)
-                if not self.connections[connection.origin]:
-                    del self.connections[connection.origin]
+                remove_from_pool = True
+            elif (
+                connection.state == ConnectionState.IDLE
+                and self.max_keepalive is not None
+            ):
+                num_connections = sum(
+                    [len(conns) for conns in self.connections.values()]
+                )
+                if num_connections > self.max_keepalive:
+                    remove_from_pool = True
+                    close_connection = True
+
+            if remove_from_pool:
+                if connection in self.connections.get(connection.origin, set()):
+                    self.connection_semaphore.release()
+                    self.connections[connection.origin].remove(connection)
+                    if not self.connections[connection.origin]:
+                        del self.connections[connection.origin]
+
+        if close_connection:
+            await connection.close()
 
     async def close(self) -> None:
         connections_to_close = set()
