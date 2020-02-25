@@ -3,8 +3,8 @@ from typing import Dict, List, Optional, Tuple
 
 from .._exceptions import ProxyError
 from .base import SyncByteStream, SyncHTTPTransport
+from .connection import SyncHTTPConnection
 from .connection_pool import SyncConnectionPool, ResponseByteStream
-from .http11 import SyncHTTP11Connection
 
 Origin = Tuple[bytes, bytes, int]
 URL = Tuple[bytes, bytes, int, bytes]
@@ -82,8 +82,8 @@ class SyncHTTPProxy(SyncConnectionPool):
         connection = self._get_connection_from_pool(origin)
 
         if connection is None:
-            connection = SyncHTTP11Connection(
-                origin=origin, ssl_context=self.ssl_context,
+            connection = SyncHTTPConnection(
+                origin=origin, http2=False, ssl_context=self.ssl_context,
             )
             with self.thread_lock:
                 self.connections.setdefault(origin, set())
@@ -122,8 +122,8 @@ class SyncHTTPProxy(SyncConnectionPool):
         connection = self._get_connection_from_pool(origin)
 
         if connection is None:
-            connection = SyncHTTP11Connection(
-                origin=origin, ssl_context=self.ssl_context,
+            connection = SyncHTTPConnection(
+                origin=origin, http2=False, ssl_context=self.ssl_context,
             )
             with self.thread_lock:
                 self.connections.setdefault(origin, set())
@@ -157,7 +157,7 @@ class SyncHTTPProxy(SyncConnectionPool):
                 raise ProxyError(msg)
 
             # Upgrade to TLS.
-            connection._start_tls(target, timeout)
+            connection.start_tls(target, timeout)
 
         # Once the connection has been established we can send requests on
         # it as normal.

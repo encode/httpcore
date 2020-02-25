@@ -7,17 +7,31 @@ def empty():
     yield b""
 
 
+class NewConnectionRequired(Exception):
+    pass
+
+
 class ConnectionState(enum.IntEnum):
-    PENDING = 0
-    ACTIVE = 1
-    ACTIVE_NON_REUSABLE = 2
-    IDLE = 3
-    CLOSED = 4
+    """
+    PENDING  READY
+        |    |   ^
+        v    V   |
+        ACTIVE   |
+         |  |    |
+         |  V    |
+         V  IDLE-+
+       FULL   |
+         |    |
+         V    V
+         CLOSED
+    """
 
-
-class HTTPVersion(enum.IntEnum):
-    HTTP_11 = 1
-    HTTP_2 = 2
+    PENDING = 0  # Connection not yet acquired.
+    READY = 1  # Re-acquired from pool, about to send a request.
+    ACTIVE = 2  # Active requests.
+    FULL = 3  # Active requests, no more stream IDs available.
+    IDLE = 4  # No active requests.
+    CLOSED = 5  # Connection closed.
 
 
 class SyncByteStream:

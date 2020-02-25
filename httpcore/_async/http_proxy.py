@@ -3,8 +3,8 @@ from typing import Dict, List, Optional, Tuple
 
 from .._exceptions import ProxyError
 from .base import AsyncByteStream, AsyncHTTPTransport
+from .connection import AsyncHTTPConnection
 from .connection_pool import AsyncConnectionPool, ResponseByteStream
-from .http11 import AsyncHTTP11Connection
 
 Origin = Tuple[bytes, bytes, int]
 URL = Tuple[bytes, bytes, int, bytes]
@@ -82,8 +82,8 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         connection = await self._get_connection_from_pool(origin)
 
         if connection is None:
-            connection = AsyncHTTP11Connection(
-                origin=origin, ssl_context=self.ssl_context,
+            connection = AsyncHTTPConnection(
+                origin=origin, http2=False, ssl_context=self.ssl_context,
             )
             async with self.thread_lock:
                 self.connections.setdefault(origin, set())
@@ -122,8 +122,8 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         connection = await self._get_connection_from_pool(origin)
 
         if connection is None:
-            connection = AsyncHTTP11Connection(
-                origin=origin, ssl_context=self.ssl_context,
+            connection = AsyncHTTPConnection(
+                origin=origin, http2=False, ssl_context=self.ssl_context,
             )
             async with self.thread_lock:
                 self.connections.setdefault(origin, set())
@@ -157,7 +157,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 raise ProxyError(msg)
 
             # Upgrade to TLS.
-            await connection._start_tls(target, timeout)
+            await connection.start_tls(target, timeout)
 
         # Once the connection has been established we can send requests on
         # it as normal.

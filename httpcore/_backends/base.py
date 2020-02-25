@@ -10,6 +10,9 @@ class AsyncSocketStream:
     backends, or for stand-alone test cases.
     """
 
+    def get_http_version(self) -> str:
+        raise NotImplementedError()  # pragma: no cover
+
     async def start_tls(
         self,
         hostname: bytes,

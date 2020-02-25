@@ -1,3 +1,4 @@
+from http import HTTPStatus
 from ssl import SSLContext
 from typing import (
     Iterator,
@@ -17,8 +18,20 @@ from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
 from .._backends.auto import SyncLock, SyncSocketStream, SyncBackend
-from .._exceptions import NewConnectionRequired, ProtocolError
-from .base import SyncByteStream, SyncHTTPTransport, ConnectionState, HTTPVersion
+from .._exceptions import ProtocolError
+from .base import (
+    SyncByteStream,
+    SyncHTTPTransport,
+    ConnectionState,
+    NewConnectionRequired,
+)
+
+
+def get_reason_phrase(status_code: int) -> bytes:
+    try:
+        return HTTPStatus(status_code).phrase.encode("ascii")
+    except ValueError:
+        return b""
 
 
 class SyncHTTP2Connection(SyncHTTPTransport):
@@ -26,27 +39,19 @@ class SyncHTTP2Connection(SyncHTTPTransport):
     CONFIG = H2Configuration(validate_inbound_headers=False)
 
     def __init__(
-        self,
-        origin: Tuple[bytes, bytes, int],
-        socket: SyncSocketStream = None,
-        ssl_context: SSLContext = None,
+        self, socket: SyncSocketStream, ssl_context: SSLContext = None,
     ):
-        self.origin = origin
         self.socket = socket
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
 
         self.backend = SyncBackend()
         self.h2_state = h2.connection.H2Connection(config=self.CONFIG)
 
+        self.sent_connection_init = False
         self.streams = {}  # type: Dict[int, SyncHTTP2Stream]
         self.events = {}  # type: Dict[int, List[h2.events.Event]]
 
-        self.state = ConnectionState.PENDING
-        self.http_version = HTTPVersion.HTTP_2
-
-    @property
-    def is_http2(self) -> bool:
-        return True
+        self.state = ConnectionState.ACTIVE
 
     @property
     def init_lock(self) -> SyncLock:
@@ -55,6 +60,15 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         if not hasattr(self, "_initialization_lock"):
             self._initialization_lock = self.backend.create_lock()
         return self._initialization_lock
+
+    def start_tls(
+        self, hostname: bytes, timeout: Dict[str, Optional[float]] = None
+    ):
+        pass
+
+    def mark_as_ready(self):
+        if self.state == ConnectionState.IDLE:
+            self.state = ConnectionState.READY
 
     def request(
         self,
@@ -66,39 +80,31 @@ class SyncHTTP2Connection(SyncHTTPTransport):
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         timeout = {} if timeout is None else timeout
 
-        assert url[:3] == self.origin
-
         with self.init_lock:
-            if self.state == ConnectionState.PENDING:
+            if not self.sent_connection_init:
                 # The very first stream is responsible for initiating the connection.
-                self.socket = self._connect(timeout)
+                self.state = ConnectionState.ACTIVE
                 self.send_connection_init(timeout)
-            self.state = ConnectionState.ACTIVE
+                self.sent_connection_init = True
 
             try:
                 stream_id = self.h2_state.get_next_available_stream_id()
             except NoAvailableStreamIDError:
-                self.state = ConnectionState.ACTIVE_NON_REUSABLE
+                self.state = ConnectionState.FULL
                 raise NewConnectionRequired()
+            else:
+                self.state = ConnectionState.ACTIVE
 
         h2_stream = SyncHTTP2Stream(stream_id=stream_id, connection=self)
         self.streams[stream_id] = h2_stream
         self.events[stream_id] = []
         return h2_stream.request(method, url, headers, stream, timeout)
 
-    def _connect(self, timeout: Dict[str, Optional[float]]) -> SyncSocketStream:
-        scheme, hostname, port = self.origin
-        ssl_context = self.ssl_context
-        ssl_context.set_alpn_protocols(["http/1.1", "h2"])
-        return self.backend.open_tcp_stream(hostname, port, ssl_context, timeout)
-
     def send_connection_init(self, timeout: Dict[str, Optional[float]]) -> None:
         """
         The HTTP/2 connection requires some initial setup before we can start
         using individual request/response streams on it.
         """
-        assert self.socket is not None
-
         # Need to set these manually here instead of manipulating via
         # __setitem__() otherwise the H2Connection will emit SettingsUpdate
         # frames in addition to sending the undesired defaults.
@@ -131,15 +137,12 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         return False
 
     def is_connection_dropped(self) -> bool:
-        assert self.socket is not None
-
         return self.socket.is_connection_dropped()
 
     def close(self) -> None:
         if self.state != ConnectionState.CLOSED:
             self.state = ConnectionState.CLOSED
 
-            assert self.socket is not None
             self.socket.close()
 
     def wait_for_outgoing_flow(
@@ -177,8 +180,6 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         """
         Read some data from the network, and update the H2 state.
         """
-        assert self.socket is not None
-
         data = self.socket.read(self.READ_NUM_BYTES, timeout)
         events = self.h2_state.receive_data(data)
         for event in events:
@@ -200,8 +201,6 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         end_stream: bool,
         timeout: Dict[str, Optional[float]],
     ) -> None:
-        assert self.socket is not None
-
         self.h2_state.send_headers(stream_id, headers, end_stream=end_stream)
         self.h2_state.increment_flow_control_window(2 ** 24, stream_id=stream_id)
         data_to_send = self.h2_state.data_to_send()
@@ -210,8 +209,6 @@ class SyncHTTP2Connection(SyncHTTPTransport):
     def send_data(
         self, stream_id: int, chunk: bytes, timeout: Dict[str, Optional[float]]
     ) -> None:
-        assert self.socket is not None
-
         self.h2_state.send_data(stream_id, chunk)
         data_to_send = self.h2_state.data_to_send()
         self.socket.write(data_to_send, timeout)
@@ -219,8 +216,6 @@ class SyncHTTP2Connection(SyncHTTPTransport):
     def end_stream(
         self, stream_id: int, timeout: Dict[str, Optional[float]]
     ) -> None:
-        assert self.socket is not None
-
         self.h2_state.end_stream(stream_id)
         data_to_send = self.h2_state.data_to_send()
         self.socket.write(data_to_send, timeout)
@@ -228,8 +223,6 @@ class SyncHTTP2Connection(SyncHTTPTransport):
     def acknowledge_received_data(
         self, stream_id: int, amount: int, timeout: Dict[str, Optional[float]]
     ) -> None:
-        assert self.socket is not None
-
         self.h2_state.acknowledge_received_data(amount, stream_id)
         data_to_send = self.h2_state.data_to_send()
         self.socket.write(data_to_send, timeout)
@@ -241,7 +234,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         if not self.streams:
             if self.state == ConnectionState.ACTIVE:
                 self.state = ConnectionState.IDLE
-            elif self.state == ConnectionState.ACTIVE_NON_REUSABLE:
+            elif self.state == ConnectionState.FULL:
                 self.close()
 
 
@@ -274,11 +267,12 @@ class SyncHTTP2Stream:
 
         # Receive the response.
         status_code, headers = self.receive_response(timeout)
+        reason_phrase = get_reason_phrase(status_code)
         stream = SyncByteStream(
-            iterator=self.body_iter(timeout), close_func=self.close
+            iterator=self.body_iter(timeout), close_func=self._response_closed
         )
 
-        return (b"HTTP/2", status_code, b"", headers, stream)
+        return (b"HTTP/2", status_code, reason_phrase, headers, stream)
 
     def send_headers(
         self,
@@ -351,5 +345,5 @@ class SyncHTTP2Stream:
             elif isinstance(event, (h2.events.StreamEnded, h2.events.StreamReset)):
                 break
 
-    def close(self) -> None:
+    def _response_closed(self) -> None:
         self.connection.close_stream(self.stream_id)
