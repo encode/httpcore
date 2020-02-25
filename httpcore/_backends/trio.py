@@ -13,7 +13,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
-from .base import AsyncBackend, AsyncLock, AsyncSocketStream
+from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 
 def none_as_inf(value: Optional[float]) -> float:
@@ -109,6 +109,30 @@ class Lock(AsyncLock):
         await self._lock.acquire()
 
 
+class Semaphore(AsyncSemaphore):
+    def __init__(self, max_value: int, exc_class: type):
+        self.max_value = max_value
+        self.exc_class = exc_class
+
+    @property
+    def semaphore(self) -> trio.Semaphore:
+        if not hasattr(self, "_semaphore"):
+            self._semaphore = trio.Semaphore(self.max_value, max_value=self.max_value)
+        return self._semaphore
+
+    async def acquire(self, timeout: float = None) -> None:
+        timeout = none_as_inf(timeout)
+
+        with trio.move_on_after(timeout):
+            await self.semaphore.acquire()
+            return
+
+        raise self.exc_class()
+
+    def release(self) -> None:
+        self.semaphore.release()
+
+
 class TrioBackend(AsyncBackend):
     async def open_tcp_stream(
         self,
@@ -137,3 +161,6 @@ class TrioBackend(AsyncBackend):
 
     def create_lock(self) -> AsyncLock:
         return Lock()
+
+    def create_semaphore(self, max_value: int, exc_class: type) -> AsyncSemaphore:
+        return Semaphore(max_value, exc_class=exc_class)

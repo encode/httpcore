@@ -3,8 +3,8 @@ from typing import Dict, Optional
 
 import sniffio
 
-from .base import AsyncBackend, AsyncLock, AsyncSocketStream
-from .sync import SyncBackend, SyncLock, SyncSocketStream
+from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
+from .sync import SyncBackend, SyncLock, SyncSemaphore, SyncSocketStream
 
 
 class AutoBackend(AsyncBackend):
@@ -36,3 +36,6 @@ class AutoBackend(AsyncBackend):
 
     def create_lock(self) -> AsyncLock:
         return self.backend.create_lock()
+
+    def create_semaphore(self, max_value: int, exc_class: type) -> AsyncSemaphore:
+        return self.backend.create_semaphore(max_value, exc_class=exc_class)

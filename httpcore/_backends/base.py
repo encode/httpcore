@@ -57,6 +57,19 @@ class AsyncLock:
         raise NotImplementedError()  # pragma: no cover
 
 
+class AsyncSemaphore:
+    """
+    An abstract interface for Semaphore classes.
+    Abstracts away any asyncio-specific interfaces.
+    """
+
+    async def acquire(self, timeout: float = None) -> None:
+        raise NotImplementedError()  # pragma: no cover
+
+    def release(self) -> None:
+        raise NotImplementedError()  # pragma: no cover
+
+
 class AsyncBackend:
     async def open_tcp_stream(
         self,
@@ -68,4 +81,7 @@ class AsyncBackend:
         raise NotImplementedError()  # pragma: no cover
 
     def create_lock(self) -> AsyncLock:
+        raise NotImplementedError()  # pragma: no cover
+
+    def create_semaphore(self, max_value: int, exc_class: type) -> AsyncSemaphore:
         raise NotImplementedError()  # pragma: no cover

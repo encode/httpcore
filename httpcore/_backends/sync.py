@@ -105,6 +105,20 @@ class SyncLock:
         self._lock.acquire()
 
 
+class SyncSemaphore:
+    def __init__(self, max_value: int, exc_class: type) -> None:
+        self.max_value = max_value
+        self.exc_class = exc_class
+        self._semaphore = threading.Semaphore(max_value)
+
+    def acquire(self, timeout: float = None) -> None:
+        if not self._semaphore.acquire(timeout=timeout):  # type: ignore
+            raise self.exc_class()
+
+    def release(self) -> None:
+        self._semaphore.release()
+
+
 class SyncBackend:
     def open_tcp_stream(
         self,
@@ -128,3 +142,6 @@ class SyncBackend:
 
     def create_lock(self) -> SyncLock:
         return SyncLock()
+
+    def create_semaphore(self, max_value: int, exc_class: type) -> SyncSemaphore:
+        return SyncSemaphore(max_value, exc_class=exc_class)

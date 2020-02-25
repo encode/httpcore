@@ -12,7 +12,7 @@ from typing import (
 
 import h11
 
-from .._backends.auto import SyncSocketStream, SyncBackend
+from .._backends.auto import SyncSocketStream
 from .._exceptions import ProtocolError, map_exceptions
 from .base import SyncByteStream, SyncHTTPTransport, ConnectionState
 
@@ -35,7 +35,6 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         self.socket = socket
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
 
-        self.backend = SyncBackend()
         self.h11_state = h11.Connection(our_role=h11.CLIENT)
 
         self.state = ConnectionState.ACTIVE

@@ -24,6 +24,10 @@ class ProxyError(Exception):
 # Timeout errors
 
 
+class PoolTimeout(Exception):
+    pass
+
+
 class ConnectTimeout(Exception):
     pass
 
