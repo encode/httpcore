@@ -79,10 +79,10 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         http_version = socket.get_http_version()
         if http_version == "HTTP/2":
             self.is_http2 = True
-            self.connection = AsyncHTTP2Connection(socket)
+            self.connection = AsyncHTTP2Connection(socket=socket, backend=self.backend)
         else:
             self.is_http11 = True
-            self.connection = AsyncHTTP11Connection(socket)
+            self.connection = AsyncHTTP11Connection(socket=socket)
 
     @property
     def state(self) -> ConnectionState:

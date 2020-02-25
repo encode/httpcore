@@ -12,7 +12,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
-from .base import AsyncBackend, AsyncLock, AsyncSocketStream
+from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 SSL_MONKEY_PATCH_APPLIED = False
 
@@ -189,6 +189,27 @@ class Lock(AsyncLock):
         await self._lock.acquire()
 
 
+class Semaphore(AsyncSemaphore):
+    def __init__(self, max_value: int, exc_class: type) -> None:
+        self.max_value = max_value
+        self.exc_class = exc_class
+
+    @property
+    def semaphore(self) -> asyncio.BoundedSemaphore:
+        if not hasattr(self, "_semaphore"):
+            self._semaphore = asyncio.BoundedSemaphore(value=self.max_value)
+        return self._semaphore
+
+    async def acquire(self, timeout: float = None) -> None:
+        try:
+            await asyncio.wait_for(self.semaphore.acquire(), timeout)
+        except asyncio.TimeoutError:
+            raise self.exc_class()
+
+    def release(self) -> None:
+        self.semaphore.release()
+
+
 class AsyncioBackend(AsyncBackend):
     def __init__(self) -> None:
         global SSL_MONKEY_PATCH_APPLIED
@@ -217,3 +238,6 @@ class AsyncioBackend(AsyncBackend):
 
     def create_lock(self) -> AsyncLock:
         return Lock()
+
+    def create_semaphore(self, max_value: int, exc_class: type) -> AsyncSemaphore:
+        return Semaphore(max_value, exc_class=exc_class)

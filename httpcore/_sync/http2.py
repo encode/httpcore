@@ -39,12 +39,15 @@ class SyncHTTP2Connection(SyncHTTPTransport):
     CONFIG = H2Configuration(validate_inbound_headers=False)
 
     def __init__(
-        self, socket: SyncSocketStream, ssl_context: SSLContext = None,
+        self,
+        socket: SyncSocketStream,
+        backend: SyncBackend,
+        ssl_context: SSLContext = None,
     ):
         self.socket = socket
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
 
-        self.backend = SyncBackend()
+        self.backend = backend
         self.h2_state = h2.connection.H2Connection(config=self.CONFIG)
 
         self.sent_connection_init = False

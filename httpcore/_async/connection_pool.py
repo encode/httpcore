@@ -1,6 +1,8 @@
 from ssl import SSLContext
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
+from .._backends.auto import AsyncSemaphore, AutoBackend
+from .._exceptions import PoolTimeout
 from .._threadlock import ThreadLock
 from .base import (
     AsyncByteStream,
@@ -14,6 +16,17 @@ Origin = Tuple[bytes, bytes, int]
 URL = Tuple[bytes, bytes, int, bytes]
 Headers = List[Tuple[bytes, bytes]]
 TimeoutDict = Dict[str, Optional[float]]
+
+
+class NullSemaphore(AsyncSemaphore):
+    def __init__(self) -> None:
+        pass
+
+    async def acquire(self, timeout: float = None) -> None:
+        return
+
+    def release(self) -> None:
+        return
 
 
 class ResponseByteStream(AsyncByteStream):
@@ -58,11 +71,32 @@ class AsyncConnectionPool(AsyncHTTPTransport):
     * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for verifying connections.
     """
 
-    def __init__(self, ssl_context: SSLContext = None, http2: bool = False):
+    def __init__(
+        self,
+        ssl_context: SSLContext = None,
+        max_connections: int = None,
+        http2: bool = False,
+    ):
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
+        self.max_connections = max_connections
         self.http2 = http2
         self.connections: Dict[Origin, Set[AsyncHTTPConnection]] = {}
         self.thread_lock = ThreadLock()
+        self.backend = AutoBackend()
+
+    @property
+    def connection_semaphore(self) -> AsyncSemaphore:
+        # We do this lazily, to make sure backend autodetection always
+        # runs within an async context.
+        if not hasattr(self, "_connection_semaphore"):
+            if self.max_connections is not None:
+                self._connection_semaphore = self.backend.create_semaphore(
+                    self.max_connections, exc_class=PoolTimeout
+                )
+            else:
+                self._connection_semaphore = NullSemaphore()
+
+        return self._connection_semaphore
 
     async def request(
         self,
@@ -72,13 +106,18 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         stream: AsyncByteStream = None,
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, Headers, AsyncByteStream]:
+        timeout = {} if timeout is None else timeout
         origin = url[:3]
 
         connection: Optional[AsyncHTTPConnection] = None
         while connection is None:
             connection = await self._get_connection_from_pool(origin)
+            is_new_connection = False
 
             if connection is None:
+                await self.connection_semaphore.acquire(
+                    timeout=timeout.get("pool", None)
+                )
                 connection = AsyncHTTPConnection(
                     origin=origin, http2=self.http2, ssl_context=self.ssl_context,
                 )
@@ -92,6 +131,13 @@ class AsyncConnectionPool(AsyncHTTPTransport):
                 )
             except NewConnectionRequired:
                 connection = None
+            except:
+                async with self.thread_lock:
+                    self.connection_semaphore.release()
+                    self.connections[connection.origin].remove(connection)
+                    if not self.connections[connection.origin]:
+                        del self.connections[connection.origin]
+                raise
 
         wrapped_stream = ResponseByteStream(
             response[4], connection=connection, callback=self._response_closed
@@ -157,6 +203,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
     async def _response_closed(self, connection: AsyncHTTPConnection):
         async with self.thread_lock:
             if connection.state == ConnectionState.CLOSED:
+                self.connection_semaphore.release()
                 self.connections[connection.origin].remove(connection)
                 if not self.connections[connection.origin]:
                     del self.connections[connection.origin]

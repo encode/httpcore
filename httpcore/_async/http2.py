@@ -39,12 +39,15 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
     CONFIG = H2Configuration(validate_inbound_headers=False)
 
     def __init__(
-        self, socket: AsyncSocketStream, ssl_context: SSLContext = None,
+        self,
+        socket: AsyncSocketStream,
+        backend: AutoBackend,
+        ssl_context: SSLContext = None,
     ):
         self.socket = socket
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
 
-        self.backend = AutoBackend()
+        self.backend = backend
         self.h2_state = h2.connection.H2Connection(config=self.CONFIG)
 
         self.sent_connection_init = False
