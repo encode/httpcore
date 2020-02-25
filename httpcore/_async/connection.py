@@ -27,7 +27,9 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
             self.ssl_context.set_alpn_protocols(["http/1.1", "h2"])
 
         self.connection: Union[None, AsyncHTTP11Connection, AsyncHTTP2Connection] = None
+        self.is_http11 = False
         self.is_http2 = False
+        self.connect_failed = False
         self.backend = AutoBackend()
 
     @property
@@ -50,7 +52,11 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
 
         async with self.request_lock:
             if self.state == ConnectionState.PENDING:
-                await self._connect(timeout)
+                try:
+                    await self._connect(timeout)
+                except:
+                    self.connect_failed = True
+                    raise
             elif self.state in (ConnectionState.READY, ConnectionState.IDLE):
                 pass
             elif self.state == ConnectionState.ACTIVE and self.is_http2:
@@ -75,11 +81,14 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
             self.is_http2 = True
             self.connection = AsyncHTTP2Connection(socket)
         else:
+            self.is_http11 = True
             self.connection = AsyncHTTP11Connection(socket)
 
     @property
     def state(self) -> ConnectionState:
-        if self.connection is None:
+        if self.connect_failed:
+            return ConnectionState.CLOSED
+        elif self.connection is None:
             return ConnectionState.PENDING
         return self.connection.state
 
