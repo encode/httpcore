@@ -102,6 +102,8 @@ class SyncConnectionPool(SyncHTTPTransport):
         self, origin: Origin
     ) -> Optional[SyncHTTPConnection]:
         # Determine expired keep alive connections on this origin.
+        seen_http11 = False
+        pending_connection = None
         reuse_connection = None
         connections_to_close = set()
 
@@ -109,6 +111,9 @@ class SyncConnectionPool(SyncHTTPTransport):
             if origin in self.connections:
                 connections = self.connections[origin]
                 for connection in list(connections):
+                    if connection.is_http11:
+                        seen_http11 = True
+
                     if connection.state == ConnectionState.IDLE:
                         if connection.is_connection_dropped():
                             # IDLE connections that have been dropped should be
@@ -125,16 +130,23 @@ class SyncConnectionPool(SyncHTTPTransport):
                     ):
                         # HTTP/2 connections may be reused.
                         reuse_connection = connection
+                    elif connection.state == ConnectionState.PENDING:
+                        # Pending connections may potentially be reused.
+                        pending_connection = connection
 
                 # Clean up the connections mapping if we've no connections
                 # remaining for this origin.
                 if not connections:
                     del self.connections[origin]
 
-            # Mark the connection as READY before we return it, to indicate
-            # that if it is HTTP/1.1 then it should not be re-acquired.
             if reuse_connection is not None:
+                # Mark the connection as READY before we return it, to indicate
+                # that if it is HTTP/1.1 then it should not be re-acquired.
                 reuse_connection.mark_as_ready()
+            elif self.http2 and pending_connection is not None and not seen_http11:
+                # If we have a PENDING connection, and no HTTP/1.1 connections
+                # on this origin, then we can attempt to share the connection.
+                reuse_connection = pending_connection
 
         # Close any dropped connections.
         for connection in connections_to_close:

@@ -61,6 +61,14 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
             self._initialization_lock = self.backend.create_lock()
         return self._initialization_lock
 
+    @property
+    def read_lock(self) -> AsyncLock:
+        # We do this lazily, to make sure backend autodetection always
+        # runs within an async context.
+        if not hasattr(self, "_read_lock"):
+            self._read_lock = self.backend.create_lock()
+        return self._read_lock
+
     async def start_tls(
         self, hostname: bytes, timeout: Dict[str, Optional[float]] = None
     ):
@@ -172,8 +180,9 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
         If no events are available yet, then waits on the network until
         an event is available.
         """
-        while not self.events[stream_id]:
-            await self.receive_events(timeout)
+        async with self.read_lock:
+            while not self.events[stream_id]:
+                await self.receive_events(timeout)
         return self.events[stream_id].pop(0)
 
     async def receive_events(self, timeout: Dict[str, Optional[float]]) -> None:
