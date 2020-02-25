@@ -26,6 +26,13 @@ class SocketStream(AsyncSocketStream):
         self.read_lock = trio.Lock()
         self.write_lock = trio.Lock()
 
+    def get_http_version(self) -> str:
+        if not isinstance(self.stream, trio.SSLStream):
+            return "HTTP/1.1"
+
+        ident = self.stream.selected_alpn_protocol()
+        return "HTTP/2" if ident == "h2" else "HTTP/1.1"
+
     async def start_tls(
         self,
         hostname: bytes,

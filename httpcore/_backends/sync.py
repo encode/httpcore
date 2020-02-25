@@ -29,6 +29,13 @@ class SyncSocketStream:
         self.read_lock = threading.Lock()
         self.write_lock = threading.Lock()
 
+    def get_http_version(self) -> str:
+        selected_alpn_protocol = getattr(self.sock, "selected_alpn_protocol", None)
+        if selected_alpn_protocol is not None:
+            ident = selected_alpn_protocol()
+            return "HTTP/2" if ident == "h2" else "HTTP/1.1"
+        return "HTTP/1.1"
+
     def start_tls(
         self,
         hostname: bytes,

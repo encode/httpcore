@@ -48,6 +48,23 @@ def test_https_request():
 
 
 
+def test_http2_request():
+    with httpcore.SyncConnectionPool(http2=True) as http:
+        method = b"GET"
+        url = (b"https", b"example.org", 443, b"/")
+        headers = [(b"host", b"example.org")]
+        http_version, status_code, reason, headers, stream = http.request(
+            method, url, headers
+        )
+        body = read_body(stream)
+
+        assert http_version == b"HTTP/2"
+        assert status_code == 200
+        assert reason == b"OK"
+        assert len(http.connections[url[:3]]) == 1
+
+
+
 def test_closing_http_request():
     with httpcore.SyncConnectionPool() as http:
         method = b"GET"

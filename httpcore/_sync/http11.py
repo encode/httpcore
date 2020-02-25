@@ -14,7 +14,7 @@ import h11
 
 from .._backends.auto import SyncSocketStream, SyncBackend
 from .._exceptions import ProtocolError, map_exceptions
-from .base import SyncByteStream, SyncHTTPTransport, ConnectionState, HTTPVersion
+from .base import SyncByteStream, SyncHTTPTransport, ConnectionState
 
 H11Event = Union[
     h11.Request,
@@ -30,20 +30,19 @@ class SyncHTTP11Connection(SyncHTTPTransport):
     READ_NUM_BYTES = 4096
 
     def __init__(
-        self,
-        origin: Tuple[bytes, bytes, int],
-        socket: SyncSocketStream = None,
-        ssl_context: SSLContext = None,
+        self, socket: SyncSocketStream, ssl_context: SSLContext = None,
     ):
-        self.origin = origin
         self.socket = socket
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
 
         self.backend = SyncBackend()
         self.h11_state = h11.Connection(our_role=h11.CLIENT)
 
-        self.state = ConnectionState.PENDING
-        self.http_version = HTTPVersion.HTTP_11
+        self.state = ConnectionState.ACTIVE
+
+    def mark_as_ready(self):
+        if self.state == ConnectionState.IDLE:
+            self.state = ConnectionState.READY
 
     def request(
         self,
@@ -57,10 +56,6 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         stream = SyncByteStream() if stream is None else stream
         timeout = {} if timeout is None else timeout
 
-        assert url[:3] == self.origin
-
-        if self.state == ConnectionState.PENDING:
-            self.socket = self._connect(timeout)
         self.state = ConnectionState.ACTIVE
 
         self._send_request(method, url, headers, timeout)
@@ -77,17 +72,11 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         )
         return (http_version, status_code, reason_phrase, headers, stream)
 
-    def _start_tls(
+    def start_tls(
         self, hostname: bytes, timeout: Dict[str, Optional[float]] = None
     ):
-        assert self.socket is not None
         timeout = {} if timeout is None else timeout
         self.socket = self.socket.start_tls(hostname, self.ssl_context, timeout)
-
-    def _connect(self, timeout: Dict[str, Optional[float]]) -> SyncSocketStream:
-        scheme, hostname, port = self.origin
-        ssl_context = self.ssl_context if scheme == b"https" else None
-        return self.backend.open_tcp_stream(hostname, port, ssl_context, timeout)
 
     def _send_request(
         self,
@@ -125,8 +114,6 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         Send a single `h11` event to the network, waiting for the data to
         drain before returning.
         """
-        assert self.socket is not None
-
         bytes_to_send = self.h11_state.send(event)
         self.socket.write(bytes_to_send, timeout)
 
@@ -160,8 +147,6 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         """
         Read a single `h11` event, reading more data from the network if needed.
         """
-        assert self.socket is not None
-
         while True:
             with map_exceptions({h11.RemoteProtocolError: ProtocolError}):
                 event = self.h11_state.next_event()
@@ -189,8 +174,7 @@ class SyncHTTP11Connection(SyncHTTPTransport):
                 event = h11.ConnectionClosed()
                 self.h11_state.send(event)
 
-            if self.socket is not None:
-                self.socket.close()
+            self.socket.close()
 
     def is_connection_dropped(self) -> bool:
-        return self.socket is not None and self.socket.is_connection_dropped()
+        return self.socket.is_connection_dropped()

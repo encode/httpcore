@@ -84,6 +84,15 @@ class SocketStream(AsyncSocketStream):
         self.read_lock = asyncio.Lock()
         self.write_lock = asyncio.Lock()
 
+    def get_http_version(self) -> str:
+        ssl_object = self.stream_writer.get_extra_info("ssl_object")
+
+        if ssl_object is None:
+            return "HTTP/1.1"
+
+        ident = ssl_object.selected_alpn_protocol()
+        return "HTTP/2" if ident == "h2" else "HTTP/1.1"
+
     async def start_tls(
         self,
         hostname: bytes,

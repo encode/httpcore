@@ -13,10 +13,6 @@ def map_exceptions(map: Dict[Type[Exception], Type[Exception]]) -> Iterator[None
         raise
 
 
-class NewConnectionRequired(Exception):
-    pass
-
-
 class ProtocolError(Exception):
     pass
 
