@@ -13,10 +13,11 @@ from typing import (
 import h2.connection
 import h2.events
 from h2.config import H2Configuration
+from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
 from .._backends.auto import SyncLock, SyncSocketStream, SyncBackend
-from .._exceptions import ProtocolError
+from .._exceptions import NewConnectionRequired, ProtocolError
 from .base import SyncByteStream, SyncHTTPTransport, ConnectionState, HTTPVersion
 
 
@@ -73,7 +74,12 @@ class SyncHTTP2Connection(SyncHTTPTransport):
                 self.socket = self._connect(timeout)
                 self.send_connection_init(timeout)
             self.state = ConnectionState.ACTIVE
-            stream_id = self.h2_state.get_next_available_stream_id()
+
+            try:
+                stream_id = self.h2_state.get_next_available_stream_id()
+            except NoAvailableStreamIDError:
+                self.state = ConnectionState.ACTIVE_NON_REUSABLE
+                raise NewConnectionRequired()
 
         h2_stream = SyncHTTP2Stream(stream_id=stream_id, connection=self)
         self.streams[stream_id] = h2_stream
@@ -130,9 +136,11 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         return self.socket.is_connection_dropped()
 
     def close(self) -> None:
-        assert self.socket is not None
+        if self.state != ConnectionState.CLOSED:
+            self.state = ConnectionState.CLOSED
 
-        self.socket.close()
+            assert self.socket is not None
+            self.socket.close()
 
     def wait_for_outgoing_flow(
         self, stream_id: int, timeout: Dict[str, Optional[float]]
@@ -231,7 +239,10 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         del self.events[stream_id]
 
         if not self.streams:
-            self.state = ConnectionState.IDLE
+            if self.state == ConnectionState.ACTIVE:
+                self.state = ConnectionState.IDLE
+            elif self.state == ConnectionState.ACTIVE_NON_REUSABLE:
+                self.close()
 
 
 class SyncHTTP2Stream:
