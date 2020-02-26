@@ -69,6 +69,10 @@ class SyncConnectionPool(SyncHTTPTransport):
     **Parameters:**
 
     * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for verifying connections.
+    * **max_connections** - `Optional[int]` - The maximum number of concurrent connections to allow.
+    * **max_keepalive** - `Optional[int]` - The maximum number of connections to allow before closing keep-alive connections.
+    * **keepalive_expiry** - `Optional[float]` - The maximum time to allow before closing a keep-alive connection.
+    * **http2** - `bool` - Enable HTTP/2 support.
     """
 
     def __init__(
@@ -76,15 +80,18 @@ class SyncConnectionPool(SyncHTTPTransport):
         ssl_context: SSLContext = None,
         max_connections: int = None,
         max_keepalive: int = None,
+        keepalive_expiry: float = None,
         http2: bool = False,
     ):
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
         self.max_connections = max_connections
         self.max_keepalive = max_keepalive
+        self.keepalive_expiry = keepalive_expiry
         self.http2 = http2
         self.connections: Dict[Origin, Set[SyncHTTPConnection]] = {}
         self.thread_lock = ThreadLock()
         self.backend = SyncBackend()
+        self.next_keepalive_check = 0.0
 
     @property
     def connection_semaphore(self) -> SyncSemaphore:
@@ -110,6 +117,9 @@ class SyncConnectionPool(SyncHTTPTransport):
     ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
         timeout = {} if timeout is None else timeout
         origin = url[:3]
+
+        if self.keepalive_expiry is not None:
+            self._keepalive_sweep()
 
         connection: Optional[SyncHTTPConnection] = None
         while connection is None:
@@ -191,6 +201,7 @@ class SyncConnectionPool(SyncHTTPTransport):
                 # Mark the connection as READY before we return it, to indicate
                 # that if it is HTTP/1.1 then it should not be re-acquired.
                 reuse_connection.mark_as_ready()
+                reuse_connection.expires_at = None
             elif self.http2 and pending_connection is not None and not seen_http11:
                 # If we have a PENDING connection, and no HTTP/1.1 connections
                 # on this origin, then we can attempt to share the connection.
@@ -209,16 +220,19 @@ class SyncConnectionPool(SyncHTTPTransport):
         with self.thread_lock:
             if connection.state == ConnectionState.CLOSED:
                 remove_from_pool = True
-            elif (
-                connection.state == ConnectionState.IDLE
-                and self.max_keepalive is not None
-            ):
+            elif connection.state == ConnectionState.IDLE:
                 num_connections = sum(
                     [len(conns) for conns in self.connections.values()]
                 )
-                if num_connections > self.max_keepalive:
+                if (
+                    self.max_keepalive is not None
+                    and num_connections > self.max_keepalive
+                ):
                     remove_from_pool = True
                     close_connection = True
+                elif self.keepalive_expiry is not None:
+                    now = self.backend.time()
+                    connection.expires_at = now + self.keepalive_expiry
 
             if remove_from_pool:
                 if connection in self.connections.get(connection.origin, set()):
@@ -228,6 +242,33 @@ class SyncConnectionPool(SyncHTTPTransport):
                         del self.connections[connection.origin]
 
         if close_connection:
+            connection.close()
+
+    def _keepalive_sweep(self):
+        assert self.keepalive_expiry is not None
+
+        now = self.backend.time()
+        if now < self.next_keepalive_check:
+            return
+
+        self.next_keepalive_check = now + 1.0
+        connections_to_close = set()
+
+        with self.thread_lock:
+            for connection_set in list(self.connections.values()):
+                for connection in list(connection_set):
+                    if (
+                        connection.state == ConnectionState.IDLE
+                        and connection.expires_at is not None
+                        and now > connection.expires_at
+                    ):
+                        connections_to_close.add(connection)
+                        self.connection_semaphore.release()
+                        self.connections[connection.origin].remove(connection)
+                        if not self.connections[connection.origin]:
+                            del self.connections[connection.origin]
+
+        for connection in connections_to_close:
             connection.close()
 
     def close(self) -> None:

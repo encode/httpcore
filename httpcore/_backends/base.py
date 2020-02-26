@@ -85,3 +85,6 @@ class AsyncBackend:
 
     def create_semaphore(self, max_value: int, exc_class: type) -> AsyncSemaphore:
         raise NotImplementedError()  # pragma: no cover
+
+    def time(self) -> float:
+        raise NotImplementedError()  # pragma: no cover

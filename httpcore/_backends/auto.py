@@ -39,3 +39,6 @@ class AutoBackend(AsyncBackend):
 
     def create_semaphore(self, max_value: int, exc_class: type) -> AsyncSemaphore:
         return self.backend.create_semaphore(max_value, exc_class=exc_class)
+
+    def time(self) -> float:
+        return self.backend.time()
