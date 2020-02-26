@@ -71,6 +71,7 @@ class SyncConnectionPool(SyncHTTPTransport):
     * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for verifying connections.
     * **max_connections** - `Optional[int]` - The maximum number of concurrent connections to allow.
     * **max_keepalive** - `Optional[int]` - The maximum number of connections to allow before closing keep-alive connections.
+    * **keepalive_expiry** - `Optional[float]` - The maximum time to allow before closing a keep-alive connection.
     * **http2** - `bool` - Enable HTTP/2 support.
     """
 
