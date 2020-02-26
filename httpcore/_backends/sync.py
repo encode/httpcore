@@ -1,6 +1,7 @@
 import select
 import socket
 import threading
+import time
 from ssl import SSLContext
 from types import TracebackType
 from typing import Dict, Optional, Type
@@ -145,3 +146,6 @@ class SyncBackend:
 
     def create_semaphore(self, max_value: int, exc_class: type) -> SyncSemaphore:
         return SyncSemaphore(max_value, exc_class=exc_class)
+
+    def time(self) -> float:
+        return time.monotonic()

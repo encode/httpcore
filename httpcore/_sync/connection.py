@@ -30,6 +30,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         self.is_http11 = False
         self.is_http2 = False
         self.connect_failed = False
+        self.expires_at: Optional[float] = None
         self.backend = SyncBackend()
 
     @property

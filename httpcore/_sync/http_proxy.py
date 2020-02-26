@@ -27,8 +27,11 @@ class SyncHTTPProxy(SyncConnectionPool):
 
     * **proxy_origin** - `Tuple[bytes, bytes, int]` - The address of the proxy service as a 3-tuple of (scheme, host, port).
     * **proxy_headers** - `Optional[List[Tuple[bytes, bytes]]]` - A list of proxy headers to include.
-    * **proxy_mode** - `Optional[str]` - A proxy mode to operate in. May be "DEFAULT", "FORWARD_ONLY", or "TUNNEL_ONLY".
+    * **proxy_mode** - `str` - A proxy mode to operate in. May be "DEFAULT", "FORWARD_ONLY", or "TUNNEL_ONLY".
     * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for verifying connections.
+    * **max_connections** - `Optional[int]` - The maximum number of concurrent connections to allow.
+    * **max_keepalive** - `Optional[int]` - The maximum number of connections to allow before closing keep-alive connections.
+    * **http2** - `bool` - Enable HTTP/2 support.
     """
 
     def __init__(
@@ -53,6 +56,9 @@ class SyncHTTPProxy(SyncConnectionPool):
         stream: SyncByteStream = None,
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
+        if self.keepalive_expiry is not None:
+            self._keepalive_sweep()
+
         if (
             self.proxy_mode == "DEFAULT" and url[0] == b"http"
         ) or self.proxy_mode == "FORWARD_ONLY":
