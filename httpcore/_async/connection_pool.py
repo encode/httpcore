@@ -127,15 +127,10 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             is_new_connection = False
 
             if connection is None:
-                await self.connection_semaphore.acquire(
-                    timeout=timeout.get("pool", None)
-                )
                 connection = AsyncHTTPConnection(
                     origin=origin, http2=self.http2, ssl_context=self.ssl_context,
                 )
-                async with self.thread_lock:
-                    self.connections.setdefault(origin, set())
-                    self.connections[origin].add(connection)
+                await self._add_to_pool(connection, timeout=timeout)
 
             try:
                 response = await connection.request(
@@ -144,11 +139,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             except NewConnectionRequired:
                 connection = None
             except:
-                async with self.thread_lock:
-                    self.connection_semaphore.release()
-                    self.connections[connection.origin].remove(connection)
-                    if not self.connections[connection.origin]:
-                        del self.connections[connection.origin]
+                await self._remove_from_pool(connection)
                 raise
 
         wrapped_stream = ResponseByteStream(
@@ -165,47 +156,36 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         reuse_connection = None
         connections_to_close = set()
 
-        async with self.thread_lock:
-            if origin in self.connections:
-                connections = self.connections[origin]
-                for connection in list(connections):
-                    if connection.is_http11:
-                        seen_http11 = True
+        for connection in self._connections_for_origin(origin):
+            if connection.is_http11:
+                seen_http11 = True
 
-                    if connection.state == ConnectionState.IDLE:
-                        if connection.is_connection_dropped():
-                            # IDLE connections that have been dropped should be
-                            # removed from the pool.
-                            connections_to_close.add(connection)
-                            connections.remove(connection)
-                        else:
-                            # IDLE connections that are still maintained may
-                            # be reused.
-                            reuse_connection = connection
-                    elif (
-                        connection.state == ConnectionState.ACTIVE
-                        and connection.is_http2
-                    ):
-                        # HTTP/2 connections may be reused.
-                        reuse_connection = connection
-                    elif connection.state == ConnectionState.PENDING:
-                        # Pending connections may potentially be reused.
-                        pending_connection = connection
+            if connection.state == ConnectionState.IDLE:
+                if connection.is_connection_dropped():
+                    # IDLE connections that have been dropped should be
+                    # removed from the pool.
+                    connections_to_close.add(connection)
+                    await self._remove_from_pool(connection)
+                else:
+                    # IDLE connections that are still maintained may
+                    # be reused.
+                    reuse_connection = connection
+            elif connection.state == ConnectionState.ACTIVE and connection.is_http2:
+                # HTTP/2 connections may be reused.
+                reuse_connection = connection
+            elif connection.state == ConnectionState.PENDING:
+                # Pending connections may potentially be reused.
+                pending_connection = connection
 
-                # Clean up the connections mapping if we've no connections
-                # remaining for this origin.
-                if not connections:
-                    del self.connections[origin]
-
-            if reuse_connection is not None:
-                # Mark the connection as READY before we return it, to indicate
-                # that if it is HTTP/1.1 then it should not be re-acquired.
-                reuse_connection.mark_as_ready()
-                reuse_connection.expires_at = None
-            elif self.http2 and pending_connection is not None and not seen_http11:
-                # If we have a PENDING connection, and no HTTP/1.1 connections
-                # on this origin, then we can attempt to share the connection.
-                reuse_connection = pending_connection
+        if reuse_connection is not None:
+            # Mark the connection as READY before we return it, to indicate
+            # that if it is HTTP/1.1 then it should not be re-acquired.
+            reuse_connection.mark_as_ready()
+            reuse_connection.expires_at = None
+        elif self.http2 and pending_connection is not None and not seen_http11:
+            # If we have a PENDING connection, and no HTTP/1.1 connections
+            # on this origin, then we can attempt to share the connection.
+            reuse_connection = pending_connection
 
         # Close any dropped connections.
         for connection in connections_to_close:
@@ -217,34 +197,27 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         remove_from_pool = False
         close_connection = False
 
-        async with self.thread_lock:
-            if connection.state == ConnectionState.CLOSED:
+        if connection.state == ConnectionState.CLOSED:
+            remove_from_pool = True
+        elif connection.state == ConnectionState.IDLE:
+            num_connections = len(self._get_all_connections())
+            if self.max_keepalive is not None and num_connections > self.max_keepalive:
                 remove_from_pool = True
-            elif connection.state == ConnectionState.IDLE:
-                num_connections = sum(
-                    [len(conns) for conns in self.connections.values()]
-                )
-                if (
-                    self.max_keepalive is not None
-                    and num_connections > self.max_keepalive
-                ):
-                    remove_from_pool = True
-                    close_connection = True
-                elif self.keepalive_expiry is not None:
-                    now = self.backend.time()
-                    connection.expires_at = now + self.keepalive_expiry
+                close_connection = True
+            elif self.keepalive_expiry is not None:
+                now = self.backend.time()
+                connection.expires_at = now + self.keepalive_expiry
 
-            if remove_from_pool:
-                if connection in self.connections.get(connection.origin, set()):
-                    self.connection_semaphore.release()
-                    self.connections[connection.origin].remove(connection)
-                    if not self.connections[connection.origin]:
-                        del self.connections[connection.origin]
+        if remove_from_pool:
+            await self._remove_from_pool(connection)
 
         if close_connection:
             await connection.close()
 
     async def _keepalive_sweep(self):
+        """
+        Remove any IDLE connections that have expired past their keep-alive time.
+        """
         assert self.keepalive_expiry is not None
 
         now = self.backend.time()
@@ -254,31 +227,50 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         self.next_keepalive_check = now + 1.0
         connections_to_close = set()
 
-        async with self.thread_lock:
-            for connection_set in list(self.connections.values()):
-                for connection in list(connection_set):
-                    if (
-                        connection.state == ConnectionState.IDLE
-                        and connection.expires_at is not None
-                        and now > connection.expires_at
-                    ):
-                        connections_to_close.add(connection)
-                        self.connection_semaphore.release()
-                        self.connections[connection.origin].remove(connection)
-                        if not self.connections[connection.origin]:
-                            del self.connections[connection.origin]
+        for connection in self._get_all_connections():
+            if (
+                connection.state == ConnectionState.IDLE
+                and connection.expires_at is not None
+                and now > connection.expires_at
+            ):
+                connections_to_close.add(connection)
+                await self._remove_from_pool(connection)
 
         for connection in connections_to_close:
             await connection.close()
 
-    async def close(self) -> None:
-        connections_to_close = set()
+    async def _add_to_pool(
+        self, connection: AsyncHTTPConnection, timeout: TimeoutDict = None
+    ):
+        timeout = {} if timeout is None else timeout
 
+        await self.connection_semaphore.acquire(timeout=timeout.get("pool", None))
         async with self.thread_lock:
-            for connection_set in self.connections.values():
-                connections_to_close.update(connection_set)
-            self.connections.clear()
+            self.connections.setdefault(connection.origin, set())
+            self.connections[connection.origin].add(connection)
+
+    async def _remove_from_pool(self, connection: AsyncHTTPConnection) -> None:
+        async with self.thread_lock:
+            if connection in self.connections.get(connection.origin, set()):
+                self.connection_semaphore.release()
+                self.connections[connection.origin].remove(connection)
+                if not self.connections[connection.origin]:
+                    del self.connections[connection.origin]
+
+    def _connections_for_origin(self, origin: Origin) -> Set[AsyncHTTPConnection]:
+        return set(self.connections.get(origin, set()))
+
+    def _get_all_connections(self) -> Set[AsyncHTTPConnection]:
+        connections: Set[AsyncHTTPConnection] = set()
+        for connection_set in self.connections.values():
+            connections |= connection_set
+        return connections
+
+    async def close(self) -> None:
+        connections = self._get_all_connections()
+        for connection in connections:
+            await self._remove_from_pool(connection)
 
         # Close all connections
-        for connection in connections_to_close:
+        for connection in connections:
             await connection.close()
