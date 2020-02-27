@@ -2,10 +2,6 @@
 
 > *Do one thing, and do it well.*
 
-!!! warning
-    This documentation is a design document. The proposed package documented
-    here does not currently exist.
-
 The HTTP Core package provides a minimal low-level HTTP client, which does
 one thing only. Sending HTTP requests.
 
