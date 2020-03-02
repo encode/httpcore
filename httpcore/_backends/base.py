@@ -27,7 +27,7 @@ class AsyncSocketStream:
     async def write(self, data: bytes, timeout: Dict[str, Optional[float]]) -> None:
         raise NotImplementedError()  # pragma: no cover
 
-    async def close(self) -> None:
+    async def aclose(self) -> None:
         raise NotImplementedError()  # pragma: no cover
 
     def is_connection_dropped(self) -> bool:

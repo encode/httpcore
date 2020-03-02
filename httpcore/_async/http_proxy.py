@@ -16,7 +16,7 @@ async def read_body(stream: AsyncByteStream) -> bytes:
     try:
         return b"".join([chunk async for chunk in stream])
     finally:
-        await stream.close()
+        await stream.aclose()
 
 
 class AsyncHTTPProxy(AsyncConnectionPool):

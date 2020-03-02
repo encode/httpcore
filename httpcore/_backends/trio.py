@@ -77,7 +77,7 @@ class SocketStream(AsyncSocketStream):
                 with trio.fail_after(write_timeout):
                     return await self.stream.send_all(data)
 
-    async def close(self) -> None:
+    async def aclose(self) -> None:
         async with self.write_lock:
             with map_exceptions({trio.BrokenResourceError: CloseError}):
                 await self.stream.aclose()

@@ -150,11 +150,11 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
     def is_connection_dropped(self) -> bool:
         return self.socket.is_connection_dropped()
 
-    async def close(self) -> None:
+    async def aclose(self) -> None:
         if self.state != ConnectionState.CLOSED:
             self.state = ConnectionState.CLOSED
 
-            await self.socket.close()
+            await self.socket.aclose()
 
     async def wait_for_outgoing_flow(
         self, stream_id: int, timeout: Dict[str, Optional[float]]
@@ -247,7 +247,7 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
             if self.state == ConnectionState.ACTIVE:
                 self.state = ConnectionState.IDLE
             elif self.state == ConnectionState.FULL:
-                await self.close()
+                await self.aclose()
 
 
 class AsyncHTTP2Stream:
