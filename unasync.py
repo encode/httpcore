@@ -11,6 +11,7 @@ SUBS = [
     ('async with', 'with'),
     ('async for', 'for'),
     ('await ', ''),
+    ('aclose', 'close'),
     ('__aenter__', '__enter__'),
     ('__aexit__', '__exit__'),
     ('__aiter__', '__iter__'),

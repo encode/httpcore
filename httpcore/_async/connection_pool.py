@@ -39,7 +39,7 @@ class ResponseByteStream(AsyncByteStream):
         """
         A wrapper around the response stream that we return from `.request()`.
 
-        Ensures that when `stream.close()` is called, the connection pool
+        Ensures that when `stream.aclose()` is called, the connection pool
         is notified via a callback.
         """
         self.stream = stream
@@ -50,12 +50,12 @@ class ResponseByteStream(AsyncByteStream):
         async for chunk in self.stream:
             yield chunk
 
-    async def close(self):
+    async def aclose(self):
         try:
             #  Call the underlying stream close callback.
             # This will be a call to `AsyncHTTP11Connection._response_closed()`
             # or `AsyncHTTP2Stream._response_closed()`.
-            await self.stream.close()
+            await self.stream.aclose()
         finally:
             #  Call the connection pool close callback.
             # This will be a call to `AsyncConnectionPool._response_closed()`.
@@ -189,7 +189,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
 
         # Close any dropped connections.
         for connection in connections_to_close:
-            await connection.close()
+            await connection.aclose()
 
         return reuse_connection
 
@@ -212,7 +212,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             await self._remove_from_pool(connection)
 
         if close_connection:
-            await connection.close()
+            await connection.aclose()
 
     async def _keepalive_sweep(self):
         """
@@ -237,7 +237,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
                 await self._remove_from_pool(connection)
 
         for connection in connections_to_close:
-            await connection.close()
+            await connection.aclose()
 
     async def _add_to_pool(
         self, connection: AsyncHTTPConnection, timeout: TimeoutDict = None
@@ -266,11 +266,11 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             connections |= connection_set
         return connections
 
-    async def close(self) -> None:
+    async def aclose(self) -> None:
         connections = self._get_all_connections()
         for connection in connections:
             await self._remove_from_pool(connection)
 
         # Close all connections
         for connection in connections:
-            await connection.close()
+            await connection.aclose()

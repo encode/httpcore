@@ -55,7 +55,7 @@ class AsyncByteStream:
         async for chunk in self.iterator:
             yield chunk
 
-    async def close(self) -> None:
+    async def aclose(self) -> None:
         """
         Must be called by the client to indicate that the stream has been closed.
         """
@@ -102,7 +102,7 @@ class AsyncHTTPTransport:
         """
         raise NotImplementedError()  # pragma: nocover
 
-    async def close(self) -> None:
+    async def aclose(self) -> None:
         """
         Close the implementation, which should close any outstanding response streams,
         and any keep alive connections.
@@ -117,4 +117,4 @@ class AsyncHTTPTransport:
         exc_value: BaseException = None,
         traceback: TracebackType = None,
     ) -> None:
-        await self.close()
+        await self.aclose()

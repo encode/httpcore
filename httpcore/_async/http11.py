@@ -163,9 +163,9 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
             self.h11_state.start_next_cycle()
             self.state = ConnectionState.IDLE
         else:
-            await self.close()
+            await self.aclose()
 
-    async def close(self) -> None:
+    async def aclose(self) -> None:
         if self.state != ConnectionState.CLOSED:
             self.state = ConnectionState.CLOSED
 
@@ -173,7 +173,7 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
                 event = h11.ConnectionClosed()
                 self.h11_state.send(event)
 
-            await self.socket.close()
+            await self.socket.aclose()
 
     def is_connection_dropped(self) -> bool:
         return self.socket.is_connection_dropped()

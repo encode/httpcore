@@ -10,7 +10,7 @@ async def read_body(stream):
             body.append(chunk)
         return b"".join(body)
     finally:
-        await stream.close()
+        await stream.aclose()
 
 
 @pytest.mark.usefixtures("async_environment")
