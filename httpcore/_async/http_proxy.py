@@ -56,7 +56,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         stream: AsyncByteStream = None,
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, Headers, AsyncByteStream]:
-        if self.keepalive_expiry is not None:
+        if self._keepalive_expiry is not None:
             await self._keepalive_sweep()
 
         if (
@@ -89,11 +89,11 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
         if connection is None:
             connection = AsyncHTTPConnection(
-                origin=origin, http2=False, ssl_context=self.ssl_context,
+                origin=origin, http2=False, ssl_context=self._ssl_context,
             )
-            async with self.thread_lock:
-                self.connections.setdefault(origin, set())
-                self.connections[origin].add(connection)
+            async with self._thread_lock:
+                self._connections.setdefault(origin, set())
+                self._connections[origin].add(connection)
 
         # Issue a forwarded proxy request...
 
@@ -129,11 +129,11 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
         if connection is None:
             connection = AsyncHTTPConnection(
-                origin=origin, http2=False, ssl_context=self.ssl_context,
+                origin=origin, http2=False, ssl_context=self._ssl_context,
             )
-            async with self.thread_lock:
-                self.connections.setdefault(origin, set())
-                self.connections[origin].add(connection)
+            async with self._thread_lock:
+                self._connections.setdefault(origin, set())
+                self._connections[origin].add(connection)
 
             # Establish the connection by issuing a CONNECT request...
 
@@ -155,10 +155,10 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             # If the proxy responds with an error, then drop the connection
             # from the pool, and raise an exception.
             if proxy_status_code < 200 or proxy_status_code > 299:
-                async with self.thread_lock:
-                    self.connections[connection.origin].remove(connection)
-                    if not self.connections[connection.origin]:
-                        del self.connections[connection.origin]
+                async with self._thread_lock:
+                    self._connections[connection.origin].remove(connection)
+                    if not self._connections[connection.origin]:
+                        del self._connections[connection.origin]
                 msg = "%d %s" % (proxy_status_code, proxy_reason_phrase.decode("ascii"))
                 raise ProxyError(msg)
 
