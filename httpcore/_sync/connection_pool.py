@@ -266,6 +266,21 @@ class SyncConnectionPool(SyncHTTPTransport):
             connections |= connection_set
         return connections
 
+    def get_connection_stats(self):
+        connections = self._get_all_connections()
+        stats = {}
+        for connection in connections:
+            if stats.get(connection.origin, None) is None:
+                stats[connection.origin] = {}
+
+            state = str(connection.state)
+            if stats.get(connection.origin).get(state, None) is None:
+                stats[connection.origin][state] = 1
+            else:
+                stats[connection.origin][state] += 1
+
+        return stats
+
     def close(self) -> None:
         connections = self._get_all_connections()
         for connection in connections:
