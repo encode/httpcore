@@ -150,7 +150,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             proxy_stream = proxy_response[4]
 
             # Ingest any request body.
-            read_body(proxy_stream)
+            await read_body(proxy_stream)
 
             # If the proxy responds with an error, then drop the connection
             # from the pool, and raise an exception.
