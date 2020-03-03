@@ -27,7 +27,7 @@ async def test_http_request():
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http.connections[url[:3]]) == 1
+        assert len(http._connections[url[:3]]) == 1
 
 
 @pytest.mark.usefixtures("async_environment")
@@ -44,7 +44,7 @@ async def test_https_request():
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http.connections[url[:3]]) == 1
+        assert len(http._connections[url[:3]]) == 1
 
 
 @pytest.mark.usefixtures("async_environment")
@@ -61,7 +61,7 @@ async def test_http2_request():
         assert http_version == b"HTTP/2"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http.connections[url[:3]]) == 1
+        assert len(http._connections[url[:3]]) == 1
 
 
 @pytest.mark.usefixtures("async_environment")
@@ -78,7 +78,7 @@ async def test_closing_http_request():
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert url[:3] not in http.connections
+        assert url[:3] not in http._connections
 
 
 @pytest.mark.usefixtures("async_environment")
@@ -95,7 +95,7 @@ async def test_http_request_reuse_connection():
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http.connections[url[:3]]) == 1
+        assert len(http._connections[url[:3]]) == 1
 
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
@@ -108,7 +108,7 @@ async def test_http_request_reuse_connection():
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http.connections[url[:3]]) == 1
+        assert len(http._connections[url[:3]]) == 1
 
 
 @pytest.mark.usefixtures("async_environment")
@@ -125,7 +125,7 @@ async def test_https_request_reuse_connection():
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http.connections[url[:3]]) == 1
+        assert len(http._connections[url[:3]]) == 1
 
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
@@ -138,7 +138,7 @@ async def test_https_request_reuse_connection():
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http.connections[url[:3]]) == 1
+        assert len(http._connections[url[:3]]) == 1
 
 
 @pytest.mark.usefixtures("async_environment")
@@ -155,10 +155,10 @@ async def test_http_request_cannot_reuse_dropped_connection():
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http.connections[url[:3]]) == 1
+        assert len(http._connections[url[:3]]) == 1
 
         # Mock the connection as having been dropped.
-        connection = list(http.connections[url[:3]])[0]
+        connection = list(http._connections[url[:3]])[0]
         connection.is_connection_dropped = lambda: True
 
         method = b"GET"
@@ -172,4 +172,4 @@ async def test_http_request_cannot_reuse_dropped_connection():
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http.connections[url[:3]]) == 1
+        assert len(http._connections[url[:3]]) == 1

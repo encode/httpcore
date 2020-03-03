@@ -83,29 +83,29 @@ class SyncConnectionPool(SyncHTTPTransport):
         keepalive_expiry: float = None,
         http2: bool = False,
     ):
-        self.ssl_context = SSLContext() if ssl_context is None else ssl_context
-        self.max_connections = max_connections
-        self.max_keepalive = max_keepalive
-        self.keepalive_expiry = keepalive_expiry
-        self.http2 = http2
-        self.connections: Dict[Origin, Set[SyncHTTPConnection]] = {}
-        self.thread_lock = ThreadLock()
-        self.backend = SyncBackend()
-        self.next_keepalive_check = 0.0
+        self._ssl_context = SSLContext() if ssl_context is None else ssl_context
+        self._max_connections = max_connections
+        self._max_keepalive = max_keepalive
+        self._keepalive_expiry = keepalive_expiry
+        self._http2 = http2
+        self._connections: Dict[Origin, Set[SyncHTTPConnection]] = {}
+        self._thread_lock = ThreadLock()
+        self._backend = SyncBackend()
+        self._next_keepalive_check = 0.0
 
     @property
-    def connection_semaphore(self) -> SyncSemaphore:
+    def _connection_semaphore(self) -> SyncSemaphore:
         # We do this lazily, to make sure backend autodetection always
         # runs within an async context.
-        if not hasattr(self, "_connection_semaphore"):
-            if self.max_connections is not None:
-                self._connection_semaphore = self.backend.create_semaphore(
-                    self.max_connections, exc_class=PoolTimeout
+        if not hasattr(self, "_internal_semaphore"):
+            if self._max_connections is not None:
+                self._internal_semaphore = self._backend.create_semaphore(
+                    self._max_connections, exc_class=PoolTimeout
                 )
             else:
-                self._connection_semaphore = NullSemaphore()
+                self._internal_semaphore = NullSemaphore()
 
-        return self._connection_semaphore
+        return self._internal_semaphore
 
     def request(
         self,
@@ -118,7 +118,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         timeout = {} if timeout is None else timeout
         origin = url[:3]
 
-        if self.keepalive_expiry is not None:
+        if self._keepalive_expiry is not None:
             self._keepalive_sweep()
 
         connection: Optional[SyncHTTPConnection] = None
@@ -128,7 +128,7 @@ class SyncConnectionPool(SyncHTTPTransport):
 
             if connection is None:
                 connection = SyncHTTPConnection(
-                    origin=origin, http2=self.http2, ssl_context=self.ssl_context,
+                    origin=origin, http2=self._http2, ssl_context=self._ssl_context,
                 )
                 self._add_to_pool(connection, timeout=timeout)
 
@@ -182,7 +182,7 @@ class SyncConnectionPool(SyncHTTPTransport):
             # that if it is HTTP/1.1 then it should not be re-acquired.
             reuse_connection.mark_as_ready()
             reuse_connection.expires_at = None
-        elif self.http2 and pending_connection is not None and not seen_http11:
+        elif self._http2 and pending_connection is not None and not seen_http11:
             # If we have a PENDING connection, and no HTTP/1.1 connections
             # on this origin, then we can attempt to share the connection.
             reuse_connection = pending_connection
@@ -201,12 +201,12 @@ class SyncConnectionPool(SyncHTTPTransport):
             remove_from_pool = True
         elif connection.state == ConnectionState.IDLE:
             num_connections = len(self._get_all_connections())
-            if self.max_keepalive is not None and num_connections > self.max_keepalive:
+            if self._max_keepalive is not None and num_connections > self._max_keepalive:
                 remove_from_pool = True
                 close_connection = True
-            elif self.keepalive_expiry is not None:
-                now = self.backend.time()
-                connection.expires_at = now + self.keepalive_expiry
+            elif self._keepalive_expiry is not None:
+                now = self._backend.time()
+                connection.expires_at = now + self._keepalive_expiry
 
         if remove_from_pool:
             self._remove_from_pool(connection)
@@ -218,9 +218,9 @@ class SyncConnectionPool(SyncHTTPTransport):
         """
         Remove any IDLE connections that have expired past their keep-alive time.
         """
-        assert self.keepalive_expiry is not None
+        assert self._keepalive_expiry is not None
 
-        now = self.backend.time()
+        now = self._backend.time()
         if now < self.next_keepalive_check:
             return
 
@@ -244,25 +244,25 @@ class SyncConnectionPool(SyncHTTPTransport):
     ):
         timeout = {} if timeout is None else timeout
 
-        self.connection_semaphore.acquire(timeout=timeout.get("pool", None))
-        with self.thread_lock:
-            self.connections.setdefault(connection.origin, set())
-            self.connections[connection.origin].add(connection)
+        self._connection_semaphore.acquire(timeout=timeout.get("pool", None))
+        with self._thread_lock:
+            self._connections.setdefault(connection.origin, set())
+            self._connections[connection.origin].add(connection)
 
     def _remove_from_pool(self, connection: SyncHTTPConnection) -> None:
-        with self.thread_lock:
-            if connection in self.connections.get(connection.origin, set()):
-                self.connection_semaphore.release()
-                self.connections[connection.origin].remove(connection)
-                if not self.connections[connection.origin]:
-                    del self.connections[connection.origin]
+        with self._thread_lock:
+            if connection in self._connections.get(connection.origin, set()):
+                self._connection_semaphore.release()
+                self._connections[connection.origin].remove(connection)
+                if not self._connections[connection.origin]:
+                    del self._connections[connection.origin]
 
     def _connections_for_origin(self, origin: Origin) -> Set[SyncHTTPConnection]:
-        return set(self.connections.get(origin, set()))
+        return set(self._connections.get(origin, set()))
 
     def _get_all_connections(self) -> Set[SyncHTTPConnection]:
         connections: Set[SyncHTTPConnection] = set()
-        for connection_set in self.connections.values():
+        for connection_set in self._connections.values():
             connections |= connection_set
         return connections
 
