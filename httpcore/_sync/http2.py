@@ -17,8 +17,13 @@ from h2.config import H2Configuration
 from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
-from .._backends.auto import SyncLock, SyncSocketStream, SyncBackend
-from .._exceptions import ProtocolError
+from .._backends.auto import (
+    SyncLock,
+    SyncSocketStream,
+    SyncBackend,
+    SyncSemaphore
+)
+from .._exceptions import ProtocolError, PoolTimeout
 from .base import (
     SyncByteStream,
     SyncHTTPTransport,
@@ -72,6 +77,17 @@ class SyncHTTP2Connection(SyncHTTPTransport):
             self._read_lock = self.backend.create_lock()
         return self._read_lock
 
+    @property
+    def streams_semaphore(self) -> SyncSemaphore:
+        # We do this lazily, to make sure backend autodetection always
+        # runs within an async context.
+        if not hasattr(self, "_streams_semaphore"):
+            semaphore_count = self.h2_state.remote_settings.max_concurrent_streams
+            self._streams_semaphore = self.backend.create_semaphore(
+                semaphore_count, PoolTimeout
+            )
+        return self._streams_semaphore
+
     def start_tls(
         self, hostname: bytes, timeout: Dict[str, Optional[float]] = None
     ):
@@ -91,20 +107,24 @@ class SyncHTTP2Connection(SyncHTTPTransport):
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         timeout = {} if timeout is None else timeout
 
-        with self.init_lock:
-            if not self.sent_connection_init:
-                # The very first stream is responsible for initiating the connection.
-                self.state = ConnectionState.ACTIVE
-                self.send_connection_init(timeout)
-                self.sent_connection_init = True
+        self.streams_semaphore.acquire()
+        try:
+            with self.init_lock:
+                if not self.sent_connection_init:
+                    # The very first stream is responsible for initiating the connection.
+                    self.state = ConnectionState.ACTIVE
+                    self.send_connection_init(timeout)
+                    self.sent_connection_init = True
 
-            try:
-                stream_id = self.h2_state.get_next_available_stream_id()
-            except NoAvailableStreamIDError:
-                self.state = ConnectionState.FULL
-                raise NewConnectionRequired()
-            else:
-                self.state = ConnectionState.ACTIVE
+                try:
+                    stream_id = self.h2_state.get_next_available_stream_id()
+                except NoAvailableStreamIDError:
+                    self.state = ConnectionState.FULL
+                    raise NewConnectionRequired()
+                else:
+                    self.state = ConnectionState.ACTIVE
+        finally:
+            self.streams_semaphore.release()
 
         h2_stream = SyncHTTP2Stream(stream_id=stream_id, connection=self)
         self.streams[stream_id] = h2_stream
