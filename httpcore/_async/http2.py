@@ -17,13 +17,8 @@ from h2.config import H2Configuration
 from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
-from .._backends.auto import (
-    AsyncLock,
-    AsyncSocketStream,
-    AutoBackend,
-    AsyncSemaphore
-)
-from .._exceptions import ProtocolError, PoolTimeout
+from .._backends.auto import AsyncLock, AsyncSemaphore, AsyncSocketStream, AutoBackend
+from .._exceptions import PoolTimeout, ProtocolError
 from .base import (
     AsyncByteStream,
     AsyncHTTPTransport,
@@ -76,7 +71,7 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
         if not hasattr(self, "_read_lock"):
             self._read_lock = self.backend.create_lock()
         return self._read_lock
-    
+
     @property
     def streams_semaphore(self) -> AsyncSemaphore:
         # We do this lazily, to make sure backend autodetection always

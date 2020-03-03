@@ -17,13 +17,8 @@ from h2.config import H2Configuration
 from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
-from .._backends.auto import (
-    SyncLock,
-    SyncSocketStream,
-    SyncBackend,
-    SyncSemaphore
-)
-from .._exceptions import ProtocolError, PoolTimeout
+from .._backends.auto import SyncLock, SyncSemaphore, SyncSocketStream, SyncBackend
+from .._exceptions import PoolTimeout, ProtocolError
 from .base import (
     SyncByteStream,
     SyncHTTPTransport,
