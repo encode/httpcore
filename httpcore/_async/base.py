@@ -33,6 +33,9 @@ class ConnectionState(enum.IntEnum):
     IDLE = 4  # No active requests.
     CLOSED = 5  # Connection closed.
 
+    def __str__(self):
+        return f"ConnectionState.{self.name}"
+
 
 class AsyncByteStream:
     """
