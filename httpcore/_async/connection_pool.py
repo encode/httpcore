@@ -270,14 +270,16 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         connections = self._get_all_connections()
         stats = {}
         for connection in connections:
-            if stats.get(connection.origin, None) is None:
-                stats[connection.origin] = {}
+            http_version = b"HTTP/1.1" if connection.is_http11 else b"HTTP/2"
+            key = connection.origin + (http_version,)
+            if stats.get(key, None) is None:
+                stats[key] = {}
 
             state = str(connection.state)
-            if stats.get(connection.origin).get(state, None) is None:
-                stats[connection.origin][state] = 1
+            if stats.get(key).get(state, None) is None:
+                stats[key][state] = 1
             else:
-                stats[connection.origin][state] += 1
+                stats[key][state] += 1
 
         return stats
 
