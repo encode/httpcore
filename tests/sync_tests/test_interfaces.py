@@ -186,10 +186,14 @@ def test_http_get_connection_stats():
         )
         body = read_body(stream)
 
-        assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http._connections[url[:3]]) == 1
+
+        stats = http.get_connection_stats()
+        key = url[:3] + (b"HTTP/1.1",)
+        assert stats.get(key, None) is not None
+        assert len(stats[key]) == 1
+        assert sum(stats[key].values()) == 1
 
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
@@ -199,16 +203,14 @@ def test_http_get_connection_stats():
         )
         body = read_body(stream)
 
-        assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http._connections[url[:3]]) == 1
 
-        assert http.get_connection_stats() == {
-            (b"http", b"example.org", 80): {
-                "ConnectionState.IDLE": 1
-            },
-            (b"https", b"example.org", 443): {
-                "ConnectionState.IDLE": 1
-            }
-        }
+        stats = http.get_connection_stats()
+        key = url[:3] + (b"HTTP/1.1",)
+        assert stats.get(key, None) is not None
+        assert len(stats[key]) == 1
+        assert sum(stats[key].values()) == 1
+
+        assert len(stats.keys()) == 2
+        assert sum([sum(k.values()) for k in stats.values()]) == 2
