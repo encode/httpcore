@@ -40,13 +40,23 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         proxy_headers: Headers = None,
         proxy_mode: str = "DEFAULT",
         ssl_context: SSLContext = None,
+        max_connections: int = None,
+        max_keepalive: int = None,
+        keepalive_expiry: float = None,
+        http2: bool = False,
     ):
         assert proxy_mode in ("DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY")
 
         self.proxy_origin = proxy_origin
         self.proxy_headers = [] if proxy_headers is None else proxy_headers
         self.proxy_mode = proxy_mode
-        super().__init__(ssl_context=ssl_context)
+        super().__init__(
+            ssl_context=ssl_context,
+            max_connections=max_connections,
+            max_keepalive=max_keepalive,
+            keepalive_expiry=keepalive_expiry,
+            http2=http2,
+        )
 
     async def request(
         self,

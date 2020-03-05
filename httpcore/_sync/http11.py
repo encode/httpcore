@@ -159,7 +159,10 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         return event
 
     def _response_closed(self) -> None:
-        if self.h11_state.our_state is h11.DONE:
+        if (
+            self.h11_state.our_state is h11.DONE
+            and self.h11_state.their_state is h11.DONE
+        ):
             self.h11_state.start_next_cycle()
             self.state = ConnectionState.IDLE
         else:

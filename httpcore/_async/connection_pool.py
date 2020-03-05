@@ -201,7 +201,10 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             remove_from_pool = True
         elif connection.state == ConnectionState.IDLE:
             num_connections = len(self._get_all_connections())
-            if self._max_keepalive is not None and num_connections > self._max_keepalive:
+            if (
+                self._max_keepalive is not None
+                and num_connections > self._max_keepalive
+            ):
                 remove_from_pool = True
                 close_connection = True
             elif self._keepalive_expiry is not None:
