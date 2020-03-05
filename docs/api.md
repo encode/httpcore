@@ -7,11 +7,11 @@ interface which transport classes need to implement.
 
 ::: httpcore.AsyncHTTPTransport
     :docstring:
-    :members: request close
+    :members: request aclose
 
 ::: httpcore.AsyncByteStream
     :docstring:
-    :members: __aiter__ close
+    :members: __aiter__ aclose
 
 The `AsyncConnectionPool` class is a concrete implementation of `AsyncHTTPTransport`.
 
