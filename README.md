@@ -28,7 +28,7 @@ Here's an example of making an HTTP GET request using `httpcore`...
 async with httpcore.AsyncConnectionPool() as http:
     http_version, status_code, reason_phrase, headers, stream = await http.request(
         method=b'GET',
-        url=(b'https', b'example.org', 433, b'/'),
+        url=(b'https', b'example.org', 443, b'/'),
     )
 
     try:
