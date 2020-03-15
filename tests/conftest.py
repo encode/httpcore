@@ -38,6 +38,9 @@ def proxy_server():
 
     class ProxyWrapper(threading.Thread):
         def run(self):
+            # mitmproxy uses asyncio internally but the default loop policy
+            # will only create event loops for the main thread, create one
+            # as part of the thread startup
             asyncio.set_event_loop(asyncio.new_event_loop())
             opts = options.Options(listen_host=host, listen_port=port)
             pconf = proxy.config.ProxyConfig(opts)
@@ -46,14 +49,14 @@ def proxy_server():
             self.master.server = proxy.server.ProxyServer(pconf)
             self.master.run()
 
-        def shutdown(self):
+        def join(self):
             self.master.shutdown()
+            super().join()
 
     try:
         thread = ProxyWrapper()
         thread.start()
-        time.sleep(2)
+        time.sleep(2)  # TODO: there's probably a better way to do this
         yield (host, port)
     finally:
-        thread.shutdown()
         thread.join()
