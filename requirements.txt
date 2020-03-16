@@ -16,3 +16,4 @@ black
 autoflake
 mypy
 isort
+mitmproxy

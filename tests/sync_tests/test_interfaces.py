@@ -173,38 +173,3 @@ def test_http_request_cannot_reuse_dropped_connection():
         assert status_code == 200
         assert reason == b"OK"
         assert len(http._connections[url[:3]]) == 1
-
-
-@pytest.mark.parametrize('proxy_mode', ['DEFAULT', 'FORWARD_ONLY'])
-def test_http_proxy(proxy_server, proxy_mode):
-    proxy_host, proxy_port = proxy_server
-    proxy_origin = (b"http", proxy_host.encode(), proxy_port)
-    with httpcore.SyncHTTPProxy(proxy_origin, proxy_mode=proxy_mode) as http:
-        method = b"GET"
-        url = (b"http", b"example.org", 80, b"/")
-        headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = http.request(
-            method, url, headers
-        )
-        body = read_body(stream)
-
-        assert http_version == b"HTTP/1.1"
-        assert status_code == 200
-        assert reason == b"OK"
-
-
-def test_http_tunnel_proxy(proxy_server):
-    proxy_host, proxy_port = proxy_server
-    proxy_origin = (b"http", proxy_host.encode(), proxy_port)
-    with httpcore.SyncHTTPProxy(proxy_origin, proxy_mode='TUNNEL_ONLY') as http:
-        method = b"GET"
-        url = (b"http", b"example.org", 80, b"/")
-        headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = http.request(
-            method, url, headers
-        )
-        body = read_body(stream)
-
-        assert http_version == b"HTTP/1.1"
-        assert status_code == 200
-        assert reason == b"OK"
