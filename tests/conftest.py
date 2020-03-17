@@ -35,12 +35,21 @@ def async_environment(request: typing.Any) -> str:
     return request.param
 
 
+class RunNotify:
+    def __init__(self):
+        self.started = threading.Event()
+
+    def running(self):
+        self.started.set()
+
+
 class ProxyWrapper(threading.Thread):
     def __init__(self, host, port, **kwargs):
         self.host = host
         self.port = port
         self.options = kwargs
         super().__init__()
+        self.notify = RunNotify()
 
     def run(self):
         # mitmproxy uses asyncio internally but the default loop policy
@@ -54,6 +63,7 @@ class ProxyWrapper(threading.Thread):
 
         self.master = DumpMaster(opts)
         self.master.server = proxy.server.ProxyServer(pconf)
+        self.master.addons.add(self.notify)
         self.master.run()
 
     def join(self):
@@ -66,7 +76,7 @@ def proxy_server():
     try:
         thread = ProxyWrapper(PROXY_HOST, PROXY_PORT)
         thread.start()
-        time.sleep(1)  # TODO: there's probably a better way to do this
+        thread.notify.started.wait()
         yield (PROXY_HOST, PROXY_PORT)
     finally:
         thread.join()
