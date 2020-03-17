@@ -1,6 +1,5 @@
 import asyncio
 import threading
-import time
 import typing
 
 import pytest
@@ -36,22 +35,26 @@ def async_environment(request: typing.Any) -> str:
 
 
 class RunNotify:
-    def __init__(self):
+    """A mitmproxy addon wrapping an event to notify us when the server is running."""
+
+    def __init__(self) -> None:
         self.started = threading.Event()
 
-    def running(self):
+    def running(self) -> None:
         self.started.set()
 
 
 class ProxyWrapper(threading.Thread):
-    def __init__(self, host, port, **kwargs):
+    """Runs an mitmproxy in a separate thread."""
+
+    def __init__(self, host: str, port: int, **kwargs) -> None:
         self.host = host
         self.port = port
         self.options = kwargs
         super().__init__()
         self.notify = RunNotify()
 
-    def run(self):
+    def run(self) -> None:
         # mitmproxy uses asyncio internally but the default loop policy
         # will only create event loops for the main thread, create one
         # as part of the thread startup
@@ -66,17 +69,18 @@ class ProxyWrapper(threading.Thread):
         self.master.addons.add(self.notify)
         self.master.run()
 
-    def join(self):
+    def join(self) -> None:
         self.master.shutdown()
         super().join()
 
 
 @pytest.fixture
-def proxy_server():
+def proxy_server() -> typing.Tuple[bytes, bytes, int]:
+    """Starts a proxy server on a different thread and returns its origin tuple."""
     try:
         thread = ProxyWrapper(PROXY_HOST, PROXY_PORT)
         thread.start()
         thread.notify.started.wait()
-        yield (PROXY_HOST, PROXY_PORT)
+        yield (b"http", PROXY_HOST.encode(), PROXY_PORT)
     finally:
         thread.join()

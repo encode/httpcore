@@ -177,9 +177,7 @@ def test_http_request_cannot_reuse_dropped_connection():
 
 @pytest.mark.parametrize('proxy_mode', ['DEFAULT', 'FORWARD_ONLY'])
 def test_http_proxy(proxy_server, proxy_mode):
-    proxy_host, proxy_port = proxy_server
-    proxy_origin = (b"http", proxy_host.encode(), proxy_port)
-    with httpcore.SyncHTTPProxy(proxy_origin) as http:
+    with httpcore.SyncHTTPProxy(proxy_server) as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
