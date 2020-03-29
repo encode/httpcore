@@ -1,9 +1,10 @@
+from enum import Enum
 from ssl import SSLContext
 from typing import Dict, List, Optional, Tuple
 
 from .._exceptions import ProxyError
-from .base import AsyncByteStream, AsyncHTTPTransport
-from .connection import AsyncHTTPConnection
+from .base import AsyncByteStream
+from .connection import AsyncHTTPConnection, AsyncSOCKSConnection
 from .connection_pool import AsyncConnectionPool, ResponseByteStream
 
 Origin = Tuple[bytes, bytes, int]
@@ -17,6 +18,15 @@ async def read_body(stream: AsyncByteStream) -> bytes:
         return b"".join([chunk async for chunk in stream])
     finally:
         await stream.aclose()
+
+
+class ProxyModes(Enum):
+    DEFAULT = "DEFAULT"
+    FORWARD_ONLY = "FORWARD_ONLY"
+    TUNNEL_ONLY = "TUNNEL_ONLY"
+    SOCKS4 = "SOCKS4"
+    SOCKS4A = "SOCKS4A"
+    SOCKS5 = "SOCKS5"
 
 
 class AsyncHTTPProxy(AsyncConnectionPool):
@@ -45,7 +55,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         keepalive_expiry: float = None,
         http2: bool = False,
     ):
-        assert proxy_mode in ("DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY")
+        assert ProxyModes(proxy_mode)  # TODO: use ProxyModes type of argument
 
         self.proxy_origin = proxy_origin
         self.proxy_headers = [] if proxy_headers is None else proxy_headers
@@ -76,6 +86,14 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             return await self._forward_request(
                 method, url, headers=headers, stream=stream, timeout=timeout
             )
+        elif self.proxy_mode == "SOCKS4":
+            return await self._socks4_request(
+                method, url, headers=headers, stream=stream, timeout=timeout
+            )
+        elif self.proxy_mode == "SOCKS4A":
+            raise NotImplementedError
+        elif self.proxy_mode == "SOCKS5":
+            raise NotImplementedError
         else:
             # By default HTTPS should be tunnelled.
             return await self._tunnel_request(
@@ -177,6 +195,39 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
         # Once the connection has been established we can send requests on
         # it as normal.
+        response = await connection.request(
+            method, url, headers=headers, stream=stream, timeout=timeout
+        )
+        wrapped_stream = ResponseByteStream(
+            response[4], connection=connection, callback=self._response_closed
+        )
+        return response[0], response[1], response[2], response[3], wrapped_stream
+
+    async def _socks4_request(
+        self,
+        method: bytes,
+        url: URL,
+        headers: Headers = None,
+        stream: AsyncByteStream = None,
+        timeout: TimeoutDict = None,
+    ) -> Tuple[bytes, int, bytes, Headers, AsyncByteStream]:
+        """
+        SOCKS4 requires negotiation with the proxy.
+        """
+        origin = url[:3]
+        connection = await self._get_connection_from_pool(origin)
+
+        if connection is None:
+            connection = AsyncSOCKSConnection(origin, self.proxy_origin, "SOCKS4")
+            async with self._thread_lock:
+                self._connections.setdefault(origin, set())
+                self._connections[origin].add(connection)
+
+        # Issue a forwarded proxy request...
+
+        # GET https://www.example.org/path HTTP/1.1
+        # [proxy headers]
+        # [headers]
         response = await connection.request(
             method, url, headers=headers, stream=stream, timeout=timeout
         )

@@ -58,6 +58,7 @@ setup(
         "h11>=0.8,<0.10",
         "h2==3.*",
         "sniffio==1.*",
+        "socksio>=0.2.0",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",

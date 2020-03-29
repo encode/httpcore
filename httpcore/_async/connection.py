@@ -1,6 +1,8 @@
 from ssl import SSLContext
 from typing import Dict, List, Optional, Tuple, Union
 
+from socksio import socks4
+
 from .._backends.auto import AsyncLock, AutoBackend
 from .base import (
     AsyncByteStream,
@@ -103,3 +105,61 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
     ) -> None:
         if self.connection is not None:
             await self.connection.start_tls(hostname, timeout)
+
+
+class AsyncSOCKSConnection(AsyncHTTPConnection):
+    """An HTTP/1.1 connection with SOCKS proxy negotiation."""
+
+    def __init__(
+        self,
+        origin: Tuple[bytes, bytes, int],
+        proxy_origin: Tuple[bytes, bytes, int],
+        socks_version: str,
+        user_id: str = b"httpcore",
+        ssl_context: SSLContext = None,
+    ):
+        self.origin = origin
+        self.proxy_origin = proxy_origin
+        self.ssl_context = SSLContext() if ssl_context is None else ssl_context
+        self.connection: Union[None, AsyncHTTP11Connection] = None
+        self.is_http11 = True
+        self.is_http2 = False
+        self.connect_failed = False
+        self.expires_at: Optional[float] = None
+        self.backend = AutoBackend()
+
+        self.user_id = user_id
+        self.socks_connection = self._get_socks_connection(socks_version)
+
+    def _get_socks_connection(self, socks_version: str):
+        if socks_version == "SOCKS4":
+            return socks4.SOCKS4Connection(user_id=self.user_id)
+        else:
+            raise NotImplementedError
+
+    async def _connect(
+        self, timeout: Dict[str, Optional[float]] = None,
+    ):
+        """SOCKS4 negotiation prior to creating an HTTP/1.1 connection."""
+        _, hostname, port = self.proxy_origin
+        timeout = {} if timeout is None else timeout
+        # TODO: Is SSL a thing in SOCKS?
+        ssl_context = None
+        socket = await self.backend.open_tcp_stream(
+            hostname, port, ssl_context, timeout
+        )
+        request = socks4.SOCKS4Request.from_address(
+            socks4.SOCKS4Command.CONNECT, (self.origin[1].decode(), self.origin[2])
+        )
+        self.socks_connection.send(request)
+        bytes_to_send = self.socks_connection.data_to_send()
+        await socket.write(bytes_to_send, timeout)
+        data = await socket.read(1024, timeout)
+        event = self.socks_connection.receive_data(data)
+        if event.reply_code != socks4.SOCKS4ReplyCode.REQUEST_GRANTED:
+            raise Exception(
+                "Proxy server could not connect to remote host: {}".format(
+                    event.reply_code
+                )
+            )
+        self.connection = AsyncHTTP11Connection(socket=socket)
