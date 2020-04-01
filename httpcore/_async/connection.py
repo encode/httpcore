@@ -1,5 +1,5 @@
 from ssl import SSLContext
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from socksio import socks4
 
@@ -12,12 +12,13 @@ from .base import (
 )
 from .http2 import AsyncHTTP2Connection
 from .http11 import AsyncHTTP11Connection
+from .._types import URL, Origin, Headers, TimeoutDict
 
 
 class AsyncHTTPConnection(AsyncHTTPTransport):
     def __init__(
         self,
-        origin: Tuple[bytes, bytes, int],
+        origin: Origin,
         http2: bool = False,
         ssl_context: SSLContext = None,
     ):
@@ -46,10 +47,10 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
     async def request(
         self,
         method: bytes,
-        url: Tuple[bytes, bytes, int, bytes],
-        headers: List[Tuple[bytes, bytes]] = None,
+        url: URL,
+        headers: Optional[Headers] = None,
         stream: AsyncByteStream = None,
-        timeout: Dict[str, Optional[float]] = None,
+        timeout: Optional[TimeoutDict] = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         assert url[:3] == self.origin
 
@@ -70,7 +71,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         assert self.connection is not None
         return await self.connection.request(method, url, headers, stream, timeout)
 
-    async def _connect(self, timeout: Dict[str, Optional[float]] = None) -> None:
+    async def _connect(self, timeout: TimeoutDict = None) -> None:
         scheme, hostname, port = self.origin
         timeout = {} if timeout is None else timeout
         ssl_context = self.ssl_context if scheme == b"https" else None
@@ -101,7 +102,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
             self.connection.mark_as_ready()
 
     async def start_tls(
-        self, hostname: bytes, timeout: Dict[str, Optional[float]] = None
+        self, hostname: bytes, timeout: Optional[TimeoutDict] = None
     ) -> None:
         if self.connection is not None:
             await self.connection.start_tls(hostname, timeout)
@@ -112,11 +113,11 @@ class AsyncSOCKSConnection(AsyncHTTPConnection):
 
     def __init__(
         self,
-        origin: Tuple[bytes, bytes, int],
-        proxy_origin: Tuple[bytes, bytes, int],
+        origin: Origin,
+        proxy_origin: Origin,
         socks_version: str,
         user_id: bytes = b"httpcore",
-        ssl_context: SSLContext = None,
+        ssl_context: Optional[SSLContext] = None,
     ) -> None:
         self.origin = origin
         self.proxy_origin = proxy_origin
@@ -138,7 +139,7 @@ class AsyncSOCKSConnection(AsyncHTTPConnection):
             raise NotImplementedError
 
     async def _connect(
-        self, timeout: Dict[str, Optional[float]] = None,
+        self, timeout: Optional[TimeoutDict] = None,
     ) -> None:
         """SOCKS4 negotiation prior to creating an HTTP/1.1 connection."""
         _, hostname, port = self.proxy_origin
