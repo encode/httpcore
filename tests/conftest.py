@@ -3,7 +3,7 @@ import threading
 import typing
 
 import pytest
-from mitmproxy import master, options, proxy
+from mitmproxy import options, proxy
 from mitmproxy.tools.dump import DumpMaster
 
 PROXY_HOST = "127.0.0.1"
@@ -69,7 +69,7 @@ class ProxyWrapper(threading.Thread):
         self.master.addons.add(self.notify)
         self.master.run()
 
-    def join(self) -> None:
+    def join(self, timeout: typing.Optional[float] = None) -> None:
         self.master.shutdown()
         super().join()
 

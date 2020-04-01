@@ -36,5 +36,7 @@ __all__ = [
     "ReadError",
     "WriteError",
     "CloseError",
+    "ProtocolError",
+    "ProxyError",
 ]
 __version__ = "0.7.0"

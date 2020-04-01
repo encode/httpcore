@@ -1,9 +1,10 @@
+from enum import Enum
 from ssl import SSLContext
 from typing import Dict, List, Optional, Tuple
 
 from .._exceptions import ProxyError
-from .base import SyncByteStream, SyncHTTPTransport
-from .connection import SyncHTTPConnection
+from .base import SyncByteStream
+from .connection import SyncHTTPConnection, SyncSOCKSConnection
 from .connection_pool import SyncConnectionPool, ResponseByteStream
 
 Origin = Tuple[bytes, bytes, int]
@@ -19,18 +20,33 @@ def read_body(stream: SyncByteStream) -> bytes:
         stream.close()
 
 
+class ProxyModes(Enum):
+    DEFAULT = "DEFAULT"
+    FORWARD_ONLY = "FORWARD_ONLY"
+    TUNNEL_ONLY = "TUNNEL_ONLY"
+    SOCKS4 = "SOCKS4"
+    SOCKS4A = "SOCKS4A"
+    SOCKS5 = "SOCKS5"
+
+
 class SyncHTTPProxy(SyncConnectionPool):
     """
     A connection pool for making HTTP requests via an HTTP proxy.
 
     **Parameters:**
 
-    * **proxy_origin** - `Tuple[bytes, bytes, int]` - The address of the proxy service as a 3-tuple of (scheme, host, port).
-    * **proxy_headers** - `Optional[List[Tuple[bytes, bytes]]]` - A list of proxy headers to include.
-    * **proxy_mode** - `str` - A proxy mode to operate in. May be "DEFAULT", "FORWARD_ONLY", or "TUNNEL_ONLY".
-    * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for verifying connections.
-    * **max_connections** - `Optional[int]` - The maximum number of concurrent connections to allow.
-    * **max_keepalive** - `Optional[int]` - The maximum number of connections to allow before closing keep-alive connections.
+    * **proxy_origin** - `Tuple[bytes, bytes, int]` - The address of the proxy
+    service as a 3-tuple of (scheme, host, port).
+    * **proxy_headers** - `Optional[List[Tuple[bytes, bytes]]]` - A list of
+    proxy headers to include.
+    * **proxy_mode** - `str` - A proxy mode to operate in. One of "DEFAULT",
+    "FORWARD_ONLY", or "TUNNEL_ONLY".
+    * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for
+    verifying connections.
+    * **max_connections** - `Optional[int]` - The maximum number of concurrent
+    connections to allow.
+    * **max_keepalive** - `Optional[int]` - The maximum number of connections
+    to allow before closing keep-alive connections.
     * **http2** - `bool` - Enable HTTP/2 support.
     """
 
@@ -45,7 +61,7 @@ class SyncHTTPProxy(SyncConnectionPool):
         keepalive_expiry: float = None,
         http2: bool = False,
     ):
-        assert proxy_mode in ("DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY")
+        assert ProxyModes(proxy_mode)  # TODO: use ProxyModes type of argument
 
         self.proxy_origin = proxy_origin
         self.proxy_headers = [] if proxy_headers is None else proxy_headers
@@ -76,6 +92,14 @@ class SyncHTTPProxy(SyncConnectionPool):
             return self._forward_request(
                 method, url, headers=headers, stream=stream, timeout=timeout
             )
+        elif self.proxy_mode == "SOCKS4":
+            return self._socks4_request(
+                method, url, headers=headers, stream=stream, timeout=timeout
+            )
+        elif self.proxy_mode == "SOCKS4A":
+            raise NotImplementedError
+        elif self.proxy_mode == "SOCKS5":
+            raise NotImplementedError
         else:
             # By default HTTPS should be tunnelled.
             return self._tunnel_request(
@@ -177,6 +201,39 @@ class SyncHTTPProxy(SyncConnectionPool):
 
         # Once the connection has been established we can send requests on
         # it as normal.
+        response = connection.request(
+            method, url, headers=headers, stream=stream, timeout=timeout
+        )
+        wrapped_stream = ResponseByteStream(
+            response[4], connection=connection, callback=self._response_closed
+        )
+        return response[0], response[1], response[2], response[3], wrapped_stream
+
+    def _socks4_request(
+        self,
+        method: bytes,
+        url: URL,
+        headers: Headers = None,
+        stream: SyncByteStream = None,
+        timeout: TimeoutDict = None,
+    ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
+        """
+        SOCKS4 requires negotiation with the proxy.
+        """
+        origin = url[:3]
+        connection = self._get_connection_from_pool(origin)
+
+        if connection is None:
+            connection = SyncSOCKSConnection(origin, self.proxy_origin, "SOCKS4")
+            with self._thread_lock:
+                self._connections.setdefault(origin, set())
+                self._connections[origin].add(connection)
+
+        # Issue a forwarded proxy request...
+
+        # GET https://www.example.org/path HTTP/1.1
+        # [proxy headers]
+        # [headers]
         response = connection.request(
             method, url, headers=headers, stream=stream, timeout=timeout
         )

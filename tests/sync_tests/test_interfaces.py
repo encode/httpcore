@@ -22,7 +22,7 @@ def test_http_request():
         http_version, status_code, reason, headers, stream = http.request(
             method, url, headers
         )
-        body = read_body(stream)
+        _ = read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -39,7 +39,7 @@ def test_https_request():
         http_version, status_code, reason, headers, stream = http.request(
             method, url, headers
         )
-        body = read_body(stream)
+        _ = read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -56,7 +56,7 @@ def test_http2_request():
         http_version, status_code, reason, headers, stream = http.request(
             method, url, headers
         )
-        body = read_body(stream)
+        _ = read_body(stream)
 
         assert http_version == b"HTTP/2"
         assert status_code == 200
@@ -73,7 +73,7 @@ def test_closing_http_request():
         http_version, status_code, reason, headers, stream = http.request(
             method, url, headers
         )
-        body = read_body(stream)
+        _ = read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -90,7 +90,7 @@ def test_http_request_reuse_connection():
         http_version, status_code, reason, headers, stream = http.request(
             method, url, headers
         )
-        body = read_body(stream)
+        _ = read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -103,7 +103,7 @@ def test_http_request_reuse_connection():
         http_version, status_code, reason, headers, stream = http.request(
             method, url, headers
         )
-        body = read_body(stream)
+        _ = read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -120,7 +120,7 @@ def test_https_request_reuse_connection():
         http_version, status_code, reason, headers, stream = http.request(
             method, url, headers
         )
-        body = read_body(stream)
+        _ = read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -133,7 +133,7 @@ def test_https_request_reuse_connection():
         http_version, status_code, reason, headers, stream = http.request(
             method, url, headers
         )
-        body = read_body(stream)
+        _ = read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -150,7 +150,7 @@ def test_http_request_cannot_reuse_dropped_connection():
         http_version, status_code, reason, headers, stream = http.request(
             method, url, headers
         )
-        body = read_body(stream)
+        _ = read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -167,7 +167,7 @@ def test_http_request_cannot_reuse_dropped_connection():
         http_version, status_code, reason, headers, stream = http.request(
             method, url, headers
         )
-        body = read_body(stream)
+        _ = read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -185,7 +185,7 @@ def test_http_proxy(proxy_server, proxy_mode):
         http_version, status_code, reason, headers, stream = http.request(
             method, url, headers
         )
-        body = read_body(stream)
+        _ = read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200

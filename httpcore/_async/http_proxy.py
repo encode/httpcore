@@ -35,12 +35,18 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
     **Parameters:**
 
-    * **proxy_origin** - `Tuple[bytes, bytes, int]` - The address of the proxy service as a 3-tuple of (scheme, host, port).
-    * **proxy_headers** - `Optional[List[Tuple[bytes, bytes]]]` - A list of proxy headers to include.
-    * **proxy_mode** - `str` - A proxy mode to operate in. May be "DEFAULT", "FORWARD_ONLY", or "TUNNEL_ONLY".
-    * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for verifying connections.
-    * **max_connections** - `Optional[int]` - The maximum number of concurrent connections to allow.
-    * **max_keepalive** - `Optional[int]` - The maximum number of connections to allow before closing keep-alive connections.
+    * **proxy_origin** - `Tuple[bytes, bytes, int]` - The address of the proxy
+    service as a 3-tuple of (scheme, host, port).
+    * **proxy_headers** - `Optional[List[Tuple[bytes, bytes]]]` - A list of
+    proxy headers to include.
+    * **proxy_mode** - `str` - A proxy mode to operate in. One of "DEFAULT",
+    "FORWARD_ONLY", or "TUNNEL_ONLY".
+    * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for
+    verifying connections.
+    * **max_connections** - `Optional[int]` - The maximum number of concurrent
+    connections to allow.
+    * **max_keepalive** - `Optional[int]` - The maximum number of connections
+    to allow before closing keep-alive connections.
     * **http2** - `bool` - Enable HTTP/2 support.
     """
 

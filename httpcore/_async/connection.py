@@ -4,6 +4,7 @@ from typing import List, Optional, Tuple, Union
 from socksio import socks4
 
 from .._backends.auto import AsyncLock, AutoBackend
+from .._types import URL, Headers, Origin, TimeoutDict
 from .base import (
     AsyncByteStream,
     AsyncHTTPTransport,
@@ -12,15 +13,11 @@ from .base import (
 )
 from .http2 import AsyncHTTP2Connection
 from .http11 import AsyncHTTP11Connection
-from .._types import URL, Origin, Headers, TimeoutDict
 
 
 class AsyncHTTPConnection(AsyncHTTPTransport):
     def __init__(
-        self,
-        origin: Origin,
-        http2: bool = False,
-        ssl_context: SSLContext = None,
+        self, origin: Origin, http2: bool = False, ssl_context: SSLContext = None,
     ):
         self.origin = origin
         self.http2 = http2
@@ -138,9 +135,7 @@ class AsyncSOCKSConnection(AsyncHTTPConnection):
         else:
             raise NotImplementedError
 
-    async def _connect(
-        self, timeout: Optional[TimeoutDict] = None,
-    ) -> None:
+    async def _connect(self, timeout: Optional[TimeoutDict] = None,) -> None:
         """SOCKS4 negotiation prior to creating an HTTP/1.1 connection."""
         # First setup the socket to talk to the proxy server
         _, hostname, port = self.proxy_origin
@@ -171,4 +166,6 @@ class AsyncSOCKSConnection(AsyncHTTPConnection):
             )
 
         # Otherwise use the socket as usual
-        self.connection = AsyncHTTP11Connection(socket=socket)
+        self.connection = AsyncHTTP11Connection(
+            socket=socket, ssl_context=self.ssl_context
+        )
