@@ -115,9 +115,9 @@ class AsyncSOCKSConnection(AsyncHTTPConnection):
         origin: Tuple[bytes, bytes, int],
         proxy_origin: Tuple[bytes, bytes, int],
         socks_version: str,
-        user_id: str = b"httpcore",
+        user_id: bytes = b"httpcore",
         ssl_context: SSLContext = None,
-    ):
+    ) -> None:
         self.origin = origin
         self.proxy_origin = proxy_origin
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
@@ -131,7 +131,7 @@ class AsyncSOCKSConnection(AsyncHTTPConnection):
         self.user_id = user_id
         self.socks_connection = self._get_socks_connection(socks_version)
 
-    def _get_socks_connection(self, socks_version: str):
+    def _get_socks_connection(self, socks_version: str) -> socks4.SOCKS4Connection:
         if socks_version == "SOCKS4":
             return socks4.SOCKS4Connection(user_id=self.user_id)
         else:
@@ -139,7 +139,7 @@ class AsyncSOCKSConnection(AsyncHTTPConnection):
 
     async def _connect(
         self, timeout: Dict[str, Optional[float]] = None,
-    ):
+    ) -> None:
         """SOCKS4 negotiation prior to creating an HTTP/1.1 connection."""
         _, hostname, port = self.proxy_origin
         timeout = {} if timeout is None else timeout
