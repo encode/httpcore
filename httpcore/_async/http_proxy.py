@@ -1,16 +1,12 @@
 from enum import Enum
 from ssl import SSLContext
-from typing import Dict, List, Optional, Tuple
+from typing import Tuple
 
 from .._exceptions import ProxyError
+from .._types import URL, Headers, Origin, TimeoutDict
 from .base import AsyncByteStream
 from .connection import AsyncHTTPConnection, AsyncSOCKSConnection
 from .connection_pool import AsyncConnectionPool, ResponseByteStream
-
-Origin = Tuple[bytes, bytes, int]
-URL = Tuple[bytes, bytes, int, bytes]
-Headers = List[Tuple[bytes, bytes]]
-TimeoutDict = Dict[str, Optional[float]]
 
 
 async def read_body(stream: AsyncByteStream) -> bytes:
