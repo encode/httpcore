@@ -1,7 +1,7 @@
 from ssl import SSLContext
 from typing import Dict, List, Optional, Tuple, Union
 
-from .._backends.auto import AsyncLock, AsyncSocketStream, AutoBackend
+from .._backends.auto import AsyncLock, AutoBackend
 from .base import (
     AsyncByteStream,
     AsyncHTTPTransport,
@@ -55,7 +55,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
             if self.state == ConnectionState.PENDING:
                 try:
                     await self._connect(timeout)
-                except:
+                except Exception:
                     self.connect_failed = True
                     raise
             elif self.state in (ConnectionState.READY, ConnectionState.IDLE):
@@ -68,9 +68,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         assert self.connection is not None
         return await self.connection.request(method, url, headers, stream, timeout)
 
-    async def _connect(
-        self, timeout: Dict[str, Optional[float]] = None,
-    ):
+    async def _connect(self, timeout: Dict[str, Optional[float]] = None,) -> None:
         scheme, hostname, port = self.origin
         timeout = {} if timeout is None else timeout
         ssl_context = self.ssl_context if scheme == b"https" else None
@@ -102,6 +100,6 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
 
     async def start_tls(
         self, hostname: bytes, timeout: Dict[str, Optional[float]] = None
-    ):
+    ) -> None:
         if self.connection is not None:
             await self.connection.start_tls(hostname, timeout)

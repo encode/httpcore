@@ -1,7 +1,7 @@
 from ssl import SSLContext
 from typing import Dict, List, Optional, Tuple, Union
 
-from .._backends.auto import SyncLock, SyncSocketStream, SyncBackend
+from .._backends.auto import SyncLock, SyncBackend
 from .base import (
     SyncByteStream,
     SyncHTTPTransport,
@@ -55,7 +55,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
             if self.state == ConnectionState.PENDING:
                 try:
                     self._connect(timeout)
-                except:
+                except Exception:
                     self.connect_failed = True
                     raise
             elif self.state in (ConnectionState.READY, ConnectionState.IDLE):
@@ -68,9 +68,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         assert self.connection is not None
         return self.connection.request(method, url, headers, stream, timeout)
 
-    def _connect(
-        self, timeout: Dict[str, Optional[float]] = None,
-    ):
+    def _connect(self, timeout: Dict[str, Optional[float]] = None,) -> None:
         scheme, hostname, port = self.origin
         timeout = {} if timeout is None else timeout
         ssl_context = self.ssl_context if scheme == b"https" else None
@@ -102,6 +100,6 @@ class SyncHTTPConnection(SyncHTTPTransport):
 
     def start_tls(
         self, hostname: bytes, timeout: Dict[str, Optional[float]] = None
-    ):
+    ) -> None:
         if self.connection is not None:
             self.connection.start_tls(hostname, timeout)

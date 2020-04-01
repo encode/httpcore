@@ -1,9 +1,10 @@
 from ssl import SSLContext
-from typing import Callable, Dict, List, Optional, Set, Tuple
+from typing import Iterator, Callable, Dict, Optional, Set, Tuple
 
 from .._backends.auto import SyncSemaphore, SyncBackend
 from .._exceptions import PoolTimeout
 from .._threadlock import ThreadLock
+from .._types import URL, Headers, Origin, TimeoutDict
 from .base import (
     SyncByteStream,
     SyncHTTPTransport,
@@ -11,11 +12,6 @@ from .base import (
     NewConnectionRequired,
 )
 from .connection import SyncHTTPConnection
-
-Origin = Tuple[bytes, bytes, int]
-URL = Tuple[bytes, bytes, int, bytes]
-Headers = List[Tuple[bytes, bytes]]
-TimeoutDict = Dict[str, Optional[float]]
 
 
 class NullSemaphore(SyncSemaphore):
@@ -46,11 +42,11 @@ class ResponseByteStream(SyncByteStream):
         self.connection = connection
         self.callback = callback
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[bytes]:
         for chunk in self.stream:
             yield chunk
 
-    def close(self):
+    def close(self) -> None:
         try:
             #  Call the underlying stream close callback.
             # This will be a call to `SyncHTTP11Connection._response_closed()`
@@ -68,10 +64,14 @@ class SyncConnectionPool(SyncHTTPTransport):
 
     **Parameters:**
 
-    * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for verifying connections.
-    * **max_connections** - `Optional[int]` - The maximum number of concurrent connections to allow.
-    * **max_keepalive** - `Optional[int]` - The maximum number of connections to allow before closing keep-alive connections.
-    * **keepalive_expiry** - `Optional[float]` - The maximum time to allow before closing a keep-alive connection.
+    * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for
+    verifying connections.
+    * **max_connections** - `Optional[int]` - The maximum number of concurrent
+    connections to allow.
+    * **max_keepalive** - `Optional[int]` - The maximum number of connections
+    to allow before closing keep-alive connections.
+    * **keepalive_expiry** - `Optional[float]` - The maximum time to allow
+    before closing a keep-alive connection.
     * **http2** - `bool` - Enable HTTP/2 support.
     """
 
@@ -124,7 +124,6 @@ class SyncConnectionPool(SyncHTTPTransport):
         connection: Optional[SyncHTTPConnection] = None
         while connection is None:
             connection = self._get_connection_from_pool(origin)
-            is_new_connection = False
 
             if connection is None:
                 connection = SyncHTTPConnection(
@@ -138,7 +137,7 @@ class SyncConnectionPool(SyncHTTPTransport):
                 )
             except NewConnectionRequired:
                 connection = None
-            except:
+            except Exception:
                 self._remove_from_pool(connection)
                 raise
 
@@ -193,7 +192,7 @@ class SyncConnectionPool(SyncHTTPTransport):
 
         return reuse_connection
 
-    def _response_closed(self, connection: SyncHTTPConnection):
+    def _response_closed(self, connection: SyncHTTPConnection) -> None:
         remove_from_pool = False
         close_connection = False
 
@@ -217,17 +216,17 @@ class SyncConnectionPool(SyncHTTPTransport):
         if close_connection:
             connection.close()
 
-    def _keepalive_sweep(self):
+    def _keepalive_sweep(self) -> None:
         """
         Remove any IDLE connections that have expired past their keep-alive time.
         """
         assert self._keepalive_expiry is not None
 
         now = self._backend.time()
-        if now < self.next_keepalive_check:
+        if now < self._next_keepalive_check:
             return
 
-        self.next_keepalive_check = now + 1.0
+        self._next_keepalive_check = now + 1.0
         connections_to_close = set()
 
         for connection in self._get_all_connections():
@@ -244,7 +243,7 @@ class SyncConnectionPool(SyncHTTPTransport):
 
     def _add_to_pool(
         self, connection: SyncHTTPConnection, timeout: TimeoutDict = None
-    ):
+    ) -> None:
         timeout = {} if timeout is None else timeout
 
         self._connection_semaphore.acquire(timeout=timeout.get("pool", None))
