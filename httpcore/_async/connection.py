@@ -68,7 +68,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         assert self.connection is not None
         return await self.connection.request(method, url, headers, stream, timeout)
 
-    async def _connect(self, timeout: Dict[str, Optional[float]] = None,) -> None:
+    async def _connect(self, timeout: Dict[str, Optional[float]] = None) -> None:
         scheme, hostname, port = self.origin
         timeout = {} if timeout is None else timeout
         ssl_context = self.ssl_context if scheme == b"https" else None
