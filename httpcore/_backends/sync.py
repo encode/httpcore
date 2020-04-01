@@ -85,7 +85,7 @@ class SyncSocketStream:
 
 
 class SyncLock:
-    def __init__(self):
+    def __init__(self) -> None:
         self._lock = threading.Lock()
 
     def __enter__(self) -> None:

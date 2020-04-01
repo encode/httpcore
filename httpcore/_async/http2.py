@@ -1,15 +1,6 @@
 from http import HTTPStatus
 from ssl import SSLContext
-from typing import (
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import AsyncIterator, Dict, List, Optional, Tuple
 
 import h2.connection
 import h2.events
@@ -74,10 +65,10 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
 
     async def start_tls(
         self, hostname: bytes, timeout: Dict[str, Optional[float]] = None
-    ):
+    ) -> None:
         pass
 
-    def mark_as_ready(self):
+    def mark_as_ready(self) -> None:
         if self.state == ConnectionState.IDLE:
             self.state = ConnectionState.READY
 

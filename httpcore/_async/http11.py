@@ -1,14 +1,5 @@
 from ssl import SSLContext
-from typing import (
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import AsyncIterator, Dict, List, Optional, Tuple, Union
 
 import h11
 
@@ -39,7 +30,7 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
 
         self.state = ConnectionState.ACTIVE
 
-    def mark_as_ready(self):
+    def mark_as_ready(self) -> None:
         if self.state == ConnectionState.IDLE:
             self.state = ConnectionState.READY
 
@@ -73,7 +64,7 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
 
     async def start_tls(
         self, hostname: bytes, timeout: Dict[str, Optional[float]] = None
-    ):
+    ) -> None:
         timeout = {} if timeout is None else timeout
         self.socket = await self.socket.start_tls(hostname, self.ssl_context, timeout)
 

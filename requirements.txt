@@ -12,6 +12,7 @@ mkdocs-material
 pytest
 pytest-asyncio
 pytest-trio
+pytest-cov
 black
 autoflake
 mypy

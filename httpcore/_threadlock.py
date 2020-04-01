@@ -9,7 +9,7 @@ class ThreadLock:
     no-op when used as an async context manager.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.lock = threading.Lock()
 
     def __enter__(self) -> None:
