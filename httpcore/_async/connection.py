@@ -142,25 +142,33 @@ class AsyncSOCKSConnection(AsyncHTTPConnection):
         self, timeout: Optional[TimeoutDict] = None,
     ) -> None:
         """SOCKS4 negotiation prior to creating an HTTP/1.1 connection."""
+        # First setup the socket to talk to the proxy server
         _, hostname, port = self.proxy_origin
         timeout = {} if timeout is None else timeout
-        # TODO: Is SSL a thing in SOCKS?
         ssl_context = None
         socket = await self.backend.open_tcp_stream(
             hostname, port, ssl_context, timeout
         )
+
+        # Use socksio to negotiate the connection with the remote host
         request = socks4.SOCKS4Request.from_address(
             socks4.SOCKS4Command.CONNECT, (self.origin[1].decode(), self.origin[2])
         )
         self.socks_connection.send(request)
         bytes_to_send = self.socks_connection.data_to_send()
         await socket.write(bytes_to_send, timeout)
+
+        # Read the response from the proxy
         data = await socket.read(1024, timeout)
         event = self.socks_connection.receive_data(data)
+
+        # Bail if rejected
         if event.reply_code != socks4.SOCKS4ReplyCode.REQUEST_GRANTED:
             raise Exception(
                 "Proxy server could not connect to remote host: {}".format(
                     event.reply_code
                 )
             )
+
+        # Otherwise use the socket as usual
         self.connection = AsyncHTTP11Connection(socket=socket)
