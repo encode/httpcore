@@ -1,6 +1,8 @@
 import enum
 from types import TracebackType
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type
+from typing import AsyncIterator, Callable, List, Optional, Tuple, Type
+
+from .._types import URL, Headers, TimeoutDict
 
 
 async def empty() -> AsyncIterator:
@@ -43,7 +45,9 @@ class AsyncByteStream:
     """
 
     def __init__(
-        self, iterator: AsyncIterator[bytes] = None, close_func: Any = None
+        self,
+        iterator: Optional[AsyncIterator[bytes]] = None,
+        close_func: Optional[Callable] = None,
     ) -> None:
         self.iterator = empty() if iterator is None else iterator
         self.close_func = close_func
@@ -74,10 +78,10 @@ class AsyncHTTPTransport:
     async def request(
         self,
         method: bytes,
-        url: Tuple[bytes, bytes, int, bytes],
-        headers: List[Tuple[bytes, bytes]] = None,
+        url: URL,
+        headers: Optional[Headers] = None,
         stream: AsyncByteStream = None,
-        timeout: Dict[str, Optional[float]] = None,
+        timeout: Optional[TimeoutDict] = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         """
         The interface for sending a single HTTP request, and returning a response.
@@ -118,8 +122,8 @@ class AsyncHTTPTransport:
 
     async def __aexit__(
         self,
-        exc_type: Type[BaseException] = None,
-        exc_value: BaseException = None,
-        traceback: TracebackType = None,
+        exc_type: Optional[Type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        traceback: Optional[TracebackType] = None,
     ) -> None:
         await self.aclose()

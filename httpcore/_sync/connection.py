@@ -1,7 +1,8 @@
 from ssl import SSLContext
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from .._backends.auto import SyncLock, SyncBackend
+from .._types import URL, Headers, Origin, TimeoutDict
 from .base import (
     SyncByteStream,
     SyncHTTPTransport,
@@ -15,9 +16,9 @@ from .http11 import SyncHTTP11Connection
 class SyncHTTPConnection(SyncHTTPTransport):
     def __init__(
         self,
-        origin: Tuple[bytes, bytes, int],
+        origin: Origin,
         http2: bool = False,
-        ssl_context: SSLContext = None,
+        ssl_context: Optional[SSLContext] = None,
     ):
         self.origin = origin
         self.http2 = http2
@@ -44,10 +45,10 @@ class SyncHTTPConnection(SyncHTTPTransport):
     def request(
         self,
         method: bytes,
-        url: Tuple[bytes, bytes, int, bytes],
-        headers: List[Tuple[bytes, bytes]] = None,
+        url: URL,
+        headers: Optional[Headers] = None,
         stream: SyncByteStream = None,
-        timeout: Dict[str, Optional[float]] = None,
+        timeout: Optional[TimeoutDict] = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         assert url[:3] == self.origin
 
@@ -68,7 +69,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         assert self.connection is not None
         return self.connection.request(method, url, headers, stream, timeout)
 
-    def _connect(self, timeout: Dict[str, Optional[float]] = None) -> None:
+    def _connect(self, timeout: Optional[TimeoutDict] = None) -> None:
         scheme, hostname, port = self.origin
         timeout = {} if timeout is None else timeout
         ssl_context = self.ssl_context if scheme == b"https" else None
@@ -99,7 +100,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
             self.connection.mark_as_ready()
 
     def start_tls(
-        self, hostname: bytes, timeout: Dict[str, Optional[float]] = None
+        self, hostname: bytes, timeout: Optional[TimeoutDict] = None
     ) -> None:
         if self.connection is not None:
             self.connection.start_tls(hostname, timeout)

@@ -1,6 +1,8 @@
 import enum
 from types import TracebackType
-from typing import Any, Iterator, Dict, List, Optional, Tuple, Type
+from typing import Iterator, Callable, List, Optional, Tuple, Type
+
+from .._types import URL, Headers, TimeoutDict
 
 
 def empty() -> Iterator:
@@ -43,7 +45,9 @@ class SyncByteStream:
     """
 
     def __init__(
-        self, iterator: Iterator[bytes] = None, close_func: Any = None
+        self,
+        iterator: Optional[Iterator[bytes]] = None,
+        close_func: Optional[Callable] = None,
     ) -> None:
         self.iterator = empty() if iterator is None else iterator
         self.close_func = close_func
@@ -74,10 +78,10 @@ class SyncHTTPTransport:
     def request(
         self,
         method: bytes,
-        url: Tuple[bytes, bytes, int, bytes],
-        headers: List[Tuple[bytes, bytes]] = None,
+        url: URL,
+        headers: Optional[Headers] = None,
         stream: SyncByteStream = None,
-        timeout: Dict[str, Optional[float]] = None,
+        timeout: Optional[TimeoutDict] = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         """
         The interface for sending a single HTTP request, and returning a response.
@@ -118,8 +122,8 @@ class SyncHTTPTransport:
 
     def __exit__(
         self,
-        exc_type: Type[BaseException] = None,
-        exc_value: BaseException = None,
-        traceback: TracebackType = None,
+        exc_type: Optional[Type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        traceback: Optional[TracebackType] = None,
     ) -> None:
         self.close()

@@ -1,6 +1,8 @@
 from ssl import SSLContext
 from types import TracebackType
-from typing import Dict, Optional, Type
+from typing import Optional, Type
+
+from .._types import TimeoutDict
 
 
 class AsyncSocketStream:
@@ -14,17 +16,14 @@ class AsyncSocketStream:
         raise NotImplementedError()  # pragma: no cover
 
     async def start_tls(
-        self,
-        hostname: bytes,
-        ssl_context: SSLContext,
-        timeout: Dict[str, Optional[float]],
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict
     ) -> "AsyncSocketStream":
         raise NotImplementedError()  # pragma: no cover
 
-    async def read(self, n: int, timeout: Dict[str, Optional[float]]) -> bytes:
+    async def read(self, n: int, timeout: TimeoutDict) -> bytes:
         raise NotImplementedError()  # pragma: no cover
 
-    async def write(self, data: bytes, timeout: Dict[str, Optional[float]]) -> None:
+    async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         raise NotImplementedError()  # pragma: no cover
 
     async def aclose(self) -> None:
@@ -63,7 +62,7 @@ class AsyncSemaphore:
     Abstracts away any asyncio-specific interfaces.
     """
 
-    async def acquire(self, timeout: float = None) -> None:
+    async def acquire(self, timeout: Optional[float] = None) -> None:
         raise NotImplementedError()  # pragma: no cover
 
     def release(self) -> None:
@@ -76,7 +75,7 @@ class AsyncBackend:
         hostname: bytes,
         port: int,
         ssl_context: Optional[SSLContext],
-        timeout: Dict[str, Optional[float]],
+        timeout: TimeoutDict,
     ) -> AsyncSocketStream:
         raise NotImplementedError()  # pragma: no cover
 

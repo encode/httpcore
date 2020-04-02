@@ -1,15 +1,11 @@
 from ssl import SSLContext
-from typing import Dict, List, Optional, Tuple
+from typing import Optional, Tuple
 
 from .._exceptions import ProxyError
-from .base import SyncByteStream, SyncHTTPTransport
+from .._types import URL, Headers, Origin, TimeoutDict
+from .base import SyncByteStream
 from .connection import SyncHTTPConnection
 from .connection_pool import SyncConnectionPool, ResponseByteStream
-
-Origin = Tuple[bytes, bytes, int]
-URL = Tuple[bytes, bytes, int, bytes]
-Headers = List[Tuple[bytes, bytes]]
-TimeoutDict = Dict[str, Optional[float]]
 
 
 def read_body(stream: SyncByteStream) -> bytes:
@@ -25,24 +21,30 @@ class SyncHTTPProxy(SyncConnectionPool):
 
     **Parameters:**
 
-    * **proxy_origin** - `Tuple[bytes, bytes, int]` - The address of the proxy service as a 3-tuple of (scheme, host, port).
-    * **proxy_headers** - `Optional[List[Tuple[bytes, bytes]]]` - A list of proxy headers to include.
-    * **proxy_mode** - `str` - A proxy mode to operate in. May be "DEFAULT", "FORWARD_ONLY", or "TUNNEL_ONLY".
-    * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for verifying connections.
-    * **max_connections** - `Optional[int]` - The maximum number of concurrent connections to allow.
-    * **max_keepalive** - `Optional[int]` - The maximum number of connections to allow before closing keep-alive connections.
+    * **proxy_origin** - `Tuple[bytes, bytes, int]` - The address of the proxy
+    service as a 3-tuple of (scheme, host, port).
+    * **proxy_headers** - `Optional[List[Tuple[bytes, bytes]]]` - A list of
+    proxy headers to include.
+    * **proxy_mode** - `str` - A proxy mode to operate in. May be "DEFAULT",
+    "FORWARD_ONLY", or "TUNNEL_ONLY".
+    * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for
+    verifying connections.
+    * **max_connections** - `Optional[int]` - The maximum number of concurrent
+    connections to allow.
+    * **max_keepalive** - `Optional[int]` - The maximum number of connections
+    to allow before closing keep-alive connections.
     * **http2** - `bool` - Enable HTTP/2 support.
     """
 
     def __init__(
         self,
         proxy_origin: Origin,
-        proxy_headers: Headers = None,
+        proxy_headers: Optional[Headers] = None,
         proxy_mode: str = "DEFAULT",
-        ssl_context: SSLContext = None,
-        max_connections: int = None,
-        max_keepalive: int = None,
-        keepalive_expiry: float = None,
+        ssl_context: Optional[SSLContext] = None,
+        max_connections: Optional[int] = None,
+        max_keepalive: Optional[int] = None,
+        keepalive_expiry: Optional[float] = None,
         http2: bool = False,
     ):
         assert proxy_mode in ("DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY")
@@ -62,9 +64,9 @@ class SyncHTTPProxy(SyncConnectionPool):
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: SyncByteStream = None,
-        timeout: TimeoutDict = None,
+        headers: Optional[Headers] = None,
+        stream: Optional[SyncByteStream] = None,
+        timeout: Optional[TimeoutDict] = None,
     ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
         if self._keepalive_expiry is not None:
             self._keepalive_sweep()
@@ -86,9 +88,9 @@ class SyncHTTPProxy(SyncConnectionPool):
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: SyncByteStream = None,
-        timeout: TimeoutDict = None,
+        headers: Optional[Headers] = None,
+        stream: Optional[SyncByteStream] = None,
+        timeout: Optional[TimeoutDict] = None,
     ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
         """
         Forwarded proxy requests include the entire URL as the HTTP target,
@@ -126,9 +128,9 @@ class SyncHTTPProxy(SyncConnectionPool):
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: SyncByteStream = None,
-        timeout: TimeoutDict = None,
+        headers: Optional[Headers] = None,
+        stream: Optional[SyncByteStream] = None,
+        timeout: Optional[TimeoutDict] = None,
     ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
         """
         Tunnelled proxy requests require an initial CONNECT request to

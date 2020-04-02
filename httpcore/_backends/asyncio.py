@@ -1,6 +1,6 @@
 import asyncio
 from ssl import SSLContext
-from typing import Dict, Optional
+from typing import Optional
 
 from .._exceptions import (
     CloseError,
@@ -12,6 +12,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
+from .._types import TimeoutDict
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 SSL_MONKEY_PATCH_APPLIED = False
@@ -44,8 +45,8 @@ async def backport_start_tls(
     ssl_context: SSLContext,
     *,
     server_side: bool = False,
-    server_hostname: str = None,
-    ssl_handshake_timeout: float = None,
+    server_hostname: Optional[str] = None,
+    ssl_handshake_timeout: Optional[float] = None,
 ) -> asyncio.Transport:  # pragma: nocover (Since it's not used on all Python versions.)
     """
     Python 3.6 asyncio doesn't have a start_tls() method on the loop
@@ -94,10 +95,7 @@ class SocketStream(AsyncSocketStream):
         return "HTTP/2" if ident == "h2" else "HTTP/1.1"
 
     async def start_tls(
-        self,
-        hostname: bytes,
-        ssl_context: SSLContext,
-        timeout: Dict[str, Optional[float]],
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict
     ) -> "SocketStream":
         loop = asyncio.get_event_loop()
 
@@ -129,7 +127,7 @@ class SocketStream(AsyncSocketStream):
         ssl_stream._inner = self  # type: ignore
         return ssl_stream
 
-    async def read(self, n: int, timeout: Dict[str, Optional[float]]) -> bytes:
+    async def read(self, n: int, timeout: TimeoutDict) -> bytes:
         exc_map = {asyncio.TimeoutError: ReadTimeout, OSError: ReadError}
         async with self.read_lock:
             with map_exceptions(exc_map):
@@ -137,7 +135,7 @@ class SocketStream(AsyncSocketStream):
                     self.stream_reader.read(n), timeout.get("read")
                 )
 
-    async def write(self, data: bytes, timeout: Dict[str, Optional[float]]) -> None:
+    async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         if not data:
             return
 
@@ -223,7 +221,7 @@ class AsyncioBackend(AsyncBackend):
         hostname: bytes,
         port: int,
         ssl_context: Optional[SSLContext],
-        timeout: Dict[str, Optional[float]],
+        timeout: TimeoutDict,
     ) -> SocketStream:
         host = hostname.decode("ascii")
         connect_timeout = timeout.get("connect")
