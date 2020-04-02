@@ -119,7 +119,7 @@ class AsyncSOCKSConnection(AsyncHTTPConnection):
         self.origin = origin
         self.proxy_origin = proxy_origin
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
-        self.connection: Union[None, AsyncHTTP11Connection] = None
+        self.connection: Union[None, AsyncHTTP11Connection, AsyncHTTP2Connection] = None
         self.is_http11 = True
         self.is_http2 = False
         self.connect_failed = False
@@ -135,7 +135,7 @@ class AsyncSOCKSConnection(AsyncHTTPConnection):
         else:
             raise NotImplementedError
 
-    async def _connect(self, timeout: Optional[TimeoutDict] = None,) -> None:
+    async def _connect(self, timeout: Optional[TimeoutDict] = None) -> None:
         """SOCKS4 negotiation prior to creating an HTTP/1.1 connection."""
         # First setup the socket to talk to the proxy server
         _, hostname, port = self.proxy_origin
@@ -166,6 +166,20 @@ class AsyncSOCKSConnection(AsyncHTTPConnection):
             )
 
         # Otherwise use the socket as usual
-        self.connection = AsyncHTTP11Connection(
-            socket=socket, ssl_context=self.ssl_context
-        )
+        # TODO: this is never going to be HTTP/2 at this point
+        # since we're connected only to the proxy server
+        # Keeping it for now in case we need to move it
+        http_version = socket.get_http_version()
+        if http_version == "HTTP/2":
+            self.is_http2 = True
+            self.connection = AsyncHTTP2Connection(socket=socket, backend=self.backend)
+        else:
+            self.is_http11 = True
+            self.connection = AsyncHTTP11Connection(socket=socket)
+
+        # Upgrading to TLS needs to happen at request time because SOCKS
+        # requires the target host and port, as opposed to tunnelling which
+        # it target independent
+        scheme = self.origin[0]
+        if scheme == b"https" and self.ssl_context:
+            await self.connection.start_tls(hostname, timeout=timeout or {})
