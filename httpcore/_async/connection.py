@@ -4,6 +4,7 @@ from typing import List, Optional, Tuple, Union
 from socksio import socks4
 
 from .._backends.auto import AsyncLock, AutoBackend
+from .._exceptions import ProxyError
 from .._types import URL, Headers, Origin, TimeoutDict
 from .base import (
     AsyncByteStream,
@@ -159,7 +160,7 @@ class AsyncSOCKSConnection(AsyncHTTPConnection):
 
         # Bail if rejected
         if event.reply_code != socks4.SOCKS4ReplyCode.REQUEST_GRANTED:
-            raise Exception(
+            raise ProxyError(
                 "Proxy server could not connect to remote host: {}".format(
                     event.reply_code
                 )
