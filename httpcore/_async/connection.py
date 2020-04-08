@@ -1,7 +1,8 @@
 from ssl import SSLContext
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from .._backends.auto import AsyncLock, AutoBackend
+from .._types import URL, Headers, Origin, TimeoutDict
 from .base import (
     AsyncByteStream,
     AsyncHTTPTransport,
@@ -14,10 +15,7 @@ from .http11 import AsyncHTTP11Connection
 
 class AsyncHTTPConnection(AsyncHTTPTransport):
     def __init__(
-        self,
-        origin: Tuple[bytes, bytes, int],
-        http2: bool = False,
-        ssl_context: SSLContext = None,
+        self, origin: Origin, http2: bool = False, ssl_context: SSLContext = None,
     ):
         self.origin = origin
         self.http2 = http2
@@ -44,10 +42,10 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
     async def request(
         self,
         method: bytes,
-        url: Tuple[bytes, bytes, int, bytes],
-        headers: List[Tuple[bytes, bytes]] = None,
+        url: URL,
+        headers: Headers = None,
         stream: AsyncByteStream = None,
-        timeout: Dict[str, Optional[float]] = None,
+        timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         assert url[:3] == self.origin
 
@@ -68,7 +66,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         assert self.connection is not None
         return await self.connection.request(method, url, headers, stream, timeout)
 
-    async def _connect(self, timeout: Dict[str, Optional[float]] = None) -> None:
+    async def _connect(self, timeout: TimeoutDict = None) -> None:
         scheme, hostname, port = self.origin
         timeout = {} if timeout is None else timeout
         ssl_context = self.ssl_context if scheme == b"https" else None
@@ -98,8 +96,6 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         if self.connection is not None:
             self.connection.mark_as_ready()
 
-    async def start_tls(
-        self, hostname: bytes, timeout: Dict[str, Optional[float]] = None
-    ) -> None:
+    async def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
         if self.connection is not None:
             await self.connection.start_tls(hostname, timeout)

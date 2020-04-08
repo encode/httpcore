@@ -1,5 +1,5 @@
 from ssl import SSLContext
-from typing import Dict, Optional, Union
+from typing import Optional, Union
 
 import trio
 
@@ -13,6 +13,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
+from .._types import TimeoutDict
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 
@@ -21,7 +22,7 @@ def none_as_inf(value: Optional[float]) -> float:
 
 
 class SocketStream(AsyncSocketStream):
-    def __init__(self, stream: Union[trio.SocketStream, trio.SSLStream],) -> None:
+    def __init__(self, stream: Union[trio.SocketStream, trio.SSLStream]) -> None:
         self.stream = stream
         self.read_lock = trio.Lock()
         self.write_lock = trio.Lock()
@@ -34,10 +35,7 @@ class SocketStream(AsyncSocketStream):
         return "HTTP/2" if ident == "h2" else "HTTP/1.1"
 
     async def start_tls(
-        self,
-        hostname: bytes,
-        ssl_context: SSLContext,
-        timeout: Dict[str, Optional[float]],
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict,
     ) -> "SocketStream":
         connect_timeout = none_as_inf(timeout.get("connect"))
         exc_map = {
@@ -53,7 +51,7 @@ class SocketStream(AsyncSocketStream):
                 await ssl_stream.do_handshake()
             return SocketStream(ssl_stream)
 
-    async def read(self, n: int, timeout: Dict[str, Optional[float]]) -> bytes:
+    async def read(self, n: int, timeout: TimeoutDict) -> bytes:
         read_timeout = none_as_inf(timeout.get("read"))
         exc_map = {trio.TooSlowError: ReadTimeout, trio.BrokenResourceError: ReadError}
 
@@ -62,7 +60,7 @@ class SocketStream(AsyncSocketStream):
                 with trio.fail_after(read_timeout):
                     return await self.stream.receive_some(max_bytes=n)
 
-    async def write(self, data: bytes, timeout: Dict[str, Optional[float]]) -> None:
+    async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         if not data:
             return
 
@@ -139,7 +137,7 @@ class TrioBackend(AsyncBackend):
         hostname: bytes,
         port: int,
         ssl_context: Optional[SSLContext],
-        timeout: Dict[str, Optional[float]],
+        timeout: TimeoutDict,
     ) -> AsyncSocketStream:
         connect_timeout = none_as_inf(timeout.get("connect"))
         exc_map = {
