@@ -28,6 +28,7 @@ __all__ = [
     "SyncByteStream",
     "SyncConnectionPool",
     "SyncHTTPProxy",
+    "TimeoutException",
     "PoolTimeout",
     "ConnectTimeout",
     "ReadTimeout",
