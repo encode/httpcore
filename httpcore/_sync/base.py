@@ -1,6 +1,6 @@
 import enum
 from types import TracebackType
-from typing import Iterator, Callable, List, Optional, Tuple, Type
+from typing import Iterator, Callable, List, Tuple, Type
 
 from .._types import URL, Headers, TimeoutDict
 
@@ -45,9 +45,7 @@ class SyncByteStream:
     """
 
     def __init__(
-        self,
-        iterator: Optional[Iterator[bytes]] = None,
-        close_func: Callable = None,
+        self, iterator: Iterator[bytes] = None, close_func: Callable = None,
     ) -> None:
         self.iterator = empty() if iterator is None else iterator
         self.close_func = close_func
