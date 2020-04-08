@@ -91,9 +91,9 @@ class SyncLock:
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]] = None,
-        exc_value: Optional[BaseException] = None,
-        traceback: Optional[TracebackType] = None,
+        exc_type: Type[BaseException] = None,
+        exc_value: BaseException = None,
+        traceback: TracebackType = None,
     ) -> None:
         self.release()
 
@@ -110,7 +110,7 @@ class SyncSemaphore:
         self.exc_class = exc_class
         self._semaphore = threading.Semaphore(max_value)
 
-    def acquire(self, timeout: Optional[float] = None) -> None:
+    def acquire(self, timeout: float = None) -> None:
         if not self._semaphore.acquire(timeout=timeout):  # type: ignore
             raise self.exc_class()
 

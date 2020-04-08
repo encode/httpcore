@@ -1,5 +1,5 @@
 from ssl import SSLContext
-from typing import AsyncIterator, List, Optional, Tuple, Union
+from typing import AsyncIterator, List, Tuple, Union
 
 import h11
 
@@ -22,7 +22,7 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
     READ_NUM_BYTES = 4096
 
     def __init__(
-        self, socket: AsyncSocketStream, ssl_context: Optional[SSLContext] = None,
+        self, socket: AsyncSocketStream, ssl_context: SSLContext = None,
     ):
         self.socket = socket
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
@@ -39,9 +39,9 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         self,
         method: bytes,
         url: URL,
-        headers: Optional[Headers] = None,
-        stream: Optional[AsyncByteStream] = None,
-        timeout: Optional[TimeoutDict] = None,
+        headers: Headers = None,
+        stream: AsyncByteStream = None,
+        timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         headers = [] if headers is None else headers
         stream = AsyncByteStream() if stream is None else stream

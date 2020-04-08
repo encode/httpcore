@@ -1,6 +1,6 @@
 from http import HTTPStatus
 from ssl import SSLContext
-from typing import AsyncIterator, Dict, List, Optional, Tuple
+from typing import AsyncIterator, Dict, List, Tuple
 
 import h2.connection
 import h2.events
@@ -34,7 +34,7 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
         self,
         socket: AsyncSocketStream,
         backend: AutoBackend,
-        ssl_context: Optional[SSLContext] = None,
+        ssl_context: SSLContext = None,
     ):
         self.socket = socket
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
@@ -75,9 +75,9 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
         self,
         method: bytes,
         url: URL,
-        headers: Optional[Headers] = None,
+        headers: Headers = None,
         stream: AsyncByteStream = None,
-        timeout: Optional[TimeoutDict] = None,
+        timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         timeout = {} if timeout is None else timeout
 
@@ -241,9 +241,9 @@ class AsyncHTTP2Stream:
         self,
         method: bytes,
         url: URL,
-        headers: Optional[Headers] = None,
-        stream: Optional[AsyncByteStream] = None,
-        timeout: Optional[TimeoutDict] = None,
+        headers: Headers = None,
+        stream: AsyncByteStream = None,
+        timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         headers = [] if headers is None else [(k.lower(), v) for (k, v) in headers]
         stream = AsyncByteStream() if stream is None else stream

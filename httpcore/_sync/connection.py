@@ -15,10 +15,7 @@ from .http11 import SyncHTTP11Connection
 
 class SyncHTTPConnection(SyncHTTPTransport):
     def __init__(
-        self,
-        origin: Origin,
-        http2: bool = False,
-        ssl_context: Optional[SSLContext] = None,
+        self, origin: Origin, http2: bool = False, ssl_context: SSLContext = None,
     ):
         self.origin = origin
         self.http2 = http2
@@ -46,9 +43,9 @@ class SyncHTTPConnection(SyncHTTPTransport):
         self,
         method: bytes,
         url: URL,
-        headers: Optional[Headers] = None,
+        headers: Headers = None,
         stream: SyncByteStream = None,
-        timeout: Optional[TimeoutDict] = None,
+        timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         assert url[:3] == self.origin
 
@@ -69,7 +66,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         assert self.connection is not None
         return self.connection.request(method, url, headers, stream, timeout)
 
-    def _connect(self, timeout: Optional[TimeoutDict] = None) -> None:
+    def _connect(self, timeout: TimeoutDict = None) -> None:
         scheme, hostname, port = self.origin
         timeout = {} if timeout is None else timeout
         ssl_context = self.ssl_context if scheme == b"https" else None
@@ -99,8 +96,6 @@ class SyncHTTPConnection(SyncHTTPTransport):
         if self.connection is not None:
             self.connection.mark_as_ready()
 
-    def start_tls(
-        self, hostname: bytes, timeout: Optional[TimeoutDict] = None
-    ) -> None:
+    def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
         if self.connection is not None:
             self.connection.start_tls(hostname, timeout)

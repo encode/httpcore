@@ -1,6 +1,6 @@
 import threading
 from types import TracebackType
-from typing import Optional, Type
+from typing import Type
 
 
 class ThreadLock:
@@ -17,9 +17,9 @@ class ThreadLock:
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]] = None,
-        exc_value: Optional[BaseException] = None,
-        traceback: Optional[TracebackType] = None,
+        exc_type: Type[BaseException] = None,
+        exc_value: BaseException = None,
+        traceback: TracebackType = None,
     ) -> None:
         self.lock.release()
 
@@ -28,8 +28,8 @@ class ThreadLock:
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]] = None,
-        exc_value: Optional[BaseException] = None,
-        traceback: Optional[TracebackType] = None,
+        exc_type: Type[BaseException] = None,
+        exc_value: BaseException = None,
+        traceback: TracebackType = None,
     ) -> None:
         pass

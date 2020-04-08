@@ -47,7 +47,7 @@ class SyncByteStream:
     def __init__(
         self,
         iterator: Optional[Iterator[bytes]] = None,
-        close_func: Optional[Callable] = None,
+        close_func: Callable = None,
     ) -> None:
         self.iterator = empty() if iterator is None else iterator
         self.close_func = close_func
@@ -79,9 +79,9 @@ class SyncHTTPTransport:
         self,
         method: bytes,
         url: URL,
-        headers: Optional[Headers] = None,
+        headers: Headers = None,
         stream: SyncByteStream = None,
-        timeout: Optional[TimeoutDict] = None,
+        timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         """
         The interface for sending a single HTTP request, and returning a response.
@@ -122,8 +122,8 @@ class SyncHTTPTransport:
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]] = None,
-        exc_value: Optional[BaseException] = None,
-        traceback: Optional[TracebackType] = None,
+        exc_type: Type[BaseException] = None,
+        exc_value: BaseException = None,
+        traceback: TracebackType = None,
     ) -> None:
         self.close()

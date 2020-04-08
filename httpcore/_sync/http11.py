@@ -1,5 +1,5 @@
 from ssl import SSLContext
-from typing import Iterator, List, Optional, Tuple, Union
+from typing import Iterator, List, Tuple, Union
 
 import h11
 
@@ -22,7 +22,7 @@ class SyncHTTP11Connection(SyncHTTPTransport):
     READ_NUM_BYTES = 4096
 
     def __init__(
-        self, socket: SyncSocketStream, ssl_context: Optional[SSLContext] = None,
+        self, socket: SyncSocketStream, ssl_context: SSLContext = None,
     ):
         self.socket = socket
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
@@ -39,9 +39,9 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         self,
         method: bytes,
         url: URL,
-        headers: Optional[Headers] = None,
-        stream: Optional[SyncByteStream] = None,
-        timeout: Optional[TimeoutDict] = None,
+        headers: Headers = None,
+        stream: SyncByteStream = None,
+        timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         headers = [] if headers is None else headers
         stream = SyncByteStream() if stream is None else stream

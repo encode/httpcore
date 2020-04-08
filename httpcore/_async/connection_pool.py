@@ -18,7 +18,7 @@ class NullSemaphore(AsyncSemaphore):
     def __init__(self) -> None:
         pass
 
-    async def acquire(self, timeout: Optional[float] = None) -> None:
+    async def acquire(self, timeout: float = None) -> None:
         return
 
     def release(self) -> None:
@@ -77,10 +77,10 @@ class AsyncConnectionPool(AsyncHTTPTransport):
 
     def __init__(
         self,
-        ssl_context: Optional[SSLContext] = None,
-        max_connections: Optional[int] = None,
-        max_keepalive: Optional[int] = None,
-        keepalive_expiry: Optional[float] = None,
+        ssl_context: SSLContext = None,
+        max_connections: int = None,
+        max_keepalive: int = None,
+        keepalive_expiry: float = None,
         http2: bool = False,
     ):
         self._ssl_context = SSLContext() if ssl_context is None else ssl_context
@@ -111,9 +111,9 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         self,
         method: bytes,
         url: URL,
-        headers: Optional[Headers] = None,
-        stream: Optional[AsyncByteStream] = None,
-        timeout: Optional[TimeoutDict] = None,
+        headers: Headers = None,
+        stream: AsyncByteStream = None,
+        timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, Headers, AsyncByteStream]:
         timeout = {} if timeout is None else timeout
         origin = url[:3]
@@ -242,7 +242,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             await connection.aclose()
 
     async def _add_to_pool(
-        self, connection: AsyncHTTPConnection, timeout: Optional[TimeoutDict] = None
+        self, connection: AsyncHTTPConnection, timeout: TimeoutDict = None
     ) -> None:
         timeout = {} if timeout is None else timeout
 

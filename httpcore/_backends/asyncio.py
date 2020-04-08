@@ -45,8 +45,8 @@ async def backport_start_tls(
     ssl_context: SSLContext,
     *,
     server_side: bool = False,
-    server_hostname: Optional[str] = None,
-    ssl_handshake_timeout: Optional[float] = None,
+    server_hostname: str = None,
+    ssl_handshake_timeout: float = None,
 ) -> asyncio.Transport:  # pragma: nocover (Since it's not used on all Python versions.)
     """
     Python 3.6 asyncio doesn't have a start_tls() method on the loop

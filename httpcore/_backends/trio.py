@@ -118,7 +118,7 @@ class Semaphore(AsyncSemaphore):
             self._semaphore = trio.Semaphore(self.max_value, max_value=self.max_value)
         return self._semaphore
 
-    async def acquire(self, timeout: Optional[float] = None) -> None:
+    async def acquire(self, timeout: float = None) -> None:
         timeout = none_as_inf(timeout)
 
         with trio.move_on_after(timeout):

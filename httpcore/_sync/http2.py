@@ -1,6 +1,6 @@
 from http import HTTPStatus
 from ssl import SSLContext
-from typing import Iterator, Dict, List, Optional, Tuple
+from typing import Iterator, Dict, List, Tuple
 
 import h2.connection
 import h2.events
@@ -34,7 +34,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         self,
         socket: SyncSocketStream,
         backend: SyncBackend,
-        ssl_context: Optional[SSLContext] = None,
+        ssl_context: SSLContext = None,
     ):
         self.socket = socket
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
@@ -75,9 +75,9 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         self,
         method: bytes,
         url: URL,
-        headers: Optional[Headers] = None,
+        headers: Headers = None,
         stream: SyncByteStream = None,
-        timeout: Optional[TimeoutDict] = None,
+        timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         timeout = {} if timeout is None else timeout
 
@@ -241,9 +241,9 @@ class SyncHTTP2Stream:
         self,
         method: bytes,
         url: URL,
-        headers: Optional[Headers] = None,
-        stream: Optional[SyncByteStream] = None,
-        timeout: Optional[TimeoutDict] = None,
+        headers: Headers = None,
+        stream: SyncByteStream = None,
+        timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         headers = [] if headers is None else [(k.lower(), v) for (k, v) in headers]
         stream = SyncByteStream() if stream is None else stream
