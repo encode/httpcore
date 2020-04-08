@@ -11,6 +11,7 @@ from ._exceptions import (
     ProxyError,
     ReadError,
     ReadTimeout,
+    TimeoutException,
     WriteError,
     WriteTimeout,
 )

@@ -24,23 +24,23 @@ class ProxyError(Exception):
 # Timeout errors
 
 
-class TimeoutError(Exception):
+class TimeoutException(Exception):
     pass
 
 
-class PoolTimeout(TimeoutError):
+class PoolTimeout(TimeoutException):
     pass
 
 
-class ConnectTimeout(TimeoutError):
+class ConnectTimeout(TimeoutException):
     pass
 
 
-class ReadTimeout(TimeoutError):
+class ReadTimeout(TimeoutException):
     pass
 
 
-class WriteTimeout(TimeoutError):
+class WriteTimeout(TimeoutException):
     pass
 
 
