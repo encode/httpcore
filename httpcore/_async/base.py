@@ -46,7 +46,7 @@ class AsyncByteStream:
 
     def __init__(
         self,
-        iterator: Optional[AsyncIterator[bytes]] = None,
+        iterator: AsyncIterator[bytes] = None,
         close_func: Callable = None,
     ) -> None:
         self.iterator = empty() if iterator is None else iterator
