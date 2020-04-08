@@ -2,7 +2,7 @@ import enum
 from types import TracebackType
 from typing import AsyncIterator, Callable, List, Optional, Tuple, Type
 
-from .._types import URL, Headers, TimeoutDict
+from .._types import HeadersType, TimeoutDictType, URLType
 
 
 async def empty() -> AsyncIterator:
@@ -78,10 +78,10 @@ class AsyncHTTPTransport:
     async def request(
         self,
         method: bytes,
-        url: URL,
-        headers: Headers = None,
+        url: URLType,
+        headers: HeadersType = None,
         stream: AsyncByteStream = None,
-        timeout: TimeoutDict = None,
+        timeout: TimeoutDictType = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         """
         The interface for sending a single HTTP request, and returning a response.

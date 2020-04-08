@@ -4,7 +4,7 @@ from typing import AsyncIterator, Callable, Dict, Optional, Set, Tuple
 from .._backends.auto import AsyncSemaphore, AutoBackend
 from .._exceptions import PoolTimeout
 from .._threadlock import ThreadLock
-from .._types import URL, Headers, Origin, TimeoutDict
+from .._types import HeadersType, OriginType, TimeoutDictType, URLType
 from .base import (
     AsyncByteStream,
     AsyncHTTPTransport,
@@ -88,7 +88,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         self._max_keepalive = max_keepalive
         self._keepalive_expiry = keepalive_expiry
         self._http2 = http2
-        self._connections: Dict[Origin, Set[AsyncHTTPConnection]] = {}
+        self._connections: Dict[OriginType, Set[AsyncHTTPConnection]] = {}
         self._thread_lock = ThreadLock()
         self._backend = AutoBackend()
         self._next_keepalive_check = 0.0
@@ -110,11 +110,11 @@ class AsyncConnectionPool(AsyncHTTPTransport):
     async def request(
         self,
         method: bytes,
-        url: URL,
-        headers: Headers = None,
+        url: URLType,
+        headers: HeadersType = None,
         stream: AsyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, Headers, AsyncByteStream]:
+        timeout: TimeoutDictType = None,
+    ) -> Tuple[bytes, int, bytes, HeadersType, AsyncByteStream]:
         timeout = {} if timeout is None else timeout
         origin = url[:3]
 
@@ -147,7 +147,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         return response[0], response[1], response[2], response[3], wrapped_stream
 
     async def _get_connection_from_pool(
-        self, origin: Origin
+        self, origin: OriginType
     ) -> Optional[AsyncHTTPConnection]:
         # Determine expired keep alive connections on this origin.
         seen_http11 = False
@@ -242,7 +242,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             await connection.aclose()
 
     async def _add_to_pool(
-        self, connection: AsyncHTTPConnection, timeout: TimeoutDict = None
+        self, connection: AsyncHTTPConnection, timeout: TimeoutDictType = None
     ) -> None:
         timeout = {} if timeout is None else timeout
 
@@ -259,7 +259,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
                 if not self._connections[connection.origin]:
                     del self._connections[connection.origin]
 
-    def _connections_for_origin(self, origin: Origin) -> Set[AsyncHTTPConnection]:
+    def _connections_for_origin(self, origin: OriginType) -> Set[AsyncHTTPConnection]:
         return set(self._connections.get(origin, set()))
 
     def _get_all_connections(self) -> Set[AsyncHTTPConnection]:

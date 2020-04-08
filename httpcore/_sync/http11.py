@@ -5,7 +5,7 @@ import h11
 
 from .._backends.auto import SyncSocketStream
 from .._exceptions import ProtocolError, map_exceptions
-from .._types import URL, Headers, TimeoutDict
+from .._types import HeadersType, TimeoutDictType, URLType
 from .base import SyncByteStream, SyncHTTPTransport, ConnectionState
 
 H11Event = Union[
@@ -38,10 +38,10 @@ class SyncHTTP11Connection(SyncHTTPTransport):
     def request(
         self,
         method: bytes,
-        url: URL,
-        headers: Headers = None,
+        url: URLType,
+        headers: HeadersType = None,
         stream: SyncByteStream = None,
-        timeout: TimeoutDict = None,
+        timeout: TimeoutDictType = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         headers = [] if headers is None else headers
         stream = SyncByteStream() if stream is None else stream
@@ -63,12 +63,16 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         )
         return (http_version, status_code, reason_phrase, headers, stream)
 
-    def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
+    def start_tls(self, hostname: bytes, timeout: TimeoutDictType = None) -> None:
         timeout = {} if timeout is None else timeout
         self.socket = self.socket.start_tls(hostname, self.ssl_context, timeout)
 
     def _send_request(
-        self, method: bytes, url: URL, headers: Headers, timeout: TimeoutDict,
+        self,
+        method: bytes,
+        url: URLType,
+        headers: HeadersType,
+        timeout: TimeoutDictType,
     ) -> None:
         """
         Send the request line and headers.
@@ -78,7 +82,7 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         self._send_event(event, timeout)
 
     def _send_request_body(
-        self, stream: SyncByteStream, timeout: TimeoutDict
+        self, stream: SyncByteStream, timeout: TimeoutDictType
     ) -> None:
         """
         Send the request body.
@@ -92,7 +96,7 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         event = h11.EndOfMessage()
         self._send_event(event, timeout)
 
-    def _send_event(self, event: H11Event, timeout: TimeoutDict) -> None:
+    def _send_event(self, event: H11Event, timeout: TimeoutDictType) -> None:
         """
         Send a single `h11` event to the network, waiting for the data to
         drain before returning.
@@ -101,7 +105,7 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         self.socket.write(bytes_to_send, timeout)
 
     def _receive_response(
-        self, timeout: TimeoutDict
+        self, timeout: TimeoutDictType
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]]]:
         """
         Read the response status and headers from the network.
@@ -114,7 +118,7 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         return http_version, event.status_code, event.reason, event.headers
 
     def _receive_response_data(
-        self, timeout: TimeoutDict
+        self, timeout: TimeoutDictType
     ) -> Iterator[bytes]:
         """
         Read the response data from the network.
@@ -126,7 +130,7 @@ class SyncHTTP11Connection(SyncHTTPTransport):
             elif isinstance(event, h11.EndOfMessage):
                 break
 
-    def _receive_event(self, timeout: TimeoutDict) -> H11Event:
+    def _receive_event(self, timeout: TimeoutDictType) -> H11Event:
         """
         Read a single `h11` event, reading more data from the network if needed.
         """

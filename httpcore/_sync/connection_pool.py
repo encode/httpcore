@@ -4,7 +4,7 @@ from typing import Iterator, Callable, Dict, Optional, Set, Tuple
 from .._backends.auto import SyncSemaphore, SyncBackend
 from .._exceptions import PoolTimeout
 from .._threadlock import ThreadLock
-from .._types import URL, Headers, Origin, TimeoutDict
+from .._types import HeadersType, OriginType, TimeoutDictType, URLType
 from .base import (
     SyncByteStream,
     SyncHTTPTransport,
@@ -88,7 +88,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         self._max_keepalive = max_keepalive
         self._keepalive_expiry = keepalive_expiry
         self._http2 = http2
-        self._connections: Dict[Origin, Set[SyncHTTPConnection]] = {}
+        self._connections: Dict[OriginType, Set[SyncHTTPConnection]] = {}
         self._thread_lock = ThreadLock()
         self._backend = SyncBackend()
         self._next_keepalive_check = 0.0
@@ -110,11 +110,11 @@ class SyncConnectionPool(SyncHTTPTransport):
     def request(
         self,
         method: bytes,
-        url: URL,
-        headers: Headers = None,
+        url: URLType,
+        headers: HeadersType = None,
         stream: SyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
+        timeout: TimeoutDictType = None,
+    ) -> Tuple[bytes, int, bytes, HeadersType, SyncByteStream]:
         timeout = {} if timeout is None else timeout
         origin = url[:3]
 
@@ -147,7 +147,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         return response[0], response[1], response[2], response[3], wrapped_stream
 
     def _get_connection_from_pool(
-        self, origin: Origin
+        self, origin: OriginType
     ) -> Optional[SyncHTTPConnection]:
         # Determine expired keep alive connections on this origin.
         seen_http11 = False
@@ -242,7 +242,7 @@ class SyncConnectionPool(SyncHTTPTransport):
             connection.close()
 
     def _add_to_pool(
-        self, connection: SyncHTTPConnection, timeout: TimeoutDict = None
+        self, connection: SyncHTTPConnection, timeout: TimeoutDictType = None
     ) -> None:
         timeout = {} if timeout is None else timeout
 
@@ -259,7 +259,7 @@ class SyncConnectionPool(SyncHTTPTransport):
                 if not self._connections[connection.origin]:
                     del self._connections[connection.origin]
 
-    def _connections_for_origin(self, origin: Origin) -> Set[SyncHTTPConnection]:
+    def _connections_for_origin(self, origin: OriginType) -> Set[SyncHTTPConnection]:
         return set(self._connections.get(origin, set()))
 
     def _get_all_connections(self) -> Set[SyncHTTPConnection]:

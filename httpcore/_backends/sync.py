@@ -16,7 +16,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
-from .._types import TimeoutDict
+from .._types import TimeoutDictType
 
 
 class SyncSocketStream:
@@ -39,7 +39,7 @@ class SyncSocketStream:
         return "HTTP/1.1"
 
     def start_tls(
-        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict,
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDictType,
     ) -> "SyncSocketStream":
         connect_timeout = timeout.get("connect")
         exc_map = {socket.timeout: ConnectTimeout, socket.error: ConnectError}
@@ -52,7 +52,7 @@ class SyncSocketStream:
 
         return SyncSocketStream(wrapped)
 
-    def read(self, n: int, timeout: TimeoutDict) -> bytes:
+    def read(self, n: int, timeout: TimeoutDictType) -> bytes:
         read_timeout = timeout.get("read")
         exc_map = {socket.timeout: ReadTimeout, socket.error: ReadError}
 
@@ -61,7 +61,7 @@ class SyncSocketStream:
                 self.sock.settimeout(read_timeout)
                 return self.sock.recv(n)
 
-    def write(self, data: bytes, timeout: TimeoutDict) -> None:
+    def write(self, data: bytes, timeout: TimeoutDictType) -> None:
         write_timeout = timeout.get("write")
         exc_map = {socket.timeout: WriteTimeout, socket.error: WriteError}
 
@@ -124,7 +124,7 @@ class SyncBackend:
         hostname: bytes,
         port: int,
         ssl_context: Optional[SSLContext],
-        timeout: TimeoutDict,
+        timeout: TimeoutDictType,
     ) -> SyncSocketStream:
         connect_timeout = timeout.get("connect")
         exc_map = {socket.timeout: ConnectTimeout, socket.error: ConnectError}
