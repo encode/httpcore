@@ -12,7 +12,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
-from .._types import TimeoutDictType
+from .._types import TimeoutDict
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 SSL_MONKEY_PATCH_APPLIED = False
@@ -95,7 +95,7 @@ class SocketStream(AsyncSocketStream):
         return "HTTP/2" if ident == "h2" else "HTTP/1.1"
 
     async def start_tls(
-        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDictType
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict
     ) -> "SocketStream":
         loop = asyncio.get_event_loop()
 
@@ -127,7 +127,7 @@ class SocketStream(AsyncSocketStream):
         ssl_stream._inner = self  # type: ignore
         return ssl_stream
 
-    async def read(self, n: int, timeout: TimeoutDictType) -> bytes:
+    async def read(self, n: int, timeout: TimeoutDict) -> bytes:
         exc_map = {asyncio.TimeoutError: ReadTimeout, OSError: ReadError}
         async with self.read_lock:
             with map_exceptions(exc_map):
@@ -135,7 +135,7 @@ class SocketStream(AsyncSocketStream):
                     self.stream_reader.read(n), timeout.get("read")
                 )
 
-    async def write(self, data: bytes, timeout: TimeoutDictType) -> None:
+    async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         if not data:
             return
 
@@ -221,7 +221,7 @@ class AsyncioBackend(AsyncBackend):
         hostname: bytes,
         port: int,
         ssl_context: Optional[SSLContext],
-        timeout: TimeoutDictType,
+        timeout: TimeoutDict,
     ) -> SocketStream:
         host = hostname.decode("ascii")
         connect_timeout = timeout.get("connect")

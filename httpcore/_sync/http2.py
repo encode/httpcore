@@ -10,7 +10,7 @@ from h2.settings import SettingCodes, Settings
 
 from .._backends.auto import SyncLock, SyncSocketStream, SyncBackend
 from .._exceptions import ProtocolError
-from .._types import HeadersType, TimeoutDictType, URLType
+from .._types import URL, Headers, TimeoutDict
 from .base import (
     SyncByteStream,
     SyncHTTPTransport,
@@ -64,7 +64,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
             self._read_lock = self.backend.create_lock()
         return self._read_lock
 
-    def start_tls(self, hostname: bytes, timeout: TimeoutDictType = None) -> None:
+    def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
         pass
 
     def mark_as_ready(self) -> None:
@@ -74,10 +74,10 @@ class SyncHTTP2Connection(SyncHTTPTransport):
     def request(
         self,
         method: bytes,
-        url: URLType,
-        headers: HeadersType = None,
+        url: URL,
+        headers: Headers = None,
         stream: SyncByteStream = None,
-        timeout: TimeoutDictType = None,
+        timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         timeout = {} if timeout is None else timeout
 
@@ -101,7 +101,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         self.events[stream_id] = []
         return h2_stream.request(method, url, headers, stream, timeout)
 
-    def send_connection_init(self, timeout: TimeoutDictType) -> None:
+    def send_connection_init(self, timeout: TimeoutDict) -> None:
         """
         The HTTP/2 connection requires some initial setup before we can start
         using individual request/response streams on it.
@@ -146,9 +146,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
 
             self.socket.close()
 
-    def wait_for_outgoing_flow(
-        self, stream_id: int, timeout: TimeoutDictType
-    ) -> int:
+    def wait_for_outgoing_flow(self, stream_id: int, timeout: TimeoutDict) -> int:
         """
         Returns the maximum allowable outgoing flow for a given stream.
         If the allowable flow is zero, then waits on the network until
@@ -166,7 +164,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         return flow
 
     def wait_for_event(
-        self, stream_id: int, timeout: TimeoutDictType
+        self, stream_id: int, timeout: TimeoutDict
     ) -> h2.events.Event:
         """
         Returns the next event for a given stream.
@@ -178,7 +176,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
                 self.receive_events(timeout)
         return self.events[stream_id].pop(0)
 
-    def receive_events(self, timeout: TimeoutDictType) -> None:
+    def receive_events(self, timeout: TimeoutDict) -> None:
         """
         Read some data from the network, and update the H2 state.
         """
@@ -197,11 +195,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         self.socket.write(data_to_send, timeout)
 
     def send_headers(
-        self,
-        stream_id: int,
-        headers: HeadersType,
-        end_stream: bool,
-        timeout: TimeoutDictType,
+        self, stream_id: int, headers: Headers, end_stream: bool, timeout: TimeoutDict,
     ) -> None:
         self.h2_state.send_headers(stream_id, headers, end_stream=end_stream)
         self.h2_state.increment_flow_control_window(2 ** 24, stream_id=stream_id)
@@ -209,19 +203,19 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         self.socket.write(data_to_send, timeout)
 
     def send_data(
-        self, stream_id: int, chunk: bytes, timeout: TimeoutDictType
+        self, stream_id: int, chunk: bytes, timeout: TimeoutDict
     ) -> None:
         self.h2_state.send_data(stream_id, chunk)
         data_to_send = self.h2_state.data_to_send()
         self.socket.write(data_to_send, timeout)
 
-    def end_stream(self, stream_id: int, timeout: TimeoutDictType) -> None:
+    def end_stream(self, stream_id: int, timeout: TimeoutDict) -> None:
         self.h2_state.end_stream(stream_id)
         data_to_send = self.h2_state.data_to_send()
         self.socket.write(data_to_send, timeout)
 
     def acknowledge_received_data(
-        self, stream_id: int, amount: int, timeout: TimeoutDictType
+        self, stream_id: int, amount: int, timeout: TimeoutDict
     ) -> None:
         self.h2_state.acknowledge_received_data(amount, stream_id)
         data_to_send = self.h2_state.data_to_send()
@@ -246,10 +240,10 @@ class SyncHTTP2Stream:
     def request(
         self,
         method: bytes,
-        url: URLType,
-        headers: HeadersType = None,
+        url: URL,
+        headers: Headers = None,
         stream: SyncByteStream = None,
-        timeout: TimeoutDictType = None,
+        timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         headers = [] if headers is None else [(k.lower(), v) for (k, v) in headers]
         stream = SyncByteStream() if stream is None else stream
@@ -277,10 +271,10 @@ class SyncHTTP2Stream:
     def send_headers(
         self,
         method: bytes,
-        url: URLType,
-        headers: HeadersType,
+        url: URL,
+        headers: Headers,
         has_body: bool,
-        timeout: TimeoutDictType,
+        timeout: TimeoutDict,
     ) -> None:
         scheme, hostname, port, path = url
         default_port = {b"http": 80, b"https": 443}.get(scheme)
@@ -296,9 +290,7 @@ class SyncHTTP2Stream:
 
         self.connection.send_headers(self.stream_id, headers, end_stream, timeout)
 
-    def send_body(
-        self, stream: SyncByteStream, timeout: TimeoutDictType
-    ) -> None:
+    def send_body(self, stream: SyncByteStream, timeout: TimeoutDict) -> None:
         for data in stream:
             while data:
                 max_flow = self.connection.wait_for_outgoing_flow(
@@ -311,7 +303,7 @@ class SyncHTTP2Stream:
         self.connection.end_stream(self.stream_id, timeout)
 
     def receive_response(
-        self, timeout: TimeoutDictType
+        self, timeout: TimeoutDict
     ) -> Tuple[int, List[Tuple[bytes, bytes]]]:
         """
         Read the response status and headers from the network.
@@ -331,7 +323,7 @@ class SyncHTTP2Stream:
 
         return (status_code, headers)
 
-    def body_iter(self, timeout: TimeoutDictType) -> Iterator[bytes]:
+    def body_iter(self, timeout: TimeoutDict) -> Iterator[bytes]:
         while True:
             event = self.connection.wait_for_event(self.stream_id, timeout)
             if isinstance(event, h2.events.DataReceived):

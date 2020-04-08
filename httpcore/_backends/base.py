@@ -2,7 +2,7 @@ from ssl import SSLContext
 from types import TracebackType
 from typing import Optional, Type
 
-from .._types import TimeoutDictType
+from .._types import TimeoutDict
 
 
 class AsyncSocketStream:
@@ -16,14 +16,14 @@ class AsyncSocketStream:
         raise NotImplementedError()  # pragma: no cover
 
     async def start_tls(
-        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDictType
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict
     ) -> "AsyncSocketStream":
         raise NotImplementedError()  # pragma: no cover
 
-    async def read(self, n: int, timeout: TimeoutDictType) -> bytes:
+    async def read(self, n: int, timeout: TimeoutDict) -> bytes:
         raise NotImplementedError()  # pragma: no cover
 
-    async def write(self, data: bytes, timeout: TimeoutDictType) -> None:
+    async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         raise NotImplementedError()  # pragma: no cover
 
     async def aclose(self) -> None:
@@ -75,7 +75,7 @@ class AsyncBackend:
         hostname: bytes,
         port: int,
         ssl_context: Optional[SSLContext],
-        timeout: TimeoutDictType,
+        timeout: TimeoutDict,
     ) -> AsyncSocketStream:
         raise NotImplementedError()  # pragma: no cover
 

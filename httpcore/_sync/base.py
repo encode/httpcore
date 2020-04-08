@@ -2,7 +2,7 @@ import enum
 from types import TracebackType
 from typing import Iterator, Callable, List, Optional, Tuple, Type
 
-from .._types import HeadersType, TimeoutDictType, URLType
+from .._types import URL, Headers, TimeoutDict
 
 
 def empty() -> Iterator:
@@ -78,10 +78,10 @@ class SyncHTTPTransport:
     def request(
         self,
         method: bytes,
-        url: URLType,
-        headers: HeadersType = None,
+        url: URL,
+        headers: Headers = None,
         stream: SyncByteStream = None,
-        timeout: TimeoutDictType = None,
+        timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         """
         The interface for sending a single HTTP request, and returning a response.

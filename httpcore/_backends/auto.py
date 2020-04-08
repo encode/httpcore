@@ -3,7 +3,7 @@ from typing import Optional
 
 import sniffio
 
-from .._types import TimeoutDictType
+from .._types import TimeoutDict
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 # The following line is imported from the _sync modules
@@ -33,7 +33,7 @@ class AutoBackend(AsyncBackend):
         hostname: bytes,
         port: int,
         ssl_context: Optional[SSLContext],
-        timeout: TimeoutDictType,
+        timeout: TimeoutDict,
     ) -> AsyncSocketStream:
         return await self.backend.open_tcp_stream(hostname, port, ssl_context, timeout)
 

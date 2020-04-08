@@ -13,7 +13,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
-from .._types import TimeoutDictType
+from .._types import TimeoutDict
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 
@@ -35,7 +35,7 @@ class SocketStream(AsyncSocketStream):
         return "HTTP/2" if ident == "h2" else "HTTP/1.1"
 
     async def start_tls(
-        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDictType,
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict,
     ) -> "SocketStream":
         connect_timeout = none_as_inf(timeout.get("connect"))
         exc_map = {
@@ -51,7 +51,7 @@ class SocketStream(AsyncSocketStream):
                 await ssl_stream.do_handshake()
             return SocketStream(ssl_stream)
 
-    async def read(self, n: int, timeout: TimeoutDictType) -> bytes:
+    async def read(self, n: int, timeout: TimeoutDict) -> bytes:
         read_timeout = none_as_inf(timeout.get("read"))
         exc_map = {trio.TooSlowError: ReadTimeout, trio.BrokenResourceError: ReadError}
 
@@ -60,7 +60,7 @@ class SocketStream(AsyncSocketStream):
                 with trio.fail_after(read_timeout):
                     return await self.stream.receive_some(max_bytes=n)
 
-    async def write(self, data: bytes, timeout: TimeoutDictType) -> None:
+    async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         if not data:
             return
 
@@ -137,7 +137,7 @@ class TrioBackend(AsyncBackend):
         hostname: bytes,
         port: int,
         ssl_context: Optional[SSLContext],
-        timeout: TimeoutDictType,
+        timeout: TimeoutDict,
     ) -> AsyncSocketStream:
         connect_timeout = none_as_inf(timeout.get("connect"))
         exc_map = {

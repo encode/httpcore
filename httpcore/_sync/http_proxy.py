@@ -2,7 +2,7 @@ from ssl import SSLContext
 from typing import Tuple
 
 from .._exceptions import ProxyError
-from .._types import HeadersType, OriginType, TimeoutDictType, URLType
+from .._types import URL, Headers, Origin, TimeoutDict
 from .base import SyncByteStream
 from .connection import SyncHTTPConnection
 from .connection_pool import SyncConnectionPool, ResponseByteStream
@@ -38,8 +38,8 @@ class SyncHTTPProxy(SyncConnectionPool):
 
     def __init__(
         self,
-        proxy_origin: OriginType,
-        proxy_headers: HeadersType = None,
+        proxy_origin: Origin,
+        proxy_headers: Headers = None,
         proxy_mode: str = "DEFAULT",
         ssl_context: SSLContext = None,
         max_connections: int = None,
@@ -63,11 +63,11 @@ class SyncHTTPProxy(SyncConnectionPool):
     def request(
         self,
         method: bytes,
-        url: URLType,
-        headers: HeadersType = None,
+        url: URL,
+        headers: Headers = None,
         stream: SyncByteStream = None,
-        timeout: TimeoutDictType = None,
-    ) -> Tuple[bytes, int, bytes, HeadersType, SyncByteStream]:
+        timeout: TimeoutDict = None,
+    ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
         if self._keepalive_expiry is not None:
             self._keepalive_sweep()
 
@@ -87,11 +87,11 @@ class SyncHTTPProxy(SyncConnectionPool):
     def _forward_request(
         self,
         method: bytes,
-        url: URLType,
-        headers: HeadersType = None,
+        url: URL,
+        headers: Headers = None,
         stream: SyncByteStream = None,
-        timeout: TimeoutDictType = None,
-    ) -> Tuple[bytes, int, bytes, HeadersType, SyncByteStream]:
+        timeout: TimeoutDict = None,
+    ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
         """
         Forwarded proxy requests include the entire URL as the HTTP target,
         rather than just the path.
@@ -127,11 +127,11 @@ class SyncHTTPProxy(SyncConnectionPool):
     def _tunnel_request(
         self,
         method: bytes,
-        url: URLType,
-        headers: HeadersType = None,
+        url: URL,
+        headers: Headers = None,
         stream: SyncByteStream = None,
-        timeout: TimeoutDictType = None,
-    ) -> Tuple[bytes, int, bytes, HeadersType, SyncByteStream]:
+        timeout: TimeoutDict = None,
+    ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
         """
         Tunnelled proxy requests require an initial CONNECT request to
         establish the connection, and then send regular requests.

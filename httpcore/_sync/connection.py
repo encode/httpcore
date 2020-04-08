@@ -2,7 +2,7 @@ from ssl import SSLContext
 from typing import List, Optional, Tuple, Union
 
 from .._backends.auto import SyncLock, SyncBackend
-from .._types import HeadersType, OriginType, TimeoutDictType, URLType
+from .._types import URL, Headers, Origin, TimeoutDict
 from .base import (
     SyncByteStream,
     SyncHTTPTransport,
@@ -15,7 +15,7 @@ from .http11 import SyncHTTP11Connection
 
 class SyncHTTPConnection(SyncHTTPTransport):
     def __init__(
-        self, origin: OriginType, http2: bool = False, ssl_context: SSLContext = None,
+        self, origin: Origin, http2: bool = False, ssl_context: SSLContext = None,
     ):
         self.origin = origin
         self.http2 = http2
@@ -42,10 +42,10 @@ class SyncHTTPConnection(SyncHTTPTransport):
     def request(
         self,
         method: bytes,
-        url: URLType,
-        headers: HeadersType = None,
+        url: URL,
+        headers: Headers = None,
         stream: SyncByteStream = None,
-        timeout: TimeoutDictType = None,
+        timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         assert url[:3] == self.origin
 
@@ -66,7 +66,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         assert self.connection is not None
         return self.connection.request(method, url, headers, stream, timeout)
 
-    def _connect(self, timeout: TimeoutDictType = None) -> None:
+    def _connect(self, timeout: TimeoutDict = None) -> None:
         scheme, hostname, port = self.origin
         timeout = {} if timeout is None else timeout
         ssl_context = self.ssl_context if scheme == b"https" else None
@@ -96,6 +96,6 @@ class SyncHTTPConnection(SyncHTTPTransport):
         if self.connection is not None:
             self.connection.mark_as_ready()
 
-    def start_tls(self, hostname: bytes, timeout: TimeoutDictType = None) -> None:
+    def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
         if self.connection is not None:
             self.connection.start_tls(hostname, timeout)
