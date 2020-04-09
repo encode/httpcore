@@ -170,9 +170,10 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 msg = "%d %s" % (proxy_status_code, proxy_reason_phrase.decode("ascii"))
                 raise ProxyError(msg)
 
-            # Upgrade to TLS.
-            # TODO: upgrade only on HTTPS targets?
-            # await proxy_connection.start_tls(target, timeout)
+            # Upgrade to TLS if required
+            # We assume the target speaks TLS on the specified port
+            if url[0] == b"https":
+                await proxy_connection.start_tls(target, timeout)
 
             # Create a new connection to the target
             connection = AsyncHTTPConnection(

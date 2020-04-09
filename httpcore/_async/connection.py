@@ -109,3 +109,4 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
     async def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
         if self.connection is not None:
             await self.connection.start_tls(hostname, timeout)
+            self.socket = self.connection.socket
