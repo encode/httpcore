@@ -1,7 +1,7 @@
 from ssl import SSLContext
 from typing import List, Optional, Tuple, Union
 
-from .._backends.auto import AsyncLock, AutoBackend, AsyncSocketStream
+from .._backends.auto import AsyncLock, AsyncSocketStream, AutoBackend
 from .._types import URL, Headers, Origin, TimeoutDict
 from .base import (
     AsyncByteStream,

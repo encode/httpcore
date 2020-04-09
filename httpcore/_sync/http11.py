@@ -51,9 +51,12 @@ class SyncHTTP11Connection(SyncHTTPTransport):
 
         self._send_request(method, url, headers, timeout)
         self._send_request_body(stream, timeout)
-        (http_version, status_code, reason_phrase, headers,) = self._receive_response(
-            timeout
-        )
+        (
+            http_version,
+            status_code,
+            reason_phrase,
+            headers,
+        ) = self._receive_response(timeout)
         stream = SyncByteStream(
             iterator=self._receive_response_data(timeout),
             close_func=self._response_closed,
@@ -74,7 +77,9 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         event = h11.Request(method=method, target=target, headers=headers)
         self._send_event(event, timeout)
 
-    def _send_request_body(self, stream: SyncByteStream, timeout: TimeoutDict) -> None:
+    def _send_request_body(
+        self, stream: SyncByteStream, timeout: TimeoutDict
+    ) -> None:
         """
         Send the request body.
         """
@@ -108,7 +113,9 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         http_version = b"HTTP/" + event.http_version
         return http_version, event.status_code, event.reason, event.headers
 
-    def _receive_response_data(self, timeout: TimeoutDict) -> Iterator[bytes]:
+    def _receive_response_data(
+        self, timeout: TimeoutDict
+    ) -> Iterator[bytes]:
         """
         Read the response data from the network.
         """
@@ -116,7 +123,7 @@ class SyncHTTP11Connection(SyncHTTPTransport):
             event = self._receive_event(timeout)
             if isinstance(event, h11.Data):
                 yield bytes(event.data)
-            elif isinstance(event, h11.EndOfMessage):
+            elif isinstance(event, (h11.EndOfMessage, h11.PAUSED)):
                 break
 
     def _receive_event(self, timeout: TimeoutDict) -> H11Event:

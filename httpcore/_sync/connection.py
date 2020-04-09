@@ -1,7 +1,7 @@
 from ssl import SSLContext
 from typing import List, Optional, Tuple, Union
 
-from .._backends.auto import SyncLock, SyncBackend
+from .._backends.auto import SyncLock, SyncSocketStream, SyncBackend
 from .._types import URL, Headers, Origin, TimeoutDict
 from .base import (
     SyncByteStream,
@@ -15,7 +15,11 @@ from .http11 import SyncHTTP11Connection
 
 class SyncHTTPConnection(SyncHTTPTransport):
     def __init__(
-        self, origin: Origin, http2: bool = False, ssl_context: SSLContext = None,
+        self,
+        origin: Origin,
+        http2: bool = False,
+        ssl_context: SSLContext = None,
+        socket: SyncSocketStream = None,
     ):
         self.origin = origin
         self.http2 = http2
@@ -30,6 +34,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         self.connect_failed = False
         self.expires_at: Optional[float] = None
         self.backend = SyncBackend()
+        self.socket = socket
 
     @property
     def request_lock(self) -> SyncLock:
@@ -48,14 +53,16 @@ class SyncHTTPConnection(SyncHTTPTransport):
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         assert url[:3] == self.origin
-
         with self.request_lock:
             if self.state == ConnectionState.PENDING:
-                try:
-                    self._connect(timeout)
-                except Exception:
-                    self.connect_failed = True
-                    raise
+                if self.socket:
+                    self._create_connection(self.socket)
+                else:
+                    try:
+                        self._connect(timeout)
+                    except Exception:
+                        self.connect_failed = True
+                        raise
             elif self.state in (ConnectionState.READY, ConnectionState.IDLE):
                 pass
             elif self.state == ConnectionState.ACTIVE and self.is_http2:
@@ -70,9 +77,12 @@ class SyncHTTPConnection(SyncHTTPTransport):
         scheme, hostname, port = self.origin
         timeout = {} if timeout is None else timeout
         ssl_context = self.ssl_context if scheme == b"https" else None
-        socket = self.backend.open_tcp_stream(
+        self.socket = self.backend.open_tcp_stream(
             hostname, port, ssl_context, timeout
         )
+        self._create_connection(self.socket)
+
+    def _create_connection(self, socket: SyncSocketStream) -> None:
         http_version = socket.get_http_version()
         if http_version == "HTTP/2":
             self.is_http2 = True
@@ -99,3 +109,4 @@ class SyncHTTPConnection(SyncHTTPTransport):
     def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
         if self.connection is not None:
             self.connection.start_tls(hostname, timeout)
+            self.socket = self.connection.socket
