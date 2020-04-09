@@ -182,7 +182,7 @@ async def test_http_request_cannot_reuse_dropped_connection() -> None:
 async def test_http_proxy(
     proxy_server: typing.Tuple[bytes, bytes, int], proxy_mode: str
 ) -> None:
-    async with httpcore.AsyncHTTPProxy(proxy_server) as http:
+    async with httpcore.AsyncHTTPProxy(proxy_server, proxy_mode=proxy_mode) as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
