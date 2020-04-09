@@ -18,3 +18,4 @@ autoflake
 mypy
 isort
 mitmproxy
+trustme

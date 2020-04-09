@@ -1,3 +1,4 @@
+import ssl
 import typing
 
 import pytest
@@ -185,6 +186,29 @@ def test_http_proxy(
     with httpcore.SyncHTTPProxy(proxy_server, proxy_mode=proxy_mode) as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
+        headers = [(b"host", b"example.org")]
+        http_version, status_code, reason, headers, stream = http.request(
+            method, url, headers
+        )
+        _ = read_body(stream)
+
+        assert http_version == b"HTTP/1.1"
+        assert status_code == 200
+        assert reason == b"OK"
+
+
+@pytest.mark.parametrize("proxy_mode", ["TUNNEL_ONLY"])
+
+def test_https_proxy(
+    https_proxy_server: typing.Tuple[bytes, bytes, int],
+    ca_ssl_context: ssl.SSLContext,
+    proxy_mode: str,
+) -> None:
+    with httpcore.SyncHTTPProxy(
+        https_proxy_server, proxy_mode=proxy_mode, ssl_context=ca_ssl_context
+    ) as http:
+        method = b"GET"
+        url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
         http_version, status_code, reason, headers, stream = http.request(
             method, url, headers

@@ -1,9 +1,11 @@
 import asyncio
+import ssl
 import threading
 import typing
 
 import pytest
-from mitmproxy import master, options, proxy
+import trustme
+from mitmproxy import options, proxy
 from mitmproxy.tools.dump import DumpMaster
 
 PROXY_HOST = "127.0.0.1"
@@ -47,9 +49,7 @@ class RunNotify:
 class ProxyWrapper(threading.Thread):
     """Runs an mitmproxy in a separate thread."""
 
-    def __init__(
-        self, host: str, port: int, **kwargs: typing.Dict[str, typing.Any]
-    ) -> None:
+    def __init__(self, host: str, port: int, **kwargs: typing.Any) -> None:
         self.host = host
         self.port = port
         self.options = kwargs
@@ -71,16 +71,55 @@ class ProxyWrapper(threading.Thread):
         self.master.addons.add(self.notify)
         self.master.run()
 
-    def join(self) -> None:
+    def join(self, timeout: float = None) -> None:
         self.master.shutdown()
         super().join()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
+def cert_authority() -> trustme.CA:
+    return trustme.CA()
+
+
+@pytest.fixture(scope="session")
+def ca_ssl_context(cert_authority: trustme.CA) -> typing.Iterator[ssl.SSLContext]:
+    ctx = ssl.SSLContext()
+    cert_authority.configure_trust(ctx)
+    yield ctx
+
+
+@pytest.fixture(scope="session")
+def example_org_cert(cert_authority: trustme.CA) -> trustme.LeafCert:
+    yield cert_authority.issue_cert("example.org")
+
+
+@pytest.fixture(scope="session")
+def example_org_cert_path(example_org_cert: trustme.LeafCert) -> typing.Iterator[str]:
+    with example_org_cert.private_key_and_cert_chain_pem.tempfile() as tmp:
+        yield tmp
+
+
+@pytest.fixture()
 def proxy_server() -> typing.Iterable[typing.Tuple[bytes, bytes, int]]:
     """Starts a proxy server on a different thread and returns its origin tuple."""
     try:
         thread = ProxyWrapper(PROXY_HOST, PROXY_PORT)
+        thread.start()
+        thread.notify.started.wait()
+        yield (b"http", PROXY_HOST.encode(), PROXY_PORT)
+    finally:
+        thread.join()
+
+
+@pytest.fixture()
+def https_proxy_server(
+    example_org_cert_path: str,
+) -> typing.Iterator[typing.Tuple[bytes, bytes, int]]:
+    """Same as proxy server but using trustme CA and certs."""
+    try:
+        thread = ProxyWrapper(
+            PROXY_HOST, PROXY_PORT, ssl_insecure=True, certs=[example_org_cert_path]
+        )
         thread.start()
         thread.notify.started.wait()
         yield (b"http", PROXY_HOST.encode(), PROXY_PORT)
