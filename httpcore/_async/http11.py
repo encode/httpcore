@@ -123,7 +123,7 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
             event = await self._receive_event(timeout)
             if isinstance(event, h11.Data):
                 yield bytes(event.data)
-            elif isinstance(event, h11.EndOfMessage):
+            elif isinstance(event, (h11.EndOfMessage, h11.PAUSED)):
                 break
 
     async def _receive_event(self, timeout: TimeoutDict) -> H11Event:
