@@ -23,9 +23,9 @@ def get_long_description():
     with open("README.md", encoding="utf8") as f:
         long_description += f.read()
     long_description += "\n\n"
-    # with open("CHANGELOG.md", encoding="utf8") as f:
-    #     long_description += f.read()
-    # return long_description
+    with open("CHANGELOG.md", encoding="utf8") as f:
+        long_description += f.read()
+    return long_description
 
 
 def get_packages(package):
@@ -50,15 +50,10 @@ setup(
     long_description_content_type="text/markdown",
     author="Tom Christie",
     author_email="tom@tomchristie.com",
-    package_data={"httpcore": ["py.typed"]},
     packages=get_packages("httpcore"),
     include_package_data=True,
     zip_safe=False,
-    install_requires=[
-        "h11>=0.8,<0.10",
-        "h2==3.*",
-        "sniffio==1.*",
-    ],
+    install_requires=["h11>=0.8,<0.10", "h2==3.*", "sniffio==1.*"],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Web Environment",
