@@ -154,9 +154,9 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             # [proxy-headers]
             target = b"%b:%d" % (url[1], url[2])
             connect_url = self.proxy_origin + (target,)
-            connect_headers = self.proxy_headers or [(b"host", self.proxy_origin[1])]
+            headers = self.proxy_headers + ([] if headers is None else headers)
             proxy_response = await proxy_connection.request(
-                b"CONNECT", connect_url, headers=connect_headers, timeout=timeout
+                b"CONNECT", connect_url, headers=headers, timeout=timeout
             )
             proxy_status_code = proxy_response[1]
             proxy_reason_phrase = proxy_response[2]
