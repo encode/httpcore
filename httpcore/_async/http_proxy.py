@@ -8,13 +8,6 @@ from .connection import AsyncHTTPConnection
 from .connection_pool import AsyncConnectionPool, ResponseByteStream
 
 
-async def read_body(stream: AsyncByteStream) -> bytes:
-    try:
-        return b"".join([chunk async for chunk in stream])
-    finally:
-        await stream.aclose()
-
-
 class AsyncHTTPProxy(AsyncConnectionPool):
     """
     A connection pool for making HTTP requests via an HTTP proxy.

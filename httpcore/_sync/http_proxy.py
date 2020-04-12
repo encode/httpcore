@@ -8,13 +8,6 @@ from .connection import SyncHTTPConnection
 from .connection_pool import SyncConnectionPool, ResponseByteStream
 
 
-def read_body(stream: SyncByteStream) -> bytes:
-    try:
-        return b"".join([chunk for chunk in stream])
-    finally:
-        stream.close()
-
-
 class SyncHTTPProxy(SyncConnectionPool):
     """
     A connection pool for making HTTP requests via an HTTP proxy.
