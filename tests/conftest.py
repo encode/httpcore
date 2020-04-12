@@ -82,15 +82,15 @@ def cert_authority() -> trustme.CA:
 
 
 @pytest.fixture(scope="session")
-def ca_ssl_context(cert_authority: trustme.CA) -> typing.Iterator[ssl.SSLContext]:
+def ca_ssl_context(cert_authority: trustme.CA) -> ssl.SSLContext:
     ctx = ssl.SSLContext()
     cert_authority.configure_trust(ctx)
-    yield ctx
+    return ctx
 
 
 @pytest.fixture(scope="session")
 def example_org_cert(cert_authority: trustme.CA) -> trustme.LeafCert:
-    yield cert_authority.issue_cert("example.org")
+    return cert_authority.issue_cert("example.org")
 
 
 @pytest.fixture(scope="session")
@@ -100,23 +100,22 @@ def example_org_cert_path(example_org_cert: trustme.LeafCert) -> typing.Iterator
 
 
 @pytest.fixture()
-def proxy_server() -> typing.Iterable[typing.Tuple[bytes, bytes, int]]:
-    """Starts a proxy server on a different thread and returns its origin tuple."""
-    try:
-        thread = ProxyWrapper(PROXY_HOST, PROXY_PORT)
-        thread.start()
-        thread.notify.started.wait()
-        yield (b"http", PROXY_HOST.encode(), PROXY_PORT)
-    finally:
-        thread.join()
-
-
-@pytest.fixture()
-def https_proxy_server(
+def proxy_server(
     example_org_cert_path: str,
 ) -> typing.Iterator[typing.Tuple[bytes, bytes, int]]:
-    """Same as proxy server but using trustme CA and certs."""
+    """Starts a proxy server on a different thread and yields its origin tuple.
+
+    The server is configured to use a trustme CA and key, this will allow our
+    test client to make HTTPS requests when using the ca_ssl_context fixture
+    above.
+
+    Note this is only required because mitmproxy's main purpose is to analyse
+    traffic. Other proxy server do not need this but mitmproxy is easier to
+    intregrate in our tests.
+    """
     try:
+        # TODO: the ssl_insecure flag prevents an error raised from mitmproxy:
+        # TlsException("Cannot validate certificate hostname without SNI")
         thread = ProxyWrapper(
             PROXY_HOST, PROXY_PORT, ssl_insecure=True, certs=[example_org_cert_path]
         )

@@ -199,12 +199,12 @@ async def test_http_proxy(
 
 @pytest.mark.usefixtures("async_environment")
 async def test_proxy_https_requests(
-    https_proxy_server: typing.Tuple[bytes, bytes, int], ca_ssl_context: ssl.SSLContext,
+    proxy_server: typing.Tuple[bytes, bytes, int], ca_ssl_context: ssl.SSLContext,
 ) -> None:
     # mitmproxy does not support forwarding HTTPS requests
     proxy_mode = "TUNNEL_ONLY"
     async with httpcore.AsyncHTTPProxy(
-        https_proxy_server, proxy_mode=proxy_mode, ssl_context=ca_ssl_context
+        proxy_server, proxy_mode=proxy_mode, ssl_context=ca_ssl_context
     ) as http:
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
