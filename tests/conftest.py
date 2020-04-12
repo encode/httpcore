@@ -83,7 +83,7 @@ def cert_authority() -> trustme.CA:
 
 @pytest.fixture(scope="session")
 def ca_ssl_context(cert_authority: trustme.CA) -> ssl.SSLContext:
-    ctx = ssl.SSLContext()
+    ctx = ssl.create_default_context()
     cert_authority.configure_trust(ctx)
     return ctx
 
@@ -114,11 +114,7 @@ def proxy_server(
     intregrate in our tests.
     """
     try:
-        # TODO: the ssl_insecure flag prevents an error raised from mitmproxy:
-        # TlsException("Cannot validate certificate hostname without SNI")
-        thread = ProxyWrapper(
-            PROXY_HOST, PROXY_PORT, ssl_insecure=True, certs=[example_org_cert_path]
-        )
+        thread = ProxyWrapper(PROXY_HOST, PROXY_PORT, certs=[example_org_cert_path])
         thread.start()
         thread.notify.started.wait()
         yield (b"http", PROXY_HOST.encode(), PROXY_PORT)

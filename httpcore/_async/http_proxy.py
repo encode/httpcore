@@ -140,6 +140,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         connection = await self._get_connection_from_pool(origin)
 
         if connection is None:
+            # First, create a connection to the proxy server
             proxy_connection = AsyncHTTPConnection(
                 origin=self.proxy_origin, http2=False, ssl_context=self._ssl_context,
             )
@@ -147,7 +148,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 self._connections.setdefault(origin, set())
                 self._connections[origin].add(proxy_connection)
 
-            # Establish the connection by issuing a CONNECT request...
+            # Issue a CONNECT request...
 
             # CONNECT www.example.org:80 HTTP/1.1
             # [proxy-headers]
@@ -173,7 +174,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             # Upgrade to TLS if required
             # We assume the target speaks TLS on the specified port
             if url[0] == b"https":
-                await proxy_connection.start_tls(target, timeout)
+                await proxy_connection.start_tls(url[1], timeout)
 
             # Create a new connection to the target
             connection = AsyncHTTPConnection(

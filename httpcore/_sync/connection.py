@@ -86,10 +86,14 @@ class SyncHTTPConnection(SyncHTTPTransport):
         http_version = socket.get_http_version()
         if http_version == "HTTP/2":
             self.is_http2 = True
-            self.connection = SyncHTTP2Connection(socket=socket, backend=self.backend)
+            self.connection = SyncHTTP2Connection(
+                socket=socket, backend=self.backend, ssl_context=self.ssl_context
+            )
         else:
             self.is_http11 = True
-            self.connection = SyncHTTP11Connection(socket=socket)
+            self.connection = SyncHTTP11Connection(
+                socket=socket, ssl_context=self.ssl_context
+            )
 
     @property
     def state(self) -> ConnectionState:
