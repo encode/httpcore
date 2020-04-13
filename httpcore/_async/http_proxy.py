@@ -147,9 +147,9 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             # [proxy-headers]
             target = b"%b:%d" % (url[1], url[2])
             connect_url = self.proxy_origin + (target,)
-            headers = self.proxy_headers + ([] if headers is None else headers)
+            proxy_headers = self._get_tunnel_proxy_headers(headers)
             proxy_response = await proxy_connection.request(
-                b"CONNECT", connect_url, headers=headers, timeout=timeout
+                b"CONNECT", connect_url, headers=proxy_headers, timeout=timeout
             )
             proxy_status_code = proxy_response[1]
             proxy_reason_phrase = proxy_response[2]
@@ -187,3 +187,34 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             response[4], connection=connection, callback=self._response_closed
         )
         return response[0], response[1], response[2], response[3], wrapped_stream
+
+    def _get_tunnel_proxy_headers(self, request_headers: Headers = None) -> Headers:
+        """Returns the headers for the CONNECT request to the tunnel proxy.
+
+        These do not include _all_ the request headers, but we make sure Host
+        is present as it's required for any h11 connection. If not in the proxy
+        headers we try to pull it from the request headers.
+
+        We also attach `Accept: */*` if not present in the user's proxy headers.
+        """
+        proxy_headers = []
+        should_add_accept_header = True
+        should_add_host_header = True
+        for header in self.proxy_headers:
+            proxy_headers.append(header)
+            if header[0] == b"accept":
+                should_add_accept_header = False
+            if header[0] == b"host":
+                should_add_host_header = False
+
+        if should_add_accept_header:
+            proxy_headers.append((b"accept", b"*/*"))
+
+        if should_add_host_header and request_headers:
+            try:
+                host_header = next(h for h in request_headers if h[0] == b"host")
+                proxy_headers.append(host_header)
+            except StopIteration:
+                pass
+
+        return proxy_headers
