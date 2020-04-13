@@ -137,9 +137,6 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             proxy_connection = AsyncHTTPConnection(
                 origin=self.proxy_origin, http2=False, ssl_context=self._ssl_context,
             )
-            async with self._thread_lock:
-                self._connections.setdefault(origin, set())
-                self._connections[origin].add(proxy_connection)
 
             # Issue a CONNECT request...
 
@@ -174,9 +171,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 ssl_context=self._ssl_context,
                 socket=proxy_connection.socket,
             )
-            async with self._thread_lock:
-                self._connections[origin].remove(proxy_connection)
-                self._connections[origin].add(connection)
+            await self._add_to_pool(connection)
 
         # Once the connection has been established we can send requests on
         # it as normal.
