@@ -165,7 +165,10 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 msg = "%d %s" % (proxy_status_code, proxy_reason_phrase.decode("ascii"))
                 raise ProxyError(msg)
 
-            # Create a new connection to the target
+            # The CONNECT request is successful, so we have now SWITCHED PROTOCOLS.
+            # This means the proxy connection is now unusable, and we must create
+            # a new one for regular requests, making sure to use the same socket to
+            # retain the tunnel.
             connection = AsyncHTTPConnection(
                 origin=origin,
                 http2=False,
