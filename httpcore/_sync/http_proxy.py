@@ -18,8 +18,8 @@ class SyncHTTPProxy(SyncConnectionPool):
     service as a 3-tuple of (scheme, host, port).
     * **proxy_headers** - `Optional[List[Tuple[bytes, bytes]]]` - A list of
     proxy headers to include.
-    * **proxy_mode** - `str` - A proxy mode to operate in. May be "DEFAULT",
-    "FORWARD_ONLY", or "TUNNEL_ONLY".
+    * **proxy_mode** - `str` - A proxy mode to operate in. May be "FORWARD",
+    or "TUNNEL".
     * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for
     verifying connections.
     * **max_connections** - `Optional[int]` - The maximum number of concurrent
@@ -32,15 +32,15 @@ class SyncHTTPProxy(SyncConnectionPool):
     def __init__(
         self,
         proxy_origin: Origin,
+        proxy_mode: str,
         proxy_headers: Headers = None,
-        proxy_mode: str = "DEFAULT",
         ssl_context: SSLContext = None,
         max_connections: int = None,
         max_keepalive: int = None,
         keepalive_expiry: float = None,
         http2: bool = False,
     ):
-        assert proxy_mode in ("DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY")
+        assert proxy_mode in ("FORWARD", "TUNNEL")
 
         self.proxy_origin = proxy_origin
         self.proxy_headers = [] if proxy_headers is None else proxy_headers
@@ -64,15 +64,11 @@ class SyncHTTPProxy(SyncConnectionPool):
         if self._keepalive_expiry is not None:
             self._keepalive_sweep()
 
-        if (
-            self.proxy_mode == "DEFAULT" and url[0] == b"http"
-        ) or self.proxy_mode == "FORWARD_ONLY":
-            # By default HTTP requests should be forwarded.
+        if self.proxy_mode == "FORWARD":
             return self._forward_request(
                 method, url, headers=headers, stream=stream, timeout=timeout
             )
         else:
-            # By default HTTPS should be tunnelled.
             return self._tunnel_request(
                 method, url, headers=headers, stream=stream, timeout=timeout
             )
@@ -144,9 +140,8 @@ class SyncHTTPProxy(SyncConnectionPool):
             # [proxy-headers]
             target = b"%b:%d" % (url[1], url[2])
             connect_url = self.proxy_origin + (target,)
-            proxy_headers = self._get_tunnel_proxy_headers(headers)
             proxy_response = proxy_connection.request(
-                b"CONNECT", connect_url, headers=proxy_headers, timeout=timeout
+                b"CONNECT", connect_url, headers=self.proxy_headers, timeout=timeout
             )
             proxy_status_code = proxy_response[1]
             proxy_reason_phrase = proxy_response[2]
@@ -182,34 +177,3 @@ class SyncHTTPProxy(SyncConnectionPool):
             response[4], connection=connection, callback=self._response_closed
         )
         return response[0], response[1], response[2], response[3], wrapped_stream
-
-    def _get_tunnel_proxy_headers(self, request_headers: Headers = None) -> Headers:
-        """Returns the headers for the CONNECT request to the tunnel proxy.
-
-        These do not include _all_ the request headers, but we make sure Host
-        is present as it's required for any h11 connection. If not in the proxy
-        headers we try to pull it from the request headers.
-
-        We also attach `Accept: */*` if not present in the user's proxy headers.
-        """
-        proxy_headers = []
-        should_add_accept_header = True
-        should_add_host_header = True
-        for header in self.proxy_headers:
-            proxy_headers.append(header)
-            if header[0] == b"accept":
-                should_add_accept_header = False
-            if header[0] == b"host":
-                should_add_host_header = False
-
-        if should_add_accept_header:
-            proxy_headers.append((b"accept", b"*/*"))
-
-        if should_add_host_header and request_headers:
-            try:
-                host_header = next(h for h in request_headers if h[0] == b"host")
-                proxy_headers.append(host_header)
-            except StopIteration:
-                pass
-
-        return proxy_headers
