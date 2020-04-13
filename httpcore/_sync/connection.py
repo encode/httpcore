@@ -24,6 +24,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         self.origin = origin
         self.http2 = http2
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
+        self.socket = socket
 
         if self.http2:
             self.ssl_context.set_alpn_protocols(["http/1.1", "h2"])
@@ -34,7 +35,6 @@ class SyncHTTPConnection(SyncHTTPTransport):
         self.connect_failed = False
         self.expires_at: Optional[float] = None
         self.backend = SyncBackend()
-        self.socket = socket
 
     @property
     def request_lock(self) -> SyncLock:
