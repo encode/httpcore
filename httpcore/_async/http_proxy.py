@@ -156,7 +156,8 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             proxy_stream = proxy_response[4]
 
             # Read the response data without closing the socket
-            _ = b"".join([chunk async for chunk in proxy_stream])
+            async for _ in proxy_stream:
+                pass
 
             # If the proxy responds with an error, then drop the connection
             # from the pool, and raise an exception.
