@@ -159,8 +159,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             async for _ in proxy_stream:
                 pass
 
-            # If the proxy responds with an error, then drop the connection
-            # from the pool, and raise an exception.
+            # See if the tunnel was successfully established.
             if proxy_status_code < 200 or proxy_status_code > 299:
                 msg = "%d %s" % (proxy_status_code, proxy_reason_phrase.decode("ascii"))
                 raise ProxyError(msg)
