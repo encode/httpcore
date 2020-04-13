@@ -55,14 +55,9 @@ class SyncHTTPConnection(SyncHTTPTransport):
         assert url[:3] == self.origin
         with self.request_lock:
             if self.state == ConnectionState.PENDING:
-                if self.socket:
-                    self._create_connection(self.socket)
-                else:
-                    try:
-                        self._connect(timeout)
-                    except Exception:
-                        self.connect_failed = True
-                        raise
+                if not self.socket:
+                    self.socket = self._open_socket(timeout)
+                self._create_connection(self.socket)
             elif self.state in (ConnectionState.READY, ConnectionState.IDLE):
                 pass
             elif self.state == ConnectionState.ACTIVE and self.is_http2:
@@ -73,14 +68,17 @@ class SyncHTTPConnection(SyncHTTPTransport):
         assert self.connection is not None
         return self.connection.request(method, url, headers, stream, timeout)
 
-    def _connect(self, timeout: TimeoutDict = None) -> None:
+    def _open_socket(self, timeout: TimeoutDict = None) -> SyncSocketStream:
         scheme, hostname, port = self.origin
         timeout = {} if timeout is None else timeout
         ssl_context = self.ssl_context if scheme == b"https" else None
-        self.socket = self.backend.open_tcp_stream(
-            hostname, port, ssl_context, timeout
-        )
-        self._create_connection(self.socket)
+        try:
+            return self.backend.open_tcp_stream(
+                hostname, port, ssl_context, timeout
+            )
+        except Exception:
+            self.connect_failed = True
+            raise
 
     def _create_connection(self, socket: SyncSocketStream) -> None:
         http_version = socket.get_http_version()

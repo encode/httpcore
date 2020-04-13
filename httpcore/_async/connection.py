@@ -55,14 +55,9 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         assert url[:3] == self.origin
         async with self.request_lock:
             if self.state == ConnectionState.PENDING:
-                if self.socket:
-                    self._create_connection(self.socket)
-                else:
-                    try:
-                        await self._connect(timeout)
-                    except Exception:
-                        self.connect_failed = True
-                        raise
+                if not self.socket:
+                    self.socket = await self._open_socket(timeout)
+                self._create_connection(self.socket)
             elif self.state in (ConnectionState.READY, ConnectionState.IDLE):
                 pass
             elif self.state == ConnectionState.ACTIVE and self.is_http2:
@@ -73,14 +68,17 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         assert self.connection is not None
         return await self.connection.request(method, url, headers, stream, timeout)
 
-    async def _connect(self, timeout: TimeoutDict = None) -> None:
+    async def _open_socket(self, timeout: TimeoutDict = None) -> AsyncSocketStream:
         scheme, hostname, port = self.origin
         timeout = {} if timeout is None else timeout
         ssl_context = self.ssl_context if scheme == b"https" else None
-        self.socket = await self.backend.open_tcp_stream(
-            hostname, port, ssl_context, timeout
-        )
-        self._create_connection(self.socket)
+        try:
+            return await self.backend.open_tcp_stream(
+                hostname, port, ssl_context, timeout
+            )
+        except Exception:
+            self.connect_failed = True
+            raise
 
     def _create_connection(self, socket: AsyncSocketStream) -> None:
         http_version = socket.get_http_version()
