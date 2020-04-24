@@ -18,8 +18,9 @@ class AsyncHTTPProxy(AsyncConnectionPool):
     service as a 3-tuple of (scheme, host, port).
     * **proxy_headers** - `Optional[List[Tuple[bytes, bytes]]]` - A list of
     proxy headers to include.
-    * **proxy_mode** - `str` - A proxy mode to operate in. May be "FORWARD",
-    or "TUNNEL".
+    * **proxy_mode** - `str` - A proxy mode to operate in. May be "DEFAULT",
+    "FORWARD_ONLY", or "TUNNEL_ONLY". "DEFAULT" is identical to "FORWARD_ONLY"
+    but is kept for backward compatibility purposes.
     * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for
     verifying connections.
     * **max_connections** - `Optional[int]` - The maximum number of concurrent
@@ -40,7 +41,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         keepalive_expiry: float = None,
         http2: bool = False,
     ):
-        assert proxy_mode in ("FORWARD", "TUNNEL")
+        assert proxy_mode in ("DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY")
 
         self.proxy_origin = proxy_origin
         self.proxy_headers = [] if proxy_headers is None else proxy_headers
@@ -64,7 +65,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         if self._keepalive_expiry is not None:
             await self._keepalive_sweep()
 
-        if self.proxy_mode == "FORWARD":
+        if self.proxy_mode == "FORWARD_ONLY":
             return await self._forward_request(
                 method, url, headers=headers, stream=stream, timeout=timeout
             )
