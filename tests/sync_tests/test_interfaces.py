@@ -177,7 +177,7 @@ def test_http_request_cannot_reuse_dropped_connection() -> None:
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
-@pytest.mark.parametrize("proxy_mode", ["FORWARD", "TUNNEL"])
+@pytest.mark.parametrize("proxy_mode", ["DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY"])
 
 def test_http_proxy(
     proxy_server: typing.Tuple[bytes, bytes, int], proxy_mode: str
@@ -187,7 +187,7 @@ def test_http_proxy(
     headers = [(b"host", b"example.org")]
     # Tunnel requires the host header to be present,
     # Forwarding will use the request headers
-    proxy_headers = headers if proxy_mode == "TUNNEL" else None
+    proxy_headers = headers if proxy_mode in ("DEFAULT", "TUNNEL_ONLY") else None
     with httpcore.SyncHTTPProxy(
         proxy_server, proxy_mode, proxy_headers=proxy_headers
     ) as http:
