@@ -65,11 +65,15 @@ class SyncHTTPProxy(SyncConnectionPool):
         if self._keepalive_expiry is not None:
             self._keepalive_sweep()
 
-        if self.proxy_mode == "FORWARD_ONLY":
+        if (
+            self.proxy_mode == "DEFAULT" and url[0] == b"http"
+        ) or self.proxy_mode == "FORWARD_ONLY":
+            # By default HTTP requests should be forwarded.
             return self._forward_request(
                 method, url, headers=headers, stream=stream, timeout=timeout
             )
         else:
+            # By default HTTPS should be tunnelled.
             return self._tunnel_request(
                 method, url, headers=headers, stream=stream, timeout=timeout
             )
