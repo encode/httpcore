@@ -107,9 +107,9 @@ class SocketStream(AsyncSocketStream):
 
         transport = await asyncio.wait_for(
             loop_start_tls(
-                transport=transport,
-                protocol=protocol,
-                sslcontext=ssl_context,
+                transport,
+                protocol,
+                ssl_context,
                 server_hostname=hostname.decode("ascii"),
             ),
             timeout=timeout.get("connect"),

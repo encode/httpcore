@@ -8,13 +8,6 @@ from .connection import AsyncHTTPConnection
 from .connection_pool import AsyncConnectionPool, ResponseByteStream
 
 
-async def read_body(stream: AsyncByteStream) -> bytes:
-    try:
-        return b"".join([chunk async for chunk in stream])
-    finally:
-        await stream.aclose()
-
-
 class AsyncHTTPProxy(AsyncConnectionPool):
     """
     A connection pool for making HTTP requests via an HTTP proxy.
@@ -140,47 +133,49 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         connection = await self._get_connection_from_pool(origin)
 
         if connection is None:
-            connection = AsyncHTTPConnection(
-                origin=origin, http2=False, ssl_context=self._ssl_context,
+            # First, create a connection to the proxy server
+            proxy_connection = AsyncHTTPConnection(
+                origin=self.proxy_origin, http2=False, ssl_context=self._ssl_context,
             )
-            async with self._thread_lock:
-                self._connections.setdefault(origin, set())
-                self._connections[origin].add(connection)
 
-            # Establish the connection by issuing a CONNECT request...
+            # Issue a CONNECT request...
 
             # CONNECT www.example.org:80 HTTP/1.1
             # [proxy-headers]
             target = b"%b:%d" % (url[1], url[2])
             connect_url = self.proxy_origin + (target,)
-            connect_headers = self.proxy_headers
-            proxy_response = await connection.request(
-                b"CONNECT", connect_url, headers=connect_headers, timeout=timeout
+            proxy_response = await proxy_connection.request(
+                b"CONNECT", connect_url, headers=self.proxy_headers, timeout=timeout
             )
             proxy_status_code = proxy_response[1]
             proxy_reason_phrase = proxy_response[2]
             proxy_stream = proxy_response[4]
 
-            # Ingest any request body.
-            await read_body(proxy_stream)
+            # Read the response data without closing the socket
+            async for _ in proxy_stream:
+                pass
 
-            # If the proxy responds with an error, then drop the connection
-            # from the pool, and raise an exception.
+            # See if the tunnel was successfully established.
             if proxy_status_code < 200 or proxy_status_code > 299:
-                async with self._thread_lock:
-                    self._connections[connection.origin].remove(connection)
-                    if not self._connections[connection.origin]:
-                        del self._connections[connection.origin]
                 msg = "%d %s" % (proxy_status_code, proxy_reason_phrase.decode("ascii"))
                 raise ProxyError(msg)
 
-            # Upgrade to TLS.
-            await connection.start_tls(target, timeout)
+            # The CONNECT request is successful, so we have now SWITCHED PROTOCOLS.
+            # This means the proxy connection is now unusable, and we must create
+            # a new one for regular requests, making sure to use the same socket to
+            # retain the tunnel.
+            connection = AsyncHTTPConnection(
+                origin=origin,
+                http2=False,
+                ssl_context=self._ssl_context,
+                socket=proxy_connection.socket,
+            )
+            await self._add_to_pool(connection)
 
         # Once the connection has been established we can send requests on
         # it as normal.
         response = await connection.request(
-            method, url, headers=headers, stream=stream, timeout=timeout
+            method, url, headers=headers, stream=stream, timeout=timeout,
         )
         wrapped_stream = ResponseByteStream(
             response[4], connection=connection, callback=self._response_closed
