@@ -189,7 +189,7 @@ async def test_http_proxy(
     # Forwarding will use the request headers
     proxy_headers = headers if proxy_mode == "TUNNEL_ONLY" else None
     async with httpcore.AsyncHTTPProxy(
-        proxy_server, proxy_mode, proxy_headers=proxy_headers
+        proxy_server, proxy_headers=proxy_headers, proxy_mode=proxy_mode
     ) as http:
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers

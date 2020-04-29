@@ -19,8 +19,7 @@ class SyncHTTPProxy(SyncConnectionPool):
     * **proxy_headers** - `Optional[List[Tuple[bytes, bytes]]]` - A list of
     proxy headers to include.
     * **proxy_mode** - `str` - A proxy mode to operate in. May be "DEFAULT",
-    "FORWARD_ONLY", or "TUNNEL_ONLY". "DEFAULT" is identical to "FORWARD_ONLY"
-    but is kept for backward compatibility purposes.
+    "FORWARD_ONLY", or "TUNNEL_ONLY".
     * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for
     verifying connections.
     * **max_connections** - `Optional[int]` - The maximum number of concurrent
@@ -33,8 +32,8 @@ class SyncHTTPProxy(SyncConnectionPool):
     def __init__(
         self,
         proxy_origin: Origin,
-        proxy_mode: str,
         proxy_headers: Headers = None,
+        proxy_mode: str = "DEFAULT",
         ssl_context: SSLContext = None,
         max_connections: int = None,
         max_keepalive: int = None,
