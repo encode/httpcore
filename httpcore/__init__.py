@@ -11,6 +11,7 @@ from ._exceptions import (
     ProxyError,
     ReadError,
     ReadTimeout,
+    TimeoutException,
     WriteError,
     WriteTimeout,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "SyncByteStream",
     "SyncConnectionPool",
     "SyncHTTPProxy",
+    "TimeoutException",
     "PoolTimeout",
     "ConnectTimeout",
     "ReadTimeout",
