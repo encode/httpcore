@@ -1,12 +1,16 @@
 #!/bin/sh -e
 
-export PREFIX=""
+PACKAGE="httpcore"
+
 if [ -d 'venv' ] ; then
-    export PREFIX="venv/bin/"
+    PREFIX="venv/bin/"
+else
+    PREFIX=""
 fi
-export SOURCE_FILES="httpcore tests"
 
 set -x
 
-${PREFIX}mypy --ignore-missing-imports httpcore
+${PREFIX}mypy --ignore-missing-imports ${PACKAGE}
+${PREFIX}flake8 --max-line-length 88 ${PACKAGE}
+${PREFIX}black --check --exclude '(httpcore/_sync|tests/sync_tests)/.*' --target-version=py37 ${PACKAGE} tests
 scripts/unasync --check

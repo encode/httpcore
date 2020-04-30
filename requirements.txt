@@ -13,12 +13,12 @@ twine
 wheel
 
 # Tests & Linting
+flake8
 pytest
 pytest-asyncio
 pytest-trio
 pytest-cov
 black
-autoflake
 mypy
 isort
 mitmproxy

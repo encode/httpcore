@@ -1,14 +1,11 @@
 #!/bin/sh -e
 
-if [ -d 'dist' ] ; then
-    rm -r dist
-fi
-if [ -d 'site' ] ; then
-    rm -r site
-fi
-if [ -d 'htmlcov' ] ; then
-    rm -r htmlcov
-fi
-if [ -d 'httpcore.egg-info' ] ; then
-    rm -r httpcore.egg-info
-fi
+PACKAGE=httpcore
+
+rm -rf dist
+rm -rf site
+rm -rf htmlcov
+rm -rf *.egg-info
+
+find ${PACKAGE} -type f -name "*.py[co]" -delete
+find ${PACKAGE} -type f -name __pycache__ -delete
