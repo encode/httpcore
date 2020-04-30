@@ -1,22 +1,11 @@
 from ssl import SSLContext
-from typing import Dict, List, Optional, Tuple
+from typing import Tuple
 
 from .._exceptions import ProxyError
-from .base import SyncByteStream, SyncHTTPTransport
+from .._types import URL, Headers, Origin, TimeoutDict
+from .base import SyncByteStream
 from .connection import SyncHTTPConnection
 from .connection_pool import SyncConnectionPool, ResponseByteStream
-
-Origin = Tuple[bytes, bytes, int]
-URL = Tuple[bytes, bytes, int, bytes]
-Headers = List[Tuple[bytes, bytes]]
-TimeoutDict = Dict[str, Optional[float]]
-
-
-def read_body(stream: SyncByteStream) -> bytes:
-    try:
-        return b"".join([chunk for chunk in stream])
-    finally:
-        stream.close()
 
 
 class SyncHTTPProxy(SyncConnectionPool):
@@ -25,12 +14,18 @@ class SyncHTTPProxy(SyncConnectionPool):
 
     **Parameters:**
 
-    * **proxy_origin** - `Tuple[bytes, bytes, int]` - The address of the proxy service as a 3-tuple of (scheme, host, port).
-    * **proxy_headers** - `Optional[List[Tuple[bytes, bytes]]]` - A list of proxy headers to include.
-    * **proxy_mode** - `str` - A proxy mode to operate in. May be "DEFAULT", "FORWARD_ONLY", or "TUNNEL_ONLY".
-    * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for verifying connections.
-    * **max_connections** - `Optional[int]` - The maximum number of concurrent connections to allow.
-    * **max_keepalive** - `Optional[int]` - The maximum number of connections to allow before closing keep-alive connections.
+    * **proxy_origin** - `Tuple[bytes, bytes, int]` - The address of the proxy
+    service as a 3-tuple of (scheme, host, port).
+    * **proxy_headers** - `Optional[List[Tuple[bytes, bytes]]]` - A list of
+    proxy headers to include.
+    * **proxy_mode** - `str` - A proxy mode to operate in. May be "DEFAULT",
+    "FORWARD_ONLY", or "TUNNEL_ONLY".
+    * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for
+    verifying connections.
+    * **max_connections** - `Optional[int]` - The maximum number of concurrent
+    connections to allow.
+    * **max_keepalive** - `Optional[int]` - The maximum number of connections
+    to allow before closing keep-alive connections.
     * **http2** - `bool` - Enable HTTP/2 support.
     """
 
@@ -138,47 +133,49 @@ class SyncHTTPProxy(SyncConnectionPool):
         connection = self._get_connection_from_pool(origin)
 
         if connection is None:
-            connection = SyncHTTPConnection(
-                origin=origin, http2=False, ssl_context=self._ssl_context,
+            # First, create a connection to the proxy server
+            proxy_connection = SyncHTTPConnection(
+                origin=self.proxy_origin, http2=False, ssl_context=self._ssl_context,
             )
-            with self._thread_lock:
-                self._connections.setdefault(origin, set())
-                self._connections[origin].add(connection)
 
-            # Establish the connection by issuing a CONNECT request...
+            # Issue a CONNECT request...
 
             # CONNECT www.example.org:80 HTTP/1.1
             # [proxy-headers]
             target = b"%b:%d" % (url[1], url[2])
             connect_url = self.proxy_origin + (target,)
-            connect_headers = self.proxy_headers
-            proxy_response = connection.request(
-                b"CONNECT", connect_url, headers=connect_headers, timeout=timeout
+            proxy_response = proxy_connection.request(
+                b"CONNECT", connect_url, headers=self.proxy_headers, timeout=timeout
             )
             proxy_status_code = proxy_response[1]
             proxy_reason_phrase = proxy_response[2]
             proxy_stream = proxy_response[4]
 
-            # Ingest any request body.
-            read_body(proxy_stream)
+            # Read the response data without closing the socket
+            for _ in proxy_stream:
+                pass
 
-            # If the proxy responds with an error, then drop the connection
-            # from the pool, and raise an exception.
+            # See if the tunnel was successfully established.
             if proxy_status_code < 200 or proxy_status_code > 299:
-                with self._thread_lock:
-                    self._connections[connection.origin].remove(connection)
-                    if not self._connections[connection.origin]:
-                        del self._connections[connection.origin]
                 msg = "%d %s" % (proxy_status_code, proxy_reason_phrase.decode("ascii"))
                 raise ProxyError(msg)
 
-            # Upgrade to TLS.
-            connection.start_tls(target, timeout)
+            # The CONNECT request is successful, so we have now SWITCHED PROTOCOLS.
+            # This means the proxy connection is now unusable, and we must create
+            # a new one for regular requests, making sure to use the same socket to
+            # retain the tunnel.
+            connection = SyncHTTPConnection(
+                origin=origin,
+                http2=False,
+                ssl_context=self._ssl_context,
+                socket=proxy_connection.socket,
+            )
+            self._add_to_pool(connection)
 
         # Once the connection has been established we can send requests on
         # it as normal.
         response = connection.request(
-            method, url, headers=headers, stream=stream, timeout=timeout
+            method, url, headers=headers, stream=stream, timeout=timeout,
         )
         wrapped_stream = ResponseByteStream(
             response[4], connection=connection, callback=self._response_closed

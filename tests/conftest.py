@@ -47,7 +47,9 @@ class RunNotify:
 class ProxyWrapper(threading.Thread):
     """Runs an mitmproxy in a separate thread."""
 
-    def __init__(self, host: str, port: int, **kwargs) -> None:
+    def __init__(
+        self, host: str, port: int, **kwargs: typing.Dict[str, typing.Any]
+    ) -> None:
         self.host = host
         self.port = port
         self.options = kwargs
@@ -75,7 +77,7 @@ class ProxyWrapper(threading.Thread):
 
 
 @pytest.fixture
-def proxy_server() -> typing.Tuple[bytes, bytes, int]:
+def proxy_server() -> typing.Iterable[typing.Tuple[bytes, bytes, int]]:
     """Starts a proxy server on a different thread and returns its origin tuple."""
     try:
         thread = ProxyWrapper(PROXY_HOST, PROXY_PORT)

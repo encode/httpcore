@@ -1,6 +1,6 @@
 from http import HTTPStatus
 from ssl import SSLContext
-from typing import AsyncIterator, Dict, List, Optional, Tuple
+from typing import AsyncIterator, Dict, List, Tuple
 
 import h2.connection
 import h2.events
@@ -10,6 +10,7 @@ from h2.settings import SettingCodes, Settings
 
 from .._backends.auto import AsyncLock, AsyncSocketStream, AutoBackend
 from .._exceptions import ProtocolError
+from .._types import URL, Headers, TimeoutDict
 from .base import (
     AsyncByteStream,
     AsyncHTTPTransport,
@@ -63,9 +64,7 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
             self._read_lock = self.backend.create_lock()
         return self._read_lock
 
-    async def start_tls(
-        self, hostname: bytes, timeout: Dict[str, Optional[float]] = None
-    ) -> None:
+    async def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
         pass
 
     def mark_as_ready(self) -> None:
@@ -75,10 +74,10 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
     async def request(
         self,
         method: bytes,
-        url: Tuple[bytes, bytes, int, bytes],
-        headers: List[Tuple[bytes, bytes]] = None,
+        url: URL,
+        headers: Headers = None,
         stream: AsyncByteStream = None,
-        timeout: Dict[str, Optional[float]] = None,
+        timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         timeout = {} if timeout is None else timeout
 
@@ -102,7 +101,7 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
         self.events[stream_id] = []
         return await h2_stream.request(method, url, headers, stream, timeout)
 
-    async def send_connection_init(self, timeout: Dict[str, Optional[float]]) -> None:
+    async def send_connection_init(self, timeout: TimeoutDict) -> None:
         """
         The HTTP/2 connection requires some initial setup before we can start
         using individual request/response streams on it.
@@ -147,9 +146,7 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
 
             await self.socket.aclose()
 
-    async def wait_for_outgoing_flow(
-        self, stream_id: int, timeout: Dict[str, Optional[float]]
-    ) -> int:
+    async def wait_for_outgoing_flow(self, stream_id: int, timeout: TimeoutDict) -> int:
         """
         Returns the maximum allowable outgoing flow for a given stream.
         If the allowable flow is zero, then waits on the network until
@@ -167,7 +164,7 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
         return flow
 
     async def wait_for_event(
-        self, stream_id: int, timeout: Dict[str, Optional[float]]
+        self, stream_id: int, timeout: TimeoutDict
     ) -> h2.events.Event:
         """
         Returns the next event for a given stream.
@@ -179,7 +176,7 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
                 await self.receive_events(timeout)
         return self.events[stream_id].pop(0)
 
-    async def receive_events(self, timeout: Dict[str, Optional[float]]) -> None:
+    async def receive_events(self, timeout: TimeoutDict) -> None:
         """
         Read some data from the network, and update the H2 state.
         """
@@ -198,11 +195,7 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
         await self.socket.write(data_to_send, timeout)
 
     async def send_headers(
-        self,
-        stream_id: int,
-        headers: List[Tuple[bytes, bytes]],
-        end_stream: bool,
-        timeout: Dict[str, Optional[float]],
+        self, stream_id: int, headers: Headers, end_stream: bool, timeout: TimeoutDict,
     ) -> None:
         self.h2_state.send_headers(stream_id, headers, end_stream=end_stream)
         self.h2_state.increment_flow_control_window(2 ** 24, stream_id=stream_id)
@@ -210,21 +203,19 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
         await self.socket.write(data_to_send, timeout)
 
     async def send_data(
-        self, stream_id: int, chunk: bytes, timeout: Dict[str, Optional[float]]
+        self, stream_id: int, chunk: bytes, timeout: TimeoutDict
     ) -> None:
         self.h2_state.send_data(stream_id, chunk)
         data_to_send = self.h2_state.data_to_send()
         await self.socket.write(data_to_send, timeout)
 
-    async def end_stream(
-        self, stream_id: int, timeout: Dict[str, Optional[float]]
-    ) -> None:
+    async def end_stream(self, stream_id: int, timeout: TimeoutDict) -> None:
         self.h2_state.end_stream(stream_id)
         data_to_send = self.h2_state.data_to_send()
         await self.socket.write(data_to_send, timeout)
 
     async def acknowledge_received_data(
-        self, stream_id: int, amount: int, timeout: Dict[str, Optional[float]]
+        self, stream_id: int, amount: int, timeout: TimeoutDict
     ) -> None:
         self.h2_state.acknowledge_received_data(amount, stream_id)
         data_to_send = self.h2_state.data_to_send()
@@ -249,10 +240,10 @@ class AsyncHTTP2Stream:
     async def request(
         self,
         method: bytes,
-        url: Tuple[bytes, bytes, int, bytes],
-        headers: List[Tuple[bytes, bytes]] = None,
+        url: URL,
+        headers: Headers = None,
         stream: AsyncByteStream = None,
-        timeout: Dict[str, Optional[float]] = None,
+        timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         headers = [] if headers is None else [(k.lower(), v) for (k, v) in headers]
         stream = AsyncByteStream() if stream is None else stream
@@ -280,10 +271,10 @@ class AsyncHTTP2Stream:
     async def send_headers(
         self,
         method: bytes,
-        url: Tuple[bytes, bytes, int, bytes],
-        headers: List[Tuple[bytes, bytes]],
+        url: URL,
+        headers: Headers,
         has_body: bool,
-        timeout: Dict[str, Optional[float]],
+        timeout: TimeoutDict,
     ) -> None:
         scheme, hostname, port, path = url
         default_port = {b"http": 80, b"https": 443}.get(scheme)
@@ -299,9 +290,7 @@ class AsyncHTTP2Stream:
 
         await self.connection.send_headers(self.stream_id, headers, end_stream, timeout)
 
-    async def send_body(
-        self, stream: AsyncByteStream, timeout: Dict[str, Optional[float]]
-    ) -> None:
+    async def send_body(self, stream: AsyncByteStream, timeout: TimeoutDict) -> None:
         async for data in stream:
             while data:
                 max_flow = await self.connection.wait_for_outgoing_flow(
@@ -314,7 +303,7 @@ class AsyncHTTP2Stream:
         await self.connection.end_stream(self.stream_id, timeout)
 
     async def receive_response(
-        self, timeout: Dict[str, Optional[float]]
+        self, timeout: TimeoutDict
     ) -> Tuple[int, List[Tuple[bytes, bytes]]]:
         """
         Read the response status and headers from the network.
@@ -334,9 +323,7 @@ class AsyncHTTP2Stream:
 
         return (status_code, headers)
 
-    async def body_iter(
-        self, timeout: Dict[str, Optional[float]]
-    ) -> AsyncIterator[bytes]:
+    async def body_iter(self, timeout: TimeoutDict) -> AsyncIterator[bytes]:
         while True:
             event = await self.connection.wait_for_event(self.stream_id, timeout)
             if isinstance(event, h2.events.DataReceived):

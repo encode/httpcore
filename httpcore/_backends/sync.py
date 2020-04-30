@@ -4,7 +4,7 @@ import threading
 import time
 from ssl import SSLContext
 from types import TracebackType
-from typing import Dict, Optional, Type
+from typing import Optional, Type
 
 from .._exceptions import (
     CloseError,
@@ -16,6 +16,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
+from .._types import TimeoutDict
 
 
 class SyncSocketStream:
@@ -38,10 +39,7 @@ class SyncSocketStream:
         return "HTTP/1.1"
 
     def start_tls(
-        self,
-        hostname: bytes,
-        ssl_context: SSLContext,
-        timeout: Dict[str, Optional[float]],
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict,
     ) -> "SyncSocketStream":
         connect_timeout = timeout.get("connect")
         exc_map = {socket.timeout: ConnectTimeout, socket.error: ConnectError}
@@ -54,7 +52,7 @@ class SyncSocketStream:
 
         return SyncSocketStream(wrapped)
 
-    def read(self, n: int, timeout: Dict[str, Optional[float]]) -> bytes:
+    def read(self, n: int, timeout: TimeoutDict) -> bytes:
         read_timeout = timeout.get("read")
         exc_map = {socket.timeout: ReadTimeout, socket.error: ReadError}
 
@@ -63,7 +61,7 @@ class SyncSocketStream:
                 self.sock.settimeout(read_timeout)
                 return self.sock.recv(n)
 
-    def write(self, data: bytes, timeout: Dict[str, Optional[float]]) -> None:
+    def write(self, data: bytes, timeout: TimeoutDict) -> None:
         write_timeout = timeout.get("write")
         exc_map = {socket.timeout: WriteTimeout, socket.error: WriteError}
 
@@ -126,7 +124,7 @@ class SyncBackend:
         hostname: bytes,
         port: int,
         ssl_context: Optional[SSLContext],
-        timeout: Dict[str, Optional[float]],
+        timeout: TimeoutDict,
     ) -> SyncSocketStream:
         connect_timeout = timeout.get("connect")
         exc_map = {socket.timeout: ConnectTimeout, socket.error: ConnectError}

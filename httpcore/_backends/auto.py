@@ -1,10 +1,13 @@
 from ssl import SSLContext
-from typing import Dict, Optional
+from typing import Optional
 
 import sniffio
 
+from .._types import TimeoutDict
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
-from .sync import SyncBackend, SyncLock, SyncSemaphore, SyncSocketStream
+
+# The following line is imported from the _sync modules
+from .sync import SyncBackend, SyncLock, SyncSemaphore, SyncSocketStream  # noqa
 
 
 class AutoBackend(AsyncBackend):
@@ -30,7 +33,7 @@ class AutoBackend(AsyncBackend):
         hostname: bytes,
         port: int,
         ssl_context: Optional[SSLContext],
-        timeout: Dict[str, Optional[float]],
+        timeout: TimeoutDict,
     ) -> AsyncSocketStream:
         return await self.backend.open_tcp_stream(hostname, port, ssl_context, timeout)
 

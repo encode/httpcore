@@ -1,10 +1,11 @@
 from ssl import SSLContext
-from typing import AsyncIterator, Dict, List, Optional, Tuple, Union
+from typing import AsyncIterator, List, Tuple, Union
 
 import h11
 
 from .._backends.auto import AsyncSocketStream
 from .._exceptions import ProtocolError, map_exceptions
+from .._types import URL, Headers, TimeoutDict
 from .base import AsyncByteStream, AsyncHTTPTransport, ConnectionState
 
 H11Event = Union[
@@ -37,10 +38,10 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
     async def request(
         self,
         method: bytes,
-        url: Tuple[bytes, bytes, int, bytes],
-        headers: List[Tuple[bytes, bytes]] = None,
+        url: URL,
+        headers: Headers = None,
         stream: AsyncByteStream = None,
-        timeout: Dict[str, Optional[float]] = None,
+        timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         headers = [] if headers is None else headers
         stream = AsyncByteStream() if stream is None else stream
@@ -62,18 +63,12 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         )
         return (http_version, status_code, reason_phrase, headers, stream)
 
-    async def start_tls(
-        self, hostname: bytes, timeout: Dict[str, Optional[float]] = None
-    ) -> None:
+    async def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
         timeout = {} if timeout is None else timeout
         self.socket = await self.socket.start_tls(hostname, self.ssl_context, timeout)
 
     async def _send_request(
-        self,
-        method: bytes,
-        url: Tuple[bytes, bytes, int, bytes],
-        headers: List[Tuple[bytes, bytes]],
-        timeout: Dict[str, Optional[float]],
+        self, method: bytes, url: URL, headers: Headers, timeout: TimeoutDict,
     ) -> None:
         """
         Send the request line and headers.
@@ -83,7 +78,7 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         await self._send_event(event, timeout)
 
     async def _send_request_body(
-        self, stream: AsyncByteStream, timeout: Dict[str, Optional[float]]
+        self, stream: AsyncByteStream, timeout: TimeoutDict
     ) -> None:
         """
         Send the request body.
@@ -97,9 +92,7 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         event = h11.EndOfMessage()
         await self._send_event(event, timeout)
 
-    async def _send_event(
-        self, event: H11Event, timeout: Dict[str, Optional[float]]
-    ) -> None:
+    async def _send_event(self, event: H11Event, timeout: TimeoutDict) -> None:
         """
         Send a single `h11` event to the network, waiting for the data to
         drain before returning.
@@ -108,7 +101,7 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         await self.socket.write(bytes_to_send, timeout)
 
     async def _receive_response(
-        self, timeout: Dict[str, Optional[float]]
+        self, timeout: TimeoutDict
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]]]:
         """
         Read the response status and headers from the network.
@@ -121,7 +114,7 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         return http_version, event.status_code, event.reason, event.headers
 
     async def _receive_response_data(
-        self, timeout: Dict[str, Optional[float]]
+        self, timeout: TimeoutDict
     ) -> AsyncIterator[bytes]:
         """
         Read the response data from the network.
@@ -130,10 +123,10 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
             event = await self._receive_event(timeout)
             if isinstance(event, h11.Data):
                 yield bytes(event.data)
-            elif isinstance(event, h11.EndOfMessage):
+            elif isinstance(event, (h11.EndOfMessage, h11.PAUSED)):
                 break
 
-    async def _receive_event(self, timeout: Dict[str, Optional[float]]) -> H11Event:
+    async def _receive_event(self, timeout: TimeoutDict) -> H11Event:
         """
         Read a single `h11` event, reading more data from the network if needed.
         """
