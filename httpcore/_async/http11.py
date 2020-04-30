@@ -58,8 +58,8 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
             headers,
         ) = await self._receive_response(timeout)
         stream = AsyncByteStream(
-            iterator=self._receive_response_data(timeout),
-            close_func=self._response_closed,
+            aiterator=self._receive_response_data(timeout),
+            aclose_func=self._response_closed,
         )
         return (http_version, status_code, reason_phrase, headers, stream)
 
