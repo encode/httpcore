@@ -8,6 +8,10 @@ mkdocs
 mkautodoc
 mkdocs-material
 
+# Packaging
+twine
+wheel
+
 # Tests & Linting
 pytest
 pytest-asyncio
