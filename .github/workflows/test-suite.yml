@@ -21,7 +21,7 @@ jobs:
           python-version: "${{ matrix.python-version }}"
       - name: "Install dependencies"
         run: "scripts/install"
-      - name: "Run checks"
+      - name: "Run linting checks"
         run: "scripts/check"
       - name: "Build package & docs"
         run: "scripts/build"
