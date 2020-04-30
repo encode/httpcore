@@ -263,7 +263,7 @@ class AsyncHTTP2Stream:
         status_code, headers = await self.receive_response(timeout)
         reason_phrase = get_reason_phrase(status_code)
         stream = AsyncByteStream(
-            iterator=self.body_iter(timeout), close_func=self._response_closed
+            aiterator=self.body_iter(timeout), aclose_func=self._response_closed
         )
 
         return (b"HTTP/2", status_code, reason_phrase, headers, stream)

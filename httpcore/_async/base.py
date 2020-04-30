@@ -45,24 +45,24 @@ class AsyncByteStream:
     """
 
     def __init__(
-        self, iterator: AsyncIterator[bytes] = None, close_func: Callable = None,
+        self, aiterator: AsyncIterator[bytes] = None, aclose_func: Callable = None,
     ) -> None:
-        self.iterator = empty() if iterator is None else iterator
-        self.close_func = close_func
+        self.aiterator = empty() if aiterator is None else aiterator
+        self.aclose_func = aclose_func
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
         """
         Yield bytes representing the request or response body.
         """
-        async for chunk in self.iterator:
+        async for chunk in self.aiterator:
             yield chunk
 
     async def aclose(self) -> None:
         """
         Must be called by the client to indicate that the stream has been closed.
         """
-        if self.close_func is not None:
-            await self.close_func()
+        if self.aclose_func is not None:
+            await self.aclose_func()
 
 
 class AsyncHTTPTransport:
