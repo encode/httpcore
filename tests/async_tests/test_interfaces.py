@@ -1,3 +1,4 @@
+import ssl
 import typing
 
 import pytest
@@ -195,6 +196,33 @@ async def test_http_proxy(
             method, url, headers
         )
         body = await read_body(stream)
+
+        assert http_version == b"HTTP/1.1"
+        assert status_code == 200
+        assert reason == b"OK"
+
+
+# mitmproxy does not support forwarding HTTPS requests
+@pytest.mark.parametrize("proxy_mode", ["DEFAULT", "TUNNEL_ONLY"])
+@pytest.mark.usefixtures("async_environment")
+async def test_proxy_https_requests(
+    proxy_server: typing.Tuple[bytes, bytes, int],
+    ca_ssl_context: ssl.SSLContext,
+    proxy_mode: str,
+) -> None:
+    method = b"GET"
+    url = (b"https", b"example.org", 443, b"/")
+    headers = proxy_headers = [(b"host", b"example.org")]
+    async with httpcore.AsyncHTTPProxy(
+        proxy_server,
+        proxy_headers=proxy_headers,
+        proxy_mode=proxy_mode,
+        ssl_context=ca_ssl_context,
+    ) as http:
+        http_version, status_code, reason, headers, stream = await http.request(
+            method, url, headers
+        )
+        _ = await read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200

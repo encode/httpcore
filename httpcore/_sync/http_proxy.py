@@ -160,6 +160,11 @@ class SyncHTTPProxy(SyncConnectionPool):
                 msg = "%d %s" % (proxy_status_code, proxy_reason_phrase.decode("ascii"))
                 raise ProxyError(msg)
 
+            # Upgrade to TLS if required
+            # We assume the target speaks TLS on the specified port
+            if url[0] == b"https":
+                proxy_connection.start_tls(url[1], timeout)
+
             # The CONNECT request is successful, so we have now SWITCHED PROTOCOLS.
             # This means the proxy connection is now unusable, and we must create
             # a new one for regular requests, making sure to use the same socket to

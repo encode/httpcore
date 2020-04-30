@@ -1,9 +1,11 @@
 import asyncio
+import ssl
 import threading
 import typing
 
 import pytest
-from mitmproxy import master, options, proxy
+import trustme
+from mitmproxy import options, proxy
 from mitmproxy.tools.dump import DumpMaster
 
 PROXY_HOST = "127.0.0.1"
@@ -47,9 +49,7 @@ class RunNotify:
 class ProxyWrapper(threading.Thread):
     """Runs an mitmproxy in a separate thread."""
 
-    def __init__(
-        self, host: str, port: int, **kwargs: typing.Dict[str, typing.Any]
-    ) -> None:
+    def __init__(self, host: str, port: int, **kwargs: typing.Any) -> None:
         self.host = host
         self.port = port
         self.options = kwargs
@@ -71,16 +71,50 @@ class ProxyWrapper(threading.Thread):
         self.master.addons.add(self.notify)
         self.master.run()
 
-    def join(self) -> None:
+    def join(self, timeout: float = None) -> None:
         self.master.shutdown()
         super().join()
 
 
-@pytest.fixture
-def proxy_server() -> typing.Iterable[typing.Tuple[bytes, bytes, int]]:
-    """Starts a proxy server on a different thread and returns its origin tuple."""
+@pytest.fixture(scope="session")
+def cert_authority() -> trustme.CA:
+    return trustme.CA()
+
+
+@pytest.fixture(scope="session")
+def ca_ssl_context(cert_authority: trustme.CA) -> ssl.SSLContext:
+    ctx = ssl.create_default_context()
+    cert_authority.configure_trust(ctx)
+    return ctx
+
+
+@pytest.fixture(scope="session")
+def example_org_cert(cert_authority: trustme.CA) -> trustme.LeafCert:
+    return cert_authority.issue_cert("example.org")
+
+
+@pytest.fixture(scope="session")
+def example_org_cert_path(example_org_cert: trustme.LeafCert) -> typing.Iterator[str]:
+    with example_org_cert.private_key_and_cert_chain_pem.tempfile() as tmp:
+        yield tmp
+
+
+@pytest.fixture()
+def proxy_server(
+    example_org_cert_path: str,
+) -> typing.Iterator[typing.Tuple[bytes, bytes, int]]:
+    """Starts a proxy server on a different thread and yields its origin tuple.
+
+    The server is configured to use a trustme CA and key, this will allow our
+    test client to make HTTPS requests when using the ca_ssl_context fixture
+    above.
+
+    Note this is only required because mitmproxy's main purpose is to analyse
+    traffic. Other proxy servers do not need this but mitmproxy is easier to
+    integrate in our tests.
+    """
     try:
-        thread = ProxyWrapper(PROXY_HOST, PROXY_PORT)
+        thread = ProxyWrapper(PROXY_HOST, PROXY_PORT, certs=[example_org_cert_path])
         thread.start()
         thread.notify.started.wait()
         yield (b"http", PROXY_HOST.encode(), PROXY_PORT)
