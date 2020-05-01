@@ -1,5 +1,5 @@
 from ssl import SSLContext
-from typing import Optional, Union
+from typing import Optional
 
 import trio
 
@@ -22,7 +22,7 @@ def none_as_inf(value: Optional[float]) -> float:
 
 
 class SocketStream(AsyncSocketStream):
-    def __init__(self, stream: Union[trio.SocketStream, trio.SSLStream]) -> None:
+    def __init__(self, stream: trio.abc.Stream) -> None:
         self.stream = stream
         self.read_lock = trio.Lock()
         self.write_lock = trio.Lock()
@@ -43,7 +43,9 @@ class SocketStream(AsyncSocketStream):
             trio.BrokenResourceError: ConnectError,
         }
         ssl_stream = trio.SSLStream(
-            self.stream, ssl_context=ssl_context, server_hostname=hostname
+            self.stream,
+            ssl_context=ssl_context,
+            server_hostname=hostname.decode("ascii"),
         )
 
         with map_exceptions(exc_map):
@@ -85,7 +87,7 @@ class SocketStream(AsyncSocketStream):
         stream = self.stream
 
         # Peek through any SSLStream wrappers to get the underlying SocketStream.
-        while hasattr(stream, "transport_stream"):
+        while isinstance(stream, trio.SSLStream):
             stream = stream.transport_stream
         assert isinstance(stream, trio.SocketStream)
 
@@ -147,11 +149,11 @@ class TrioBackend(AsyncBackend):
 
         with map_exceptions(exc_map):
             with trio.fail_after(connect_timeout):
-                stream: trio.SocketStream = await trio.open_tcp_stream(hostname, port)
+                stream: trio.abc.Stream = await trio.open_tcp_stream(hostname, port)
 
                 if ssl_context is not None:
                     stream = trio.SSLStream(
-                        stream, ssl_context, server_hostname=hostname
+                        stream, ssl_context, server_hostname=hostname.decode("ascii")
                     )
                     await stream.do_handshake()
 
