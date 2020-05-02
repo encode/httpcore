@@ -96,9 +96,7 @@ class SyncHTTPProxy(SyncConnectionPool):
             connection = SyncHTTPConnection(
                 origin=origin, http2=False, ssl_context=self._ssl_context,
             )
-            with self._thread_lock:
-                self._connections.setdefault(origin, set())
-                self._connections[origin].add(connection)
+            self._add_to_pool(connection)
 
         # Issue a forwarded proxy request...
 
