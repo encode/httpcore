@@ -96,9 +96,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             connection = AsyncHTTPConnection(
                 origin=origin, http2=False, ssl_context=self._ssl_context,
             )
-            async with self._thread_lock:
-                self._connections.setdefault(origin, set())
-                self._connections[origin].add(connection)
+            await self._add_to_pool(connection)
 
         # Issue a forwarded proxy request...
 
