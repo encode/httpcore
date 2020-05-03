@@ -6,8 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+## 0.8.2 (May 3rd, 2020)
+
+### Fixed
+
 - Fix connections using proxy forwarding requests not being added to the
-connection pool properly.
+connection pool properly. (Pull #70)
 
 ## 0.8.1 (April 30th, 2020)
 
