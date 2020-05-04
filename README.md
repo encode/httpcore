@@ -1,5 +1,14 @@
 # HTTP Core
 
+<p>
+    <a href="https://github.com/encode/httpcore/actions">
+        <img src="https://github.com/encode/httpcore/workflows/Test%20Suite/badge.svg" alt="Test Suite">
+    </a>
+    <a href="https://pypi.org/project/httpcore/">
+        <img src="https://badge.fury.io/py/httpcore.svg" alt="Package version">
+    </a>
+</p>
+
 > *Do one thing, and do it well.*
 
 The HTTP Core package provides a minimal low-level HTTP client, which does
