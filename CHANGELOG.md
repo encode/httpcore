@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Fixed
+
+- HTTP/2 flag not being passed down to proxy connections.
+
 ## 0.8.2 (May 3rd, 2020)
 
 ### Fixed
