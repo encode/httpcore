@@ -81,7 +81,7 @@ def cert_authority() -> trustme.CA:
     return trustme.CA()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def ca_ssl_context(cert_authority: trustme.CA) -> ssl.SSLContext:
     ctx = ssl.create_default_context()
     cert_authority.configure_trust(ctx)

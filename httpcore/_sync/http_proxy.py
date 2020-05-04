@@ -94,7 +94,7 @@ class SyncHTTPProxy(SyncConnectionPool):
 
         if connection is None:
             connection = SyncHTTPConnection(
-                origin=origin, http2=False, ssl_context=self._ssl_context,
+                origin=origin, http2=self._http2, ssl_context=self._ssl_context,
             )
             self._add_to_pool(connection)
 
@@ -133,7 +133,9 @@ class SyncHTTPProxy(SyncConnectionPool):
         if connection is None:
             # First, create a connection to the proxy server
             proxy_connection = SyncHTTPConnection(
-                origin=self.proxy_origin, http2=False, ssl_context=self._ssl_context,
+                origin=self.proxy_origin,
+                http2=self._http2,
+                ssl_context=self._ssl_context,
             )
 
             # Issue a CONNECT request...
@@ -169,7 +171,7 @@ class SyncHTTPProxy(SyncConnectionPool):
             # retain the tunnel.
             connection = SyncHTTPConnection(
                 origin=origin,
-                http2=False,
+                http2=self._http2,
                 ssl_context=self._ssl_context,
                 socket=proxy_connection.socket,
             )

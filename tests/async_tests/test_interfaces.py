@@ -211,10 +211,12 @@ async def test_http_proxy(
 # mitmproxy does not support forwarding HTTPS requests
 @pytest.mark.parametrize("proxy_mode", ["DEFAULT", "TUNNEL_ONLY"])
 @pytest.mark.usefixtures("async_environment")
+@pytest.mark.parametrize("http2", [False, True])
 async def test_proxy_https_requests(
     proxy_server: typing.Tuple[bytes, bytes, int],
     ca_ssl_context: ssl.SSLContext,
     proxy_mode: str,
+    http2: bool,
 ) -> None:
     method = b"GET"
     url = (b"https", b"example.org", 443, b"/")
@@ -228,12 +230,13 @@ async def test_proxy_https_requests(
         ssl_context=ca_ssl_context,
         max_connections=max_connections,
         max_keepalive=max_keepalive,
+        http2=http2,
     ) as http:
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers
         )
         _ = await read_body(stream)
 
-        assert http_version == b"HTTP/1.1"
+        assert http_version == (b"HTTP/2" if http2 else b"HTTP/1.1")
         assert status_code == 200
         assert reason == b"OK"
