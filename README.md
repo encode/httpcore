@@ -1,13 +1,7 @@
 # HTTP Core
 
-<p>
-    <a href="https://github.com/encode/httpcore/actions">
-        <img src="https://github.com/encode/httpcore/workflows/Test%20Suite/badge.svg" alt="Test Suite">
-    </a>
-    <a href="https://pypi.org/project/httpcore/">
-        <img src="https://badge.fury.io/py/httpcore.svg" alt="Package version">
-    </a>
-</p>
+[![Test Suite](https://github.com/encode/httpcore/workflows/Test%20Suite/badge.svg)](https://github.com/encode/httpcore/actions)
+[![Package version](https://badge.fury.io/py/httpcore.svg)](https://pypi.org/project/httpcore/)
 
 > *Do one thing, and do it well.*
 
