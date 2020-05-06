@@ -8,6 +8,23 @@ from .connection import SyncHTTPConnection
 from .connection_pool import SyncConnectionPool, ResponseByteStream
 
 
+def merge_headers(
+    default_headers: Headers = None, override_headers: Headers = None
+) -> Headers:
+    """
+    Append default_headers and override_headers, de-duplicating if a key existing in both cases.
+    """
+    default_headers = [] if default_headers is None else default_headers
+    override_headers = [] if override_headers is None else override_headers
+    has_override = set([key.lower() for key, value in override_headers])
+    default_headers = [
+        (key, value)
+        for key, value in default_headers
+        if key.lower() not in has_override
+    ]
+    return default_headers + override_headers
+
+
 class SyncHTTPProxy(SyncConnectionPool):
     """
     A connection pool for making HTTP requests via an HTTP proxy.
@@ -105,7 +122,7 @@ class SyncHTTPProxy(SyncConnectionPool):
         # [headers]
         target = b"%b://%b:%d%b" % url
         url = self.proxy_origin + (target,)
-        headers = self.proxy_headers + ([] if headers is None else headers)
+        headers = merge_headers(self.proxy_headers, headers)
 
         response = connection.request(
             method, url, headers=headers, stream=stream, timeout=timeout
@@ -144,8 +161,10 @@ class SyncHTTPProxy(SyncConnectionPool):
             # [proxy-headers]
             target = b"%b:%d" % (url[1], url[2])
             connect_url = self.proxy_origin + (target,)
+            connect_headers = [(b"Host", target), (b"Accept", b"*/*")]
+            connect_headers = merge_headers(connect_headers, self.proxy_headers)
             proxy_response = proxy_connection.request(
-                b"CONNECT", connect_url, headers=self.proxy_headers, timeout=timeout
+                b"CONNECT", connect_url, headers=connect_headers, timeout=timeout
             )
             proxy_status_code = proxy_response[1]
             proxy_reason_phrase = proxy_response[2]

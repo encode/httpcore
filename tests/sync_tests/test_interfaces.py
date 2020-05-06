@@ -188,12 +188,8 @@ def test_http_proxy(
     headers = [(b"host", b"example.org")]
     max_connections = 1
     max_keepalive = 2
-    # Tunnel requires the host header to be present,
-    # Forwarding will use the request headers
-    proxy_headers = headers if proxy_mode == "TUNNEL_ONLY" else None
     with httpcore.SyncHTTPProxy(
         proxy_server,
-        proxy_headers=proxy_headers,
         proxy_mode=proxy_mode,
         max_connections=max_connections,
         max_keepalive=max_keepalive,
@@ -220,12 +216,11 @@ def test_proxy_https_requests(
 ) -> None:
     method = b"GET"
     url = (b"https", b"example.org", 443, b"/")
-    headers = proxy_headers = [(b"host", b"example.org")]
+    headers = [(b"host", b"example.org")]
     max_connections = 1
     max_keepalive = 2
     with httpcore.SyncHTTPProxy(
         proxy_server,
-        proxy_headers=proxy_headers,
         proxy_mode=proxy_mode,
         ssl_context=ca_ssl_context,
         max_connections=max_connections,
