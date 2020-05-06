@@ -3,9 +3,12 @@ from typing import Tuple
 
 from .._exceptions import ProxyError
 from .._types import URL, Headers, Origin, TimeoutDict
+from .._utils import get_logger
 from .base import AsyncByteStream
 from .connection import AsyncHTTPConnection
 from .connection_pool import AsyncConnectionPool, ResponseByteStream
+
+logger = get_logger(__name__)
 
 
 def merge_headers(
@@ -85,11 +88,25 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             self.proxy_mode == "DEFAULT" and url[0] == b"http"
         ) or self.proxy_mode == "FORWARD_ONLY":
             # By default HTTP requests should be forwarded.
+            logger.trace(
+                "forward_request proxy_origin=%r proxy_headers=%r method=%r url=%r",
+                self.proxy_origin,
+                self.proxy_headers,
+                method,
+                url,
+            )
             return await self._forward_request(
                 method, url, headers=headers, stream=stream, timeout=timeout
             )
         else:
             # By default HTTPS should be tunnelled.
+            logger.trace(
+                "tunnel_request proxy_origin=%r proxy_headers=%r method=%r url=%r",
+                self.proxy_origin,
+                self.proxy_headers,
+                method,
+                url,
+            )
             return await self._tunnel_request(
                 method, url, headers=headers, stream=stream, timeout=timeout
             )
@@ -169,7 +186,11 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             proxy_status_code = proxy_response[1]
             proxy_reason_phrase = proxy_response[2]
             proxy_stream = proxy_response[4]
-
+            logger.trace(
+                "tunnel_response proxy_status_code=%r proxy_reason=%r ",
+                proxy_status_code,
+                proxy_reason_phrase,
+            )
             # Read the response data without closing the socket
             async for _ in proxy_stream:
                 pass

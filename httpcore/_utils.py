@@ -19,7 +19,6 @@ def get_logger(name: str) -> Logger:
     set up debug logging based on the HTTPCORE_LOG_LEVEL environment variable.
     """
     global _LOGGER_INITIALIZED
-
     if not _LOGGER_INITIALIZED:
         _LOGGER_INITIALIZED = True
         logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")

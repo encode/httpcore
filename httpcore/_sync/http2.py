@@ -11,12 +11,15 @@ from h2.settings import SettingCodes, Settings
 from .._backends.auto import SyncLock, SyncSocketStream, SyncBackend
 from .._exceptions import ProtocolError
 from .._types import URL, Headers, TimeoutDict
+from .._utils import get_logger
 from .base import (
     SyncByteStream,
     SyncHTTPTransport,
     ConnectionState,
     NewConnectionRequired,
 )
+
+logger = get_logger(__name__)
 
 
 def get_reason_phrase(status_code: int) -> bytes:
@@ -128,6 +131,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
             h2.settings.SettingCodes.ENABLE_CONNECT_PROTOCOL
         ]
 
+        logger.trace("initiate_connection=%r", self)
         self.h2_state.initiate_connection()
         self.h2_state.increment_flow_control_window(2 ** 24)
         data_to_send = self.h2_state.data_to_send()
@@ -141,6 +145,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         return self.socket.is_connection_dropped()
 
     def close(self) -> None:
+        logger.trace("close_connection=%r", self)
         if self.state != ConnectionState.CLOSED:
             self.state = ConnectionState.CLOSED
 
@@ -184,6 +189,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         events = self.h2_state.receive_data(data)
         for event in events:
             event_stream_id = getattr(event, "stream_id", 0)
+            logger.trace("receive_event stream_id=%r event=%s", event_stream_id, event)
 
             if hasattr(event, "error_code"):
                 raise ProtocolError(event)
@@ -197,6 +203,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
     def send_headers(
         self, stream_id: int, headers: Headers, end_stream: bool, timeout: TimeoutDict,
     ) -> None:
+        logger.trace("send_headers stream_id=%r headers=%r", stream_id, headers)
         self.h2_state.send_headers(stream_id, headers, end_stream=end_stream)
         self.h2_state.increment_flow_control_window(2 ** 24, stream_id=stream_id)
         data_to_send = self.h2_state.data_to_send()
@@ -205,11 +212,13 @@ class SyncHTTP2Connection(SyncHTTPTransport):
     def send_data(
         self, stream_id: int, chunk: bytes, timeout: TimeoutDict
     ) -> None:
+        logger.trace("send_data stream_id=%r chunk=%r", stream_id, chunk)
         self.h2_state.send_data(stream_id, chunk)
         data_to_send = self.h2_state.data_to_send()
         self.socket.write(data_to_send, timeout)
 
     def end_stream(self, stream_id: int, timeout: TimeoutDict) -> None:
+        logger.trace("end_stream stream_id=%r", stream_id)
         self.h2_state.end_stream(stream_id)
         data_to_send = self.h2_state.data_to_send()
         self.socket.write(data_to_send, timeout)
@@ -222,6 +231,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         self.socket.write(data_to_send, timeout)
 
     def close_stream(self, stream_id: int) -> None:
+        logger.trace("close_stream stream_id=%r", stream_id)
         del self.streams[stream_id]
         del self.events[stream_id]
 

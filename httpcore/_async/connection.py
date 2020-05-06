@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple, Union
 
 from .._backends.auto import AsyncLock, AsyncSocketStream, AutoBackend
 from .._types import URL, Headers, Origin, TimeoutDict
+from .._utils import get_logger
 from .base import (
     AsyncByteStream,
     AsyncHTTPTransport,
@@ -11,6 +12,8 @@ from .base import (
 )
 from .http2 import AsyncHTTP2Connection
 from .http11 import AsyncHTTP11Connection
+
+logger = get_logger(__name__)
 
 
 class AsyncHTTPConnection(AsyncHTTPTransport):
@@ -56,6 +59,9 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         async with self.request_lock:
             if self.state == ConnectionState.PENDING:
                 if not self.socket:
+                    logger.trace(
+                        "open_socket origin=%r timeout=%r", self.origin, timeout
+                    )
                     self.socket = await self._open_socket(timeout)
                 self._create_connection(self.socket)
             elif self.state in (ConnectionState.READY, ConnectionState.IDLE):
@@ -66,6 +72,9 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
                 raise NewConnectionRequired()
 
         assert self.connection is not None
+        logger.trace(
+            "connection.request method=%r url=%r headers=%r", method, url, headers
+        )
         return await self.connection.request(method, url, headers, stream, timeout)
 
     async def _open_socket(self, timeout: TimeoutDict = None) -> AsyncSocketStream:
@@ -82,6 +91,9 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
 
     def _create_connection(self, socket: AsyncSocketStream) -> None:
         http_version = socket.get_http_version()
+        logger.trace(
+            "create_connection socket=%r http_version=%r", socket, http_version
+        )
         if http_version == "HTTP/2":
             self.is_http2 = True
             self.connection = AsyncHTTP2Connection(
@@ -110,5 +122,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
 
     async def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
         if self.connection is not None:
+            logger.trace("start_tls hostname=%r timeout=%r", hostname, timeout)
             await self.connection.start_tls(hostname, timeout)
+            logger.trace("start_tls complete hostname=%r timeout=%r", hostname, timeout)
             self.socket = self.connection.socket
