@@ -4,10 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## 0.8.3 (May 6rd, 2020)
 
 ### Fixed
 
+- Include `Host` and `Accept` headers on proxy "CONNECT" requests.
+- De-duplicate any headers also contained in proxy_headers.
 - HTTP/2 flag not being passed down to proxy connections.
 
 ## 0.8.2 (May 3rd, 2020)
