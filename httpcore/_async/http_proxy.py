@@ -8,14 +8,20 @@ from .connection import AsyncHTTPConnection
 from .connection_pool import AsyncConnectionPool, ResponseByteStream
 
 
-def merge_headers(default_headers: Headers = None, override_headers: Headers = None) -> Headers:
+def merge_headers(
+    default_headers: Headers = None, override_headers: Headers = None
+) -> Headers:
     """
     Append default_headers and override_headers, de-duplicating if a key existing in both cases.
     """
     default_headers = [] if default_headers is None else default_headers
     override_headers = [] if override_headers is None else override_headers
     has_override = set([key.lower() for key, value in override_headers])
-    default_headers = [(key, value) for key, value in default_headers if key.lower() not in has_override]
+    default_headers = [
+        (key, value)
+        for key, value in default_headers
+        if key.lower() not in has_override
+    ]
     return default_headers + override_headers
 
 
@@ -155,7 +161,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             # [proxy-headers]
             target = b"%b:%d" % (url[1], url[2])
             connect_url = self.proxy_origin + (target,)
-            connect_headers = [(b'Host', target), (b'Accept', b'*/*')]
+            connect_headers = [(b"Host", target), (b"Accept", b"*/*")]
             connect_headers = merge_headers(connect_headers, self.proxy_headers)
             proxy_response = await proxy_connection.request(
                 b"CONNECT", connect_url, headers=connect_headers, timeout=timeout
