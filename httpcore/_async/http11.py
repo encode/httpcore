@@ -6,6 +6,7 @@ import h11
 from .._backends.auto import AsyncSocketStream
 from .._exceptions import ProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
+from .._utils import get_logger
 from .base import AsyncByteStream, AsyncHTTPTransport, ConnectionState
 
 H11Event = Union[
@@ -16,6 +17,8 @@ H11Event = Union[
     h11.EndOfMessage,
     h11.ConnectionClosed,
 ]
+
+logger = get_logger(__name__)
 
 
 class AsyncHTTP11Connection(AsyncHTTPTransport):
@@ -73,6 +76,7 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         """
         Send the request line and headers.
         """
+        logger.trace("send_request method=%r url=%r headers=%s", method, url, headers)
         _scheme, _host, _port, target = url
         event = h11.Request(method=method, target=target, headers=headers)
         await self._send_event(event, timeout)
@@ -85,6 +89,7 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         """
         # Send the request body.
         async for chunk in stream:
+            logger.trace("send_data=Data(<%d bytes>)", len(chunk))
             event = h11.Data(data=chunk)
             await self._send_event(event, timeout)
 
@@ -122,8 +127,10 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         while True:
             event = await self._receive_event(timeout)
             if isinstance(event, h11.Data):
+                logger.trace("receive_event=Data(<%d bytes>)", len(event.data))
                 yield bytes(event.data)
             elif isinstance(event, (h11.EndOfMessage, h11.PAUSED)):
+                logger.trace("receive_event=%r", event)
                 break
 
     async def _receive_event(self, timeout: TimeoutDict) -> H11Event:
@@ -132,6 +139,10 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         """
         while True:
             with map_exceptions({h11.RemoteProtocolError: ProtocolError}):
+                logger.debug(
+                    "h11.RemoteProtocolError exception their_state=%r",
+                    self.h11_state.their_state,
+                )
                 event = self.h11_state.next_event()
 
             if event is h11.NEED_DATA:
@@ -143,6 +154,11 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         return event
 
     async def _response_closed(self) -> None:
+        logger.trace(
+            "response_closed our_state=%r their_state=%r",
+            self.h11_state.our_state,
+            self.h11_state.their_state,
+        )
         if (
             self.h11_state.our_state is h11.DONE
             and self.h11_state.their_state is h11.DONE
