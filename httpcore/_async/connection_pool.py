@@ -1,7 +1,7 @@
 from ssl import SSLContext
 from typing import AsyncIterator, Callable, Dict, Optional, Set, Tuple
 
-from .._backends.auto import AsyncSemaphore, AutoBackend
+from .._backends.auto import AsyncLock, AsyncSemaphore, AutoBackend
 from .._exceptions import PoolTimeout
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
@@ -107,6 +107,12 @@ class AsyncConnectionPool(AsyncHTTPTransport):
 
         return self._internal_semaphore
 
+    @property
+    def _connection_acquiry_lock(self) -> AsyncLock:
+        if not hasattr(self, "_internal_connection_acquiry_lock"):
+            self._internal_connection_acquiry_lock = self._backend.create_lock()
+        return self._internal_connection_acquiry_lock
+
     async def request(
         self,
         method: bytes,
@@ -123,13 +129,17 @@ class AsyncConnectionPool(AsyncHTTPTransport):
 
         connection: Optional[AsyncHTTPConnection] = None
         while connection is None:
-            connection = await self._get_connection_from_pool(origin)
+            async with self._connection_acquiry_lock:
+                # We get-or-create a connection as an atomic operation, to ensure
+                # that HTTP/2 requests issued in close concurrency will end up
+                # on the same connection.
+                connection = await self._get_connection_from_pool(origin)
 
-            if connection is None:
-                connection = AsyncHTTPConnection(
-                    origin=origin, http2=self._http2, ssl_context=self._ssl_context,
-                )
-                await self._add_to_pool(connection, timeout=timeout)
+                if connection is None:
+                    connection = AsyncHTTPConnection(
+                        origin=origin, http2=self._http2, ssl_context=self._ssl_context,
+                    )
+                    await self._add_to_pool(connection, timeout=timeout)
 
             try:
                 response = await connection.request(
