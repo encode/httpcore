@@ -16,14 +16,17 @@ class Logger(logging.Logger):
 def get_logger(name: str) -> Logger:
     """
     Get a `logging.Logger` instance, and optionally
-    set up debug logging based on the HTTPCORE_LOG_LEVEL environment variable.
+    set up debug logging based on the HTTPCORE_LOG_LEVEL or HTTPX_LOG_LEVEL
+    environment variables.
     """
     global _LOGGER_INITIALIZED
     if not _LOGGER_INITIALIZED:
         _LOGGER_INITIALIZED = True
         logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")
 
-        log_level = os.environ.get("HTTPCORE_LOG_LEVEL", "").upper()
+        log_level = os.environ.get(
+            "HTTPCORE_LOG_LEVEL", os.environ.get("HTTPX_LOG_LEVEL", "")
+        ).upper()
         if log_level in ("DEBUG", "TRACE"):
             logger = logging.getLogger("httpcore")
             logger.setLevel(logging.DEBUG if log_level == "DEBUG" else TRACE_LOG_LEVEL)
