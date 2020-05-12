@@ -1,5 +1,5 @@
 import asyncio
-from ssl import SSLContext
+from ssl import SSLContext, SSLWantReadError
 from typing import Optional
 
 from .._exceptions import (
@@ -158,6 +158,14 @@ class SocketStream(AsyncSocketStream):
         async with self.write_lock:
             with map_exceptions({OSError: CloseError}):
                 self.stream_writer.close()
+                try:
+                    ssl_object = self.stream_writer.get_extra_info("ssl_object")
+                    if ssl_object is not None:
+                        ssl_object.unwrap()
+                except SSLWantReadError:
+                    pass
+                else:
+                    await self.stream_writer.wait_closed()
 
     def is_connection_dropped(self) -> bool:
         # Counter-intuitively, what we really want to know here is whether the socket is
