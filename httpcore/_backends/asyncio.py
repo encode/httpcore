@@ -169,7 +169,7 @@ class SocketStream(AsyncSocketStream):
                 else:
                     if hasattr(self.stream_writer, "wait_closed"):
                         # Python 3.7+
-                        await self.stream_writer.wait_closed()
+                        await self.stream_writer.wait_closed()  # type: ignore
 
     def is_connection_dropped(self) -> bool:
         # Counter-intuitively, what we really want to know here is whether the socket is
