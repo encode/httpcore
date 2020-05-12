@@ -139,10 +139,6 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         """
         while True:
             with map_exceptions({h11.RemoteProtocolError: ProtocolError}):
-                logger.debug(
-                    "h11.RemoteProtocolError exception their_state=%r",
-                    self.h11_state.their_state,
-                )
                 event = self.h11_state.next_event()
 
             if event is h11.NEED_DATA:
