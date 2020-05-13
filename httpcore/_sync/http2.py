@@ -8,8 +8,8 @@ from h2.config import H2Configuration
 from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
-from .._backends.auto import SyncLock, SyncSocketStream, SyncBackend
-from .._exceptions import ProtocolError
+from .._backends.auto import SyncLock, SyncSemaphore, SyncSocketStream, SyncBackend
+from .._exceptions import PoolTimeout, ProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
 from .base import (
@@ -66,6 +66,17 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         if not hasattr(self, "_read_lock"):
             self._read_lock = self.backend.create_lock()
         return self._read_lock
+
+    @property
+    def max_streams_semaphore(self) -> SyncSemaphore:
+        # We do this lazily, to make sure backend autodetection always
+        # runs within an async context.
+        if not hasattr(self, "_max_streams_semaphore"):
+            max_streams = self.h2_state.remote_settings.max_concurrent_streams
+            self._max_streams_semaphore = self.backend.create_semaphore(
+                max_streams, exc_class=PoolTimeout
+            )
+        return self._max_streams_semaphore
 
     def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
         pass
@@ -265,16 +276,21 @@ class SyncHTTP2Stream:
             b"content-length" in seen_headers or b"transfer-encoding" in seen_headers
         )
 
-        self.send_headers(method, url, headers, has_body, timeout)
-        if has_body:
-            self.send_body(stream, timeout)
+        self.connection.max_streams_semaphore.acquire()
+        try:
+            self.send_headers(method, url, headers, has_body, timeout)
+            if has_body:
+                self.send_body(stream, timeout)
 
-        # Receive the response.
-        status_code, headers = self.receive_response(timeout)
-        reason_phrase = get_reason_phrase(status_code)
-        stream = SyncByteStream(
-            iterator=self.body_iter(timeout), close_func=self._response_closed
-        )
+            # Receive the response.
+            status_code, headers = self.receive_response(timeout)
+            reason_phrase = get_reason_phrase(status_code)
+            stream = SyncByteStream(
+                iterator=self.body_iter(timeout), close_func=self._response_closed
+            )
+        except:
+            self.connection.max_streams_semaphore.release()
+            raise
 
         return (b"HTTP/2", status_code, reason_phrase, headers, stream)
 
@@ -346,4 +362,5 @@ class SyncHTTP2Stream:
                 break
 
     def _response_closed(self) -> None:
+        self.connection.max_streams_semaphore.release()
         self.connection.close_stream(self.stream_id)
