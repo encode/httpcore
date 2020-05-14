@@ -288,7 +288,7 @@ class AsyncHTTP2Stream:
             stream = AsyncByteStream(
                 aiterator=self.body_iter(timeout), aclose_func=self._response_closed
             )
-        except:
+        except Exception:
             self.connection.max_streams_semaphore.release()
             raise
 

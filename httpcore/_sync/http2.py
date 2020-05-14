@@ -288,7 +288,7 @@ class SyncHTTP2Stream:
             stream = SyncByteStream(
                 iterator=self.body_iter(timeout), close_func=self._response_closed
             )
-        except:
+        except Exception:
             self.connection.max_streams_semaphore.release()
             raise
 
