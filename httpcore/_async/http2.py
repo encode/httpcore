@@ -362,5 +362,7 @@ class AsyncHTTP2Stream:
                 break
 
     async def _response_closed(self) -> None:
-        self.connection.max_streams_semaphore.release()
-        await self.connection.close_stream(self.stream_id)
+        try:
+            await self.connection.close_stream(self.stream_id)
+        finally:
+            self.connection.max_streams_semaphore.release()

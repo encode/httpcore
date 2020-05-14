@@ -362,5 +362,7 @@ class SyncHTTP2Stream:
                 break
 
     def _response_closed(self) -> None:
-        self.connection.max_streams_semaphore.release()
-        self.connection.close_stream(self.stream_id)
+        try:
+            self.connection.close_stream(self.stream_id)
+        finally:
+            self.connection.max_streams_semaphore.release()
