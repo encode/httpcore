@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 import typing
+from ._types import URL, Origin
 
 _LOGGER_INITIALIZED = False
 TRACE_LOG_LEVEL = 5
@@ -47,3 +48,10 @@ def get_logger(name: str) -> Logger:
     logger.trace = trace  # type: ignore
 
     return typing.cast(Logger, logger)
+
+
+def url_to_origin(url: URL) -> Origin:
+    scheme, host, explicit_port = url[:3]
+    default_port = {b'http': 80, b'https': 443}[scheme]
+    port = default_port if explicit_port is None else explicit_port
+    return scheme, host, port

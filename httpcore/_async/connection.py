@@ -3,7 +3,7 @@ from typing import List, Optional, Tuple, Union
 
 from .._backends.auto import AsyncLock, AsyncSocketStream, AutoBackend
 from .._types import URL, Headers, Origin, TimeoutDict
-from .._utils import get_logger
+from .._utils import get_logger, url_to_origin
 from .base import (
     AsyncByteStream,
     AsyncHTTPTransport,
@@ -55,7 +55,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         stream: AsyncByteStream = None,
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
-        assert url[:3] == self.origin
+        assert url_to_origin(url) == self.origin
         async with self.request_lock:
             if self.state == ConnectionState.PENDING:
                 if not self.socket:

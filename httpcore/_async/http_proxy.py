@@ -3,7 +3,7 @@ from typing import Tuple
 
 from .._exceptions import ProxyError
 from .._types import URL, Headers, Origin, TimeoutDict
-from .._utils import get_logger
+from .._utils import get_logger, url_to_origin
 from .base import AsyncByteStream
 from .connection import AsyncHTTPConnection
 from .connection_pool import AsyncConnectionPool, ResponseByteStream
@@ -51,7 +51,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
     def __init__(
         self,
-        proxy_origin: Origin,
+        proxy_url: URL,
         proxy_headers: Headers = None,
         proxy_mode: str = "DEFAULT",
         ssl_context: SSLContext = None,
@@ -62,7 +62,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
     ):
         assert proxy_mode in ("DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY")
 
-        self.proxy_origin = proxy_origin
+        self.proxy_origin = url_to_origin(proxy_url)
         self.proxy_headers = [] if proxy_headers is None else proxy_headers
         self.proxy_mode = proxy_mode
         super().__init__(
@@ -137,7 +137,12 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         # GET https://www.example.org/path HTTP/1.1
         # [proxy headers]
         # [headers]
-        target = b"%b://%b:%d%b" % url
+        scheme, host, port, path = url
+        if port is None:
+            target = b"%b://%b%b" % (scheme, host, path)
+        else:
+            target = b"%b://%b:%d%b" % (scheme, host, port, path)
+
         url = self.proxy_origin + (target,)
         headers = merge_headers(self.proxy_headers, headers)
 
@@ -161,7 +166,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         Tunnelled proxy requests require an initial CONNECT request to
         establish the connection, and then send regular requests.
         """
-        origin = url[:3]
+        origin = url_to_origin(url)
         connection = await self._get_connection_from_pool(origin)
 
         if connection is None:
@@ -176,7 +181,10 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
             # CONNECT www.example.org:80 HTTP/1.1
             # [proxy-headers]
-            target = b"%b:%d" % (url[1], url[2])
+            if url[2] is None:
+                target = url[1]
+            else:
+                target = b"%b:%d" % (url[1], url[2])
             connect_url = self.proxy_origin + (target,)
             connect_headers = [(b"Host", target), (b"Accept", b"*/*")]
             connect_headers = merge_headers(connect_headers, self.proxy_headers)

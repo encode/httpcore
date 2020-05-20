@@ -307,7 +307,10 @@ class AsyncHTTP2Stream:
     ) -> None:
         scheme, hostname, port, path = url
         default_port = {b"http": 80, b"https": 443}.get(scheme)
-        authority = b"%s:%d" % (hostname, port) if port != default_port else hostname
+        if port is None or port == default_port:
+            authority = hostname
+        else:
+            authority = b"%s:%d" % (hostname, port)
 
         headers = [
             (b":method", method),
