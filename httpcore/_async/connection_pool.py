@@ -5,7 +5,7 @@ from .._backends.auto import AsyncLock, AsyncSemaphore, AutoBackend
 from .._exceptions import PoolTimeout
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
-from .._utils import get_logger
+from .._utils import get_logger, url_to_origin
 from .base import (
     AsyncByteStream,
     AsyncHTTPTransport,
@@ -124,8 +124,8 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         stream: AsyncByteStream = None,
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, Headers, AsyncByteStream]:
-        timeout = {} if timeout is None else timeout
-        origin = url[:3]
+        assert url[0] in (b'http', b'https')
+        origin = url_to_origin(url)
 
         if self._keepalive_expiry is not None:
             await self._keepalive_sweep()

@@ -5,7 +5,7 @@ from .._backends.auto import SyncLock, SyncSemaphore, SyncBackend
 from .._exceptions import PoolTimeout
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
-from .._utils import get_logger
+from .._utils import get_logger, url_to_origin
 from .base import (
     SyncByteStream,
     SyncHTTPTransport,
@@ -124,8 +124,8 @@ class SyncConnectionPool(SyncHTTPTransport):
         stream: SyncByteStream = None,
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
-        timeout = {} if timeout is None else timeout
-        origin = url[:3]
+        assert url[0] in (b'http', b'https')
+        origin = url_to_origin(url)
 
         if self._keepalive_expiry is not None:
             self._keepalive_sweep()
