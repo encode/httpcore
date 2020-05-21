@@ -34,8 +34,8 @@ class SyncHTTPProxy(SyncConnectionPool):
 
     **Parameters:**
 
-    * **proxy_origin** - `Tuple[bytes, bytes, int]` - The address of the proxy
-    service as a 3-tuple of (scheme, host, port).
+    * **proxy_url** - `Tuple[bytes, bytes, Optional[int], bytes]` - The URL of
+    the proxy service as a 4-tuple of (scheme, host, port, path).
     * **proxy_headers** - `Optional[List[Tuple[bytes, bytes]]]` - A list of
     proxy headers to include.
     * **proxy_mode** - `str` - A proxy mode to operate in. May be "DEFAULT",
