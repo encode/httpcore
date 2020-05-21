@@ -41,4 +41,4 @@ __all__ = [
     "ProtocolError",
     "ProxyError",
 ]
-__version__ = "0.8.0"
+__version__ = "0.8.4"

@@ -1,10 +1,11 @@
 from ssl import SSLContext
 from typing import Iterator, Callable, Dict, Optional, Set, Tuple
 
-from .._backends.auto import SyncSemaphore, SyncBackend
+from .._backends.auto import SyncLock, SyncSemaphore, SyncBackend
 from .._exceptions import PoolTimeout
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
+from .._utils import get_logger, url_to_origin
 from .base import (
     SyncByteStream,
     SyncHTTPTransport,
@@ -12,6 +13,8 @@ from .base import (
     NewConnectionRequired,
 )
 from .connection import SyncHTTPConnection
+
+logger = get_logger(__name__)
 
 
 class NullSemaphore(SyncSemaphore):
@@ -107,6 +110,12 @@ class SyncConnectionPool(SyncHTTPTransport):
 
         return self._internal_semaphore
 
+    @property
+    def _connection_acquiry_lock(self) -> SyncLock:
+        if not hasattr(self, "_internal_connection_acquiry_lock"):
+            self._internal_connection_acquiry_lock = self._backend.create_lock()
+        return self._internal_connection_acquiry_lock
+
     def request(
         self,
         method: bytes,
@@ -115,21 +124,29 @@ class SyncConnectionPool(SyncHTTPTransport):
         stream: SyncByteStream = None,
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
-        timeout = {} if timeout is None else timeout
-        origin = url[:3]
+        assert url[0] in (b'http', b'https')
+        origin = url_to_origin(url)
 
         if self._keepalive_expiry is not None:
             self._keepalive_sweep()
 
         connection: Optional[SyncHTTPConnection] = None
         while connection is None:
-            connection = self._get_connection_from_pool(origin)
+            with self._connection_acquiry_lock:
+                # We get-or-create a connection as an atomic operation, to ensure
+                # that HTTP/2 requests issued in close concurrency will end up
+                # on the same connection.
+                logger.trace("get_connection_from_pool=%r", origin)
+                connection = self._get_connection_from_pool(origin)
 
-            if connection is None:
-                connection = SyncHTTPConnection(
-                    origin=origin, http2=self._http2, ssl_context=self._ssl_context,
-                )
-                self._add_to_pool(connection, timeout=timeout)
+                if connection is None:
+                    connection = SyncHTTPConnection(
+                        origin=origin, http2=self._http2, ssl_context=self._ssl_context,
+                    )
+                    logger.trace("created connection=%r", connection)
+                    self._add_to_pool(connection, timeout=timeout)
+                else:
+                    logger.trace("reuse connection=%r", connection)
 
             try:
                 response = connection.request(
@@ -138,6 +155,7 @@ class SyncConnectionPool(SyncHTTPTransport):
             except NewConnectionRequired:
                 connection = None
             except Exception:
+                logger.trace("remove from pool connection=%r", connection)
                 self._remove_from_pool(connection)
                 raise
 

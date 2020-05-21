@@ -8,15 +8,18 @@ from h2.config import H2Configuration
 from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
-from .._backends.auto import SyncLock, SyncSocketStream, SyncBackend
-from .._exceptions import ProtocolError
+from .._backends.auto import SyncLock, SyncSemaphore, SyncSocketStream, SyncBackend
+from .._exceptions import PoolTimeout, ProtocolError
 from .._types import URL, Headers, TimeoutDict
+from .._utils import get_logger
 from .base import (
     SyncByteStream,
     SyncHTTPTransport,
     ConnectionState,
     NewConnectionRequired,
 )
+
+logger = get_logger(__name__)
 
 
 def get_reason_phrase(status_code: int) -> bytes:
@@ -64,6 +67,17 @@ class SyncHTTP2Connection(SyncHTTPTransport):
             self._read_lock = self.backend.create_lock()
         return self._read_lock
 
+    @property
+    def max_streams_semaphore(self) -> SyncSemaphore:
+        # We do this lazily, to make sure backend autodetection always
+        # runs within an async context.
+        if not hasattr(self, "_max_streams_semaphore"):
+            max_streams = self.h2_state.local_settings.max_concurrent_streams
+            self._max_streams_semaphore = self.backend.create_semaphore(
+                max_streams, exc_class=PoolTimeout
+            )
+        return self._max_streams_semaphore
+
     def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
         pass
 
@@ -88,6 +102,8 @@ class SyncHTTP2Connection(SyncHTTPTransport):
                 self.send_connection_init(timeout)
                 self.sent_connection_init = True
 
+        self.max_streams_semaphore.acquire()
+        try:
             try:
                 stream_id = self.h2_state.get_next_available_stream_id()
             except NoAvailableStreamIDError:
@@ -96,10 +112,13 @@ class SyncHTTP2Connection(SyncHTTPTransport):
             else:
                 self.state = ConnectionState.ACTIVE
 
-        h2_stream = SyncHTTP2Stream(stream_id=stream_id, connection=self)
-        self.streams[stream_id] = h2_stream
-        self.events[stream_id] = []
-        return h2_stream.request(method, url, headers, stream, timeout)
+            h2_stream = SyncHTTP2Stream(stream_id=stream_id, connection=self)
+            self.streams[stream_id] = h2_stream
+            self.events[stream_id] = []
+            return h2_stream.request(method, url, headers, stream, timeout)
+        except Exception:
+            self.max_streams_semaphore.release()
+            raise
 
     def send_connection_init(self, timeout: TimeoutDict) -> None:
         """
@@ -128,6 +147,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
             h2.settings.SettingCodes.ENABLE_CONNECT_PROTOCOL
         ]
 
+        logger.trace("initiate_connection=%r", self)
         self.h2_state.initiate_connection()
         self.h2_state.increment_flow_control_window(2 ** 24)
         data_to_send = self.h2_state.data_to_send()
@@ -141,6 +161,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         return self.socket.is_connection_dropped()
 
     def close(self) -> None:
+        logger.trace("close_connection=%r", self)
         if self.state != ConnectionState.CLOSED:
             self.state = ConnectionState.CLOSED
 
@@ -184,6 +205,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         events = self.h2_state.receive_data(data)
         for event in events:
             event_stream_id = getattr(event, "stream_id", 0)
+            logger.trace("receive_event stream_id=%r event=%s", event_stream_id, event)
 
             if hasattr(event, "error_code"):
                 raise ProtocolError(event)
@@ -197,6 +219,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
     def send_headers(
         self, stream_id: int, headers: Headers, end_stream: bool, timeout: TimeoutDict,
     ) -> None:
+        logger.trace("send_headers stream_id=%r headers=%r", stream_id, headers)
         self.h2_state.send_headers(stream_id, headers, end_stream=end_stream)
         self.h2_state.increment_flow_control_window(2 ** 24, stream_id=stream_id)
         data_to_send = self.h2_state.data_to_send()
@@ -205,11 +228,13 @@ class SyncHTTP2Connection(SyncHTTPTransport):
     def send_data(
         self, stream_id: int, chunk: bytes, timeout: TimeoutDict
     ) -> None:
+        logger.trace("send_data stream_id=%r chunk=%r", stream_id, chunk)
         self.h2_state.send_data(stream_id, chunk)
         data_to_send = self.h2_state.data_to_send()
         self.socket.write(data_to_send, timeout)
 
     def end_stream(self, stream_id: int, timeout: TimeoutDict) -> None:
+        logger.trace("end_stream stream_id=%r", stream_id)
         self.h2_state.end_stream(stream_id)
         data_to_send = self.h2_state.data_to_send()
         self.socket.write(data_to_send, timeout)
@@ -222,14 +247,18 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         self.socket.write(data_to_send, timeout)
 
     def close_stream(self, stream_id: int) -> None:
-        del self.streams[stream_id]
-        del self.events[stream_id]
+        try:
+            logger.trace("close_stream stream_id=%r", stream_id)
+            del self.streams[stream_id]
+            del self.events[stream_id]
 
-        if not self.streams:
-            if self.state == ConnectionState.ACTIVE:
-                self.state = ConnectionState.IDLE
-            elif self.state == ConnectionState.FULL:
-                self.close()
+            if not self.streams:
+                if self.state == ConnectionState.ACTIVE:
+                    self.state = ConnectionState.IDLE
+                elif self.state == ConnectionState.FULL:
+                    self.close()
+        finally:
+            self.max_streams_semaphore.release()
 
 
 class SyncHTTP2Stream:
@@ -278,7 +307,10 @@ class SyncHTTP2Stream:
     ) -> None:
         scheme, hostname, port, path = url
         default_port = {b"http": 80, b"https": 443}.get(scheme)
-        authority = b"%s:%d" % (hostname, port) if port != default_port else hostname
+        if port is None or port == default_port:
+            authority = hostname
+        else:
+            authority = b"%s:%d" % (hostname, port)
 
         headers = [
             (b":method", method),

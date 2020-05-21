@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple, Union
 
 from .._backends.auto import SyncLock, SyncSocketStream, SyncBackend
 from .._types import URL, Headers, Origin, TimeoutDict
+from .._utils import get_logger, url_to_origin
 from .base import (
     SyncByteStream,
     SyncHTTPTransport,
@@ -11,6 +12,8 @@ from .base import (
 )
 from .http2 import SyncHTTP2Connection
 from .http11 import SyncHTTP11Connection
+
+logger = get_logger(__name__)
 
 
 class SyncHTTPConnection(SyncHTTPTransport):
@@ -52,10 +55,13 @@ class SyncHTTPConnection(SyncHTTPTransport):
         stream: SyncByteStream = None,
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
-        assert url[:3] == self.origin
+        assert url_to_origin(url) == self.origin
         with self.request_lock:
             if self.state == ConnectionState.PENDING:
                 if not self.socket:
+                    logger.trace(
+                        "open_socket origin=%r timeout=%r", self.origin, timeout
+                    )
                     self.socket = self._open_socket(timeout)
                 self._create_connection(self.socket)
             elif self.state in (ConnectionState.READY, ConnectionState.IDLE):
@@ -66,6 +72,9 @@ class SyncHTTPConnection(SyncHTTPTransport):
                 raise NewConnectionRequired()
 
         assert self.connection is not None
+        logger.trace(
+            "connection.request method=%r url=%r headers=%r", method, url, headers
+        )
         return self.connection.request(method, url, headers, stream, timeout)
 
     def _open_socket(self, timeout: TimeoutDict = None) -> SyncSocketStream:
@@ -82,6 +91,9 @@ class SyncHTTPConnection(SyncHTTPTransport):
 
     def _create_connection(self, socket: SyncSocketStream) -> None:
         http_version = socket.get_http_version()
+        logger.trace(
+            "create_connection socket=%r http_version=%r", socket, http_version
+        )
         if http_version == "HTTP/2":
             self.is_http2 = True
             self.connection = SyncHTTP2Connection(
@@ -110,5 +122,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
 
     def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
         if self.connection is not None:
+            logger.trace("start_tls hostname=%r timeout=%r", hostname, timeout)
             self.connection.start_tls(hostname, timeout)
+            logger.trace("start_tls complete hostname=%r timeout=%r", hostname, timeout)
             self.socket = self.connection.socket

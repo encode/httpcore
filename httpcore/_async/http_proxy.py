@@ -3,9 +3,29 @@ from typing import Tuple
 
 from .._exceptions import ProxyError
 from .._types import URL, Headers, Origin, TimeoutDict
+from .._utils import get_logger, url_to_origin
 from .base import AsyncByteStream
 from .connection import AsyncHTTPConnection
 from .connection_pool import AsyncConnectionPool, ResponseByteStream
+
+logger = get_logger(__name__)
+
+
+def merge_headers(
+    default_headers: Headers = None, override_headers: Headers = None
+) -> Headers:
+    """
+    Append default_headers and override_headers, de-duplicating if a key existing in both cases.
+    """
+    default_headers = [] if default_headers is None else default_headers
+    override_headers = [] if override_headers is None else override_headers
+    has_override = set([key.lower() for key, value in override_headers])
+    default_headers = [
+        (key, value)
+        for key, value in default_headers
+        if key.lower() not in has_override
+    ]
+    return default_headers + override_headers
 
 
 class AsyncHTTPProxy(AsyncConnectionPool):
@@ -14,8 +34,8 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
     **Parameters:**
 
-    * **proxy_origin** - `Tuple[bytes, bytes, int]` - The address of the proxy
-    service as a 3-tuple of (scheme, host, port).
+    * **proxy_url** - `Tuple[bytes, bytes, Optional[int], bytes]` - The URL of
+    the proxy service as a 4-tuple of (scheme, host, port, path).
     * **proxy_headers** - `Optional[List[Tuple[bytes, bytes]]]` - A list of
     proxy headers to include.
     * **proxy_mode** - `str` - A proxy mode to operate in. May be "DEFAULT",
@@ -31,7 +51,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
     def __init__(
         self,
-        proxy_origin: Origin,
+        proxy_url: URL,
         proxy_headers: Headers = None,
         proxy_mode: str = "DEFAULT",
         ssl_context: SSLContext = None,
@@ -42,7 +62,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
     ):
         assert proxy_mode in ("DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY")
 
-        self.proxy_origin = proxy_origin
+        self.proxy_origin = url_to_origin(proxy_url)
         self.proxy_headers = [] if proxy_headers is None else proxy_headers
         self.proxy_mode = proxy_mode
         super().__init__(
@@ -68,11 +88,25 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             self.proxy_mode == "DEFAULT" and url[0] == b"http"
         ) or self.proxy_mode == "FORWARD_ONLY":
             # By default HTTP requests should be forwarded.
+            logger.trace(
+                "forward_request proxy_origin=%r proxy_headers=%r method=%r url=%r",
+                self.proxy_origin,
+                self.proxy_headers,
+                method,
+                url,
+            )
             return await self._forward_request(
                 method, url, headers=headers, stream=stream, timeout=timeout
             )
         else:
             # By default HTTPS should be tunnelled.
+            logger.trace(
+                "tunnel_request proxy_origin=%r proxy_headers=%r method=%r url=%r",
+                self.proxy_origin,
+                self.proxy_headers,
+                method,
+                url,
+            )
             return await self._tunnel_request(
                 method, url, headers=headers, stream=stream, timeout=timeout
             )
@@ -94,20 +128,23 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
         if connection is None:
             connection = AsyncHTTPConnection(
-                origin=origin, http2=False, ssl_context=self._ssl_context,
+                origin=origin, http2=self._http2, ssl_context=self._ssl_context,
             )
-            async with self._thread_lock:
-                self._connections.setdefault(origin, set())
-                self._connections[origin].add(connection)
+            await self._add_to_pool(connection)
 
         # Issue a forwarded proxy request...
 
         # GET https://www.example.org/path HTTP/1.1
         # [proxy headers]
         # [headers]
-        target = b"%b://%b:%d%b" % url
+        scheme, host, port, path = url
+        if port is None:
+            target = b"%b://%b%b" % (scheme, host, path)
+        else:
+            target = b"%b://%b:%d%b" % (scheme, host, port, path)
+
         url = self.proxy_origin + (target,)
-        headers = self.proxy_headers + ([] if headers is None else headers)
+        headers = merge_headers(self.proxy_headers, headers)
 
         response = await connection.request(
             method, url, headers=headers, stream=stream, timeout=timeout
@@ -129,28 +166,39 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         Tunnelled proxy requests require an initial CONNECT request to
         establish the connection, and then send regular requests.
         """
-        origin = url[:3]
+        origin = url_to_origin(url)
         connection = await self._get_connection_from_pool(origin)
 
         if connection is None:
             # First, create a connection to the proxy server
             proxy_connection = AsyncHTTPConnection(
-                origin=self.proxy_origin, http2=False, ssl_context=self._ssl_context,
+                origin=self.proxy_origin,
+                http2=self._http2,
+                ssl_context=self._ssl_context,
             )
 
             # Issue a CONNECT request...
 
             # CONNECT www.example.org:80 HTTP/1.1
             # [proxy-headers]
-            target = b"%b:%d" % (url[1], url[2])
+            if url[2] is None:
+                target = url[1]
+            else:
+                target = b"%b:%d" % (url[1], url[2])
             connect_url = self.proxy_origin + (target,)
+            connect_headers = [(b"Host", target), (b"Accept", b"*/*")]
+            connect_headers = merge_headers(connect_headers, self.proxy_headers)
             proxy_response = await proxy_connection.request(
-                b"CONNECT", connect_url, headers=self.proxy_headers, timeout=timeout
+                b"CONNECT", connect_url, headers=connect_headers, timeout=timeout
             )
             proxy_status_code = proxy_response[1]
             proxy_reason_phrase = proxy_response[2]
             proxy_stream = proxy_response[4]
-
+            logger.trace(
+                "tunnel_response proxy_status_code=%r proxy_reason=%r ",
+                proxy_status_code,
+                proxy_reason_phrase,
+            )
             # Read the response data without closing the socket
             async for _ in proxy_stream:
                 pass
@@ -171,7 +219,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             # retain the tunnel.
             connection = AsyncHTTPConnection(
                 origin=origin,
-                http2=False,
+                http2=self._http2,
                 ssl_context=self._ssl_context,
                 socket=proxy_connection.socket,
             )

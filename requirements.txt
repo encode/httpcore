@@ -2,6 +2,7 @@
 
 # Optionals
 trio
+trio-typing
 
 # Docs
 mkdocs
