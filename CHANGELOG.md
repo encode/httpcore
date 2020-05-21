@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.9.0 (May 21th, 2020)
+
+### Changed
+
+- URL port becomes an `Optional[int]` instead of `int`. (Pull #92)
+
+### Fixed
+
+- Honor HTTP/2 max concurrent streams settings. (Pull #89, #90)
+- Remove incorrect debug log. (Pull #83)
+
 ## 0.8.4 (May 11th, 2020)
 
 ### Added
