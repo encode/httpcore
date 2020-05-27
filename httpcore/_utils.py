@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 import typing
+
 from ._types import URL, Origin
 
 _LOGGER_INITIALIZED = False
@@ -52,6 +53,6 @@ def get_logger(name: str) -> Logger:
 
 def url_to_origin(url: URL) -> Origin:
     scheme, host, explicit_port = url[:3]
-    default_port = {b'http': 80, b'https': 443}[scheme]
+    default_port = {b"http": 80, b"https": 443}[scheme]
     port = default_port if explicit_port is None else explicit_port
     return scheme, host, port

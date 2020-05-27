@@ -124,7 +124,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         stream: AsyncByteStream = None,
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, Headers, AsyncByteStream]:
-        assert url[0] in (b'http', b'https')
+        assert url[0] in (b"http", b"https")
         origin = url_to_origin(url)
 
         if self._keepalive_expiry is not None:

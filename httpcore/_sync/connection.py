@@ -126,3 +126,8 @@ class SyncHTTPConnection(SyncHTTPTransport):
             self.connection.start_tls(hostname, timeout)
             logger.trace("start_tls complete hostname=%r timeout=%r", hostname, timeout)
             self.socket = self.connection.socket
+
+    def close(self) -> None:
+        with self.request_lock:
+            if self.connection is not None:
+                self.connection.close()
