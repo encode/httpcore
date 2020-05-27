@@ -12,7 +12,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
-from .._types import TimeoutDict
+from .._types import SocketAddress, TimeoutDict
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 SSL_MONKEY_PATCH_APPLIED = False
@@ -222,13 +222,18 @@ class AsyncioBackend(AsyncBackend):
         port: int,
         ssl_context: Optional[SSLContext],
         timeout: TimeoutDict,
+        family: int,
+        local_addr: Optional[SocketAddress],
     ) -> SocketStream:
         host = hostname.decode("ascii")
         connect_timeout = timeout.get("connect")
         exc_map = {asyncio.TimeoutError: ConnectTimeout, OSError: ConnectError}
         with map_exceptions(exc_map):
             stream_reader, stream_writer = await asyncio.wait_for(
-                asyncio.open_connection(host, port, ssl=ssl_context), connect_timeout,
+                asyncio.open_connection(
+                    host, port, ssl=ssl_context, family=family, local_addr=local_addr
+                ),
+                connect_timeout,
             )
             return SocketStream(
                 stream_reader=stream_reader, stream_writer=stream_writer

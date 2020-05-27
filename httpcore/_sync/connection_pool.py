@@ -4,7 +4,7 @@ from typing import Iterator, Callable, Dict, Optional, Set, Tuple
 from .._backends.auto import SyncLock, SyncSemaphore, SyncBackend
 from .._exceptions import PoolTimeout
 from .._threadlock import ThreadLock
-from .._types import URL, Headers, Origin, TimeoutDict
+from .._types import URL, Headers, Origin, SocketAddress, TimeoutDict
 from .._utils import get_logger, url_to_origin
 from .base import (
     SyncByteStream,
@@ -85,12 +85,16 @@ class SyncConnectionPool(SyncHTTPTransport):
         max_keepalive: int = None,
         keepalive_expiry: float = None,
         http2: bool = False,
+        family: int = 0,
+        local_addr: SocketAddress = None,
     ):
         self._ssl_context = SSLContext() if ssl_context is None else ssl_context
         self._max_connections = max_connections
         self._max_keepalive = max_keepalive
         self._keepalive_expiry = keepalive_expiry
         self._http2 = http2
+        self._family = family
+        self._local_addr = local_addr
         self._connections: Dict[Origin, Set[SyncHTTPConnection]] = {}
         self._thread_lock = ThreadLock()
         self._backend = SyncBackend()
@@ -141,7 +145,11 @@ class SyncConnectionPool(SyncHTTPTransport):
 
                 if connection is None:
                     connection = SyncHTTPConnection(
-                        origin=origin, http2=self._http2, ssl_context=self._ssl_context,
+                        origin=origin,
+                        http2=self._http2,
+                        ssl_context=self._ssl_context,
+                        family=self._family,
+                        local_addr=self._local_addr,
                     )
                     logger.trace("created connection=%r", connection)
                     self._add_to_pool(connection, timeout=timeout)

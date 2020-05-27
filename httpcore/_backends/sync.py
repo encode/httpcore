@@ -16,7 +16,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
-from .._types import TimeoutDict
+from .._types import SocketAddress, TimeoutDict
 
 
 class SyncSocketStream:
@@ -125,13 +125,22 @@ class SyncBackend:
         port: int,
         ssl_context: Optional[SSLContext],
         timeout: TimeoutDict,
+        family: int,
+        local_addr: Optional[SocketAddress],
     ) -> SyncSocketStream:
         address = (hostname.decode("ascii"), port)
         connect_timeout = timeout.get("connect")
         exc_map = {socket.timeout: ConnectTimeout, socket.error: ConnectError}
 
         with map_exceptions(exc_map):
-            sock = socket.create_connection(address, connect_timeout)
+            if family != 0 and local_addr is None:
+                if family == socket.AF_INET:
+                    local_addr = ("0.0.0.0", 0)
+                elif family == socket.AF_INET6:
+                    local_addr = ("::", 0)
+                else:
+                    raise NotImplementedError()
+            sock = socket.create_connection(address, connect_timeout, local_addr)
             if ssl_context is not None:
                 sock = ssl_context.wrap_socket(
                     sock, server_hostname=hostname.decode("ascii")
