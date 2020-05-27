@@ -126,13 +126,12 @@ class SyncBackend:
         ssl_context: Optional[SSLContext],
         timeout: TimeoutDict,
     ) -> SyncSocketStream:
+        address = (hostname.decode("ascii"), port)
         connect_timeout = timeout.get("connect")
         exc_map = {socket.timeout: ConnectTimeout, socket.error: ConnectError}
 
         with map_exceptions(exc_map):
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(connect_timeout)
-            sock.connect((hostname.decode("ascii"), port))
+            sock = socket.create_connection(address, connect_timeout)
             if ssl_context is not None:
                 sock = ssl_context.wrap_socket(
                     sock, server_hostname=hostname.decode("ascii")
