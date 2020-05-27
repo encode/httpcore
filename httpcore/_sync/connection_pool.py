@@ -124,7 +124,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         stream: SyncByteStream = None,
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
-        assert url[0] in (b'http', b'https')
+        assert url[0] in (b"http", b"https")
         origin = url_to_origin(url)
 
         if self._keepalive_expiry is not None:
