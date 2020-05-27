@@ -126,3 +126,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
             await self.connection.start_tls(hostname, timeout)
             logger.trace("start_tls complete hostname=%r timeout=%r", hostname, timeout)
             self.socket = self.connection.socket
+
+    async def aclose(self) -> None:
+        if self.socket:
+            await self.socket.aclose()
