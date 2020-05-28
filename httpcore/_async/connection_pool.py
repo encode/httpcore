@@ -1,3 +1,4 @@
+from collections import defaultdict
 from ssl import SSLContext
 from typing import AsyncIterator, Callable, Dict, Optional, Set, Tuple
 
@@ -294,3 +295,15 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         # Close all connections
         for connection in connections:
             await connection.aclose()
+
+    def get_connection_stats(self) -> Dict[Origin, Dict[str, int]]:
+        """Returns statistics dict around state of the connection pool in the form:
+
+        { origin: { connection_state: number_of_connections_on_that_state } }
+        """
+        stats: Dict[Origin, Dict[str, int]] = {}
+        for origin, connections in self._connections.items():
+            stats[origin] = defaultdict(lambda: 0)
+            for connection in connections:
+                stats[origin][connection.state.name] += 1
+        return stats

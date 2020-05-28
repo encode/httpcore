@@ -30,7 +30,7 @@ def test_http_request() -> None:
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        assert len(http.get_connection_stats()[url[:3]]) == 1  # type: ignore
 
 
 
@@ -47,7 +47,7 @@ def test_https_request() -> None:
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        assert len(http.get_connection_stats()[url[:3]]) == 1  # type: ignore
 
 
 
@@ -64,7 +64,7 @@ def test_http2_request() -> None:
         assert http_version == b"HTTP/2"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        assert len(http.get_connection_stats()[url[:3]]) == 1  # type: ignore
 
 
 
@@ -98,7 +98,7 @@ def test_http_request_reuse_connection() -> None:
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        assert len(http.get_connection_stats()[url[:3]]) == 1  # type: ignore
 
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
@@ -111,7 +111,7 @@ def test_http_request_reuse_connection() -> None:
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        assert len(http.get_connection_stats()[url[:3]]) == 1  # type: ignore
 
 
 
@@ -128,7 +128,7 @@ def test_https_request_reuse_connection() -> None:
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        assert len(http.get_connection_stats()[url[:3]]) == 1  # type: ignore
 
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
@@ -141,7 +141,7 @@ def test_https_request_reuse_connection() -> None:
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        assert len(http.get_connection_stats()[url[:3]]) == 1  # type: ignore
 
 
 
@@ -158,7 +158,7 @@ def test_http_request_cannot_reuse_dropped_connection() -> None:
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        assert len(http.get_connection_stats()[url[:3]]) == 1  # type: ignore
 
         # Mock the connection as having been dropped.
         connection = list(http._connections[url[:3]])[0]  # type: ignore
@@ -175,7 +175,7 @@ def test_http_request_cannot_reuse_dropped_connection() -> None:
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        assert len(http.get_connection_stats()[url[:3]]) == 1  # type: ignore
 
 
 @pytest.mark.parametrize("proxy_mode", ["DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY"])
@@ -235,3 +235,15 @@ def test_proxy_https_requests(
         assert http_version == (b"HTTP/2" if http2 else b"HTTP/1.1")
         assert status_code == 200
         assert reason == b"OK"
+
+
+
+def test_connection_pool_get_connection_stats() -> None:
+    with httpcore.SyncConnectionPool() as http:
+        method = b"GET"
+        url = (b"https", b"example.org", 443, b"/")
+        headers = [(b"host", b"example.org")]
+        for _ in range(2):
+            _ = http.request(method, url, headers)
+        stats = http.get_connection_stats()
+        assert stats == {(b"https", b"example.org", 443): {"ACTIVE": 2}}
