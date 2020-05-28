@@ -1,5 +1,5 @@
 from ssl import SSLContext
-from typing import List, Optional, Tuple, Union, cast
+from typing import List, Optional, Tuple, Union
 
 from .._backends.auto import AsyncLock, AsyncSocketStream, AutoBackend
 from .._types import URL, Headers, Origin, TimeoutDict
@@ -44,11 +44,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
             return "Not connected"
         elif self.state == ConnectionState.PENDING:
             return "Connecting"
-        elif self.is_http11:
-            return f"HTTP/1.1, {self.state.name}"
-        else:
-            connection = cast(AsyncHTTP2Connection, self.connection)
-            return f"HTTP/2, {self.state.name}, {len(connection.streams)} streams"
+        return self.connection.info()
 
     @property
     def request_lock(self) -> AsyncLock:
