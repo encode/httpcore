@@ -1,5 +1,5 @@
 from ssl import SSLContext
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, cast
 
 from .._backends.auto import SyncLock, SyncSocketStream, SyncBackend
 from .._types import URL, Headers, Origin, TimeoutDict
@@ -38,6 +38,17 @@ class SyncHTTPConnection(SyncHTTPTransport):
         self.connect_failed = False
         self.expires_at: Optional[float] = None
         self.backend = SyncBackend()
+
+    def info(self) -> str:
+        if self.connection is None:
+            return "Not connected"
+        elif self.state == ConnectionState.PENDING:
+            return "Connecting"
+        elif self.is_http11:
+            return f"HTTP/1.1, {self.state.name}"
+        else:
+            connection = cast(SyncHTTP2Connection, self.connection)
+            return f"HTTP/2, {self.state.name}, {len(connection.streams)} streams"
 
     @property
     def request_lock(self) -> SyncLock:

@@ -1,12 +1,11 @@
-from collections import defaultdict
 from ssl import SSLContext
-from typing import Iterator, Callable, Dict, Optional, Set, Tuple
+from typing import Iterator, Callable, Dict, List, Optional, Set, Tuple
 
 from .._backends.auto import SyncLock, SyncSemaphore, SyncBackend
 from .._exceptions import PoolTimeout
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
-from .._utils import get_logger, url_to_origin
+from .._utils import get_logger, origin_to_url_string, url_to_origin
 from .base import (
     SyncByteStream,
     SyncHTTPTransport,
@@ -296,14 +295,11 @@ class SyncConnectionPool(SyncHTTPTransport):
         for connection in connections:
             connection.close()
 
-    def get_connection_stats(self) -> Dict[Origin, Dict[str, int]]:
-        """Returns statistics dict around state of the connection pool in the form:
-
-        { origin: { connection_state: number_of_connections_on_that_state } }
-        """
-        stats: Dict[Origin, Dict[str, int]] = {}
+    def get_connection_info(self) -> Dict[str, List[str]]:
+        """Returns dict with ."""
+        stats = {}
         for origin, connections in self._connections.items():
-            stats[origin] = defaultdict(lambda: 0)
-            for connection in connections:
-                stats[origin][connection.state.name] += 1
+            stats[origin_to_url_string(origin)] = [
+                connection.info() for connection in connections
+            ]
         return stats
