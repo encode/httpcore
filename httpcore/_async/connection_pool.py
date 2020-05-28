@@ -179,6 +179,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
 
             if connection.state == ConnectionState.IDLE:
                 if connection.is_connection_dropped():
+                    logger.trace("removing dropped idle connection=%r", connection)
                     # IDLE connections that have been dropped should be
                     # removed from the pool.
                     connections_to_close.add(connection)
@@ -186,9 +187,11 @@ class AsyncConnectionPool(AsyncHTTPTransport):
                 else:
                     # IDLE connections that are still maintained may
                     # be reused.
+                    logger.trace("reusing idle http11 connection=%r", connection)
                     reuse_connection = connection
             elif connection.state == ConnectionState.ACTIVE and connection.is_http2:
                 # HTTP/2 connections may be reused.
+                logger.trace("reusing active http2 connection=%r", connection)
                 reuse_connection = connection
             elif connection.state == ConnectionState.PENDING:
                 # Pending connections may potentially be reused.
@@ -202,6 +205,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         elif self._http2 and pending_connection is not None and not seen_http11:
             # If we have a PENDING connection, and no HTTP/1.1 connections
             # on this origin, then we can attempt to share the connection.
+            logger.trace("reusing pending connection=%r", connection)
             reuse_connection = pending_connection
 
         # Close any dropped connections.
@@ -264,12 +268,14 @@ class AsyncConnectionPool(AsyncHTTPTransport):
     ) -> None:
         timeout = {} if timeout is None else timeout
 
+        logger.trace("adding connection to pool=%r", connection)
         await self._connection_semaphore.acquire(timeout=timeout.get("pool", None))
         async with self._thread_lock:
             self._connections.setdefault(connection.origin, set())
             self._connections[connection.origin].add(connection)
 
     async def _remove_from_pool(self, connection: AsyncHTTPConnection) -> None:
+        logger.trace("removing connection from pool=%r", connection)
         async with self._thread_lock:
             if connection in self._connections.get(connection.origin, set()):
                 self._connection_semaphore.release()
