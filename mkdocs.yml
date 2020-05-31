@@ -12,6 +12,7 @@ edit_uri: ""
 nav:
     - Introduction: 'index.md'
     - Developer Interface: 'api.md'
+    - Contributing: 'contributing.md'
 
 markdown_extensions:
   - admonition
