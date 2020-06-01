@@ -35,9 +35,9 @@ async with httpcore.AsyncConnectionPool() as http:
     )
 
     try:
-        body = b''.join(chunk async for chunk in stream)
+        body = b''.join([chunk async for chunk in stream])
     finally:
-        await stream.close()
+        await stream.aclose()
 
     print(status_code, body)
 ```
