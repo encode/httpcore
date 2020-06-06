@@ -67,7 +67,7 @@ $ scripts/install
 
 HTTP Core provides synchronous and asynchronous interfaces. As you can imagine,
 keeping two almost identical versions of code in sync can be quite time consuming.
-To work around this problem httpcore uses a technique called _unasync_, where
+To work around this problem HTTP Core uses a technique called _unasync_, where
 the development is focused on the asynchronous version of the code and a script
 generates the synchronous version from it.
 
