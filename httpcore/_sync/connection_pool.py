@@ -296,7 +296,9 @@ class SyncConnectionPool(SyncHTTPTransport):
             connection.close()
 
     def get_connection_info(self) -> Dict[str, List[str]]:
-        """Returns dict with ."""
+        """
+        Returns a dict of origin URLs to a list of summary strings for each connection.
+        """
         stats = {}
         for origin, connections in self._connections.items():
             stats[origin_to_url_string(origin)] = [
