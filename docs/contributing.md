@@ -37,12 +37,16 @@ output of your program. To do so set the `HTTPCORE_LOG_LEVEL` or `HTTPX_LOG_LEVE
 environment variables to `TRACE`, for example:
 
 ```console
-$ HTTPX_LOG_LEVEL=debug python test_script.py
-DEBUG [2019-11-06 19:11:24] httpx._client - HTTP Request: GET https://google.com "HTTP/1.1 301 Moved Permanently"
-DEBUG [2019-11-06 19:11:24] httpx._client - HTTP Request: GET https://www.google.com/ "HTTP/1.1 200 OK"
+$ HTTPCORE_LOG_LEVEL=TRACE python test_script.py
+TRACE [2020-06-06 09:55:10] httpcore._async.connection_pool - get_connection_from_pool=(b'https', b'localhost', 5000)
+TRACE [2020-06-06 09:55:10] httpcore._async.connection_pool - created connection=<httpcore._async.connection.AsyncHTTPConnection object at 0x1110fe9d0>
+...
 ```
 
 The output will be quite long but it will help dramatically in diagnosing the problem.
+
+For more examples please refer to the
+[environment variables documentation in HTTPX](https://www.python-httpx.org/environment_variables/#httpx_log_level).
 
 ## Development
 
