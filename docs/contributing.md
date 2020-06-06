@@ -73,7 +73,7 @@ generates the synchronous version from it.
 
 As such developers should:
 
-- Only make modifications in the _asynchronous and shared portions of the code_.
+- Only make modifications in the asynchronous and shared portions of the code.
 In practice this roughly means avoiding the `httpcore/_sync` directory.
 - Write tests _only under `async_tests`_, synchronous tests are also generated
 as part of the unasync process.
