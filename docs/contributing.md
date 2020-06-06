@@ -33,7 +33,7 @@ bug report, provide information like:
 - Error traceback and output
 
 It is quite helpful to increase the logging level of HTTP Core and include the
-output in your program. To do so set the `HTTPCORE_LOG_LEVEL` or `HTTPX_LOG_LEVEL`
+output of your program. To do so set the `HTTPCORE_LOG_LEVEL` or `HTTPX_LOG_LEVEL`
 environment variables to `TRACE`, for example:
 
 ```console
