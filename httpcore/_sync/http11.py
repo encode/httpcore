@@ -34,6 +34,9 @@ class SyncHTTP11Connection(SyncHTTPTransport):
 
         self.state = ConnectionState.ACTIVE
 
+    def info(self) -> str:
+        return f"HTTP/1.1, {self.state.name}"
+
     def mark_as_ready(self) -> None:
         if self.state == ConnectionState.IDLE:
             self.state = ConnectionState.READY
