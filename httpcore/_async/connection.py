@@ -43,6 +43,13 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         self.expires_at: Optional[float] = None
         self.backend = AutoBackend()
 
+    def info(self) -> str:
+        if self.connection is None:
+            return "Not connected"
+        elif self.state == ConnectionState.PENDING:
+            return "Connecting"
+        return self.connection.info()
+
     @property
     def request_lock(self) -> AsyncLock:
         # We do this lazily, to make sure backend autodetection always

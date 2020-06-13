@@ -1,11 +1,11 @@
 from ssl import SSLContext
-from typing import AsyncIterator, Callable, Dict, Optional, Set, Tuple
+from typing import AsyncIterator, Callable, Dict, List, Optional, Set, Tuple
 
 from .._backends.auto import AsyncLock, AsyncSemaphore, AutoBackend
 from .._exceptions import PoolTimeout
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, SocketAddress, TimeoutDict
-from .._utils import get_logger, url_to_origin
+from .._utils import get_logger, origin_to_url_string, url_to_origin
 from .base import (
     AsyncByteStream,
     AsyncHTTPTransport,
@@ -302,3 +302,14 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         # Close all connections
         for connection in connections:
             await connection.aclose()
+
+    def get_connection_info(self) -> Dict[str, List[str]]:
+        """
+        Returns a dict of origin URLs to a list of summary strings for each connection.
+        """
+        stats = {}
+        for origin, connections in self._connections.items():
+            stats[origin_to_url_string(origin)] = [
+                connection.info() for connection in connections
+            ]
+        return stats
