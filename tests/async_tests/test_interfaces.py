@@ -208,9 +208,7 @@ async def test_http_proxy(
 @pytest.mark.parametrize("family", [socket.AF_INET, socket.AF_INET6])
 @pytest.mark.asyncio
 # This doesn't run with trio, since trio doesn't support family.
-async def test_http_request_family(
-    family : int,
-) -> None:
+async def test_http_request_family(family: int,) -> None:
     async with httpcore.AsyncConnectionPool(family=family) as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
@@ -226,12 +224,10 @@ async def test_http_request_family(
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
-@pytest.mark.parametrize("local_addr", ['0.0.0.0', '::'])
+@pytest.mark.parametrize("local_addr", ["0.0.0.0", "::"])
 @pytest.mark.asyncio
 # This doesn't run with trio, since trio doesn't support local_addr.
-async def test_http_request_local_addr(
-    local_addr : str
-) -> None:
+async def test_http_request_local_addr(local_addr: str) -> None:
     async with httpcore.AsyncConnectionPool(local_addr=(local_addr, 0)) as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
