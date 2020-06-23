@@ -228,9 +228,10 @@ def test_http_request_family(family: int,) -> None:
 
 # This doesn't run with trio, since trio doesn't support local_addr.
 def test_http_request_local_addr(local_addr: str) -> None:
-    family = socket.AF_INET6 if ':' in local_addr else socket.AF_INET
-    with httpcore.SyncConnectionPool(family=family,
-                                            local_addr=(local_addr, 0)) as http:
+    family = socket.AF_INET6 if ":" in local_addr else socket.AF_INET
+    with httpcore.SyncConnectionPool(
+        family=family, local_addr=(local_addr, 0)
+    ) as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]

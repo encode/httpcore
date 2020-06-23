@@ -140,7 +140,7 @@ class SyncBackend:
                     local_addr = ("::", 0)
                 else:
                     raise NotImplementedError()
-            sock = socket.create_connection(address, connect_timeout, local_addr) # type: ignore
+            sock = socket.create_connection(address, connect_timeout, local_addr)  # type: ignore
             if ssl_context is not None:
                 sock = ssl_context.wrap_socket(
                     sock, server_hostname=hostname.decode("ascii")

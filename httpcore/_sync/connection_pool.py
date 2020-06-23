@@ -76,7 +76,7 @@ class SyncConnectionPool(SyncHTTPTransport):
     * **keepalive_expiry** - `Optional[float]` - The maximum time to allow
     before closing a keep-alive connection.
     * **http2** - `bool` - Enable HTTP/2 support.
-    * **family** - `Optional[int]` - Address family to use
+    * **family** - `int` - Address family to use, defaults to 0.
     * **local_addr** - `Optional[SocketAddress]` - Local address to connect
     from; requires family
     """
