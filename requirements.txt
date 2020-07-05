@@ -21,6 +21,6 @@ pytest-cov
 black
 autoflake
 mypy
-isort
+isort==5.*
 mitmproxy
 trustme
