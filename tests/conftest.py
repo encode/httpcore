@@ -5,6 +5,7 @@ import typing
 
 import pytest
 import trustme
+
 from mitmproxy import options, proxy
 from mitmproxy.tools.dump import DumpMaster
 

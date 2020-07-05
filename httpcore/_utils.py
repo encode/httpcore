@@ -7,6 +7,7 @@ from ._types import URL, Origin
 
 _LOGGER_INITIALIZED = False
 TRACE_LOG_LEVEL = 5
+DEFAULT_PORTS = {b"http": 80, b"https": 443}
 
 
 class Logger(logging.Logger):
@@ -53,6 +54,12 @@ def get_logger(name: str) -> Logger:
 
 def url_to_origin(url: URL) -> Origin:
     scheme, host, explicit_port = url[:3]
-    default_port = {b"http": 80, b"https": 443}[scheme]
+    default_port = DEFAULT_PORTS[scheme]
     port = default_port if explicit_port is None else explicit_port
     return scheme, host, port
+
+
+def origin_to_url_string(origin: Origin) -> str:
+    scheme, host, explicit_port = origin
+    port = f":{explicit_port}" if explicit_port != DEFAULT_PORTS[scheme] else ""
+    return f"{scheme.decode('ascii')}://{host.decode('ascii')}{port}"

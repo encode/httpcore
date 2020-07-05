@@ -235,3 +235,22 @@ async def test_proxy_https_requests(
         assert http_version == (b"HTTP/2" if http2 else b"HTTP/1.1")
         assert status_code == 200
         assert reason == b"OK"
+
+
+@pytest.mark.parametrize(
+    "http2,expected",
+    [
+        (False, ["HTTP/1.1, ACTIVE", "HTTP/1.1, ACTIVE"]),
+        (True, ["HTTP/2, ACTIVE, 2 streams"]),
+    ],
+)
+@pytest.mark.usefixtures("async_environment")
+async def test_connection_pool_get_connection_info(http2, expected) -> None:
+    async with httpcore.AsyncConnectionPool(http2=http2) as http:
+        method = b"GET"
+        url = (b"https", b"example.org", 443, b"/")
+        headers = [(b"host", b"example.org")]
+        for _ in range(2):
+            _ = await http.request(method, url, headers)
+        stats = http.get_connection_info()
+        assert stats == {"https://example.org": expected}

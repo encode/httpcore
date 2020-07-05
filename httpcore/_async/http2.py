@@ -51,6 +51,9 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
 
         self.state = ConnectionState.ACTIVE
 
+    def info(self) -> str:
+        return f"HTTP/2, {self.state.name}, {len(self.streams)} streams"
+
     @property
     def init_lock(self) -> AsyncLock:
         # We do this lazily, to make sure backend autodetection always

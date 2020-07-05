@@ -39,6 +39,13 @@ class SyncHTTPConnection(SyncHTTPTransport):
         self.expires_at: Optional[float] = None
         self.backend = SyncBackend()
 
+    def info(self) -> str:
+        if self.connection is None:
+            return "Not connected"
+        elif self.state == ConnectionState.PENDING:
+            return "Connecting"
+        return self.connection.info()
+
     @property
     def request_lock(self) -> SyncLock:
         # We do this lazily, to make sure backend autodetection always
