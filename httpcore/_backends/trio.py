@@ -55,12 +55,21 @@ class SocketStream(AsyncSocketStream):
 
     async def read(self, n: int, timeout: TimeoutDict) -> bytes:
         read_timeout = none_as_inf(timeout.get("read"))
-        exc_map = {trio.TooSlowError: ReadTimeout, trio.BrokenResourceError: ReadError}
+        exc_map = {trio.TooSlowError: ReadTimeout, OSError: ReadError}
 
         async with self.read_lock:
             with map_exceptions(exc_map):
                 with trio.fail_after(read_timeout):
-                    return await self.stream.receive_some(max_bytes=n)
+                    try:
+                        data = await self.stream.receive_some(max_bytes=n)
+                    except trio.BrokenResourceError:
+                        message = "Server disconnected while attempting read"
+                        raise OSError(message) from None
+
+                    if data == b"":
+                        raise OSError("Server disconnected while attempting read")
+
+                    return data
 
     async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         if not data:

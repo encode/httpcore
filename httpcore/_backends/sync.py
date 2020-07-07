@@ -54,12 +54,15 @@ class SyncSocketStream:
 
     def read(self, n: int, timeout: TimeoutDict) -> bytes:
         read_timeout = timeout.get("read")
-        exc_map = {socket.timeout: ReadTimeout, socket.error: ReadError}
+        exc_map = {socket.timeout: ReadTimeout, OSError: ReadError}
 
         with self.read_lock:
             with map_exceptions(exc_map):
                 self.sock.settimeout(read_timeout)
-                return self.sock.recv(n)
+                data = self.sock.recv(n)
+                if data == b"":
+                    raise OSError("Server disconnected while attempting read")
+                return data
 
     def write(self, data: bytes, timeout: TimeoutDict) -> None:
         write_timeout = timeout.get("write")

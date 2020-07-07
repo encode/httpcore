@@ -131,9 +131,12 @@ class SocketStream(AsyncSocketStream):
         exc_map = {asyncio.TimeoutError: ReadTimeout, OSError: ReadError}
         async with self.read_lock:
             with map_exceptions(exc_map):
-                return await asyncio.wait_for(
+                data = await asyncio.wait_for(
                     self.stream_reader.read(n), timeout.get("read")
                 )
+                if data == b"":
+                    raise OSError("Server disconnected while attempting read")
+                return data
 
     async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         if not data:
