@@ -1,16 +1,16 @@
 from ssl import SSLContext
-from typing import Iterator, Callable, Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple
 
-from .._backends.auto import SyncLock, SyncSemaphore, SyncBackend
+from .._backends.auto import SyncBackend, SyncLock, SyncSemaphore
 from .._exceptions import PoolTimeout
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, origin_to_url_string, url_to_origin
 from .base import (
-    SyncByteStream,
-    SyncHTTPTransport,
     ConnectionState,
     NewConnectionRequired,
+    SyncByteStream,
+    SyncHTTPTransport,
 )
 from .connection import SyncHTTPConnection
 
@@ -164,9 +164,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         )
         return response[0], response[1], response[2], response[3], wrapped_stream
 
-    def _get_connection_from_pool(
-        self, origin: Origin
-    ) -> Optional[SyncHTTPConnection]:
+    def _get_connection_from_pool(self, origin: Origin) -> Optional[SyncHTTPConnection]:
         # Determine expired keep alive connections on this origin.
         seen_http11 = False
         pending_connection = None

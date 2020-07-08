@@ -16,7 +16,6 @@ def read_body(stream: httpcore.SyncByteStream) -> bytes:
         stream.close()
 
 
-
 def test_http_request() -> None:
     with httpcore.SyncConnectionPool() as http:
         method = b"GET"
@@ -31,7 +30,6 @@ def test_http_request() -> None:
         assert status_code == 200
         assert reason == b"OK"
         assert len(http._connections[url[:3]]) == 1  # type: ignore
-
 
 
 def test_https_request() -> None:
@@ -50,7 +48,6 @@ def test_https_request() -> None:
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
-
 def test_http2_request() -> None:
     with httpcore.SyncConnectionPool(http2=True) as http:
         method = b"GET"
@@ -67,7 +64,6 @@ def test_http2_request() -> None:
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
-
 def test_closing_http_request() -> None:
     with httpcore.SyncConnectionPool() as http:
         method = b"GET"
@@ -82,7 +78,6 @@ def test_closing_http_request() -> None:
         assert status_code == 200
         assert reason == b"OK"
         assert url[:3] not in http._connections  # type: ignore
-
 
 
 def test_http_request_reuse_connection() -> None:
@@ -114,7 +109,6 @@ def test_http_request_reuse_connection() -> None:
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
-
 def test_https_request_reuse_connection() -> None:
     with httpcore.SyncConnectionPool() as http:
         method = b"GET"
@@ -142,7 +136,6 @@ def test_https_request_reuse_connection() -> None:
         assert status_code == 200
         assert reason == b"OK"
         assert len(http._connections[url[:3]]) == 1  # type: ignore
-
 
 
 def test_http_request_cannot_reuse_dropped_connection() -> None:
@@ -179,7 +172,6 @@ def test_http_request_cannot_reuse_dropped_connection() -> None:
 
 
 @pytest.mark.parametrize("proxy_mode", ["DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY"])
-
 def test_http_proxy(
     proxy_server: typing.Tuple[bytes, bytes, int], proxy_mode: str
 ) -> None:
@@ -206,7 +198,6 @@ def test_http_proxy(
 
 # mitmproxy does not support forwarding HTTPS requests
 @pytest.mark.parametrize("proxy_mode", ["DEFAULT", "TUNNEL_ONLY"])
-
 @pytest.mark.parametrize("http2", [False, True])
 def test_proxy_https_requests(
     proxy_server: typing.Tuple[bytes, bytes, int],
@@ -244,7 +235,6 @@ def test_proxy_https_requests(
         (True, ["HTTP/2, ACTIVE, 2 streams"]),
     ],
 )
-
 def test_connection_pool_get_connection_info(http2, expected) -> None:
     with httpcore.SyncConnectionPool(http2=http2) as http:
         method = b"GET"

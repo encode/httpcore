@@ -6,7 +6,7 @@ from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, url_to_origin
 from .base import SyncByteStream
 from .connection import SyncHTTPConnection
-from .connection_pool import SyncConnectionPool, ResponseByteStream
+from .connection_pool import ResponseByteStream, SyncConnectionPool
 
 logger = get_logger(__name__)
 

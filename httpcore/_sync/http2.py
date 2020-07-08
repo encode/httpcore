@@ -1,6 +1,6 @@
 from http import HTTPStatus
 from ssl import SSLContext
-from typing import Iterator, Dict, List, Tuple
+from typing import Dict, Iterator, List, Tuple
 
 import h2.connection
 import h2.events
@@ -8,15 +8,15 @@ from h2.config import H2Configuration
 from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
-from .._backends.auto import SyncLock, SyncSemaphore, SyncSocketStream, SyncBackend
+from .._backends.auto import SyncBackend, SyncLock, SyncSemaphore, SyncSocketStream
 from .._exceptions import PoolTimeout, ProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
 from .base import (
-    SyncByteStream,
-    SyncHTTPTransport,
     ConnectionState,
     NewConnectionRequired,
+    SyncByteStream,
+    SyncHTTPTransport,
 )
 
 logger = get_logger(__name__)
@@ -187,9 +187,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
             flow = min(local_flow, connection_flow)
         return flow
 
-    def wait_for_event(
-        self, stream_id: int, timeout: TimeoutDict
-    ) -> h2.events.Event:
+    def wait_for_event(self, stream_id: int, timeout: TimeoutDict) -> h2.events.Event:
         """
         Returns the next event for a given stream.
         If no events are available yet, then waits on the network until
@@ -228,9 +226,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         data_to_send = self.h2_state.data_to_send()
         self.socket.write(data_to_send, timeout)
 
-    def send_data(
-        self, stream_id: int, chunk: bytes, timeout: TimeoutDict
-    ) -> None:
+    def send_data(self, stream_id: int, chunk: bytes, timeout: TimeoutDict) -> None:
         logger.trace("send_data stream_id=%r chunk=%r", stream_id, chunk)
         self.h2_state.send_data(stream_id, chunk)
         data_to_send = self.h2_state.data_to_send()

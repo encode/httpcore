@@ -1,6 +1,6 @@
 import enum
 from types import TracebackType
-from typing import Iterator, Callable, List, Tuple, Type
+from typing import Callable, Iterator, List, Tuple, Type
 
 from .._types import URL, Headers, TimeoutDict
 

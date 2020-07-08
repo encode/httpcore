@@ -1,14 +1,14 @@
 from ssl import SSLContext
 from typing import List, Optional, Tuple, Union
 
-from .._backends.auto import SyncLock, SyncSocketStream, SyncBackend
+from .._backends.auto import SyncBackend, SyncLock, SyncSocketStream
 from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, url_to_origin
 from .base import (
-    SyncByteStream,
-    SyncHTTPTransport,
     ConnectionState,
     NewConnectionRequired,
+    SyncByteStream,
+    SyncHTTPTransport,
 )
 from .http2 import SyncHTTP2Connection
 from .http11 import SyncHTTP11Connection
@@ -89,9 +89,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         timeout = {} if timeout is None else timeout
         ssl_context = self.ssl_context if scheme == b"https" else None
         try:
-            return self.backend.open_tcp_stream(
-                hostname, port, ssl_context, timeout
-            )
+            return self.backend.open_tcp_stream(hostname, port, ssl_context, timeout)
         except Exception:
             self.connect_failed = True
             raise
