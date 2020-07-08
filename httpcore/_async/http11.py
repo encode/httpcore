@@ -34,6 +34,9 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
 
         self.state = ConnectionState.ACTIVE
 
+    def __repr__(self) -> str:
+        return f"<AsyncHTTP11Connection state={self.state}>"
+
     def info(self) -> str:
         return f"HTTP/1.1, {self.state.name}"
 

@@ -51,6 +51,9 @@ class SyncHTTP2Connection(SyncHTTPTransport):
 
         self.state = ConnectionState.ACTIVE
 
+    def __repr__(self) -> str:
+        return f"<SyncHTTP2Connection state={self.state}>"
+
     def info(self) -> str:
         return f"HTTP/2, {self.state.name}, {len(self.streams)} streams"
 

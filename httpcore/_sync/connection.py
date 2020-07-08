@@ -39,6 +39,14 @@ class SyncHTTPConnection(SyncHTTPTransport):
         self.expires_at: Optional[float] = None
         self.backend = SyncBackend()
 
+    def __repr__(self) -> str:
+        http_version = "UNKNOWN"
+        if self.is_http11:
+            http_version = "HTTP/1.1"
+        elif self.is_http2:
+            http_version = "HTTP/2"
+        return f"<SyncHTTPConnection http_version={http_version} state={self.state}>"
+
     def info(self) -> str:
         if self.connection is None:
             return "Not connected"
