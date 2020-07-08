@@ -51,6 +51,9 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
 
         self.state = ConnectionState.ACTIVE
 
+    def __repr__(self) -> str:
+        return f"<AsyncHTTP2Connection state={self.state}>"
+
     def info(self) -> str:
         return f"HTTP/2, {self.state.name}, {len(self.streams)} streams"
 
