@@ -5,9 +5,10 @@ import typing
 
 import pytest
 import trustme
-
 from mitmproxy import options, proxy
 from mitmproxy.tools.dump import DumpMaster
+
+from httpcore._types import URL
 
 PROXY_HOST = "127.0.0.1"
 PROXY_PORT = 8080
@@ -101,9 +102,7 @@ def example_org_cert_path(example_org_cert: trustme.LeafCert) -> typing.Iterator
 
 
 @pytest.fixture()
-def proxy_server(
-    example_org_cert_path: str,
-) -> typing.Iterator[typing.Tuple[bytes, bytes, int]]:
+def proxy_server(example_org_cert_path: str) -> typing.Iterator[URL]:
     """Starts a proxy server on a different thread and yields its origin tuple.
 
     The server is configured to use a trustme CA and key, this will allow our
@@ -118,6 +117,6 @@ def proxy_server(
         thread = ProxyWrapper(PROXY_HOST, PROXY_PORT, certs=[example_org_cert_path])
         thread.start()
         thread.notify.started.wait()
-        yield (b"http", PROXY_HOST.encode(), PROXY_PORT)
+        yield (b"http", PROXY_HOST.encode(), PROXY_PORT, b"/")
     finally:
         thread.join()
