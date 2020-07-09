@@ -204,7 +204,7 @@ async def test_http_proxy(
         assert reason == b"OK"
 
 
-@pytest.mark.parametrize("local_addr", ["0.0.0.0"])
+@pytest.mark.parametrize("local_addr", [b"0.0.0.0"])
 @pytest.mark.asyncio
 # This doesn't run with trio, since trio doesn't support local_addr.
 async def test_http_request_local_addr(local_addr: str) -> None:
