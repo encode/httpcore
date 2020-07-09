@@ -2,7 +2,7 @@ from ssl import SSLContext
 from typing import List, Optional, Tuple, Union
 
 from .._backends.auto import SyncLock, SyncSocketStream, SyncBackend
-from .._types import URL, Headers, Origin, SocketAddress, TimeoutDict
+from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, url_to_origin
 from .base import (
     SyncByteStream,
@@ -23,14 +23,12 @@ class SyncHTTPConnection(SyncHTTPTransport):
         http2: bool = False,
         ssl_context: SSLContext = None,
         socket: SyncSocketStream = None,
-        family: int = 0,
-        local_addr: SocketAddress = None,
+        local_addr: bytes = None,
     ):
         self.origin = origin
         self.http2 = http2
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
         self.socket = socket
-        self.family = family
         self.local_addr = local_addr
 
         if self.http2:
@@ -102,7 +100,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         ssl_context = self.ssl_context if scheme == b"https" else None
         try:
             return self.backend.open_tcp_stream(
-                hostname, port, ssl_context, timeout, self.family, self.local_addr
+                hostname, port, ssl_context, timeout, self.local_addr
             )
         except Exception:
             self.connect_failed = True

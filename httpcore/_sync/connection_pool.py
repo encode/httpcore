@@ -4,7 +4,7 @@ from typing import Iterator, Callable, Dict, List, Optional, Set, Tuple
 from .._backends.auto import SyncLock, SyncSemaphore, SyncBackend
 from .._exceptions import PoolTimeout
 from .._threadlock import ThreadLock
-from .._types import URL, Headers, Origin, SocketAddress, TimeoutDict
+from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, origin_to_url_string, url_to_origin
 from .base import (
     SyncByteStream,
@@ -76,9 +76,7 @@ class SyncConnectionPool(SyncHTTPTransport):
     * **keepalive_expiry** - `Optional[float]` - The maximum time to allow
     before closing a keep-alive connection.
     * **http2** - `bool` - Enable HTTP/2 support.
-    * **family** - `int` - Address family to use, defaults to 0.
-    * **local_addr** - `Optional[SocketAddress]` - Local address to connect
-    from; requires family
+    * **local_addr** - `Optional[bytes]` - Local address to connect from
     """
 
     def __init__(
@@ -88,15 +86,13 @@ class SyncConnectionPool(SyncHTTPTransport):
         max_keepalive: int = None,
         keepalive_expiry: float = None,
         http2: bool = False,
-        family: int = 0,
-        local_addr: SocketAddress = None,
+        local_addr: bytes = None,
     ):
         self._ssl_context = SSLContext() if ssl_context is None else ssl_context
         self._max_connections = max_connections
         self._max_keepalive = max_keepalive
         self._keepalive_expiry = keepalive_expiry
         self._http2 = http2
-        self._family = family
         self._local_addr = local_addr
         self._connections: Dict[Origin, Set[SyncHTTPConnection]] = {}
         self._thread_lock = ThreadLock()
@@ -151,7 +147,6 @@ class SyncConnectionPool(SyncHTTPTransport):
                         origin=origin,
                         http2=self._http2,
                         ssl_context=self._ssl_context,
-                        family=self._family,
                         local_addr=self._local_addr,
                     )
                     logger.trace("created connection=%r", connection)

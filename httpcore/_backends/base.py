@@ -2,7 +2,7 @@ from ssl import SSLContext
 from types import TracebackType
 from typing import Optional, Type
 
-from .._types import SocketAddress, TimeoutDict
+from .._types import TimeoutDict
 
 
 class AsyncSocketStream:
@@ -76,8 +76,7 @@ class AsyncBackend:
         port: int,
         ssl_context: Optional[SSLContext],
         timeout: TimeoutDict,
-        family: int,
-        local_addr: Optional[SocketAddress],
+        local_addr: Optional[bytes],
     ) -> AsyncSocketStream:
         raise NotImplementedError()  # pragma: no cover
 

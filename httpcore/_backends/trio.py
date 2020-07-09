@@ -13,7 +13,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
-from .._types import SocketAddress, TimeoutDict
+from .._types import TimeoutDict
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 
@@ -140,10 +140,9 @@ class TrioBackend(AsyncBackend):
         port: int,
         ssl_context: Optional[SSLContext],
         timeout: TimeoutDict,
-        family: int,
-        local_addr: Optional[SocketAddress],
+        local_addr: Optional[bytes],
     ) -> AsyncSocketStream:
-        if family != 0 or local_addr:
+        if local_addr:
             raise NotImplementedError()
         connect_timeout = none_as_inf(timeout.get("connect"))
         exc_map = {
