@@ -34,6 +34,9 @@ class SyncHTTP11Connection(SyncHTTPTransport):
 
         self.state = ConnectionState.ACTIVE
 
+    def __repr__(self) -> str:
+        return f"<SyncHTTP11Connection state={self.state}>"
+
     def info(self) -> str:
         return f"HTTP/1.1, {self.state.name}"
 
