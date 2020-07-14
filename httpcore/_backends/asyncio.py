@@ -135,7 +135,7 @@ class SocketStream(AsyncSocketStream):
                     self.stream_reader.read(n), timeout.get("read")
                 )
                 if data == b"":
-                    raise OSError("Server disconnected while attempting read")
+                    raise ReadError("Server disconnected while attempting read")
                 return data
 
     async def write(self, data: bytes, timeout: TimeoutDict) -> None:
