@@ -157,6 +157,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             except Exception:
                 logger.trace("remove from pool connection=%r", connection)
                 await self._remove_from_pool(connection)
+                await connection.aclose()
                 raise
 
         wrapped_stream = ResponseByteStream(
