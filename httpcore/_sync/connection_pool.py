@@ -157,6 +157,7 @@ class SyncConnectionPool(SyncHTTPTransport):
             except Exception:
                 logger.trace("remove from pool connection=%r", connection)
                 self._remove_from_pool(connection)
+                connection.close()
                 raise
 
         wrapped_stream = ResponseByteStream(
