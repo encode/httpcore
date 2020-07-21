@@ -7,7 +7,8 @@ from .._backends.auto import AsyncSocketStream
 from .._exceptions import ProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
-from .base import AsyncByteStream, AsyncHTTPTransport, ConnectionState
+from .base import AsyncByteStream, ConnectionState
+from .http import BaseHTTPConnection
 
 H11Event = Union[
     h11.Request,
@@ -21,7 +22,7 @@ H11Event = Union[
 logger = get_logger(__name__)
 
 
-class AsyncHTTP11Connection(AsyncHTTPTransport):
+class AsyncHTTP11Connection(BaseHTTPConnection):
     READ_NUM_BYTES = 4096
 
     def __init__(
@@ -39,6 +40,9 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
 
     def info(self) -> str:
         return f"HTTP/1.1, {self.state.name}"
+
+    def get_state(self) -> ConnectionState:
+        return self.state
 
     def mark_as_ready(self) -> None:
         if self.state == ConnectionState.IDLE:
@@ -72,9 +76,12 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         )
         return (http_version, status_code, reason_phrase, headers, stream)
 
-    async def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
+    async def start_tls(
+        self, hostname: bytes, timeout: TimeoutDict = None
+    ) -> AsyncSocketStream:
         timeout = {} if timeout is None else timeout
         self.socket = await self.socket.start_tls(hostname, self.ssl_context, timeout)
+        return self.socket
 
     async def _send_request(
         self, method: bytes, url: URL, headers: Headers, timeout: TimeoutDict,

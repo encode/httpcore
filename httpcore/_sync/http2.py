@@ -12,12 +12,8 @@ from .._backends.auto import SyncLock, SyncSemaphore, SyncSocketStream, SyncBack
 from .._exceptions import PoolTimeout, ProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
-from .base import (
-    SyncByteStream,
-    SyncHTTPTransport,
-    ConnectionState,
-    NewConnectionRequired,
-)
+from .base import SyncByteStream, ConnectionState, NewConnectionRequired
+from .http import BaseHTTPConnection
 
 logger = get_logger(__name__)
 
@@ -29,7 +25,7 @@ def get_reason_phrase(status_code: int) -> bytes:
         return b""
 
 
-class SyncHTTP2Connection(SyncHTTPTransport):
+class SyncHTTP2Connection(BaseHTTPConnection):
     READ_NUM_BYTES = 4096
     CONFIG = H2Configuration(validate_inbound_headers=False)
 
@@ -84,8 +80,13 @@ class SyncHTTP2Connection(SyncHTTPTransport):
             )
         return self._max_streams_semaphore
 
-    def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
-        pass
+    def start_tls(
+        self, hostname: bytes, timeout: TimeoutDict = None
+    ) -> SyncSocketStream:
+        raise NotImplementedError("TLS upgrade not supported on HTTP/2 connections.")
+
+    def get_state(self) -> ConnectionState:
+        return self.state
 
     def mark_as_ready(self) -> None:
         if self.state == ConnectionState.IDLE:
