@@ -60,7 +60,10 @@ class SocketStream(AsyncSocketStream):
         async with self.read_lock:
             with map_exceptions(exc_map):
                 with trio.fail_after(read_timeout):
-                    return await self.stream.receive_some(max_bytes=n)
+                    data = await self.stream.receive_some(max_bytes=n)
+                    if data == b"":
+                        raise ReadError("Server disconnected while attempting read")
+                    return data
 
     async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         if not data:

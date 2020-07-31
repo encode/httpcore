@@ -93,7 +93,10 @@ class SyncHTTPTransport:
         to send with the request.
         * **stream** - `Optional[SyncByteStream]` - The body of the HTTP request.
         * **timeout** - `Optional[Dict[str, Optional[float]]]` - A dictionary of
-        timeout values for I/O operations.
+        timeout values for I/O operations. Supported keys are "pool" for acquiring a
+        connection from the connection pool, "read" for reading from the connection,
+        "write" for writing to the connection and "connect" for opening the connection.
+        Values are floating point seconds.
 
         ** Returns:**
 
