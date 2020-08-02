@@ -51,7 +51,7 @@ async def test_https_request() -> None:
 
 
 @pytest.mark.usefixtures("async_environment")
-async def test_ftp_request() -> None:
+async def test_request_unsupported_protocol() -> None:
     async with httpcore.AsyncConnectionPool() as http:
         method = b"GET"
         url = (b"ftp", b"example.org", 443, b"/")
