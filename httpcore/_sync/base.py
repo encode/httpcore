@@ -5,10 +5,6 @@ from typing import Iterator, Callable, List, Tuple, Type
 from .._types import URL, Headers, TimeoutDict
 
 
-def empty() -> Iterator:
-    yield b""
-
-
 class NewConnectionRequired(Exception):
     pass
 
@@ -45,17 +41,25 @@ class SyncByteStream:
     """
 
     def __init__(
-        self, iterator: Iterator[bytes] = None, close_func: Callable = None,
+        self,
+        content: bytes = b"",
+        iterator: Iterator[bytes] = None,
+        close_func: Callable = None,
     ) -> None:
-        self.iterator = empty() if iterator is None else iterator
+        assert iterator is None or not content
+        self.content = content
+        self.iterator = iterator
         self.close_func = close_func
 
     def __iter__(self) -> Iterator[bytes]:
         """
         Yield bytes representing the request or response body.
         """
-        for chunk in self.iterator:
-            yield chunk
+        if self.iterator is None:
+            yield self.content
+        else:
+            for chunk in self.iterator:
+                yield chunk
 
     def close(self) -> None:
         """
