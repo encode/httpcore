@@ -13,7 +13,7 @@ from .._exceptions import PoolTimeout, ProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
 from .base import SyncByteStream, ConnectionState, NewConnectionRequired
-from .http import BaseHTTPConnection
+from .http import SyncBaseHTTPConnection
 
 logger = get_logger(__name__)
 
@@ -25,7 +25,7 @@ def get_reason_phrase(status_code: int) -> bytes:
         return b""
 
 
-class SyncHTTP2Connection(BaseHTTPConnection):
+class SyncHTTP2Connection(SyncBaseHTTPConnection):
     READ_NUM_BYTES = 4096
     CONFIG = H2Configuration(validate_inbound_headers=False)
 

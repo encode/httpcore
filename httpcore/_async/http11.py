@@ -8,7 +8,7 @@ from .._exceptions import ProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
 from .base import AsyncByteStream, ConnectionState
-from .http import BaseHTTPConnection
+from .http import AsyncBaseHTTPConnection
 
 H11Event = Union[
     h11.Request,
@@ -22,7 +22,7 @@ H11Event = Union[
 logger = get_logger(__name__)
 
 
-class AsyncHTTP11Connection(BaseHTTPConnection):
+class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
     READ_NUM_BYTES = 4096
 
     def __init__(

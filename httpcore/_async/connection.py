@@ -10,7 +10,7 @@ from .base import (
     ConnectionState,
     NewConnectionRequired,
 )
-from .http import BaseHTTPConnection
+from .http import AsyncBaseHTTPConnection
 
 logger = get_logger(__name__)
 
@@ -31,7 +31,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         if self.http2:
             self.ssl_context.set_alpn_protocols(["http/1.1", "h2"])
 
-        self.connection: Optional[BaseHTTPConnection] = None
+        self.connection: Optional[AsyncBaseHTTPConnection] = None
         self.is_http11 = False
         self.is_http2 = False
         self.connect_failed = False

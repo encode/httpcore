@@ -3,7 +3,7 @@ from .._types import TimeoutDict
 from .base import AsyncHTTPTransport, ConnectionState
 
 
-class BaseHTTPConnection(AsyncHTTPTransport):
+class AsyncBaseHTTPConnection(AsyncHTTPTransport):
     def info(self) -> str:
         raise NotImplementedError()  # pragma: nocover
 
