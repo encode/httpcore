@@ -7,7 +7,8 @@ from .._backends.auto import SyncSocketStream
 from .._exceptions import RemoteProtocolError, LocalProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
-from .base import SyncByteStream, SyncHTTPTransport, ConnectionState
+from .base import SyncByteStream, ConnectionState
+from .http import SyncBaseHTTPConnection
 
 H11Event = Union[
     h11.Request,
@@ -21,7 +22,7 @@ H11Event = Union[
 logger = get_logger(__name__)
 
 
-class SyncHTTP11Connection(SyncHTTPTransport):
+class SyncHTTP11Connection(SyncBaseHTTPConnection):
     READ_NUM_BYTES = 4096
 
     def __init__(
@@ -39,6 +40,9 @@ class SyncHTTP11Connection(SyncHTTPTransport):
 
     def info(self) -> str:
         return f"HTTP/1.1, {self.state.name}"
+
+    def get_state(self) -> ConnectionState:
+        return self.state
 
     def mark_as_ready(self) -> None:
         if self.state == ConnectionState.IDLE:
@@ -72,9 +76,12 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         )
         return (http_version, status_code, reason_phrase, headers, stream)
 
-    def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
+    def start_tls(
+        self, hostname: bytes, timeout: TimeoutDict = None
+    ) -> SyncSocketStream:
         timeout = {} if timeout is None else timeout
         self.socket = self.socket.start_tls(hostname, self.ssl_context, timeout)
+        return self.socket
 
     def _send_request(
         self, method: bytes, url: URL, headers: Headers, timeout: TimeoutDict,

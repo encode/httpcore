@@ -1,5 +1,5 @@
 from ssl import SSLContext
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 from .._backends.auto import SyncLock, SyncSocketStream, SyncBackend
 from .._types import URL, Headers, Origin, TimeoutDict
@@ -10,8 +10,7 @@ from .base import (
     ConnectionState,
     NewConnectionRequired,
 )
-from .http2 import SyncHTTP2Connection
-from .http11 import SyncHTTP11Connection
+from .http import SyncBaseHTTPConnection
 
 logger = get_logger(__name__)
 
@@ -32,7 +31,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         if self.http2:
             self.ssl_context.set_alpn_protocols(["http/1.1", "h2"])
 
-        self.connection: Union[None, SyncHTTP11Connection, SyncHTTP2Connection] = None
+        self.connection: Optional[SyncBaseHTTPConnection] = None
         self.is_http11 = False
         self.is_http2 = False
         self.connect_failed = False
@@ -110,11 +109,15 @@ class SyncHTTPConnection(SyncHTTPTransport):
             "create_connection socket=%r http_version=%r", socket, http_version
         )
         if http_version == "HTTP/2":
+            from .http2 import SyncHTTP2Connection
+
             self.is_http2 = True
             self.connection = SyncHTTP2Connection(
                 socket=socket, backend=self.backend, ssl_context=self.ssl_context
             )
         else:
+            from .http11 import SyncHTTP11Connection
+
             self.is_http11 = True
             self.connection = SyncHTTP11Connection(
                 socket=socket, ssl_context=self.ssl_context
@@ -126,7 +129,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
             return ConnectionState.CLOSED
         elif self.connection is None:
             return ConnectionState.PENDING
-        return self.connection.state
+        return self.connection.get_state()
 
     def is_connection_dropped(self) -> bool:
         return self.connection is not None and self.connection.is_connection_dropped()
@@ -138,9 +141,8 @@ class SyncHTTPConnection(SyncHTTPTransport):
     def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
         if self.connection is not None:
             logger.trace("start_tls hostname=%r timeout=%r", hostname, timeout)
-            self.connection.start_tls(hostname, timeout)
+            self.socket = self.connection.start_tls(hostname, timeout)
             logger.trace("start_tls complete hostname=%r timeout=%r", hostname, timeout)
-            self.socket = self.connection.socket
 
     def close(self) -> None:
         with self.request_lock:
