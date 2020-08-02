@@ -146,13 +146,21 @@ class SyncHTTPProxy(SyncConnectionPool):
         url = self.proxy_origin + (target,)
         headers = merge_headers(self.proxy_headers, headers)
 
-        response = connection.request(
+        (
+            http_version,
+            status_code,
+            reason_phrase,
+            headers,
+            stream,
+        ) = connection.request(
             method, url, headers=headers, stream=stream, timeout=timeout
         )
+
         wrapped_stream = ResponseByteStream(
-            response[4], connection=connection, callback=self._response_closed
+            stream, connection=connection, callback=self._response_closed
         )
-        return response[0], response[1], response[2], response[3], wrapped_stream
+
+        return http_version, status_code, reason_phrase, headers, wrapped_stream
 
     def _tunnel_request(
         self,
@@ -170,6 +178,8 @@ class SyncHTTPProxy(SyncConnectionPool):
         connection = self._get_connection_from_pool(origin)
 
         if connection is None:
+            scheme, host, port, _ = url
+
             # First, create a connection to the proxy server
             proxy_connection = SyncHTTPConnection(
                 origin=self.proxy_origin,
@@ -181,19 +191,22 @@ class SyncHTTPProxy(SyncConnectionPool):
 
             # CONNECT www.example.org:80 HTTP/1.1
             # [proxy-headers]
-            if url[2] is None:
-                target = url[1]
+            if port is None:
+                target = host
             else:
-                target = b"%b:%d" % (url[1], url[2])
+                target = b"%b:%d" % (host, port)
             connect_url = self.proxy_origin + (target,)
             connect_headers = [(b"Host", target), (b"Accept", b"*/*")]
             connect_headers = merge_headers(connect_headers, self.proxy_headers)
-            proxy_response = proxy_connection.request(
+            (
+                _,
+                proxy_status_code,
+                proxy_reason_phrase,
+                _,
+                proxy_stream,
+            ) = proxy_connection.request(
                 b"CONNECT", connect_url, headers=connect_headers, timeout=timeout
             )
-            proxy_status_code = proxy_response[1]
-            proxy_reason_phrase = proxy_response[2]
-            proxy_stream = proxy_response[4]
             logger.trace(
                 "tunnel_response proxy_status_code=%r proxy_reason=%r ",
                 proxy_status_code,
@@ -210,8 +223,8 @@ class SyncHTTPProxy(SyncConnectionPool):
 
             # Upgrade to TLS if required
             # We assume the target speaks TLS on the specified port
-            if url[0] == b"https":
-                proxy_connection.start_tls(url[1], timeout)
+            if scheme == b"https":
+                proxy_connection.start_tls(host, timeout)
 
             # The CONNECT request is successful, so we have now SWITCHED PROTOCOLS.
             # This means the proxy connection is now unusable, and we must create
@@ -227,10 +240,18 @@ class SyncHTTPProxy(SyncConnectionPool):
 
         # Once the connection has been established we can send requests on
         # it as normal.
-        response = connection.request(
+        (
+            http_version,
+            status_code,
+            reason_phrase,
+            headers,
+            stream,
+        ) = connection.request(
             method, url, headers=headers, stream=stream, timeout=timeout,
         )
+
         wrapped_stream = ResponseByteStream(
-            response[4], connection=connection, callback=self._response_closed
+            stream, connection=connection, callback=self._response_closed
         )
-        return response[0], response[1], response[2], response[3], wrapped_stream
+
+        return http_version, status_code, reason_phrase, headers, wrapped_stream
