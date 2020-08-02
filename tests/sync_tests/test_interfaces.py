@@ -51,6 +51,18 @@ def test_https_request() -> None:
 
 
 
+def test_ftp_request() -> None:
+    with httpcore.SyncConnectionPool() as http:
+        method = b"GET"
+        url = (b"ftp", b"example.org", 443, b"/")
+        headers = [(b"host", b"example.org")]
+        with pytest.raises(httpcore.UnsupportedProtocol):
+            http_version, status_code, reason, headers, stream = http.request(
+                method, url, headers
+            )
+
+
+
 def test_http2_request() -> None:
     with httpcore.SyncConnectionPool(http2=True) as http:
         method = b"GET"

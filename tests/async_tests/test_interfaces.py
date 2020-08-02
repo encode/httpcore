@@ -51,6 +51,18 @@ async def test_https_request() -> None:
 
 
 @pytest.mark.usefixtures("async_environment")
+async def test_ftp_request() -> None:
+    async with httpcore.AsyncConnectionPool() as http:
+        method = b"GET"
+        url = (b"ftp", b"example.org", 443, b"/")
+        headers = [(b"host", b"example.org")]
+        with pytest.raises(httpcore.UnsupportedProtocol):
+            http_version, status_code, reason, headers, stream = await http.request(
+                method, url, headers
+            )
+
+
+@pytest.mark.usefixtures("async_environment")
 async def test_http2_request() -> None:
     async with httpcore.AsyncConnectionPool(http2=True) as http:
         method = b"GET"
