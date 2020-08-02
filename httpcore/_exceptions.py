@@ -17,6 +17,14 @@ class ProtocolError(Exception):
     pass
 
 
+class RemoteProtocolError(ProtocolError):
+    pass
+
+
+class LocalProtocolError(ProtocolError):
+    pass
+
+
 class ProxyError(Exception):
     pass
 

@@ -4,7 +4,7 @@ from typing import Iterator, List, Tuple, Union
 import h11
 
 from .._backends.auto import SyncSocketStream
-from .._exceptions import ProtocolError, map_exceptions
+from .._exceptions import RemoteProtocolError, LocalProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
 from .base import SyncByteStream, SyncHTTPTransport, ConnectionState
@@ -84,7 +84,8 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         """
         logger.trace("send_request method=%r url=%r headers=%s", method, url, headers)
         _scheme, _host, _port, target = url
-        event = h11.Request(method=method, target=target, headers=headers)
+        with map_exceptions({h11.LocalProtocolError: LocalProtocolError}):
+            event = h11.Request(method=method, target=target, headers=headers)
         self._send_event(event, timeout)
 
     def _send_request_body(
@@ -144,7 +145,7 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         Read a single `h11` event, reading more data from the network if needed.
         """
         while True:
-            with map_exceptions({h11.RemoteProtocolError: ProtocolError}):
+            with map_exceptions({h11.RemoteProtocolError: RemoteProtocolError}):
                 event = self.h11_state.next_event()
 
             if event is h11.NEED_DATA:

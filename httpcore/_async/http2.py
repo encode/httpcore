@@ -9,7 +9,7 @@ from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
 from .._backends.auto import AsyncLock, AsyncSemaphore, AsyncSocketStream, AutoBackend
-from .._exceptions import PoolTimeout, ProtocolError
+from .._exceptions import PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
 from .base import (
@@ -214,7 +214,7 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
             logger.trace("receive_event stream_id=%r event=%s", event_stream_id, event)
 
             if hasattr(event, "error_code"):
-                raise ProtocolError(event)
+                raise RemoteProtocolError(event)
 
             if event_stream_id in self.events:
                 self.events[event_stream_id].append(event)

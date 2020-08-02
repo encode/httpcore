@@ -2,7 +2,7 @@ from ssl import SSLContext
 from typing import AsyncIterator, Callable, Dict, List, Optional, Set, Tuple
 
 from .._backends.auto import AsyncLock, AsyncSemaphore, AutoBackend
-from .._exceptions import PoolTimeout
+from .._exceptions import PoolTimeout, LocalProtocolError
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, origin_to_url_string, url_to_origin
@@ -125,6 +125,10 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, Headers, AsyncByteStream]:
         assert url[0] in (b"http", b"https")
+
+        if not url[1]:
+            raise LocalProtocolError("Missing hostname in URL.")
+
         origin = url_to_origin(url)
 
         if self._keepalive_expiry is not None:
