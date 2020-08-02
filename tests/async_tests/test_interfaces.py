@@ -57,9 +57,7 @@ async def test_ftp_request() -> None:
         url = (b"ftp", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
         with pytest.raises(httpcore.UnsupportedProtocol):
-            http_version, status_code, reason, headers, stream = await http.request(
-                method, url, headers
-            )
+            await http.request(method, url, headers)
 
 
 @pytest.mark.usefixtures("async_environment")
