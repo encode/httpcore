@@ -126,7 +126,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
     ) -> Tuple[bytes, int, bytes, Headers, AsyncByteStream]:
         if url[0] not in (b"http", b"https"):
             scheme = url[0].decode("latin-1")
-            raise UnsupportedProtocol("Unsupported URL protocol '{scheme}'")
+            raise UnsupportedProtocol(f"Unsupported URL protocol {scheme!r}")
 
         origin = url_to_origin(url)
 
