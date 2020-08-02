@@ -14,6 +14,7 @@ from ._exceptions import (
     ReadError,
     ReadTimeout,
     TimeoutException,
+    UnsupportedProtocol,
     WriteError,
     WriteTimeout,
 )
@@ -42,5 +43,6 @@ __all__ = [
     "CloseError",
     "LocalProtocolError",
     "RemoteProtocolError",
+    "UnsupportedProtocol",
 ]
 __version__ = "0.9.1"

@@ -2,7 +2,7 @@ from ssl import SSLContext
 from typing import Iterator, Callable, Dict, List, Optional, Set, Tuple
 
 from .._backends.auto import SyncLock, SyncSemaphore, SyncBackend
-from .._exceptions import PoolTimeout, LocalProtocolError
+from .._exceptions import PoolTimeout, LocalProtocolError, UnsupportedProtocol
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, origin_to_url_string, url_to_origin
@@ -124,9 +124,10 @@ class SyncConnectionPool(SyncHTTPTransport):
         stream: SyncByteStream = None,
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
-        assert url[0] in (b"http", b"https")
-
-        if not url[1]:
+        if url[0] not in (b"http", b"https"):
+            scheme = url[0].decode("latin-1")
+            raise UnsupportedProtocol(f"Unsupported URL protocol {scheme!r}")
+         if not url[1]:
             raise LocalProtocolError("Missing hostname in URL.")
 
         origin = url_to_origin(url)
