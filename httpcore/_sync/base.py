@@ -46,27 +46,39 @@ class SyncByteStream:
         iterator: Iterator[bytes] = None,
         close_func: Callable = None,
     ) -> None:
+        #  We're doing a bit of a funny dance here to ensure that type checkers
+        # don't make any assumptions about the attribute interfaces that
+        # SyncByteStream subclasses should support.
+
+        # This allows us to include a simple base-case implementation on the
+        # class itself, wile still treating subclasses as plain
+        # "implement this interface" cases.
         assert iterator is None or not content
-        self.content = content
-        self.iterator = iterator
-        self.close_func = close_func
+        setattr(self, "content", content)
+        setattr(self, "iterator", iterator)
+        setattr(self, "close_func", close_func)
 
     def __iter__(self) -> Iterator[bytes]:
         """
         Yield bytes representing the request or response body.
         """
-        if self.iterator is None:
-            yield self.content
+        content = getattr(self, "content", b"")
+        iterator = getattr(self, "iterator", None)
+
+        if iterator is None:
+            yield content
         else:
-            for chunk in self.iterator:
+            for chunk in iterator:
                 yield chunk
 
     def close(self) -> None:
         """
         Must be called by the client to indicate that the stream has been closed.
         """
-        if self.close_func is not None:
-            self.close_func()
+        close_func = getattr(self, "close_func")
+
+        if close_func is not None:
+            close_func()
 
 
 class SyncHTTPTransport:

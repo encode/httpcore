@@ -46,27 +46,39 @@ class AsyncByteStream:
         aiterator: AsyncIterator[bytes] = None,
         aclose_func: Callable = None,
     ) -> None:
+        #  We're doing a bit of a funny dance here to ensure that type checkers
+        # don't make any assumptions about the attribute interfaces that
+        # AsyncByteStream subclasses should support.
+
+        # This allows us to include a simple base-case implementation on the
+        # class itself, wile still treating subclasses as plain
+        # "implement this interface" cases.
         assert aiterator is None or not content
-        self.content = content
-        self.aiterator = aiterator
-        self.aclose_func = aclose_func
+        setattr(self, "content", content)
+        setattr(self, "aiterator", aiterator)
+        setattr(self, "aclose_func", aclose_func)
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
         """
         Yield bytes representing the request or response body.
         """
-        if self.aiterator is None:
-            yield self.content
+        content = getattr(self, "content", b"")
+        aiterator = getattr(self, "aiterator", None)
+
+        if aiterator is None:
+            yield content
         else:
-            async for chunk in self.aiterator:
+            async for chunk in aiterator:
                 yield chunk
 
     async def aclose(self) -> None:
         """
         Must be called by the client to indicate that the stream has been closed.
         """
-        if self.aclose_func is not None:
-            await self.aclose_func()
+        aclose_func = getattr(self, "aclose_func")
+
+        if aclose_func is not None:
+            await aclose_func()
 
 
 class AsyncHTTPTransport:
