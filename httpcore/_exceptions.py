@@ -13,7 +13,19 @@ def map_exceptions(map: Dict[Type[Exception], Type[Exception]]) -> Iterator[None
         raise
 
 
+class UnsupportedProtocol(Exception):
+    pass
+
+
 class ProtocolError(Exception):
+    pass
+
+
+class RemoteProtocolError(ProtocolError):
+    pass
+
+
+class LocalProtocolError(ProtocolError):
     pass
 
 

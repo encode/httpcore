@@ -8,10 +8,13 @@ from ._exceptions import (
     NetworkError,
     PoolTimeout,
     ProtocolError,
+    RemoteProtocolError,
+    LocalProtocolError,
     ProxyError,
     ReadError,
     ReadTimeout,
     TimeoutException,
+    UnsupportedProtocol,
     WriteError,
     WriteTimeout,
 )
@@ -38,5 +41,8 @@ __all__ = [
     "ReadError",
     "WriteError",
     "CloseError",
+    "LocalProtocolError",
+    "RemoteProtocolError",
+    "UnsupportedProtocol",
 ]
 __version__ = "0.9.1"

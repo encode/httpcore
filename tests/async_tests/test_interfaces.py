@@ -1,9 +1,9 @@
 import ssl
-import typing
 
 import pytest
 
 import httpcore
+from httpcore._types import URL
 
 
 async def read_body(stream: httpcore.AsyncByteStream) -> bytes:
@@ -48,6 +48,16 @@ async def test_https_request() -> None:
         assert status_code == 200
         assert reason == b"OK"
         assert len(http._connections[url[:3]]) == 1  # type: ignore
+
+
+@pytest.mark.usefixtures("async_environment")
+async def test_request_unsupported_protocol() -> None:
+    async with httpcore.AsyncConnectionPool() as http:
+        method = b"GET"
+        url = (b"ftp", b"example.org", 443, b"/")
+        headers = [(b"host", b"example.org")]
+        with pytest.raises(httpcore.UnsupportedProtocol):
+            await http.request(method, url, headers)
 
 
 @pytest.mark.usefixtures("async_environment")
@@ -180,9 +190,7 @@ async def test_http_request_cannot_reuse_dropped_connection() -> None:
 
 @pytest.mark.parametrize("proxy_mode", ["DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY"])
 @pytest.mark.usefixtures("async_environment")
-async def test_http_proxy(
-    proxy_server: typing.Tuple[bytes, bytes, int], proxy_mode: str
-) -> None:
+async def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
     method = b"GET"
     url = (b"http", b"example.org", 80, b"/")
     headers = [(b"host", b"example.org")]
@@ -228,10 +236,7 @@ async def test_http_request_local_addr(local_addr: str) -> None:
 @pytest.mark.usefixtures("async_environment")
 @pytest.mark.parametrize("http2", [False, True])
 async def test_proxy_https_requests(
-    proxy_server: typing.Tuple[bytes, bytes, int],
-    ca_ssl_context: ssl.SSLContext,
-    proxy_mode: str,
-    http2: bool,
+    proxy_server: URL, ca_ssl_context: ssl.SSLContext, proxy_mode: str, http2: bool,
 ) -> None:
     method = b"GET"
     url = (b"https", b"example.org", 443, b"/")

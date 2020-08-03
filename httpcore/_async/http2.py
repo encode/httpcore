@@ -9,15 +9,11 @@ from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
 from .._backends.auto import AsyncLock, AsyncSemaphore, AsyncSocketStream, AutoBackend
-from .._exceptions import PoolTimeout, ProtocolError
+from .._exceptions import PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
-from .base import (
-    AsyncByteStream,
-    AsyncHTTPTransport,
-    ConnectionState,
-    NewConnectionRequired,
-)
+from .base import AsyncByteStream, ConnectionState, NewConnectionRequired
+from .http import AsyncBaseHTTPConnection
 
 logger = get_logger(__name__)
 
@@ -29,7 +25,7 @@ def get_reason_phrase(status_code: int) -> bytes:
         return b""
 
 
-class AsyncHTTP2Connection(AsyncHTTPTransport):
+class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
     READ_NUM_BYTES = 4096
     CONFIG = H2Configuration(validate_inbound_headers=False)
 
@@ -84,8 +80,13 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
             )
         return self._max_streams_semaphore
 
-    async def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
-        pass
+    async def start_tls(
+        self, hostname: bytes, timeout: TimeoutDict = None
+    ) -> AsyncSocketStream:
+        raise NotImplementedError("TLS upgrade not supported on HTTP/2 connections.")
+
+    def get_state(self) -> ConnectionState:
+        return self.state
 
     def mark_as_ready(self) -> None:
         if self.state == ConnectionState.IDLE:
@@ -214,7 +215,7 @@ class AsyncHTTP2Connection(AsyncHTTPTransport):
             logger.trace("receive_event stream_id=%r event=%s", event_stream_id, event)
 
             if hasattr(event, "error_code"):
-                raise ProtocolError(event)
+                raise RemoteProtocolError(event)
 
             if event_stream_id in self.events:
                 self.events[event_stream_id].append(event)

@@ -4,10 +4,11 @@ from typing import AsyncIterator, List, Tuple, Union
 import h11
 
 from .._backends.auto import AsyncSocketStream
-from .._exceptions import ProtocolError, map_exceptions
+from .._exceptions import RemoteProtocolError, LocalProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
-from .base import AsyncByteStream, AsyncHTTPTransport, ConnectionState
+from .base import AsyncByteStream, ConnectionState
+from .http import AsyncBaseHTTPConnection
 
 H11Event = Union[
     h11.Request,
@@ -21,7 +22,7 @@ H11Event = Union[
 logger = get_logger(__name__)
 
 
-class AsyncHTTP11Connection(AsyncHTTPTransport):
+class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
     READ_NUM_BYTES = 4096
 
     def __init__(
@@ -39,6 +40,9 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
 
     def info(self) -> str:
         return f"HTTP/1.1, {self.state.name}"
+
+    def get_state(self) -> ConnectionState:
+        return self.state
 
     def mark_as_ready(self) -> None:
         if self.state == ConnectionState.IDLE:
@@ -72,9 +76,12 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         )
         return (http_version, status_code, reason_phrase, headers, stream)
 
-    async def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
+    async def start_tls(
+        self, hostname: bytes, timeout: TimeoutDict = None
+    ) -> AsyncSocketStream:
         timeout = {} if timeout is None else timeout
         self.socket = await self.socket.start_tls(hostname, self.ssl_context, timeout)
+        return self.socket
 
     async def _send_request(
         self, method: bytes, url: URL, headers: Headers, timeout: TimeoutDict,
@@ -84,7 +91,8 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         """
         logger.trace("send_request method=%r url=%r headers=%s", method, url, headers)
         _scheme, _host, _port, target = url
-        event = h11.Request(method=method, target=target, headers=headers)
+        with map_exceptions({h11.LocalProtocolError: LocalProtocolError}):
+            event = h11.Request(method=method, target=target, headers=headers)
         await self._send_event(event, timeout)
 
     async def _send_request_body(
@@ -144,7 +152,7 @@ class AsyncHTTP11Connection(AsyncHTTPTransport):
         Read a single `h11` event, reading more data from the network if needed.
         """
         while True:
-            with map_exceptions({h11.RemoteProtocolError: ProtocolError}):
+            with map_exceptions({h11.RemoteProtocolError: RemoteProtocolError}):
                 event = self.h11_state.next_event()
 
             if event is h11.NEED_DATA:

@@ -5,10 +5,6 @@ from typing import AsyncIterator, Callable, List, Tuple, Type
 from .._types import URL, Headers, TimeoutDict
 
 
-async def empty() -> AsyncIterator:
-    yield b""
-
-
 class NewConnectionRequired(Exception):
     pass
 
@@ -45,17 +41,25 @@ class AsyncByteStream:
     """
 
     def __init__(
-        self, aiterator: AsyncIterator[bytes] = None, aclose_func: Callable = None,
+        self,
+        content: bytes = b"",
+        aiterator: AsyncIterator[bytes] = None,
+        aclose_func: Callable = None,
     ) -> None:
-        self.aiterator = empty() if aiterator is None else aiterator
+        assert aiterator is None or not content
+        self.content = content
+        self.aiterator = aiterator
         self.aclose_func = aclose_func
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
         """
         Yield bytes representing the request or response body.
         """
-        async for chunk in self.aiterator:
-            yield chunk
+        if self.aiterator is None:
+            yield self.content
+        else:
+            async for chunk in self.aiterator:
+                yield chunk
 
     async def aclose(self) -> None:
         """
