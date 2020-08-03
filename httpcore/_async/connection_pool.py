@@ -76,7 +76,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
     * **keepalive_expiry** - `Optional[float]` - The maximum time to allow
     before closing a keep-alive connection.
     * **http2** - `bool` - Enable HTTP/2 support.
-    * **local_addr** - `Optional[bytes]` - Local address to connect from
+    * **local_addr** - `Optional[bytes]` - Local address to connect from.
     """
 
     def __init__(
