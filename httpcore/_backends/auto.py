@@ -37,7 +37,7 @@ class AutoBackend(AsyncBackend):
         local_addr: Optional[bytes],
     ) -> AsyncSocketStream:
         return await self.backend.open_tcp_stream(
-            hostname, port, ssl_context, timeout, local_addr
+            hostname, port, ssl_context, timeout, local_addr=local_addr
         )
 
     def create_lock(self) -> AsyncLock:
