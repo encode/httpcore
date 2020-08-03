@@ -145,6 +145,8 @@ class TrioBackend(AsyncBackend):
         timeout: TimeoutDict,
         local_addr: Optional[bytes],
     ) -> AsyncSocketStream:
+        # trio doesn't currently support specifying the local address; it will
+        # as of 0.16.1.
         if local_addr:
             raise NotImplementedError()
         connect_timeout = none_as_inf(timeout.get("connect"))
