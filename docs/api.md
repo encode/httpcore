@@ -18,6 +18,15 @@ The `AsyncConnectionPool` class is a concrete implementation of `AsyncHTTPTransp
 ::: httpcore.AsyncConnectionPool
     :docstring:
 
+
+The `SimpleByteStream` and `AIteratorByteStream` classes are concrete implementations of `AsyncByteStream`.
+
+::: httpcore.SimpleByteStream
+    :docstring:
+
+::: httpcore.AIteratorByteStream
+    :docstring:
+
 ---
 
 ## Sync API Overview
@@ -36,4 +45,12 @@ interface which transport classes need to implement.
 The `SyncConnectionPool` class is a concrete implementation of `SyncHTTPTransport`.
 
 ::: httpcore.SyncConnectionPool
+    :docstring:
+
+The `SimpleByteStream` and `IteratorByteStream` classes are concrete implementations of `SyncByteStream`.
+
+::: httpcore.SimpleByteStream
+    :docstring:
+
+::: httpcore.IteratorByteStream
     :docstring:

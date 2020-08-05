@@ -4,6 +4,7 @@ import os
 import sys
 
 SUBS = [
+    ('AIteratorByteStream', 'IteratorByteStream'),
     ('AsyncIterator', 'Iterator'),
     ('AutoBackend', 'SyncBackend'),
     ('Async([A-Z][A-Za-z0-9_]*)', r'Sync\2'),
