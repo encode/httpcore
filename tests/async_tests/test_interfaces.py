@@ -212,11 +212,11 @@ async def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
         assert reason == b"OK"
 
 
-@pytest.mark.parametrize("local_addr", [b"0.0.0.0"])
+@pytest.mark.parametrize("local_address", [b"0.0.0.0"])
 @pytest.mark.asyncio
-# This doesn't run with trio, since trio doesn't support local_addr.
-async def test_http_request_local_addr(local_addr: str) -> None:
-    async with httpcore.AsyncConnectionPool(local_addr=local_addr) as http:
+# This doesn't run with trio, since trio doesn't support local_address.
+async def test_http_request_local_address(local_address: str) -> None:
+    async with httpcore.AsyncConnectionPool(local_address=local_address) as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]

@@ -34,10 +34,11 @@ class AutoBackend(AsyncBackend):
         port: int,
         ssl_context: Optional[SSLContext],
         timeout: TimeoutDict,
-        local_addr: Optional[bytes],
+        *,
+        local_address: Optional[str],
     ) -> AsyncSocketStream:
         return await self.backend.open_tcp_stream(
-            hostname, port, ssl_context, timeout, local_addr=local_addr
+            hostname, port, ssl_context, timeout, local_address=local_address
         )
 
     def create_lock(self) -> AsyncLock:
