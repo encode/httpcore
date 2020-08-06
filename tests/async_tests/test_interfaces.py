@@ -286,12 +286,12 @@ async def test_connection_pool_get_connection_info(http2, expected) -> None:
     reason="Unix Domain Sockets only exist on Unix",
 )
 @pytest.mark.usefixtures("async_environment")
-async def test_connection_pool_unix_domain_socket(uds_server) -> None:
+async def test_http_request_unix_domain_socket(uds_server) -> None:
     uds = uds_server.config.uds
     assert uds is not None
     async with httpcore.AsyncConnectionPool(uds=uds) as http:
         method = b"GET"
-        url = (b"http", b"localhost", None, b"/info")
+        url = (b"http", b"localhost", None, b"/")
         headers = [(b"host", b"localhost")]
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers
@@ -299,4 +299,5 @@ async def test_connection_pool_unix_domain_socket(uds_server) -> None:
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        _ = await read_body(stream)
+        body = await read_body(stream)
+        assert body == b"Hello, world!"

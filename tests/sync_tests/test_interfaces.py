@@ -286,12 +286,12 @@ def test_connection_pool_get_connection_info(http2, expected) -> None:
     reason="Unix Domain Sockets only exist on Unix",
 )
 
-def test_connection_pool_unix_domain_socket(uds_server) -> None:
+def test_http_request_unix_domain_socket(uds_server) -> None:
     uds = uds_server.config.uds
     assert uds is not None
     with httpcore.SyncConnectionPool(uds=uds) as http:
         method = b"GET"
-        url = (b"http", b"localhost", None, b"/info")
+        url = (b"http", b"localhost", None, b"/")
         headers = [(b"host", b"localhost")]
         http_version, status_code, reason, headers, stream = http.request(
             method, url, headers
@@ -299,4 +299,5 @@ def test_connection_pool_unix_domain_socket(uds_server) -> None:
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
-        _ = read_body(stream)
+        body = read_body(stream)
+        assert body == b"Hello, world!"
