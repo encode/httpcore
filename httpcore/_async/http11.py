@@ -4,7 +4,7 @@ from typing import AsyncIterator, List, Tuple, Union
 import h11
 
 from .._backends.auto import AsyncSocketStream
-from .._bytestreams import SimpleByteStream, AIteratorByteStream
+from .._bytestreams import SimpleByteStream, AsyncIteratorByteStream
 from .._exceptions import RemoteProtocolError, LocalProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
@@ -71,7 +71,7 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
             reason_phrase,
             headers,
         ) = await self._receive_response(timeout)
-        response_stream = AIteratorByteStream(
+        response_stream = AsyncIteratorByteStream(
             aiterator=self._receive_response_data(timeout),
             aclose_func=self._response_closed,
         )

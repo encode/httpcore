@@ -9,7 +9,7 @@ from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
 from .._backends.auto import AsyncLock, AsyncSemaphore, AsyncSocketStream, AutoBackend
-from .._bytestreams import SimpleByteStream, AIteratorByteStream
+from .._bytestreams import SimpleByteStream, AsyncIteratorByteStream
 from .._exceptions import PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
@@ -299,7 +299,7 @@ class AsyncHTTP2Stream:
         # Receive the response.
         status_code, headers = await self.receive_response(timeout)
         reason_phrase = get_reason_phrase(status_code)
-        response_stream = AIteratorByteStream(
+        response_stream = AsyncIteratorByteStream(
             aiterator=self.body_iter(timeout), aclose_func=self._response_closed
         )
 

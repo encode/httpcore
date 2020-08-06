@@ -49,7 +49,7 @@ class IteratorByteStream(SyncByteStream):
             self._close_func()
 
 
-class AIteratorByteStream(AsyncByteStream):
+class AsyncIteratorByteStream(AsyncByteStream):
     """
     A concrete implementation for async byte streams.
     Handles an async byte iterator as the content of the stream.
@@ -58,7 +58,7 @@ class AIteratorByteStream(AsyncByteStream):
     async def generate_content():
         ...
 
-    stream = httpcore.AIteratorByteStream(generate_content())
+    stream = httpcore.AsyncIteratorByteStream(generate_content())
     ```
     """
 
