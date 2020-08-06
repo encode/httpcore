@@ -212,11 +212,10 @@ def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
         assert reason == b"OK"
 
 
-@pytest.mark.parametrize("local_address", [b"0.0.0.0"])
 
 # This doesn't run with trio, since trio doesn't support local_address.
-def test_http_request_local_address(local_address: str) -> None:
-    with httpcore.SyncConnectionPool(local_address=local_address) as http:
+def test_http_request_local_address() -> None:
+    with httpcore.SyncConnectionPool(local_address="0.0.0.0") as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]

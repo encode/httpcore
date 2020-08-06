@@ -230,12 +230,13 @@ class AsyncioBackend(AsyncBackend):
     ) -> SocketStream:
         host = hostname.decode("ascii")
         connect_timeout = timeout.get("connect")
+        local_addr = None if local_address is None else (local_address, 0)
+
         exc_map = {asyncio.TimeoutError: ConnectTimeout, OSError: ConnectError}
         with map_exceptions(exc_map):
-            local_addrport = None if local_address is None else (local_address, 0)
             stream_reader, stream_writer = await asyncio.wait_for(
                 asyncio.open_connection(
-                    host, port, ssl=ssl_context, local_addr=local_addrport
+                    host, port, ssl=ssl_context, local_addr=local_addr
                 ),
                 connect_timeout,
             )

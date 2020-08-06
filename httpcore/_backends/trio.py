@@ -147,6 +147,10 @@ class TrioBackend(AsyncBackend):
         local_address: Optional[str],
     ) -> AsyncSocketStream:
         connect_timeout = none_as_inf(timeout.get("connect"))
+        # Trio will support local_address from 0.16.1 onwards.
+        # We only include the keyword argument if a local_address
+        #  argument has been passed.
+        kwargs = {} if local_address is not None else {"local_address": local_address}
         exc_map = {
             trio.TooSlowError: ConnectTimeout,
             trio.BrokenResourceError: ConnectError,
@@ -154,14 +158,9 @@ class TrioBackend(AsyncBackend):
 
         with map_exceptions(exc_map):
             with trio.fail_after(connect_timeout):
-                kwargs: dict = {}
-                if local_address is not None:
-                    # Trio will support local_address from 0.16.1 onwards.
-                    # We only include the keyword argument if a local_address
-                    # argument has been passed.
-                    kwargs = {"local_address": local_address}
-
-                stream: trio.abc.Stream = await trio.open_tcp_stream(hostname, port, **kwargs)
+                stream: trio.abc.Stream = await trio.open_tcp_stream(
+                    hostname, port, **kwargs
+                )
 
                 if ssl_context is not None:
                     stream = trio.SSLStream(
