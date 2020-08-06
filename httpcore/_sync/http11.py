@@ -4,7 +4,7 @@ from typing import Iterator, List, Tuple, Union
 import h11
 
 from .._backends.auto import SyncSocketStream
-from .._bytestreams import SimpleByteStream, IteratorByteStream
+from .._bytestreams import PlainByteStream, IteratorByteStream
 from .._exceptions import RemoteProtocolError, LocalProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
@@ -58,7 +58,7 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         headers = [] if headers is None else headers
-        stream = SimpleByteStream(b"") if stream is None else stream
+        stream = PlainByteStream(b"") if stream is None else stream
         timeout = {} if timeout is None else timeout
 
         self.state = ConnectionState.ACTIVE

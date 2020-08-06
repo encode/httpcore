@@ -9,7 +9,7 @@ from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
 from .._backends.auto import SyncLock, SyncSemaphore, SyncSocketStream, SyncBackend
-from .._bytestreams import SimpleByteStream, IteratorByteStream
+from .._bytestreams import PlainByteStream, IteratorByteStream
 from .._exceptions import PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
@@ -283,7 +283,7 @@ class SyncHTTP2Stream:
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
         headers = [] if headers is None else [(k.lower(), v) for (k, v) in headers]
-        stream = SimpleByteStream(b"") if stream is None else stream
+        stream = PlainByteStream(b"") if stream is None else stream
         timeout = {} if timeout is None else timeout
 
         # Send the request.

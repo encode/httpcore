@@ -1,7 +1,7 @@
 from ._async.base import AsyncByteStream, AsyncHTTPTransport
 from ._async.connection_pool import AsyncConnectionPool
 from ._async.http_proxy import AsyncHTTPProxy
-from ._bytestreams import SimpleByteStream, AsyncIteratorByteStream, IteratorByteStream
+from ._bytestreams import PlainByteStream, AsyncIteratorByteStream, IteratorByteStream
 from ._exceptions import (
     CloseError,
     ConnectError,
@@ -47,6 +47,6 @@ __all__ = [
     "UnsupportedProtocol",
     "AsyncIteratorByteStream",
     "IteratorByteStream",
-    "SimpleByteStream",
+    "PlainByteStream",
 ]
 __version__ = "0.9.1"
