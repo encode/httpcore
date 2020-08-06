@@ -1,4 +1,6 @@
 import ssl
+import platform
+from pathlib import Path
 
 import pytest
 
@@ -259,3 +261,24 @@ def test_connection_pool_get_connection_info(http2, expected) -> None:
             _ = http.request(method, url, headers)
         stats = http.get_connection_info()
         assert stats == {"https://example.org": expected}
+
+
+@pytest.mark.skipif(
+    platform.system() not in ("Linux", "Darwin"),
+    reason="Unix Domain Sockets only exist on Unix",
+)
+
+def test_connection_pool_unix_domain_socket(uds_server) -> None:
+    uds = uds_server.config.uds
+    assert uds is not None
+    with httpcore.SyncConnectionPool(uds=uds) as http:
+        method = b"GET"
+        url = (b"http", b"localhost", None, b"/info")
+        headers = [(b"host", b"localhost")]
+        http_version, status_code, reason, headers, stream = http.request(
+            method, url, headers
+        )
+        assert http_version == b"HTTP/1.1"
+        assert status_code == 200
+        assert reason == b"OK"
+        _ = read_body(stream)

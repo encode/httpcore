@@ -20,11 +20,13 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         self,
         origin: Origin,
         http2: bool = False,
+        uds: str = None,
         ssl_context: SSLContext = None,
         socket: AsyncSocketStream = None,
     ):
         self.origin = origin
         self.http2 = http2
+        self.uds = uds
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
         self.socket = socket
 
@@ -96,9 +98,14 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         timeout = {} if timeout is None else timeout
         ssl_context = self.ssl_context if scheme == b"https" else None
         try:
-            return await self.backend.open_tcp_stream(
-                hostname, port, ssl_context, timeout
-            )
+            if self.uds is None:
+                return await self.backend.open_tcp_stream(
+                    hostname, port, ssl_context, timeout
+                )
+            else:
+                return await self.backend.open_uds_stream(
+                    self.uds, hostname, ssl_context, timeout
+                )
         except Exception:
             self.connect_failed = True
             raise

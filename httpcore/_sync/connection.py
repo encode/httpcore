@@ -20,11 +20,13 @@ class SyncHTTPConnection(SyncHTTPTransport):
         self,
         origin: Origin,
         http2: bool = False,
+        uds: str = None,
         ssl_context: SSLContext = None,
         socket: SyncSocketStream = None,
     ):
         self.origin = origin
         self.http2 = http2
+        self.uds = uds
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
         self.socket = socket
 
@@ -96,9 +98,14 @@ class SyncHTTPConnection(SyncHTTPTransport):
         timeout = {} if timeout is None else timeout
         ssl_context = self.ssl_context if scheme == b"https" else None
         try:
-            return self.backend.open_tcp_stream(
-                hostname, port, ssl_context, timeout
-            )
+            if self.uds is None:
+                return self.backend.open_tcp_stream(
+                    hostname, port, ssl_context, timeout
+                )
+            else:
+                return self.backend.open_uds_stream(
+                    self.uds, hostname, ssl_context, timeout
+                )
         except Exception:
             self.connect_failed = True
             raise

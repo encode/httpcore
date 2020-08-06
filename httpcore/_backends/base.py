@@ -79,6 +79,15 @@ class AsyncBackend:
     ) -> AsyncSocketStream:
         raise NotImplementedError()  # pragma: no cover
 
+    async def open_uds_stream(
+        self,
+        path: str,
+        hostname: bytes,
+        ssl_context: Optional[SSLContext],
+        timeout: TimeoutDict,
+    ) -> AsyncSocketStream:
+        raise NotImplementedError()  # pragma: no cover
+
     def create_lock(self) -> AsyncLock:
         raise NotImplementedError()  # pragma: no cover
 
