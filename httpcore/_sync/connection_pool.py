@@ -76,6 +76,7 @@ class SyncConnectionPool(SyncHTTPTransport):
     * **keepalive_expiry** - `Optional[float]` - The maximum time to allow
     before closing a keep-alive connection.
     * **http2** - `bool` - Enable HTTP/2 support.
+    * **local_address** - `Optional[str]` - Local address to connect from.
     """
 
     def __init__(
@@ -85,12 +86,14 @@ class SyncConnectionPool(SyncHTTPTransport):
         max_keepalive: int = None,
         keepalive_expiry: float = None,
         http2: bool = False,
+        local_address: str = None,
     ):
         self._ssl_context = SSLContext() if ssl_context is None else ssl_context
         self._max_connections = max_connections
         self._max_keepalive = max_keepalive
         self._keepalive_expiry = keepalive_expiry
         self._http2 = http2
+        self._local_address = local_address
         self._connections: Dict[Origin, Set[SyncHTTPConnection]] = {}
         self._thread_lock = ThreadLock()
         self._backend = SyncBackend()
@@ -146,7 +149,10 @@ class SyncConnectionPool(SyncHTTPTransport):
 
                 if connection is None:
                     connection = SyncHTTPConnection(
-                        origin=origin, http2=self._http2, ssl_context=self._ssl_context,
+                        origin=origin,
+                        http2=self._http2,
+                        ssl_context=self._ssl_context,
+                        local_address=self._local_address,
                     )
                     logger.trace("created connection=%r", connection)
                     self._add_to_pool(connection, timeout=timeout)
