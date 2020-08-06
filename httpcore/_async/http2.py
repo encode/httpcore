@@ -9,6 +9,7 @@ from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
 from .._backends.auto import AsyncLock, AsyncSemaphore, AsyncSocketStream, AutoBackend
+from .._bytestreams import PlainByteStream, AsyncIteratorByteStream
 from .._exceptions import PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
@@ -26,7 +27,7 @@ def get_reason_phrase(status_code: int) -> bytes:
 
 
 class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
-    READ_NUM_BYTES = 4096
+    READ_NUM_BYTES = 64 * 1024
     CONFIG = H2Configuration(validate_inbound_headers=False)
 
     def __init__(
@@ -282,7 +283,7 @@ class AsyncHTTP2Stream:
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         headers = [] if headers is None else [(k.lower(), v) for (k, v) in headers]
-        stream = AsyncByteStream() if stream is None else stream
+        stream = PlainByteStream(b"") if stream is None else stream
         timeout = {} if timeout is None else timeout
 
         # Send the request.
@@ -298,11 +299,11 @@ class AsyncHTTP2Stream:
         # Receive the response.
         status_code, headers = await self.receive_response(timeout)
         reason_phrase = get_reason_phrase(status_code)
-        stream = AsyncByteStream(
+        response_stream = AsyncIteratorByteStream(
             aiterator=self.body_iter(timeout), aclose_func=self._response_closed
         )
 
-        return (b"HTTP/2", status_code, reason_phrase, headers, stream)
+        return (b"HTTP/2", status_code, reason_phrase, headers, response_stream)
 
     async def send_headers(
         self,

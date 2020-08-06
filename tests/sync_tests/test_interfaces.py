@@ -214,6 +214,24 @@ def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
         assert reason == b"OK"
 
 
+
+# This doesn't run with trio, since trio doesn't support local_address.
+def test_http_request_local_address() -> None:
+    with httpcore.SyncConnectionPool(local_address="0.0.0.0") as http:
+        method = b"GET"
+        url = (b"http", b"example.org", 80, b"/")
+        headers = [(b"host", b"example.org")]
+        http_version, status_code, reason, headers, stream = http.request(
+            method, url, headers
+        )
+        body = read_body(stream)
+
+        assert http_version == b"HTTP/1.1"
+        assert status_code == 200
+        assert reason == b"OK"
+        assert len(http._connections[url[:3]]) == 1  # type: ignore
+
+
 # mitmproxy does not support forwarding HTTPS requests
 @pytest.mark.parametrize("proxy_mode", ["DEFAULT", "TUNNEL_ONLY"])
 

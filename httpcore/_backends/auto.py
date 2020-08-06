@@ -34,8 +34,12 @@ class AutoBackend(AsyncBackend):
         port: int,
         ssl_context: Optional[SSLContext],
         timeout: TimeoutDict,
+        *,
+        local_address: Optional[str],
     ) -> AsyncSocketStream:
-        return await self.backend.open_tcp_stream(hostname, port, ssl_context, timeout)
+        return await self.backend.open_tcp_stream(
+            hostname, port, ssl_context, timeout, local_address=local_address
+        )
 
     async def open_uds_stream(
         self,
