@@ -144,8 +144,7 @@ class SyncConnectionPool(SyncHTTPTransport):
 
         origin = url_to_origin(url)
 
-        if self._keepalive_expiry is not None:
-            self._keepalive_sweep()
+        self._keepalive_sweep()
 
         connection: Optional[SyncHTTPConnection] = None
         while connection is None:
@@ -262,13 +261,14 @@ class SyncConnectionPool(SyncHTTPTransport):
         """
         Remove any IDLE connections that have expired past their keep-alive time.
         """
-        assert self._keepalive_expiry is not None
+        if self._keepalive_expiry is None:
+            return
 
         now = self._backend.time()
         if now < self._next_keepalive_check:
             return
 
-        self._next_keepalive_check = now + 1.0
+        self._next_keepalive_check = now + min(1.0, self._keepalive_expiry)
         connections_to_close = set()
 
         for connection in self._get_all_connections():
@@ -325,6 +325,8 @@ class SyncConnectionPool(SyncHTTPTransport):
         """
         Returns a dict of origin URLs to a list of summary strings for each connection.
         """
+        self._keepalive_sweep()
+
         stats = {}
         for origin, connections in self._connections.items():
             stats[origin_to_url_string(origin)] = [

@@ -261,19 +261,52 @@ async def test_proxy_https_requests(
 
 
 @pytest.mark.parametrize(
-    "http2,expected",
+    "http2,keepalive_expiry,expected_during_active,expected_during_idle",
     [
-        (False, ["HTTP/1.1, ACTIVE", "HTTP/1.1, ACTIVE"]),
-        (True, ["HTTP/2, ACTIVE, 2 streams"]),
+        (
+            False,
+            60.0,
+            {"https://example.org": ["HTTP/1.1, ACTIVE", "HTTP/1.1, ACTIVE"]},
+            {"https://example.org": ["HTTP/1.1, IDLE", "HTTP/1.1, IDLE"]},
+        ),
+        (
+            True,
+            60.0,
+            {"https://example.org": ["HTTP/2, ACTIVE, 2 streams"]},
+            {"https://example.org": ["HTTP/2, IDLE, 0 streams"]},
+        ),
+        (
+            False,
+            0.0,
+            {"https://example.org": ["HTTP/1.1, ACTIVE", "HTTP/1.1, ACTIVE"]},
+            {},
+        ),
+        (True, 0.0, {"https://example.org": ["HTTP/2, ACTIVE, 2 streams"]}, {},),
     ],
 )
 @pytest.mark.usefixtures("async_environment")
-async def test_connection_pool_get_connection_info(http2, expected) -> None:
-    async with httpcore.AsyncConnectionPool(http2=http2) as http:
+async def test_connection_pool_get_connection_info(
+    http2, keepalive_expiry, expected_during_active, expected_during_idle
+) -> None:
+    async with httpcore.AsyncConnectionPool(
+        http2=http2, keepalive_expiry=keepalive_expiry
+    ) as http:
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
-        for _ in range(2):
-            _ = await http.request(method, url, headers)
-        stats = http.get_connection_info()
-        assert stats == {"https://example.org": expected}
+
+        _, _, _, _, stream_1 = await http.request(method, url, headers)
+        _, _, _, _, stream_2 = await http.request(method, url, headers)
+
+        try:
+            stats = await http.get_connection_info()
+            assert stats == expected_during_active
+        finally:
+            await read_body(stream_1)
+            await read_body(stream_2)
+
+        stats = await http.get_connection_info()
+        assert stats == expected_during_idle
+
+    stats = await http.get_connection_info()
+    assert stats == {}
