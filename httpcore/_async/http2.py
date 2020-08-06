@@ -26,7 +26,7 @@ def get_reason_phrase(status_code: int) -> bytes:
 
 
 class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
-    READ_NUM_BYTES = 4096
+    READ_NUM_BYTES = 64 * 1024
     CONFIG = H2Configuration(validate_inbound_headers=False)
 
     def __init__(
