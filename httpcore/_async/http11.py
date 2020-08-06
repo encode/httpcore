@@ -4,6 +4,7 @@ from typing import AsyncIterator, List, Tuple, Union
 import h11
 
 from .._backends.auto import AsyncSocketStream
+from .._bytestreams import PlainByteStream, AsyncIteratorByteStream
 from .._exceptions import RemoteProtocolError, LocalProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
@@ -57,7 +58,7 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         timeout: TimeoutDict = None,
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
         headers = [] if headers is None else headers
-        stream = AsyncByteStream() if stream is None else stream
+        stream = PlainByteStream(b"") if stream is None else stream
         timeout = {} if timeout is None else timeout
 
         self.state = ConnectionState.ACTIVE
@@ -70,11 +71,11 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
             reason_phrase,
             headers,
         ) = await self._receive_response(timeout)
-        stream = AsyncByteStream(
+        response_stream = AsyncIteratorByteStream(
             aiterator=self._receive_response_data(timeout),
             aclose_func=self._response_closed,
         )
-        return (http_version, status_code, reason_phrase, headers, stream)
+        return (http_version, status_code, reason_phrase, headers, response_stream)
 
     async def start_tls(
         self, hostname: bytes, timeout: TimeoutDict = None

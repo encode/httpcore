@@ -1,6 +1,6 @@
 import enum
 from types import TracebackType
-from typing import AsyncIterator, Callable, List, Tuple, Type
+from typing import AsyncIterator, List, Tuple, Type
 
 from .._types import URL, Headers, TimeoutDict
 
@@ -37,36 +37,20 @@ class AsyncByteStream:
     The base interface for request and response bodies.
 
     Concrete implementations should subclass this class, and implement
-    the `\\__aiter__` method, and optionally the `close` method.
+    the `\\__aiter__` method, and optionally the `aclose` method.
     """
-
-    def __init__(
-        self,
-        content: bytes = b"",
-        aiterator: AsyncIterator[bytes] = None,
-        aclose_func: Callable = None,
-    ) -> None:
-        assert aiterator is None or not content
-        self.content = content
-        self.aiterator = aiterator
-        self.aclose_func = aclose_func
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
         """
         Yield bytes representing the request or response body.
         """
-        if self.aiterator is None:
-            yield self.content
-        else:
-            async for chunk in self.aiterator:
-                yield chunk
+        yield b""  # pragma: nocover
 
     async def aclose(self) -> None:
         """
         Must be called by the client to indicate that the stream has been closed.
         """
-        if self.aclose_func is not None:
-            await self.aclose_func()
+        pass  # pragma: nocover
 
 
 class AsyncHTTPTransport:
