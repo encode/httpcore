@@ -22,11 +22,13 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         http2: bool = False,
         ssl_context: SSLContext = None,
         socket: AsyncSocketStream = None,
+        local_address: str = None,
     ):
         self.origin = origin
         self.http2 = http2
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
         self.socket = socket
+        self.local_address = local_address
 
         if self.http2:
             self.ssl_context.set_alpn_protocols(["http/1.1", "h2"])
@@ -97,7 +99,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         ssl_context = self.ssl_context if scheme == b"https" else None
         try:
             return await self.backend.open_tcp_stream(
-                hostname, port, ssl_context, timeout
+                hostname, port, ssl_context, timeout, local_address=self.local_address
             )
         except Exception:
             self.connect_failed = True

@@ -76,6 +76,8 @@ class AsyncBackend:
         port: int,
         ssl_context: Optional[SSLContext],
         timeout: TimeoutDict,
+        *,
+        local_address: Optional[str],
     ) -> AsyncSocketStream:
         raise NotImplementedError()  # pragma: no cover
 
