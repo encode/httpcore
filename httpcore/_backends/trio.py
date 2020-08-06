@@ -150,7 +150,7 @@ class TrioBackend(AsyncBackend):
         # Trio will support local_address from 0.16.1 onwards.
         # We only include the keyword argument if a local_address
         #  argument has been passed.
-        kwargs = {} if local_address is not None else {"local_address": local_address}
+        kwargs: dict = {} if local_address is None else {"local_address": local_address}
         exc_map = {
             trio.TooSlowError: ConnectTimeout,
             trio.BrokenResourceError: ConnectError,
