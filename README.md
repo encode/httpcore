@@ -23,6 +23,20 @@ Some things HTTP Core does do:
 * Automatic connection pooling.
 * HTTP(S) proxy support.
 
+## Installation
+
+For HTTP/1.1 only support, install with...
+
+```shell
+$ pip install httpcore
+```
+
+For HTTP/1.1 and HTTP/2 support, install with...
+
+```shell
+$ pip install httpcore[http2]
+```
+
 ## Quickstart
 
 Here's an example of making an HTTP GET request using `httpcore`...

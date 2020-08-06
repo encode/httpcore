@@ -99,6 +99,15 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         self._backend = AutoBackend()
         self._next_keepalive_check = 0.0
 
+        if http2:
+            try:
+                import h2
+            except ImportError:
+                raise ImportError(
+                    "Attempted to use http2=True, but the 'h2' "
+                    "package is not installed. Use 'pip install httpcore[http2]'."
+                )
+
     @property
     def _connection_semaphore(self) -> AsyncSemaphore:
         # We do this lazily, to make sure backend autodetection always
