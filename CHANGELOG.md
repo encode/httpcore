@@ -6,11 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## 0.10.0
 
-The most notable change in the 0.10.0 release is that HTTP/2 support is now
-fully optional.
+The most notable change in the 0.10.0 release is that HTTP/2 support is now fully optional.
 
-Use either `pip install httpcore` for HTTP/1.1 support only, or
-`pip install httpcore[http2]` for HTTP/1.1 and HTTP/2 support.
+Use either `pip install httpcore` for HTTP/1.1 support only, or `pip install httpcore[http2]` for HTTP/1.1 and HTTP/2 support.
 
 ### Added
 
