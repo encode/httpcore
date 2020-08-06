@@ -19,12 +19,12 @@ The `AsyncConnectionPool` class is a concrete implementation of `AsyncHTTPTransp
     :docstring:
 
 
-The `SimpleByteStream` and `AIteratorByteStream` classes are concrete implementations of `AsyncByteStream`.
+The `SimpleByteStream` and `AsyncIteratorByteStream` classes are concrete implementations of `AsyncByteStream`.
 
 ::: httpcore.SimpleByteStream
     :docstring:
 
-::: httpcore.AIteratorByteStream
+::: httpcore.AsyncIteratorByteStream
     :docstring:
 
 ---
