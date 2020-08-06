@@ -24,7 +24,7 @@ logger = get_logger(__name__)
 
 
 class SyncHTTP11Connection(SyncBaseHTTPConnection):
-    READ_NUM_BYTES = 4096
+    READ_NUM_BYTES = 64 * 1024
 
     def __init__(
         self, socket: SyncSocketStream, ssl_context: SSLContext = None,
