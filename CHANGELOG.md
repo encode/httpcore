@@ -16,10 +16,9 @@ Use either `pip install httpcore` for HTTP/1.1 support only, or
 
 - HTTP/2 support becomes optional. (Pull #121, #130)
 - Add `local_address=...` support. (Pull #100, #134)
-- Add `SimpleByteStream`, `IteratorByteStream`, `AsyncIteratorByteStream`. The `AsyncByteSteam` and `SyncByteStream` classes are now pure interface classes. (#133)
+- Add `PlainByteStream`, `IteratorByteStream`, `AsyncIteratorByteStream`. The `AsyncByteSteam` and `SyncByteStream` classes are now pure interface classes. (#133)
 - Add `LocalProtocolError`, `RemoteProtocolError` exceptions. (Pull #129)
 - Add `UnsupportedProtocol` exception. (Pull #128)
-- Support simple non-streaming byte content with `AsyncByteStream` and `SyncByteStream`. (#127)
 - Add `.get_connection_info()` method. (Pull #102)
 - Add better TRACE logs. (Pull #101)
 
