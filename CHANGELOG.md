@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.10.0 (August 7th, 2020)
+
+The most notable change in the 0.10.0 release is that HTTP/2 support is now fully optional.
+
+Use either `pip install httpcore` for HTTP/1.1 support only, or `pip install httpcore[http2]` for HTTP/1.1 and HTTP/2 support.
+
+### Added
+
+- HTTP/2 support becomes optional. (Pull #121, #130)
+- Add `local_address=...` support. (Pull #100, #134)
+- Add `PlainByteStream`, `IteratorByteStream`, `AsyncIteratorByteStream`. The `AsyncByteSteam` and `SyncByteStream` classes are now pure interface classes. (#133)
+- Add `LocalProtocolError`, `RemoteProtocolError` exceptions. (Pull #129)
+- Add `UnsupportedProtocol` exception. (Pull #128)
+- Add `.get_connection_info()` method. (Pull #102, #137)
+- Add better TRACE logs. (Pull #101)
+
+### Changed
+
+- `max_keepalive` is deprecated in favour of `max_keepalive_connections`. (Pull #140)
+
+### Fixed
+
+- Improve handling of server disconnects. (Pull #112)
+
 ## 0.9.1 (May 27th, 2020)
 
 ### Fixed
