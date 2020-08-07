@@ -1,5 +1,6 @@
 from ssl import SSLContext
 from typing import Iterator, Callable, Dict, List, Optional, Set, Tuple
+import warnings
 
 from .._backends.auto import SyncLock, SyncSemaphore, SyncBackend
 from .._exceptions import PoolTimeout, LocalProtocolError, UnsupportedProtocol
@@ -71,8 +72,8 @@ class SyncConnectionPool(SyncHTTPTransport):
     verifying connections.
     * **max_connections** - `Optional[int]` - The maximum number of concurrent
     connections to allow.
-    * **max_keepalive** - `Optional[int]` - The maximum number of connections
-    to allow before closing keep-alive connections.
+    * **max_keepalive_connections** - `Optional[int]` - The maximum number of
+    connections to allow before closing keep-alive connections.
     * **keepalive_expiry** - `Optional[float]` - The maximum time to allow
     before closing a keep-alive connection.
     * **http2** - `bool` - Enable HTTP/2 support.
@@ -83,11 +84,19 @@ class SyncConnectionPool(SyncHTTPTransport):
         self,
         ssl_context: SSLContext = None,
         max_connections: int = None,
-        max_keepalive: int = None,
+        max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
         http2: bool = False,
         local_address: str = None,
+        max_keepalive: int = None,
     ):
+        if max_keepalive is not None:
+            warnings.warn(
+                "'max_keepalive' is deprecated. Use 'max_keepalive_connections'.",
+                DeprecationWarning,
+            )
+            max_keepalive_connections = max_keepalive
+
         self._ssl_context = SSLContext() if ssl_context is None else ssl_context
         self._max_connections = max_connections
         self._max_keepalive = max_keepalive

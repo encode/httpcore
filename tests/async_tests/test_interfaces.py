@@ -195,12 +195,8 @@ async def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
     url = (b"http", b"example.org", 80, b"/")
     headers = [(b"host", b"example.org")]
     max_connections = 1
-    max_keepalive = 2
     async with httpcore.AsyncHTTPProxy(
-        proxy_server,
-        proxy_mode=proxy_mode,
-        max_connections=max_connections,
-        max_keepalive=max_keepalive,
+        proxy_server, proxy_mode=proxy_mode, max_connections=max_connections,
     ) as http:
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers
@@ -241,13 +237,11 @@ async def test_proxy_https_requests(
     url = (b"https", b"example.org", 443, b"/")
     headers = [(b"host", b"example.org")]
     max_connections = 1
-    max_keepalive = 2
     async with httpcore.AsyncHTTPProxy(
         proxy_server,
         proxy_mode=proxy_mode,
         ssl_context=ca_ssl_context,
         max_connections=max_connections,
-        max_keepalive=max_keepalive,
         http2=http2,
     ) as http:
         http_version, status_code, reason, headers, stream = await http.request(
