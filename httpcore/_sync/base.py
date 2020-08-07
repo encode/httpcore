@@ -1,6 +1,6 @@
 import enum
 from types import TracebackType
-from typing import Iterator, Callable, List, Tuple, Type
+from typing import Iterator, List, Tuple, Type
 
 from .._types import URL, Headers, TimeoutDict
 
@@ -40,33 +40,17 @@ class SyncByteStream:
     the `\\__iter__` method, and optionally the `close` method.
     """
 
-    def __init__(
-        self,
-        content: bytes = b"",
-        iterator: Iterator[bytes] = None,
-        close_func: Callable = None,
-    ) -> None:
-        assert iterator is None or not content
-        self.content = content
-        self.iterator = iterator
-        self.close_func = close_func
-
     def __iter__(self) -> Iterator[bytes]:
         """
         Yield bytes representing the request or response body.
         """
-        if self.iterator is None:
-            yield self.content
-        else:
-            for chunk in self.iterator:
-                yield chunk
+        yield b""  # pragma: nocover
 
     def close(self) -> None:
         """
         Must be called by the client to indicate that the stream has been closed.
         """
-        if self.close_func is not None:
-            self.close_func()
+        pass  # pragma: nocover
 
 
 class SyncHTTPTransport:
