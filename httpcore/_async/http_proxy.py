@@ -44,8 +44,8 @@ class AsyncHTTPProxy(AsyncConnectionPool):
     verifying connections.
     * **max_connections** - `Optional[int]` - The maximum number of concurrent
     connections to allow.
-    * **max_keepalive** - `Optional[int]` - The maximum number of connections
-    to allow before closing keep-alive connections.
+    * **max_keepalive_connections** - `Optional[int]` - The maximum number of
+    connections to allow before closing keep-alive connections.
     * **http2** - `bool` - Enable HTTP/2 support.
     """
 
@@ -56,9 +56,11 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         proxy_mode: str = "DEFAULT",
         ssl_context: SSLContext = None,
         max_connections: int = None,
-        max_keepalive: int = None,
+        max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
         http2: bool = False,
+        # Deprecated argument style:
+        max_keepalive: int = None,
     ):
         assert proxy_mode in ("DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY")
 
@@ -68,9 +70,10 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         super().__init__(
             ssl_context=ssl_context,
             max_connections=max_connections,
-            max_keepalive=max_keepalive,
+            max_keepalive_connections=max_keepalive_connections,
             keepalive_expiry=keepalive_expiry,
             http2=http2,
+            max_keepalive=max_keepalive,
         )
 
     async def request(

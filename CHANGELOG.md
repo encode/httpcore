@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.10.1 (August 7th, 2020)
+
+- Include `max_keepalive_connections` on `AsyncHTTPProxy`/`SyncHTTPProxy` classes.
+
 ## 0.10.0 (August 7th, 2020)
 
 The most notable change in the 0.10.0 release is that HTTP/2 support is now fully optional.
