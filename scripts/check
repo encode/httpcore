@@ -8,5 +8,7 @@ export SOURCE_FILES="httpcore tests"
 
 set -x
 
+${PREFIX}isort --check --diff --project=httpcore $SOURCE_FILES
+${PREFIX}black --check --diff --exclude 'httpcore/_sync/.*' --exclude 'tests/sync_tests/.*' --target-version=py36 $SOURCE_FILES
 ${PREFIX}mypy --ignore-missing-imports httpcore
 scripts/unasync --check
