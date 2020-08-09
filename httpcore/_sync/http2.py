@@ -9,7 +9,7 @@ from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
 from .._backends.auto import SyncLock, SyncSemaphore, SyncSocketStream, SyncBackend
-from .._bytestreams import PlainByteStream, IteratorByteStream
+from .._bytestreams import IteratorByteStream, PlainByteStream
 from .._exceptions import PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
