@@ -1,19 +1,19 @@
 from ._async.base import AsyncByteStream, AsyncHTTPTransport
 from ._async.connection_pool import AsyncConnectionPool
 from ._async.http_proxy import AsyncHTTPProxy
-from ._bytestreams import PlainByteStream, AsyncIteratorByteStream, IteratorByteStream
+from ._bytestreams import AsyncIteratorByteStream, IteratorByteStream, PlainByteStream
 from ._exceptions import (
     CloseError,
     ConnectError,
     ConnectTimeout,
+    LocalProtocolError,
     NetworkError,
     PoolTimeout,
     ProtocolError,
-    RemoteProtocolError,
-    LocalProtocolError,
     ProxyError,
     ReadError,
     ReadTimeout,
+    RemoteProtocolError,
     TimeoutException,
     UnsupportedProtocol,
     WriteError,

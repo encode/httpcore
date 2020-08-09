@@ -1,4 +1,5 @@
-from typing import AsyncIterator, Iterator, Callable
+from typing import AsyncIterator, Callable, Iterator
+
 from ._async.base import AsyncByteStream
 from ._sync.base import SyncByteStream
 

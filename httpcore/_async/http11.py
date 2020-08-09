@@ -4,8 +4,8 @@ from typing import AsyncIterator, List, Tuple, Union
 import h11
 
 from .._backends.auto import AsyncSocketStream
-from .._bytestreams import PlainByteStream, AsyncIteratorByteStream
-from .._exceptions import RemoteProtocolError, LocalProtocolError, map_exceptions
+from .._bytestreams import AsyncIteratorByteStream, PlainByteStream
+from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
 from .base import AsyncByteStream, ConnectionState
