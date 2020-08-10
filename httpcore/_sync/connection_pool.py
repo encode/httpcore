@@ -1,9 +1,9 @@
+import warnings
 from ssl import SSLContext
 from typing import Iterator, Callable, Dict, List, Optional, Set, Tuple
-import warnings
 
 from .._backends.auto import SyncLock, SyncSemaphore, SyncBackend
-from .._exceptions import PoolTimeout, LocalProtocolError, UnsupportedProtocol
+from .._exceptions import LocalProtocolError, PoolTimeout, UnsupportedProtocol
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, origin_to_url_string, url_to_origin
