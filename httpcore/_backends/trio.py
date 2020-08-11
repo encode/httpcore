@@ -170,6 +170,31 @@ class TrioBackend(AsyncBackend):
 
                 return SocketStream(stream=stream)
 
+    async def open_uds_stream(
+        self,
+        path: str,
+        hostname: bytes,
+        ssl_context: Optional[SSLContext],
+        timeout: TimeoutDict,
+    ) -> AsyncSocketStream:
+        connect_timeout = none_as_inf(timeout.get("connect"))
+        exc_map = {
+            trio.TooSlowError: ConnectTimeout,
+            trio.BrokenResourceError: ConnectError,
+        }
+
+        with map_exceptions(exc_map):
+            with trio.fail_after(connect_timeout):
+                stream: trio.abc.Stream = await trio.open_unix_socket(path)
+
+                if ssl_context is not None:
+                    stream = trio.SSLStream(
+                        stream, ssl_context, server_hostname=hostname.decode("ascii")
+                    )
+                    await stream.do_handshake()
+
+                return SocketStream(stream=stream)
+
     def create_lock(self) -> AsyncLock:
         return Lock()
 
