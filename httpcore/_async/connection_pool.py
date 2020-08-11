@@ -1,8 +1,9 @@
+import warnings
 from ssl import SSLContext
 from typing import AsyncIterator, Callable, Dict, List, Optional, Set, Tuple
 
 from .._backends.auto import AsyncLock, AsyncSemaphore, AutoBackend
-from .._exceptions import PoolTimeout, LocalProtocolError, UnsupportedProtocol
+from .._exceptions import LocalProtocolError, PoolTimeout, UnsupportedProtocol
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, origin_to_url_string, url_to_origin
@@ -71,25 +72,37 @@ class AsyncConnectionPool(AsyncHTTPTransport):
     verifying connections.
     * **max_connections** - `Optional[int]` - The maximum number of concurrent
     connections to allow.
-    * **max_keepalive** - `Optional[int]` - The maximum number of connections
-    to allow before closing keep-alive connections.
+    * **max_keepalive_connections** - `Optional[int]` - The maximum number of
+    connections to allow before closing keep-alive connections.
     * **keepalive_expiry** - `Optional[float]` - The maximum time to allow
     before closing a keep-alive connection.
     * **http2** - `bool` - Enable HTTP/2 support.
     * **uds** - `str` - Path to a Unix Domain Socket to use instead of TCP sockets.
-    * **local_address** - `Optional[str]` - Local address to connect from.
+    * **local_address** - `Optional[str]` - Local address to connect from. Can
+    also be used to connect using a particular address family. Using
+    `local_address="0.0.0.0"` will connect using an `AF_INET` address (IPv4),
+    while using `local_address="::"` will connect using an `AF_INET6` address
+    (IPv6).
     """
 
     def __init__(
         self,
         ssl_context: SSLContext = None,
         max_connections: int = None,
-        max_keepalive: int = None,
+        max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
         http2: bool = False,
         uds: str = None,
         local_address: str = None,
+        max_keepalive: int = None,
     ):
+        if max_keepalive is not None:
+            warnings.warn(
+                "'max_keepalive' is deprecated. Use 'max_keepalive_connections'.",
+                DeprecationWarning,
+            )
+            max_keepalive_connections = max_keepalive
+
         self._ssl_context = SSLContext() if ssl_context is None else ssl_context
         self._max_connections = max_connections
         self._max_keepalive = max_keepalive
@@ -147,8 +160,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
 
         origin = url_to_origin(url)
 
-        if self._keepalive_expiry is not None:
-            await self._keepalive_sweep()
+        await self._keepalive_sweep()
 
         connection: Optional[AsyncHTTPConnection] = None
         while connection is None:
@@ -266,13 +278,14 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         """
         Remove any IDLE connections that have expired past their keep-alive time.
         """
-        assert self._keepalive_expiry is not None
+        if self._keepalive_expiry is None:
+            return
 
         now = self._backend.time()
         if now < self._next_keepalive_check:
             return
 
-        self._next_keepalive_check = now + 1.0
+        self._next_keepalive_check = now + min(1.0, self._keepalive_expiry)
         connections_to_close = set()
 
         for connection in self._get_all_connections():
@@ -325,10 +338,12 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         for connection in connections:
             await connection.aclose()
 
-    def get_connection_info(self) -> Dict[str, List[str]]:
+    async def get_connection_info(self) -> Dict[str, List[str]]:
         """
         Returns a dict of origin URLs to a list of summary strings for each connection.
         """
+        await self._keepalive_sweep()
+
         stats = {}
         for origin, connections in self._connections.items():
             stats[origin_to_url_string(origin)] = [

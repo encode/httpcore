@@ -4,8 +4,8 @@ from typing import Iterator, List, Tuple, Union
 import h11
 
 from .._backends.auto import SyncSocketStream
-from .._bytestreams import PlainByteStream, IteratorByteStream
-from .._exceptions import RemoteProtocolError, LocalProtocolError, map_exceptions
+from .._bytestreams import IteratorByteStream, PlainByteStream
+from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
 from .base import SyncByteStream, ConnectionState
