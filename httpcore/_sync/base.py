@@ -2,7 +2,7 @@ import enum
 from types import TracebackType
 from typing import Iterator, List, Tuple, Type
 
-from .._types import URL, Headers, TimeoutDict
+from .._types import T, URL, Headers, TimeoutDict
 
 
 class NewConnectionRequired(Exception):
@@ -106,7 +106,7 @@ class SyncHTTPTransport:
         and any keep alive connections.
         """
 
-    def __enter__(self) -> "SyncHTTPTransport":
+    def __enter__(self: T) -> T:
         return self
 
     def __exit__(

@@ -2,7 +2,7 @@ import enum
 from types import TracebackType
 from typing import AsyncIterator, List, Tuple, Type
 
-from .._types import URL, Headers, TimeoutDict
+from .._types import T, URL, Headers, TimeoutDict
 
 
 class NewConnectionRequired(Exception):
@@ -106,7 +106,7 @@ class AsyncHTTPTransport:
         and any keep alive connections.
         """
 
-    async def __aenter__(self) -> "AsyncHTTPTransport":
+    async def __aenter__(self: T) -> T:
         return self
 
     async def __aexit__(
