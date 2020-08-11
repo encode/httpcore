@@ -77,7 +77,11 @@ class AsyncConnectionPool(AsyncHTTPTransport):
     * **keepalive_expiry** - `Optional[float]` - The maximum time to allow
     before closing a keep-alive connection.
     * **http2** - `bool` - Enable HTTP/2 support.
-    * **local_address** - `Optional[str]` - Local address to connect from.
+    * **local_address** - `Optional[str]` - Local address to connect from. Can
+    also be used to connect using a particular address family. Using
+    `local_address="0.0.0.0"` will connect using an `AF_INET` address (IPv4),
+    while using `local_address="::"` will connect using an `AF_INET6` address
+    (IPv6).
     """
 
     def __init__(
