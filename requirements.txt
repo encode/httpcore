@@ -25,3 +25,4 @@ isort==5.*
 mitmproxy
 trustme
 uvicorn
+sortedcontainers==2.1.*
