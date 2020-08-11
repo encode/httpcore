@@ -77,6 +77,7 @@ class SyncConnectionPool(SyncHTTPTransport):
     * **keepalive_expiry** - `Optional[float]` - The maximum time to allow
     before closing a keep-alive connection.
     * **http2** - `bool` - Enable HTTP/2 support.
+    * **uds** - `str` - Path to a Unix Domain Socket to use instead of TCP sockets.
     * **local_address** - `Optional[str]` - Local address to connect from. Can
     also be used to connect using a particular address family. Using
     `local_address="0.0.0.0"` will connect using an `AF_INET` address (IPv4),
@@ -91,6 +92,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
         http2: bool = False,
+        uds: str = None,
         local_address: str = None,
         max_keepalive: int = None,
     ):
@@ -106,6 +108,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         self._max_keepalive = max_keepalive
         self._keepalive_expiry = keepalive_expiry
         self._http2 = http2
+        self._uds = uds
         self._local_address = local_address
         self._connections: Dict[Origin, Set[SyncHTTPConnection]] = {}
         self._thread_lock = ThreadLock()
@@ -172,6 +175,7 @@ class SyncConnectionPool(SyncHTTPTransport):
                     connection = SyncHTTPConnection(
                         origin=origin,
                         http2=self._http2,
+                        uds=self._uds,
                         ssl_context=self._ssl_context,
                         local_address=self._local_address,
                     )

@@ -244,6 +244,26 @@ class AsyncioBackend(AsyncBackend):
                 stream_reader=stream_reader, stream_writer=stream_writer
             )
 
+    async def open_uds_stream(
+        self,
+        path: str,
+        hostname: bytes,
+        ssl_context: Optional[SSLContext],
+        timeout: TimeoutDict,
+    ) -> AsyncSocketStream:
+        host = hostname.decode("ascii")
+        connect_timeout = timeout.get("connect")
+        kwargs: dict = {"server_hostname": host} if ssl_context is not None else {}
+        exc_map = {asyncio.TimeoutError: ConnectTimeout, OSError: ConnectError}
+        with map_exceptions(exc_map):
+            stream_reader, stream_writer = await asyncio.wait_for(
+                asyncio.open_unix_connection(path, ssl=ssl_context, **kwargs),
+                connect_timeout,
+            )
+            return SocketStream(
+                stream_reader=stream_reader, stream_writer=stream_writer
+            )
+
     def create_lock(self) -> AsyncLock:
         return Lock()
 
