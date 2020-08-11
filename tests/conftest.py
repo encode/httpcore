@@ -1,14 +1,14 @@
 import asyncio
+import contextlib
+import os
 import ssl
 import threading
-import typing
-import contextlib
 import time
+import typing
 
-import os
-import uvicorn
 import pytest
 import trustme
+import uvicorn
 from mitmproxy import options, proxy
 from mitmproxy.tools.dump import DumpMaster
 
