@@ -2,7 +2,7 @@ import enum
 from types import TracebackType
 from typing import Iterator, List, Tuple, Type
 
-from .._types import T, URL, Headers, TimeoutDict
+from .._types import URL, Headers, T, TimeoutDict
 
 
 class NewConnectionRequired(Exception):
