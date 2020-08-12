@@ -316,7 +316,7 @@ def test_connection_pool_get_connection_info(
     reason="Unix Domain Sockets only exist on Unix",
 )
 
-def test_http_request_unix_domain_socket(uds_server: Server,) -> None:
+def test_http_request_unix_domain_socket(uds_server: Server) -> None:
     uds = uds_server.config.uds
     assert uds is not None
     with httpcore.SyncConnectionPool(uds=uds) as http:
