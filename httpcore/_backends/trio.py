@@ -7,7 +7,6 @@ from .._exceptions import (
     CloseError,
     ConnectError,
     ConnectTimeout,
-    ReadError,
     ReadTimeout,
     WriteError,
     WriteTimeout,
@@ -55,15 +54,17 @@ class SocketStream(AsyncSocketStream):
 
     async def read(self, n: int, timeout: TimeoutDict) -> bytes:
         read_timeout = none_as_inf(timeout.get("read"))
-        exc_map = {trio.TooSlowError: ReadTimeout, trio.BrokenResourceError: ReadError}
+        exc_map: dict = {trio.TooSlowError: ReadTimeout}
 
         async with self.read_lock:
             with map_exceptions(exc_map):
                 with trio.fail_after(read_timeout):
-                    data = await self.stream.receive_some(max_bytes=n)
-                    if data == b"":
-                        raise ReadError("Server disconnected while attempting read")
-                    return data
+                    try:
+                        return await self.stream.receive_some(max_bytes=n)
+                    except trio.BrokenResourceError:
+                        # Match behavior of the other backends when the server
+                        # has disconnected.
+                        return b""
 
     async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         if not data:

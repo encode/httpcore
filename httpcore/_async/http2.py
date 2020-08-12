@@ -210,6 +210,16 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         Read some data from the network, and update the H2 state.
         """
         data = await self.socket.read(self.READ_NUM_BYTES, timeout)
+
+        if data == b"":
+            # The server has disconnected. `h11` deals with this "empty data" signal
+            # correctly, but h2 doesn't. So we raise an exception equivalent to
+            # what would be raised in the HTTP/1.1 case.
+            raise RemoteProtocolError(
+                "peer closed connection without sending complete message body "
+                "(incomplete chunked read)"
+            )
+
         events = self.h2_state.receive_data(data)
         for event in events:
             event_stream_id = getattr(event, "stream_id", 0)
