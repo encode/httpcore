@@ -10,7 +10,7 @@ set -x
 
 ${PREFIX}autoflake --in-place --recursive $SOURCE_FILES
 ${PREFIX}isort --project=httpcore $SOURCE_FILES
-${PREFIX}black --exclude 'httpcore/_sync/.*' --exclude 'tests/sync_tests/.*' --target-version=py36 $SOURCE_FILES
+${PREFIX}black $SOURCE_FILES
 
 # Run unasync last because its `--check` mode is not aware of code formatters.
 # (This means sync code isn't prettified, and that's mostly okay.)
