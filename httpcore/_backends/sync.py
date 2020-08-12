@@ -144,6 +144,28 @@ class SyncBackend:
                 )
             return SyncSocketStream(sock=sock)
 
+    def open_uds_stream(
+        self,
+        path: str,
+        hostname: bytes,
+        ssl_context: Optional[SSLContext],
+        timeout: TimeoutDict,
+    ) -> SyncSocketStream:
+        connect_timeout = timeout.get("connect")
+        exc_map = {socket.timeout: ConnectTimeout, socket.error: ConnectError}
+
+        with map_exceptions(exc_map):
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.settimeout(connect_timeout)
+            sock.connect(path)
+
+            if ssl_context is not None:
+                sock = ssl_context.wrap_socket(
+                    sock, server_hostname=hostname.decode("ascii")
+                )
+
+            return SyncSocketStream(sock=sock)
+
     def create_lock(self) -> SyncLock:
         return SyncLock()
 

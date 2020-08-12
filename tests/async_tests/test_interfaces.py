@@ -1,4 +1,6 @@
 import ssl
+import platform
+from pathlib import Path
 
 import pytest
 
@@ -304,3 +306,25 @@ async def test_connection_pool_get_connection_info(
 
     stats = await http.get_connection_info()
     assert stats == {}
+
+
+@pytest.mark.skipif(
+    platform.system() not in ("Linux", "Darwin"),
+    reason="Unix Domain Sockets only exist on Unix",
+)
+@pytest.mark.usefixtures("async_environment")
+async def test_http_request_unix_domain_socket(uds_server) -> None:
+    uds = uds_server.config.uds
+    assert uds is not None
+    async with httpcore.AsyncConnectionPool(uds=uds) as http:
+        method = b"GET"
+        url = (b"http", b"localhost", None, b"/")
+        headers = [(b"host", b"localhost")]
+        http_version, status_code, reason, headers, stream = await http.request(
+            method, url, headers
+        )
+        assert http_version == b"HTTP/1.1"
+        assert status_code == 200
+        assert reason == b"OK"
+        body = await read_body(stream)
+        assert body == b"Hello, world!"
