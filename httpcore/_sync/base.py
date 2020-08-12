@@ -75,8 +75,8 @@ class SyncHTTPTransport:
         **Parameters:**
 
         * **method** - `bytes` - The HTTP method, such as `b'GET'`.
-        * **url** - `Tuple[bytes, bytes, Optional[int], bytes]` - The URL as a 4-tuple of
-        (scheme, host, port, path).
+        * **url** - `Tuple[bytes, bytes, Optional[int], bytes]` - The URL as a 4-tuple
+        of (scheme, host, port, path).
         * **headers** - `Optional[List[Tuple[bytes, bytes]]]` - Any HTTP headers
         to send with the request.
         * **stream** - `Optional[SyncByteStream]` - The body of the HTTP request.

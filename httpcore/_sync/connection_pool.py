@@ -117,7 +117,7 @@ class SyncConnectionPool(SyncHTTPTransport):
 
         if http2:
             try:
-                import h2
+                import h2  # noqa: F401
             except ImportError:
                 raise ImportError(
                     "Attempted to use http2=True, but the 'h2' "

@@ -2,7 +2,7 @@ from ssl import SSLContext
 from typing import Tuple
 
 from .._exceptions import ProxyError
-from .._types import URL, Headers, Origin, TimeoutDict
+from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger, url_to_origin
 from .base import SyncByteStream
 from .connection import SyncHTTPConnection
@@ -15,7 +15,8 @@ def merge_headers(
     default_headers: Headers = None, override_headers: Headers = None
 ) -> Headers:
     """
-    Append default_headers and override_headers, de-duplicating if a key existing in both cases.
+    Append default_headers and override_headers, de-duplicating if a key existing in
+    both cases.
     """
     default_headers = [] if default_headers is None else default_headers
     override_headers = [] if override_headers is None else override_headers
