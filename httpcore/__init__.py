@@ -50,3 +50,9 @@ __all__ = [
     "PlainByteStream",
 ]
 __version__ = "0.10.1"
+
+__locals = locals()
+
+for name in __all__:
+    if not name.startswith("__"):
+        setattr(__locals[name], "__module__", "httpcore")  # noqa
