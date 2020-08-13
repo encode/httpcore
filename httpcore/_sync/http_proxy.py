@@ -181,7 +181,7 @@ class SyncHTTPProxy(SyncConnectionPool):
         connection = self._get_connection_from_pool(origin)
 
         if connection is None:
-            scheme, host, port, _ = url
+            scheme, host, port = origin
 
             # First, create a connection to the proxy server
             proxy_connection = SyncHTTPConnection(
@@ -194,10 +194,7 @@ class SyncHTTPProxy(SyncConnectionPool):
 
             # CONNECT www.example.org:80 HTTP/1.1
             # [proxy-headers]
-            if port is None:
-                target = host
-            else:
-                target = b"%b:%d" % (host, port)
+            target = b"%b:%d" % (host, port)
             connect_url = self.proxy_origin + (target,)
             connect_headers = [(b"Host", target), (b"Accept", b"*/*")]
             connect_headers = merge_headers(connect_headers, self.proxy_headers)
