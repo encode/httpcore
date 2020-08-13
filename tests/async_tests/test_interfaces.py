@@ -328,3 +328,31 @@ async def test_http_request_unix_domain_socket(uds_server) -> None:
         assert reason == b"OK"
         body = await read_body(stream)
         assert body == b"Hello, world!"
+
+
+@pytest.mark.usefixtures("async_environment")
+@pytest.mark.parametrize("max_keepalive", [1, 3, 5])
+@pytest.mark.parametrize("connections_number", [4])
+async def test_max_keepalive_connections_handled_correctly(
+    max_keepalive, connections_number
+) -> None:
+    async with httpcore.AsyncConnectionPool(
+        max_keepalive_connections=max_keepalive, keepalive_expiry=60
+    ) as http:
+        method = b"GET"
+        url = (b"http", b"example.org", 80, b"/")
+        headers = [(b"host", b"example.org")]
+
+        connections_streams = []
+        for _ in range(connections_number):
+            _, _, _, _, stream = await http.request(method, url, headers)
+            connections_streams.append(stream)
+
+        try:
+            for i in range(len(connections_streams)):
+                await read_body(connections_streams[i])
+        finally:
+            stats = await http.get_connection_info()
+
+            connections_in_pool = next(iter(stats.values()))
+            assert len(connections_in_pool) == min(connections_number, max_keepalive)
