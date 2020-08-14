@@ -1,6 +1,5 @@
-import ssl
 import platform
-from pathlib import Path
+import ssl
 
 import pytest
 
