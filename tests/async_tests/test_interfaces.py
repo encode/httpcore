@@ -5,6 +5,7 @@ import pytest
 
 import httpcore
 from httpcore._types import URL
+from tests.conftest import Server
 
 
 async def read_body(stream: httpcore.AsyncByteStream) -> bytes:
@@ -26,7 +27,7 @@ async def test_http_request() -> None:
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers
         )
-        body = await read_body(stream)
+        await read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -43,7 +44,7 @@ async def test_https_request() -> None:
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers
         )
-        body = await read_body(stream)
+        await read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -70,7 +71,7 @@ async def test_http2_request() -> None:
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers
         )
-        body = await read_body(stream)
+        await read_body(stream)
 
         assert http_version == b"HTTP/2"
         assert status_code == 200
@@ -87,7 +88,7 @@ async def test_closing_http_request() -> None:
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers
         )
-        body = await read_body(stream)
+        await read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -104,7 +105,7 @@ async def test_http_request_reuse_connection() -> None:
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers
         )
-        body = await read_body(stream)
+        await read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -117,7 +118,7 @@ async def test_http_request_reuse_connection() -> None:
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers
         )
-        body = await read_body(stream)
+        await read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -134,7 +135,7 @@ async def test_https_request_reuse_connection() -> None:
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers
         )
-        body = await read_body(stream)
+        await read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -147,7 +148,7 @@ async def test_https_request_reuse_connection() -> None:
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers
         )
-        body = await read_body(stream)
+        await read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -164,7 +165,7 @@ async def test_http_request_cannot_reuse_dropped_connection() -> None:
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers
         )
-        body = await read_body(stream)
+        await read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -173,7 +174,7 @@ async def test_http_request_cannot_reuse_dropped_connection() -> None:
 
         # Mock the connection as having been dropped.
         connection = list(http._connections[url[:3]])[0]  # type: ignore
-        connection.is_connection_dropped = lambda: True
+        connection.is_connection_dropped = lambda: True  # type: ignore
 
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
@@ -181,7 +182,7 @@ async def test_http_request_cannot_reuse_dropped_connection() -> None:
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers
         )
-        body = await read_body(stream)
+        await read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -202,7 +203,7 @@ async def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers
         )
-        body = await read_body(stream)
+        await read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -219,7 +220,7 @@ async def test_http_request_local_address() -> None:
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers
         )
-        body = await read_body(stream)
+        await read_body(stream)
 
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
@@ -281,7 +282,10 @@ async def test_proxy_https_requests(
 )
 @pytest.mark.usefixtures("async_environment")
 async def test_connection_pool_get_connection_info(
-    http2, keepalive_expiry, expected_during_active, expected_during_idle
+    http2: bool,
+    keepalive_expiry: float,
+    expected_during_active: dict,
+    expected_during_idle: dict,
 ) -> None:
     async with httpcore.AsyncConnectionPool(
         http2=http2, keepalive_expiry=keepalive_expiry
@@ -312,7 +316,7 @@ async def test_connection_pool_get_connection_info(
     reason="Unix Domain Sockets only exist on Unix",
 )
 @pytest.mark.usefixtures("async_environment")
-async def test_http_request_unix_domain_socket(uds_server) -> None:
+async def test_http_request_unix_domain_socket(uds_server: Server) -> None:
     uds = uds_server.config.uds
     assert uds is not None
     async with httpcore.AsyncConnectionPool(uds=uds) as http:

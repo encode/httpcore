@@ -2,7 +2,7 @@
 Type definitions for type checking purposes.
 """
 
-from typing import List, Mapping, Optional, Tuple, Union, TypeVar
+from typing import List, Mapping, Optional, Tuple, TypeVar, Union
 
 T = TypeVar("T")
 StrOrBytes = Union[str, bytes]
