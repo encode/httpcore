@@ -337,7 +337,7 @@ def test_http_request_unix_domain_socket(uds_server: Server) -> None:
 @pytest.mark.parametrize("max_keepalive", [1, 3, 5])
 @pytest.mark.parametrize("connections_number", [4])
 def test_max_keepalive_connections_handled_correctly(
-    max_keepalive, connections_number
+    max_keepalive: int, connections_number: int
 ) -> None:
     with httpcore.SyncConnectionPool(
         max_keepalive_connections=max_keepalive, keepalive_expiry=60
