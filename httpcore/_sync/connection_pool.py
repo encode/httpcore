@@ -105,7 +105,7 @@ class SyncConnectionPool(SyncHTTPTransport):
 
         self._ssl_context = SSLContext() if ssl_context is None else ssl_context
         self._max_connections = max_connections
-        self._max_keepalive = max_keepalive
+        self._max_keepalive_connections = max_keepalive_connections
         self._keepalive_expiry = keepalive_expiry
         self._http2 = http2
         self._uds = uds
@@ -259,8 +259,8 @@ class SyncConnectionPool(SyncHTTPTransport):
         elif connection.state == ConnectionState.IDLE:
             num_connections = len(self._get_all_connections())
             if (
-                self._max_keepalive is not None
-                and num_connections > self._max_keepalive
+                self._max_keepalive_connections is not None
+                and num_connections > self._max_keepalive_connections
             ):
                 remove_from_pool = True
                 close_connection = True
