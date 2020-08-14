@@ -137,10 +137,9 @@ class SyncBackend:
         exc_map = {socket.timeout: ConnectTimeout, socket.error: ConnectError}
 
         with map_exceptions(exc_map):
-            local_addrport = None
-            if local_address:
-                local_addrport = (local_address, 0)
-            sock = socket.create_connection(address, connect_timeout, source_address=source_address)  # type: ignore
+            sock = socket.create_connection(
+                address, connect_timeout, source_address=source_address  # type: ignore
+            )
             if ssl_context is not None:
                 sock = ssl_context.wrap_socket(
                     sock, server_hostname=hostname.decode("ascii")
