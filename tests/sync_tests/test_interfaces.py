@@ -331,3 +331,31 @@ def test_http_request_unix_domain_socket(uds_server: Server) -> None:
         assert reason == b"OK"
         body = read_body(stream)
         assert body == b"Hello, world!"
+
+
+
+@pytest.mark.parametrize("max_keepalive", [1, 3, 5])
+@pytest.mark.parametrize("connections_number", [4])
+def test_max_keepalive_connections_handled_correctly(
+    max_keepalive: int, connections_number: int
+) -> None:
+    with httpcore.SyncConnectionPool(
+        max_keepalive_connections=max_keepalive, keepalive_expiry=60
+    ) as http:
+        method = b"GET"
+        url = (b"http", b"example.org", 80, b"/")
+        headers = [(b"host", b"example.org")]
+
+        connections_streams = []
+        for _ in range(connections_number):
+            _, _, _, _, stream = http.request(method, url, headers)
+            connections_streams.append(stream)
+
+        try:
+            for i in range(len(connections_streams)):
+                read_body(connections_streams[i])
+        finally:
+            stats = http.get_connection_info()
+
+            connections_in_pool = next(iter(stats.values()))
+            assert len(connections_in_pool) == min(connections_number, max_keepalive)
