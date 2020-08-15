@@ -1,30 +1,31 @@
 -e .[http2]
 
 # Optionals
-trio
-trio-typing
+trio==0.16.0
+trio-typing==0.5.0
 
 # Docs
-mkautodoc
-mkdocs
-mkdocs-material
+mkautodoc==0.1.0
+mkdocs==1.1.2
+mkdocs-material==5.5.6
 
 # Packaging
-twine
-wheel
+twine==3.2.0
+wheel==0.35.1
 
 # Tests & Linting
-autoflake
-black
-flake8
-flake8-bugbear
-flake8-pie
-isort==5.*
-mitmproxy
-mypy
-pytest
-pytest-asyncio
-pytest-cov
-pytest-trio
-trustme
-uvicorn
+autoflake==1.3.1
+black==19.10b0
+flake8==3.8.3
+flake8-bugbear==20.1.4
+flake8-pie==0.5.0
+isort==5.4.2
+mitmproxy==5.2
+mypy==0.782
+pytest==6.0.1
+pytest-asyncio==0.14.0
+pytest-cov==2.10.1
+pytest-trio==0.6.0
+sortedcontainers==2.1.0
+trustme==0.6.0
+uvicorn==0.11.8
