@@ -1,0 +1,32 @@
+--use-feature="2020-resolver"
+
+-e .[http2]
+
+# Optionals
+trio
+trio-typing
+
+# Docs
+mkautodoc
+mkdocs
+mkdocs-material
+
+# Packaging
+twine
+wheel
+
+# Tests & Linting
+autoflake
+black
+flake8
+flake8-bugbear
+flake8-pie
+isort==5.*
+mitmproxy
+mypy
+pytest
+pytest-asyncio
+pytest-cov
+pytest-trio
+trustme
+uvicorn

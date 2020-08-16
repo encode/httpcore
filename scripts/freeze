@@ -1,0 +1,21 @@
+#!/bin/sh -e
+
+# Use the Python executable provided from the `-p` option, or a default.
+[ "$1" = "-p" ] && PYTHON=$2 || PYTHON="python3"
+
+VENV=`mktemp -d ./venv-XXXXXXXXXX`
+
+set -x
+
+"${PYTHON}" -m venv "${VENV}"
+PIP="${VENV}/bin/pip"
+
+"${PIP}" install -U "pip >= 20.2"
+"${PIP}" install -r requirements.base
+
+# Exclude our own editable dependency
+"${PIP}" freeze | grep -v '^-e' > requirements.txt
+# Add it back
+echo "-e .[http2]" >> requirements.txt
+
+rm -rf ${VENV}
