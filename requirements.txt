@@ -51,6 +51,7 @@ outcome==1.0.1
 packaging==20.4
 passlib==1.7.2
 pathspec==0.8.0
+pip==20.2.2
 pkginfo==1.5.0.1
 pluggy==0.13.1
 protobuf==3.11.3
@@ -77,6 +78,7 @@ requests-toolbelt==0.9.1
 rfc3986==1.4.0
 ruamel.yaml==0.16.10
 ruamel.yaml.clib==0.2.0
+setuptools==41.2.0
 six==1.15.0
 sniffio==1.1.0
 sortedcontainers==2.1.0
@@ -96,6 +98,7 @@ uvloop==0.14.0
 webencodings==0.5.1
 websockets==8.1
 Werkzeug==1.0.1
+wheel==0.35.1
 wsproto==0.15.0
 zstandard==0.13.0
 -e .[http2]
