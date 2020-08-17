@@ -13,9 +13,10 @@ PIP="${VENV}/bin/pip"
 "${PIP}" install -U "pip >= 20.2"
 "${PIP}" install -r requirements.base
 
-# Argument "--all" is needed to pin "wheel". Exclude our own editable dependency
-"${PIP}" freeze --all | grep -v '^-e' > requirements.txt
-# Add it back
+# Argument "--all" is needed to pin "wheel"
+# Argument "--exclude-editable" is needed to avoid pinning ourselves to a git commit
+"${PIP}" freeze --all --exclude-editable > requirements.txt
+# Add ourselves as an editable dependency
 echo "-e .[http2]" >> requirements.txt
 
 rm -rf ${VENV}
