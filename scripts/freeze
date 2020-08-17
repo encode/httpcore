@@ -11,7 +11,7 @@ set -x
 PIP="${VENV}/bin/pip"
 
 "${PIP}" install -U "pip >= 20.2"
-"${PIP}" install -r requirements.base
+"${PIP}" install -r requirements.in
 
 # Argument "--all" is needed to pin "wheel"
 # Argument "--exclude-editable" is needed to avoid pinning ourselves to a git commit
