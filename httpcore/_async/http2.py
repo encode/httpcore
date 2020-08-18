@@ -210,6 +210,9 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         Read some data from the network, and update the H2 state.
         """
         data = await self.socket.read(self.READ_NUM_BYTES, timeout)
+        if data == b"":
+            raise RemoteProtocolError("Server disconnected")
+
         events = self.h2_state.receive_data(data)
         for event in events:
             event_stream_id = getattr(event, "stream_id", 0)
