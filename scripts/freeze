@@ -13,9 +13,8 @@ PIP="${VENV}/bin/pip"
 "${PIP}" install -U "pip >= 20.2" setuptools wheel
 "${PIP}" install -r requirements.in
 
-# Argument "--all" is needed to pin "wheel"
 # Argument "--exclude-editable" is needed to avoid pinning ourselves to a git commit
-"${PIP}" freeze --all --exclude-editable > requirements.txt
+"${PIP}" freeze --exclude-editable > requirements.txt
 # Add ourselves as an editable dependency
 echo "-e .[http2]" >> requirements.txt
 

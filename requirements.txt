@@ -25,9 +25,11 @@ hpack==3.0.0
 httptools==0.1.1
 hyperframe==5.2.0
 idna==2.10
+importlib-metadata==1.7.0
 iniconfig==1.0.1
 isort==5.4.2
 itsdangerous==1.1.0
+jeepney==0.4.3
 Jinja2==2.11.2
 joblib==0.16.0
 kaitaistruct==0.8
@@ -51,7 +53,6 @@ outcome==1.0.1
 packaging==20.4
 passlib==1.7.2
 pathspec==0.8.0
-pip==20.2.2
 pkginfo==1.5.0.1
 pluggy==0.13.1
 protobuf==3.11.3
@@ -78,7 +79,7 @@ requests-toolbelt==0.9.1
 rfc3986==1.4.0
 ruamel.yaml==0.16.10
 ruamel.yaml.clib==0.2.0
-setuptools==41.2.0
+SecretStorage==3.1.2
 six==1.15.0
 sniffio==1.1.0
 sortedcontainers==2.1.0
@@ -98,7 +99,7 @@ uvloop==0.14.0
 webencodings==0.5.1
 websockets==8.1
 Werkzeug==1.0.1
-wheel==0.35.1
 wsproto==0.15.0
+zipp==3.1.0
 zstandard==0.13.0
 -e .[http2]
