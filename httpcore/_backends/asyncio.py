@@ -78,7 +78,9 @@ async def backport_start_tls(
 
 class SocketStream(AsyncSocketStream):
     def __init__(
-        self, stream_reader: asyncio.StreamReader, stream_writer: asyncio.StreamWriter,
+        self,
+        stream_reader: asyncio.StreamReader,
+        stream_writer: asyncio.StreamWriter,
     ):
         self.stream_reader = stream_reader
         self.stream_writer = stream_writer
@@ -158,9 +160,14 @@ class SocketStream(AsyncSocketStream):
         # This is fine, though, because '.aclose()' schedules the actual closing of the
         # stream, meaning that at best it will happen during the next event loop
         # iteration, and at worst asyncio will take care of it on program exit.
+        is_ssl = self.stream_writer.get_extra_info("ssl_object") is not None
+
         async with self.write_lock:
             with map_exceptions({OSError: CloseError}):
                 self.stream_writer.close()
+                if is_ssl:
+                    self.stream_writer.transport.abort()  # type: ignore
+                await self.stream_writer.wait_closed()
 
     def is_connection_dropped(self) -> bool:
         # Counter-intuitively, what we really want to know here is whether the socket is
