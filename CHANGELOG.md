@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## 0.10.2 (August 19th, 2020)
+## 0.10.2 (August 20th, 2020)
 
 ### Added
 
