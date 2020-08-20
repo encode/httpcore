@@ -148,13 +148,20 @@ class SocketStream(AsyncSocketStream):
                 )
 
     async def aclose(self) -> None:
-        # NOTE: StreamWriter instances expose a '.wait_closed()' coroutine function,
-        # but using it has caused compatibility issues with certain sites in
-        # the past (see https://github.com/encode/httpx/issues/634), which is
-        # why we don't call it here.
-        # This is fine, though, because '.aclose()' schedules the actual closing of the
-        # stream, meaning that at best it will happen during the next event loop
-        # iteration, and at worst asyncio will take care of it on program exit.
+        # SSL connections should issue the close and then abort, rather than
+        # waiting for the remote end of the connection to signal the EOF.
+        #
+        # See:
+        #
+        # * https://bugs.python.org/issue39758
+        # * https://github.com/python-trio/trio/blob/
+        #             31e2ae866ad549f1927d45ce073d4f0ea9f12419/trio/_ssl.py#L779-L829
+        #
+        # And related issues caused if we simply omit the 'wait_closed' call,
+        # without first using `.abort()`
+        #
+        # * https://github.com/encode/httpx/issues/825
+        # * https://github.com/encode/httpx/issues/914
         is_ssl = self.stream_writer.get_extra_info("ssl_object") is not None
 
         async with self.write_lock:
