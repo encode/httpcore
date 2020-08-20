@@ -169,7 +169,9 @@ class SocketStream(AsyncSocketStream):
                 self.stream_writer.close()
                 if is_ssl:
                     self.stream_writer.transport.abort()  # type: ignore
-                await self.stream_writer.wait_closed()
+                if hasattr(self.stream_writer, "wait_closed"):
+                    # Python 3.7+ only.
+                    await self.stream_writer.wait_closed()
 
     def is_connection_dropped(self) -> bool:
         # Counter-intuitively, what we really want to know here is whether the socket is
