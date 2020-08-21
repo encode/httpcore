@@ -168,7 +168,7 @@ class SocketStream(AsyncSocketStream):
             with map_exceptions({OSError: CloseError}):
                 self.stream_writer.close()
                 if is_ssl:
-                    # Give the connection a chance to write any data in the buffer,
+                    # Give the connection a chance to write any data in the buffer,
                     # and then forcibly tear down the SSL connection.
                     await asyncio.sleep(0)
                     self.stream_writer.transport.abort()  # type: ignore
