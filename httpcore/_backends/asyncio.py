@@ -153,7 +153,7 @@ class SocketStream(AsyncSocketStream):
         #
         # See:
         #
-        # * https://bugs.python.org/issue39758
+        # * https://bugs.python.org/issue39758
         # * https://github.com/python-trio/trio/blob/
         #             31e2ae866ad549f1927d45ce073d4f0ea9f12419/trio/_ssl.py#L779-L829
         #
@@ -161,7 +161,7 @@ class SocketStream(AsyncSocketStream):
         # without first using `.abort()`
         #
         # * https://github.com/encode/httpx/issues/825
-        # * https://github.com/encode/httpx/issues/914
+        # * https://github.com/encode/httpx/issues/914
         is_ssl = self.stream_writer.get_extra_info("ssl_object") is not None
 
         async with self.write_lock:

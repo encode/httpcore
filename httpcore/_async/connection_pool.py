@@ -52,12 +52,12 @@ class ResponseByteStream(AsyncByteStream):
 
     async def aclose(self) -> None:
         try:
-            #  Call the underlying stream close callback.
+            # Call the underlying stream close callback.
             # This will be a call to `AsyncHTTP11Connection._response_closed()`
             # or `AsyncHTTP2Stream._response_closed()`.
             await self.stream.aclose()
         finally:
-            #  Call the connection pool close callback.
+            # Call the connection pool close callback.
             # This will be a call to `AsyncConnectionPool._response_closed()`.
             await self.callback(self.connection)
 
