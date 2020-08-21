@@ -52,12 +52,12 @@ class ResponseByteStream(SyncByteStream):
 
     def close(self) -> None:
         try:
-            #  Call the underlying stream close callback.
+            # Call the underlying stream close callback.
             # This will be a call to `SyncHTTP11Connection._response_closed()`
             # or `SyncHTTP2Stream._response_closed()`.
             self.stream.close()
         finally:
-            #  Call the connection pool close callback.
+            # Call the connection pool close callback.
             # This will be a call to `SyncConnectionPool._response_closed()`.
             self.callback(self.connection)
 
