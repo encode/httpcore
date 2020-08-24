@@ -24,6 +24,10 @@ class AutoBackend(AsyncBackend):
                 from .trio import TrioBackend
 
                 self._backend_implementation = TrioBackend()
+            elif backend == "curio":
+                from .curio import CurioBackend
+
+                self._backend_implementation = CurioBackend()
             else:  # pragma: nocover
                 raise RuntimeError(f"Unsupported concurrency backend {backend!r}")
         return self._backend_implementation
