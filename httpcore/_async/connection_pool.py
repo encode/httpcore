@@ -25,7 +25,7 @@ class NullSemaphore(AsyncSemaphore):
     async def acquire(self, timeout: float = None) -> None:
         return
 
-    def release(self) -> None:
+    async def release(self) -> None:
         return
 
 
@@ -315,7 +315,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         logger.trace("removing connection from pool=%r", connection)
         async with self._thread_lock:
             if connection in self._connections.get(connection.origin, set()):
-                self._connection_semaphore.release()
+                await self._connection_semaphore.release()
                 self._connections[connection.origin].remove(connection)
                 if not self._connections[connection.origin]:
                     del self._connections[connection.origin]

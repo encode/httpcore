@@ -204,7 +204,7 @@ class Semaphore(AsyncSemaphore):
         except asyncio.TimeoutError:
             raise self.exc_class()
 
-    def release(self) -> None:
+    async def release(self) -> None:
         self.semaphore.release()
 
 
