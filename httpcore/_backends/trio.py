@@ -102,7 +102,7 @@ class Lock(AsyncLock):
     def __init__(self) -> None:
         self._lock = trio.Lock()
 
-    def release(self) -> None:
+    async def release(self) -> None:
         self._lock.release()
 
     async def acquire(self) -> None:

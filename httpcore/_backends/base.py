@@ -47,9 +47,9 @@ class AsyncLock:
         exc_value: BaseException = None,
         traceback: TracebackType = None,
     ) -> None:
-        self.release()
+        await self.release()
 
-    def release(self) -> None:
+    async def release(self) -> None:
         raise NotImplementedError()  # pragma: no cover
 
     async def acquire(self) -> None:
