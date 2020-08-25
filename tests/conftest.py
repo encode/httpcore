@@ -14,12 +14,21 @@ from mitmproxy.tools.dump import DumpMaster
 
 from httpcore._types import URL
 
-from .marks.curio import kernel  # noqa: F401
-from .marks.curio import pytest_pycollect_makeitem  # noqa: F401
-from .marks.curio import pytest_pyfunc_call  # noqa: F401
+from .marks.curio import curio_kernel_fixture  # noqa: F401
+from .marks.curio import curio_pytest_pycollect_makeitem, curio_pytest_pyfunc_call
 
 PROXY_HOST = "127.0.0.1"
 PROXY_PORT = 8080
+
+
+@pytest.mark.tryfirst
+def pytest_pycollect_makeitem(collector, name, obj):
+    curio_pytest_pycollect_makeitem(collector, name, obj)
+
+
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_pyfunc_call(pyfuncitem):
+    yield from curio_pytest_pyfunc_call(pyfuncitem)
 
 
 @pytest.fixture(

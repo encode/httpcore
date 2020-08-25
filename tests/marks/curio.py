@@ -14,7 +14,7 @@ def _is_coroutine(obj):
 
 
 @pytest.mark.tryfirst
-def pytest_pycollect_makeitem(collector, name, obj):
+def curio_pytest_pycollect_makeitem(collector, name, obj):
     """A pytest hook to collect coroutines in a test module."""
     if collector.funcnamefilter(name) and _is_coroutine(obj):
         item = pytest.Function.from_parent(collector, name=name)
@@ -23,7 +23,7 @@ def pytest_pycollect_makeitem(collector, name, obj):
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
-def pytest_pyfunc_call(pyfuncitem):
+def curio_pytest_pyfunc_call(pyfuncitem):
     """Run curio marked test functions in a Curio kernel instead of a normal function call.
     """
     if pyfuncitem.get_closest_marker("curio"):
@@ -44,7 +44,7 @@ def wrap_in_sync(func):
 
 # Fixture for explicitly running in Kernel instance.
 @pytest.fixture(scope="session")
-def kernel(request):
+def curio_kernel_fixture(request):
     """Provide a Curio Kernel object for running co-routines."""
     k = curio.Kernel(debug=[curio.debug.longblock, curio.debug.logcrash])
     m = curio.monitor.Monitor(k)
