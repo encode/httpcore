@@ -61,9 +61,10 @@ class SocketStream(AsyncSocketStream):
         self.read_lock = curio.Lock()
         self.write_lock = curio.Lock()
         self.socket = socket
+        self.stream = socket.as_stream()
 
     def get_http_version(self) -> str:
-        if hasattr(self.socket._socket, "_sslobj"):
+        if hasattr(self.socket, "_socket") and hasattr(self.socket._socket, "_sslobj"):
             ident = self.socket._socket._sslobj.selected_alpn_protocol()
         else:
             ident = "http/1.1"
@@ -102,9 +103,7 @@ class SocketStream(AsyncSocketStream):
 
         with map_exceptions(exc_map):
             async with self.read_lock:
-                socket_stream = self.socket.as_stream()
-
-                return await curio.timeout_after(read_timeout, socket_stream.read(n))
+                return await curio.timeout_after(read_timeout, self.stream.read(n))
 
     async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         write_timeout = convert_timeout(timeout.get("write"))
@@ -116,11 +115,11 @@ class SocketStream(AsyncSocketStream):
 
         with map_exceptions(exc_map):
             async with self.write_lock:
-                socket_stream = self.socket.as_stream()
-                await curio.timeout_after(write_timeout, socket_stream.write(data))
+                await curio.timeout_after(write_timeout, self.stream.write(data))
 
     async def aclose(self) -> None:
-        await self.socket.close()
+        # we dont need to close the self.socket, since it's closed by stream closing
+        await self.stream.close()
 
     def is_connection_dropped(self) -> bool:
         return self.socket._closed
