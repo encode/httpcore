@@ -33,8 +33,8 @@ def async_environment(request: typing.Any) -> str:
     """
     Mark a test function to be run on asyncio, trio and curio.
 
-    Equivalent to having a pair of tests, each respectively marked with
-    '@pytest.mark.asyncio' and '@pytest.mark.trio'.
+    Equivalent to having three tests, each respectively marked with
+    '@pytest.mark.asyncio', '@pytest.mark.trio' and '@pytest.mark.curio'.
 
     Intended usage:
 
