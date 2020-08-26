@@ -24,8 +24,8 @@ def curio_pytest_pycollect_makeitem(collector, name, obj):
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def curio_pytest_pyfunc_call(pyfuncitem):
-    """Run curio marked test functions in a Curio kernel instead of a normal function call.
-    """
+    """Run curio marked test functions in a Curio kernel
+    instead of a normal function call."""
     if pyfuncitem.get_closest_marker("curio"):
         pyfuncitem.obj = wrap_in_sync(pyfuncitem.obj)
     yield
@@ -40,14 +40,3 @@ def wrap_in_sync(func):
         curio.Kernel().run(coro, shutdown=True)
 
     return inner
-
-
-# Fixture for explicitly running in Kernel instance.
-@pytest.fixture(scope="session")
-def curio_kernel_fixture(request):
-    """Provide a Curio Kernel object for running co-routines."""
-    k = curio.Kernel(debug=[curio.debug.longblock, curio.debug.logcrash])
-    m = curio.monitor.Monitor(k)
-    request.addfinalizer(lambda: k.run(shutdown=True))
-    request.addfinalizer(m.close)
-    return k

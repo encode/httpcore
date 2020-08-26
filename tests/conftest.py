@@ -14,7 +14,6 @@ from mitmproxy.tools.dump import DumpMaster
 
 from httpcore._types import URL
 
-from .marks.curio import curio_kernel_fixture  # noqa: F401
 from .marks.curio import curio_pytest_pycollect_makeitem, curio_pytest_pyfunc_call
 
 PROXY_HOST = "127.0.0.1"
