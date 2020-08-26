@@ -25,7 +25,7 @@ class NullSemaphore(AsyncSemaphore):
     async def acquire(self, timeout: float = None) -> None:
         return
 
-    def release(self) -> None:
+    async def release(self) -> None:
         return
 
 
@@ -265,7 +265,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
                 remove_from_pool = True
                 close_connection = True
             elif self._keepalive_expiry is not None:
-                now = self._backend.time()
+                now = await self._backend.time()
                 connection.expires_at = now + self._keepalive_expiry
 
         if remove_from_pool:
@@ -281,7 +281,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         if self._keepalive_expiry is None:
             return
 
-        now = self._backend.time()
+        now = await self._backend.time()
         if now < self._next_keepalive_check:
             return
 
@@ -315,7 +315,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         logger.trace("removing connection from pool=%r", connection)
         async with self._thread_lock:
             if connection in self._connections.get(connection.origin, set()):
-                self._connection_semaphore.release()
+                await self._connection_semaphore.release()
                 self._connections[connection.origin].remove(connection)
                 if not self._connections[connection.origin]:
                     del self._connections[connection.origin]

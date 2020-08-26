@@ -102,7 +102,7 @@ class Lock(AsyncLock):
     def __init__(self) -> None:
         self._lock = trio.Lock()
 
-    def release(self) -> None:
+    async def release(self) -> None:
         self._lock.release()
 
     async def acquire(self) -> None:
@@ -129,7 +129,7 @@ class Semaphore(AsyncSemaphore):
 
         raise self.exc_class()
 
-    def release(self) -> None:
+    async def release(self) -> None:
         self.semaphore.release()
 
 
@@ -198,5 +198,5 @@ class TrioBackend(AsyncBackend):
     def create_semaphore(self, max_value: int, exc_class: type) -> AsyncSemaphore:
         return Semaphore(max_value, exc_class=exc_class)
 
-    def time(self) -> float:
+    async def time(self) -> float:
         return trio.current_time()
