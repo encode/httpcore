@@ -20,6 +20,14 @@ PROXY_HOST = "127.0.0.1"
 PROXY_PORT = 8080
 
 
+def pytest_configure(config):
+    # register an additional marker
+    config.addinivalue_line(
+        "markers",
+        "curio: mark the test as a coroutine, it will be run using a Curio kernel.",
+    )
+
+
 @pytest.mark.tryfirst
 def pytest_pycollect_makeitem(collector, name, obj):
     curio_pytest_pycollect_makeitem(collector, name, obj)
