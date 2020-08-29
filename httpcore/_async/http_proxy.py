@@ -132,7 +132,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
         if connection is None:
             connection = AsyncHTTPConnection(
-                origin=origin, http2=self._http2, ssl_context=self._ssl_context,
+                origin=origin, http2=self._http2, ssl_context=self._ssl_context
             )
             await self._add_to_pool(connection)
 
@@ -248,7 +248,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             headers,
             stream,
         ) = await connection.request(
-            method, url, headers=headers, stream=stream, timeout=timeout,
+            method, url, headers=headers, stream=stream, timeout=timeout
         )
 
         wrapped_stream = ResponseByteStream(
