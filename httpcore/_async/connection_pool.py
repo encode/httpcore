@@ -292,7 +292,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             if (
                 connection.state == ConnectionState.IDLE
                 and connection.expires_at is not None
-                and now > connection.expires_at
+                and now >= connection.expires_at
             ):
                 connections_to_close.add(connection)
                 await self._remove_from_pool(connection)
