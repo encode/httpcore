@@ -198,7 +198,7 @@ def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
     headers = [(b"host", b"example.org")]
     max_connections = 1
     with httpcore.SyncHTTPProxy(
-        proxy_server, proxy_mode=proxy_mode, max_connections=max_connections,
+        proxy_server, proxy_mode=proxy_mode, max_connections=max_connections
     ) as http:
         http_version, status_code, reason, headers, stream = http.request(
             method, url, headers
@@ -233,7 +233,7 @@ def test_http_request_local_address() -> None:
 
 @pytest.mark.parametrize("http2", [False, True])
 def test_proxy_https_requests(
-    proxy_server: URL, ca_ssl_context: ssl.SSLContext, proxy_mode: str, http2: bool,
+    proxy_server: URL, ca_ssl_context: ssl.SSLContext, proxy_mode: str, http2: bool
 ) -> None:
     method = b"GET"
     url = (b"https", b"example.org", 443, b"/")
@@ -277,7 +277,12 @@ def test_proxy_https_requests(
             {"https://example.org": ["HTTP/1.1, ACTIVE", "HTTP/1.1, ACTIVE"]},
             {},
         ),
-        (True, 0.0, {"https://example.org": ["HTTP/2, ACTIVE, 2 streams"]}, {},),
+        (
+            True,
+            0.0,
+            {"https://example.org": ["HTTP/2, ACTIVE, 2 streams"]},
+            {},
+        ),
     ],
 )
 

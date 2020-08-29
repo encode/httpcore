@@ -132,7 +132,7 @@ class SyncHTTPProxy(SyncConnectionPool):
 
         if connection is None:
             connection = SyncHTTPConnection(
-                origin=origin, http2=self._http2, ssl_context=self._ssl_context,
+                origin=origin, http2=self._http2, ssl_context=self._ssl_context
             )
             self._add_to_pool(connection)
 
@@ -248,7 +248,7 @@ class SyncHTTPProxy(SyncConnectionPool):
             headers,
             stream,
         ) = connection.request(
-            method, url, headers=headers, stream=stream, timeout=timeout,
+            method, url, headers=headers, stream=stream, timeout=timeout
         )
 
         wrapped_stream = ResponseByteStream(

@@ -39,7 +39,7 @@ class SyncSocketStream:
         return "HTTP/1.1"
 
     def start_tls(
-        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict,
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict
     ) -> "SyncSocketStream":
         connect_timeout = timeout.get("connect")
         exc_map = {socket.timeout: ConnectTimeout, socket.error: ConnectError}

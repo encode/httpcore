@@ -35,7 +35,7 @@ class SocketStream(AsyncSocketStream):
         return "HTTP/2" if ident == "h2" else "HTTP/1.1"
 
     async def start_tls(
-        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict,
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict
     ) -> "SocketStream":
         connect_timeout = none_as_inf(timeout.get("connect"))
         exc_map = {

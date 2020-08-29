@@ -26,9 +26,7 @@ logger = get_logger(__name__)
 class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
     READ_NUM_BYTES = 64 * 1024
 
-    def __init__(
-        self, socket: AsyncSocketStream, ssl_context: SSLContext = None,
-    ):
+    def __init__(self, socket: AsyncSocketStream, ssl_context: SSLContext = None):
         self.socket = socket
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
 
@@ -85,7 +83,7 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         return self.socket
 
     async def _send_request(
-        self, method: bytes, url: URL, headers: Headers, timeout: TimeoutDict,
+        self, method: bytes, url: URL, headers: Headers, timeout: TimeoutDict
     ) -> None:
         """
         Send the request line and headers.

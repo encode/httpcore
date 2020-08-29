@@ -78,7 +78,7 @@ async def backport_start_tls(
 
 class SocketStream(AsyncSocketStream):
     def __init__(
-        self, stream_reader: asyncio.StreamReader, stream_writer: asyncio.StreamWriter,
+        self, stream_reader: asyncio.StreamReader, stream_writer: asyncio.StreamWriter
     ):
         self.stream_reader = stream_reader
         self.stream_writer = stream_writer
