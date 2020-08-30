@@ -292,7 +292,7 @@ class SyncConnectionPool(SyncHTTPTransport):
             if (
                 connection.state == ConnectionState.IDLE
                 and connection.expires_at is not None
-                and now > connection.expires_at
+                and now >= connection.expires_at
             ):
                 connections_to_close.add(connection)
                 self._remove_from_pool(connection)
