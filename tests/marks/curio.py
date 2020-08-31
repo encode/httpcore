@@ -19,7 +19,7 @@ def curio_pytest_pycollect_makeitem(collector, name, obj):
     if collector.funcnamefilter(name) and _is_coroutine(obj):
         item = pytest.Function.from_parent(collector, name=name)
         if "curio" in item.keywords:
-            return list(collector._genfunctions(name, obj))
+            return list(collector._genfunctions(name, obj))  # pragma: nocover
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
