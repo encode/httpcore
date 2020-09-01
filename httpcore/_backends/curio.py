@@ -5,7 +5,6 @@ from typing import Dict, Optional, Type, Union
 
 import curio
 import curio.io
-from curio.network import _wrap_ssl_client
 
 from .._exceptions import (
     ConnectError,
@@ -24,6 +23,22 @@ from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 logger = get_logger("curio_backend")
 
 one_day_in_seconds = 60 * 60 * 24
+
+
+async def wrap_ssl_client(
+    sock: curio.io.Socket,
+    ssl_context: SSLContext,
+    server_hostname: bytes,
+) -> curio.io.Socket:
+    kwargs = {
+        "server_hostname": server_hostname,
+        "do_handshake_on_connect": sock._socket.gettimeout() != 0.0,
+    }
+
+    socket = curio.io.Socket(ssl_context.wrap_socket(sock._socket, **kwargs))
+    await socket.do_handshake()
+
+    return socket
 
 
 def convert_timeout(value: Optional[float]) -> int:
@@ -96,12 +111,7 @@ class SocketStream(AsyncSocketStream):
         with map_exceptions(exc_map):
             wrapped_sock = await curio.timeout_after(
                 connect_timeout,
-                _wrap_ssl_client(
-                    self.socket,
-                    ssl=ssl_context,
-                    server_hostname=hostname,
-                    alpn_protocols=["h2", "http/1.1"],
-                ),
+                wrap_ssl_client(self.socket, ssl_context, hostname),
             )
 
             return SocketStream(wrapped_sock)
@@ -163,7 +173,8 @@ class CurioBackend(AsyncBackend):
 
         with map_exceptions(exc_map):
             sock: curio.io.Socket = await curio.timeout_after(
-                connect_timeout, curio.open_connection(hostname, port, **kwargs)
+                connect_timeout,
+                curio.open_connection(hostname, port, **kwargs),
             )
 
             return SocketStream(sock)
