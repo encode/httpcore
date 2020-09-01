@@ -125,7 +125,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
             self.events[stream_id] = []
             return await h2_stream.request(method, url, headers, stream, timeout)
         except Exception:
-            self.max_streams_semaphore.release()
+            await self.max_streams_semaphore.release()
             raise
 
     async def send_connection_init(self, timeout: TimeoutDict) -> None:
@@ -228,7 +228,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         await self.socket.write(data_to_send, timeout)
 
     async def send_headers(
-        self, stream_id: int, headers: Headers, end_stream: bool, timeout: TimeoutDict,
+        self, stream_id: int, headers: Headers, end_stream: bool, timeout: TimeoutDict
     ) -> None:
         logger.trace("send_headers stream_id=%r headers=%r", stream_id, headers)
         self.h2_state.send_headers(stream_id, headers, end_stream=end_stream)
@@ -269,7 +269,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
                 elif self.state == ConnectionState.FULL:
                     await self.aclose()
         finally:
-            self.max_streams_semaphore.release()
+            await self.max_streams_semaphore.release()
 
 
 class AsyncHTTP2Stream:

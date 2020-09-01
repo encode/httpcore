@@ -47,9 +47,9 @@ class AsyncLock:
         exc_value: BaseException = None,
         traceback: TracebackType = None,
     ) -> None:
-        self.release()
+        await self.release()
 
-    def release(self) -> None:
+    async def release(self) -> None:
         raise NotImplementedError()  # pragma: no cover
 
     async def acquire(self) -> None:
@@ -65,7 +65,7 @@ class AsyncSemaphore:
     async def acquire(self, timeout: float = None) -> None:
         raise NotImplementedError()  # pragma: no cover
 
-    def release(self) -> None:
+    async def release(self) -> None:
         raise NotImplementedError()  # pragma: no cover
 
 
@@ -96,5 +96,5 @@ class AsyncBackend:
     def create_semaphore(self, max_value: int, exc_class: type) -> AsyncSemaphore:
         raise NotImplementedError()  # pragma: no cover
 
-    def time(self) -> float:
+    async def time(self) -> float:
         raise NotImplementedError()  # pragma: no cover
