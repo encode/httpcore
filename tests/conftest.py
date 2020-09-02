@@ -21,7 +21,6 @@ PROXY_PORT = 8080
 
 
 def pytest_configure(config):
-    # register an additional marker
     config.addinivalue_line(
         "markers",
         "curio: mark the test as a coroutine, it will be run using a Curio kernel.",
