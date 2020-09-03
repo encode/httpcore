@@ -56,6 +56,7 @@ setup(
     install_requires=["h11>=0.8,<0.10", "sniffio==1.*"],
     extras_require={
         "http2": ["h2==3.*"],
+        "http3": ["aioquic>=0.9"],
     },
     classifiers=[
         "Development Status :: 3 - Alpha",

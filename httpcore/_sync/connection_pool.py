@@ -1,3 +1,4 @@
+import importlib.util
 import warnings
 from ssl import SSLContext
 from typing import Iterator, Callable, Dict, List, Optional, Set, Tuple
@@ -92,6 +93,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
         http2: bool = False,
+        http3: bool = False,
         uds: str = None,
         local_address: str = None,
         max_keepalive: int = None,
@@ -108,6 +110,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         self._max_keepalive_connections = max_keepalive_connections
         self._keepalive_expiry = keepalive_expiry
         self._http2 = http2
+        self._http3 = http3
         self._uds = uds
         self._local_address = local_address
         self._connections: Dict[Origin, Set[SyncHTTPConnection]] = {}
@@ -122,6 +125,15 @@ class SyncConnectionPool(SyncHTTPTransport):
                 raise ImportError(
                     "Attempted to use http2=True, but the 'h2' "
                     "package is not installed. Use 'pip install httpcore[http2]'."
+                )
+
+        if http3:
+            spec = importlib.util.find_spec("aioquic")
+
+            if spec is None:
+                raise ImportError(
+                    "Attempted to use http2=True, but the 'aioquic' "
+                    "package is not installed. Use 'pip install httpcore[http3]'."
                 )
 
     @property
@@ -175,6 +187,7 @@ class SyncConnectionPool(SyncHTTPTransport):
                     connection = SyncHTTPConnection(
                         origin=origin,
                         http2=self._http2,
+                        http3=self._http3,
                         uds=self._uds,
                         ssl_context=self._ssl_context,
                         local_address=self._local_address,

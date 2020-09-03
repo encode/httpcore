@@ -1,5 +1,6 @@
 import platform
 import ssl
+from unittest.mock import patch
 
 import pytest
 
@@ -364,3 +365,11 @@ def test_max_keepalive_connections_handled_correctly(
 
             connections_in_pool = next(iter(stats.values()))
             assert len(connections_in_pool) == min(connections_number, max_keepalive)
+
+
+
+@patch("importlib.util.find_spec", return_value=None)
+def test_cannot_create_connection_pool_with_http3_without_lib(find_spec_mock):
+    with pytest.raises(ImportError):
+        with httpcore.SyncConnectionPool(http3=True):
+            pass

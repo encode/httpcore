@@ -20,6 +20,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         self,
         origin: Origin,
         http2: bool = False,
+        http3: bool = False,
         uds: str = None,
         ssl_context: SSLContext = None,
         socket: AsyncSocketStream = None,
@@ -27,6 +28,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
     ):
         self.origin = origin
         self.http2 = http2
+        self.http3 = http3
         self.uds = uds
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
         self.socket = socket
@@ -38,6 +40,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         self.connection: Optional[AsyncBaseHTTPConnection] = None
         self.is_http11 = False
         self.is_http2 = False
+        self.is_http3 = False
         self.connect_failed = False
         self.expires_at: Optional[float] = None
         self.backend = AutoBackend()
@@ -48,6 +51,8 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
             http_version = "HTTP/1.1"
         elif self.is_http2:
             http_version = "HTTP/2"
+        elif self.is_http3:
+            http_version = "HTTP/3"
         return f"<AsyncHTTPConnection http_version={http_version} state={self.state}>"
 
     def info(self) -> str:
