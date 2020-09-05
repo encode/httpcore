@@ -20,6 +20,7 @@ SUBS = [
     ('__aiter__', '__iter__'),
     ('@pytest.mark.asyncio', ''),
     ('@pytest.mark.trio', ''),
+    ('@pytest.mark.curio', ''),
     ('@pytest.mark.usefixtures.*', ''),
 ]
 COMPILED_SUBS = [

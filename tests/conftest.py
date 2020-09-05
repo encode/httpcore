@@ -14,22 +14,42 @@ from mitmproxy.tools.dump import DumpMaster
 
 from httpcore._types import URL
 
+from .marks.curio import curio_pytest_pycollect_makeitem, curio_pytest_pyfunc_call
+
 PROXY_HOST = "127.0.0.1"
 PROXY_PORT = 8080
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "curio: mark the test as a coroutine, it will be run using a Curio kernel.",
+    )
+
+
+@pytest.mark.tryfirst
+def pytest_pycollect_makeitem(collector, name, obj):
+    curio_pytest_pycollect_makeitem(collector, name, obj)
+
+
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_pyfunc_call(pyfuncitem):
+    yield from curio_pytest_pyfunc_call(pyfuncitem)
 
 
 @pytest.fixture(
     params=[
         pytest.param("asyncio", marks=pytest.mark.asyncio),
         pytest.param("trio", marks=pytest.mark.trio),
+        pytest.param("curio", marks=pytest.mark.curio),
     ]
 )
 def async_environment(request: typing.Any) -> str:
     """
-    Mark a test function to be run on both asyncio and trio.
+    Mark a test function to be run on asyncio, trio and curio.
 
-    Equivalent to having a pair of tests, each respectively marked with
-    '@pytest.mark.asyncio' and '@pytest.mark.trio'.
+    Equivalent to having three tests, each respectively marked with
+    '@pytest.mark.asyncio', '@pytest.mark.trio' and '@pytest.mark.curio'.
 
     Intended usage:
 
