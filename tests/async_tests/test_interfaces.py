@@ -6,6 +6,7 @@ import pytest
 import httpcore
 from httpcore._types import URL
 from tests.conftest import Server
+from tests.utils import getsockname, get_local_ip_address
 
 
 async def read_body(stream: httpcore.AsyncByteStream) -> bytes:
@@ -213,7 +214,14 @@ async def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
 @pytest.mark.asyncio
 # This doesn't run with trio, since trio doesn't support local_address.
 async def test_http_request_local_address() -> None:
-    async with httpcore.AsyncConnectionPool(local_address="0.0.0.0") as http:
+    # By default systems seem to bind to a private IP like 10.x.x.x.
+    # We forcefully use the system local IP, something like 192.168.x.x,
+    # to be able to distinguish that local_address is correctly applied.
+    # NOTE: this requires the machine to be connected to the Internet.
+    local_address = get_local_ip_address()
+    assert local_address.startswith("192.168.")
+
+    async with httpcore.AsyncConnectionPool(local_address=local_address) as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
@@ -222,6 +230,8 @@ async def test_http_request_local_address() -> None:
         )
         await read_body(stream)
 
+        client_host, _ = getsockname(stream.connection.socket)  # type: ignore
+        assert client_host == local_address
         assert http_version == b"HTTP/1.1"
         assert status_code == 200
         assert reason == b"OK"
