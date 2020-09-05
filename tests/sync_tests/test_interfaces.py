@@ -214,11 +214,11 @@ def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
 
 # This doesn't run with trio, since trio doesn't support local_address.
 def test_http_request_local_address() -> None:
-    # By default systems seem to bind to a private IP like 10.x.x.x.
-    # We forcefully use the system local IP, something like 192.168.x.x,
-    # to be able to distinguish that local_address is correctly applied.
+    # Forcefully use the system local IP, instead of a randomly assigned
+    # client IP address. Its shape may differ based on the type of network we're
+    # connected to (eg 10.x.x.x, 192.168.x.x, or 172.20.10.x) so we can't make any
+    # assumption there.
     local_address = get_local_ip_address()
-    assert local_address.startswith("192.168.")
 
     with httpcore.SyncConnectionPool(local_address=local_address) as http:
         method = b"GET"
