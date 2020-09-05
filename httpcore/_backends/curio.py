@@ -155,9 +155,13 @@ class CurioBackend(AsyncBackend):
             OSError: ConnectError,
         }
         host = hostname.decode("ascii")
-        kwargs = (
-            {} if ssl_context is None else {"ssl": ssl_context, "server_hostname": host}
-        )
+
+        kwargs: dict = {}
+        if ssl_context is not None:
+            kwargs["ssl"] = ssl_context
+            kwargs["server_hostname"] = host
+        if local_address is not None:
+            kwargs["source_addr"] = (local_address, 0)
 
         with map_exceptions(exc_map):
             sock: curio.io.Socket = await curio.timeout_after(
