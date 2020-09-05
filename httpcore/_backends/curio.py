@@ -18,7 +18,7 @@ from .._types import TimeoutDict
 from .._utils import get_logger
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
-logger = get_logger("curio_backend")
+logger = get_logger(__name__)
 
 ONE_DAY_IN_SECONDS = float(60 * 60 * 24)
 
@@ -199,4 +199,4 @@ class CurioBackend(AsyncBackend):
         return Semaphore(max_value, exc_class)
 
     async def time(self) -> float:
-        return float(await curio.clock())
+        return await curio.clock()
