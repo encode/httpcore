@@ -2,7 +2,8 @@ import warnings
 from ssl import SSLContext
 from typing import AsyncIterator, Callable, Dict, List, Optional, Set, Tuple
 
-from .._backends.auto import AsyncLock, AsyncSemaphore, AutoBackend
+from .._backends.auto import AsyncLock, AsyncSemaphore
+from .._backends.base import lookup_async_backend
 from .._exceptions import LocalProtocolError, PoolTimeout, UnsupportedProtocol
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
@@ -52,12 +53,12 @@ class ResponseByteStream(AsyncByteStream):
 
     async def aclose(self) -> None:
         try:
-            #  Call the underlying stream close callback.
+            # Call the underlying stream close callback.
             # This will be a call to `AsyncHTTP11Connection._response_closed()`
             # or `AsyncHTTP2Stream._response_closed()`.
             await self.stream.aclose()
         finally:
-            #  Call the connection pool close callback.
+            # Call the connection pool close callback.
             # This will be a call to `AsyncConnectionPool._response_closed()`.
             await self.callback(self.connection)
 
@@ -83,6 +84,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
     `local_address="0.0.0.0"` will connect using an `AF_INET` address (IPv4),
     while using `local_address="::"` will connect using an `AF_INET6` address
     (IPv6).
+    * **backend** - `str` - A name indicating which concurrency backend to use.
     """
 
     def __init__(
@@ -95,6 +97,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         uds: str = None,
         local_address: str = None,
         max_keepalive: int = None,
+        backend: str = "auto",
     ):
         if max_keepalive is not None:
             warnings.warn(
@@ -112,7 +115,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         self._local_address = local_address
         self._connections: Dict[Origin, Set[AsyncHTTPConnection]] = {}
         self._thread_lock = ThreadLock()
-        self._backend = AutoBackend()
+        self._backend = lookup_async_backend(backend)
         self._next_keepalive_check = 0.0
 
         if http2:
@@ -178,6 +181,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
                         uds=self._uds,
                         ssl_context=self._ssl_context,
                         local_address=self._local_address,
+                        backend=self._backend,
                     )
                     logger.trace("created connection=%r", connection)
                     await self._add_to_pool(connection, timeout=timeout)

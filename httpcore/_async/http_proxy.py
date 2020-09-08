@@ -60,6 +60,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
         http2: bool = False,
+        backend: str = "auto",
         # Deprecated argument style:
         max_keepalive: int = None,
     ):
@@ -74,6 +75,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             max_keepalive_connections=max_keepalive_connections,
             keepalive_expiry=keepalive_expiry,
             http2=http2,
+            backend=backend,
             max_keepalive=max_keepalive,
         )
 

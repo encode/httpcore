@@ -185,3 +185,12 @@ def uds_server() -> typing.Iterator[Server]:
             yield server
     finally:
         os.remove(uds)
+
+
+def detect_backend() -> str:
+    import sniffio
+
+    try:
+        return sniffio.current_async_library()
+    except sniffio.AsyncLibraryNotFoundError:
+        return "sync"

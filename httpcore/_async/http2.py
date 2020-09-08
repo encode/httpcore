@@ -8,7 +8,7 @@ from h2.config import H2Configuration
 from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
-from .._backends.auto import AsyncLock, AsyncSemaphore, AsyncSocketStream, AutoBackend
+from .._backends.auto import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 from .._bytestreams import AsyncIteratorByteStream, PlainByteStream
 from .._exceptions import PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
@@ -33,7 +33,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
     def __init__(
         self,
         socket: AsyncSocketStream,
-        backend: AutoBackend,
+        backend: AsyncBackend,
         ssl_context: SSLContext = None,
     ):
         self.socket = socket

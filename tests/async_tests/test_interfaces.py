@@ -5,7 +5,7 @@ import pytest
 
 import httpcore
 from httpcore._types import URL
-from tests.conftest import Server
+from tests.conftest import Server, detect_backend
 
 
 async def read_body(stream: httpcore.AsyncByteStream) -> bytes:
@@ -364,3 +364,20 @@ async def test_max_keepalive_connections_handled_correctly(
 
             connections_in_pool = next(iter(stats.values()))
             assert len(connections_in_pool) == min(connections_number, max_keepalive)
+
+
+@pytest.mark.usefixtures("async_environment")
+async def test_explicit_backend_name() -> None:
+    async with httpcore.AsyncConnectionPool(backend=detect_backend()) as http:
+        method = b"GET"
+        url = (b"http", b"example.org", 80, b"/")
+        headers = [(b"host", b"example.org")]
+        http_version, status_code, reason, headers, stream = await http.request(
+            method, url, headers
+        )
+        await read_body(stream)
+
+        assert http_version == b"HTTP/1.1"
+        assert status_code == 200
+        assert reason == b"OK"
+        assert len(http._connections[url[:3]]) == 1  # type: ignore
