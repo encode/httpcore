@@ -18,7 +18,7 @@ SUBS = [
     ('__aenter__', '__enter__'),
     ('__aexit__', '__exit__'),
     ('__aiter__', '__iter__'),
-    ('pytestmark = pytest.mark.anyio', ''),
+    ('@pytest.mark.anyio', ''),
     ('lookup_async_backend', "lookup_sync_backend"),
     ('auto', 'sync'),
     ('anyio', 'sync'),
