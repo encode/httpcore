@@ -2,10 +2,13 @@ import platform
 import ssl
 
 import pytest
+import sniffio
 
 import httpcore
 from httpcore._types import URL
 from tests.conftest import Server, detect_backend
+
+
 
 
 def read_body(stream: httpcore.SyncByteStream) -> bytes:
@@ -16,7 +19,6 @@ def read_body(stream: httpcore.SyncByteStream) -> bytes:
         return b"".join(body)
     finally:
         stream.close()
-
 
 
 def test_http_request() -> None:
@@ -35,7 +37,6 @@ def test_http_request() -> None:
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
-
 def test_https_request() -> None:
     with httpcore.SyncConnectionPool() as http:
         method = b"GET"
@@ -52,7 +53,6 @@ def test_https_request() -> None:
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
-
 def test_request_unsupported_protocol() -> None:
     with httpcore.SyncConnectionPool() as http:
         method = b"GET"
@@ -60,7 +60,6 @@ def test_request_unsupported_protocol() -> None:
         headers = [(b"host", b"example.org")]
         with pytest.raises(httpcore.UnsupportedProtocol):
             http.request(method, url, headers)
-
 
 
 def test_http2_request() -> None:
@@ -79,7 +78,6 @@ def test_http2_request() -> None:
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
-
 def test_closing_http_request() -> None:
     with httpcore.SyncConnectionPool() as http:
         method = b"GET"
@@ -94,7 +92,6 @@ def test_closing_http_request() -> None:
         assert status_code == 200
         assert reason == b"OK"
         assert url[:3] not in http._connections  # type: ignore
-
 
 
 def test_http_request_reuse_connection() -> None:
@@ -126,7 +123,6 @@ def test_http_request_reuse_connection() -> None:
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
-
 def test_https_request_reuse_connection() -> None:
     with httpcore.SyncConnectionPool() as http:
         method = b"GET"
@@ -154,7 +150,6 @@ def test_https_request_reuse_connection() -> None:
         assert status_code == 200
         assert reason == b"OK"
         assert len(http._connections[url[:3]]) == 1  # type: ignore
-
 
 
 def test_http_request_cannot_reuse_dropped_connection() -> None:
@@ -191,7 +186,6 @@ def test_http_request_cannot_reuse_dropped_connection() -> None:
 
 
 @pytest.mark.parametrize("proxy_mode", ["DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY"])
-
 def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
     method = b"GET"
     url = (b"http", b"example.org", 80, b"/")
@@ -210,9 +204,14 @@ def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
         assert reason == b"OK"
 
 
-
-# This doesn't run with trio, since trio doesn't support local_address.
 def test_http_request_local_address() -> None:
+    exc = getattr(sniffio, "Async" + "LibraryNotFoundError")
+    try:
+        if sniffio.current_async_library() == "trio":
+            pytest.skip("The trio backend does not support local_address")
+    except exc:
+        pass
+
     with httpcore.SyncConnectionPool(local_address="0.0.0.0") as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
@@ -230,7 +229,6 @@ def test_http_request_local_address() -> None:
 
 # mitmproxy does not support forwarding HTTPS requests
 @pytest.mark.parametrize("proxy_mode", ["DEFAULT", "TUNNEL_ONLY"])
-
 @pytest.mark.parametrize("http2", [False, True])
 def test_proxy_https_requests(
     proxy_server: URL, ca_ssl_context: ssl.SSLContext, proxy_mode: str, http2: bool
@@ -285,7 +283,6 @@ def test_proxy_https_requests(
         ),
     ],
 )
-
 def test_connection_pool_get_connection_info(
     http2: bool,
     keepalive_expiry: float,
@@ -320,7 +317,6 @@ def test_connection_pool_get_connection_info(
     platform.system() not in ("Linux", "Darwin"),
     reason="Unix Domain Sockets only exist on Unix",
 )
-
 def test_http_request_unix_domain_socket(uds_server: Server) -> None:
     uds = uds_server.config.uds
     assert uds is not None
@@ -336,7 +332,6 @@ def test_http_request_unix_domain_socket(uds_server: Server) -> None:
         assert reason == b"OK"
         body = read_body(stream)
         assert body == b"Hello, world!"
-
 
 
 @pytest.mark.parametrize("max_keepalive", [1, 3, 5])
@@ -364,7 +359,6 @@ def test_max_keepalive_connections_handled_correctly(
 
             connections_in_pool = next(iter(stats.values()))
             assert len(connections_in_pool) == min(connections_number, max_keepalive)
-
 
 
 def test_explicit_backend_name() -> None:
