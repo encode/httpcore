@@ -1,8 +1,38 @@
 from ssl import SSLContext
 from types import TracebackType
-from typing import Optional, Type
+from typing import TYPE_CHECKING, Optional, Type
 
 from .._types import TimeoutDict
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .sync import SyncBackend
+
+
+def lookup_async_backend(name: str) -> "AsyncBackend":
+    if name == "auto":
+        from .auto import AutoBackend
+
+        return AutoBackend()
+    elif name == "asyncio":
+        from .asyncio import AsyncioBackend
+
+        return AsyncioBackend()
+    elif name == "trio":
+        from .trio import TrioBackend
+
+        return TrioBackend()
+    elif name == "curio":
+        from .curio import CurioBackend
+
+        return CurioBackend()
+
+    raise ValueError("Invalid backend name {name!r}")
+
+
+def lookup_sync_backend(name: str) -> "SyncBackend":
+    from .sync import SyncBackend
+
+    return SyncBackend()
 
 
 class AsyncSocketStream:

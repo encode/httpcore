@@ -3,7 +3,7 @@ from typing import Iterator, List, Tuple, Union
 
 import h11
 
-from .._backends.auto import SyncSocketStream
+from .._backends.sync import SyncSocketStream
 from .._bytestreams import IteratorByteStream, PlainByteStream
 from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict

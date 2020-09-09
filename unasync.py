@@ -22,6 +22,9 @@ SUBS = [
     ('@pytest.mark.trio', ''),
     ('@pytest.mark.curio', ''),
     ('@pytest.mark.usefixtures.*', ''),
+    ('lookup_async_backend', "lookup_sync_backend"),
+    ('auto', 'sync'),
+    ('anyio', 'sync'),
 ]
 COMPILED_SUBS = [
     (re.compile(r'(^|\b)' + regex + r'($|\b)'), repl)

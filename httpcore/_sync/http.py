@@ -1,4 +1,4 @@
-from .._backends.auto import SyncSocketStream
+from .._backends.sync import SyncSocketStream
 from .._types import TimeoutDict
 from .base import SyncHTTPTransport, ConnectionState
 
