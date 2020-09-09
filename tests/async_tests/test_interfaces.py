@@ -20,7 +20,7 @@ async def read_body(stream: httpcore.AsyncByteStream) -> bytes:
 
 @pytest.mark.usefixtures("async_environment")
 async def test_http_request() -> None:
-    async with httpcore.AsyncConnectionPool() as http:
+    async with httpcore.AsyncConnectionPool(backend="anyio") as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
@@ -37,7 +37,7 @@ async def test_http_request() -> None:
 
 @pytest.mark.usefixtures("async_environment")
 async def test_https_request() -> None:
-    async with httpcore.AsyncConnectionPool() as http:
+    async with httpcore.AsyncConnectionPool(backend="anyio") as http:
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
@@ -54,7 +54,7 @@ async def test_https_request() -> None:
 
 @pytest.mark.usefixtures("async_environment")
 async def test_request_unsupported_protocol() -> None:
-    async with httpcore.AsyncConnectionPool() as http:
+    async with httpcore.AsyncConnectionPool(backend="anyio") as http:
         method = b"GET"
         url = (b"ftp", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
@@ -64,7 +64,7 @@ async def test_request_unsupported_protocol() -> None:
 
 @pytest.mark.usefixtures("async_environment")
 async def test_http2_request() -> None:
-    async with httpcore.AsyncConnectionPool(http2=True) as http:
+    async with httpcore.AsyncConnectionPool(backend="anyio", http2=True) as http:
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
@@ -81,7 +81,7 @@ async def test_http2_request() -> None:
 
 @pytest.mark.usefixtures("async_environment")
 async def test_closing_http_request() -> None:
-    async with httpcore.AsyncConnectionPool() as http:
+    async with httpcore.AsyncConnectionPool(backend="anyio") as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org"), (b"connection", b"close")]
@@ -98,7 +98,7 @@ async def test_closing_http_request() -> None:
 
 @pytest.mark.usefixtures("async_environment")
 async def test_http_request_reuse_connection() -> None:
-    async with httpcore.AsyncConnectionPool() as http:
+    async with httpcore.AsyncConnectionPool(backend="anyio") as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
@@ -128,7 +128,7 @@ async def test_http_request_reuse_connection() -> None:
 
 @pytest.mark.usefixtures("async_environment")
 async def test_https_request_reuse_connection() -> None:
-    async with httpcore.AsyncConnectionPool() as http:
+    async with httpcore.AsyncConnectionPool(backend="anyio") as http:
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
@@ -158,7 +158,7 @@ async def test_https_request_reuse_connection() -> None:
 
 @pytest.mark.usefixtures("async_environment")
 async def test_http_request_cannot_reuse_dropped_connection() -> None:
-    async with httpcore.AsyncConnectionPool() as http:
+    async with httpcore.AsyncConnectionPool(backend="anyio") as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
@@ -198,7 +198,10 @@ async def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
     headers = [(b"host", b"example.org")]
     max_connections = 1
     async with httpcore.AsyncHTTPProxy(
-        proxy_server, proxy_mode=proxy_mode, max_connections=max_connections
+        proxy_server,
+        proxy_mode=proxy_mode,
+        max_connections=max_connections,
+        backend="anyio",
     ) as http:
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers
@@ -213,7 +216,9 @@ async def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
 @pytest.mark.asyncio
 # This doesn't run with trio, since trio doesn't support local_address.
 async def test_http_request_local_address() -> None:
-    async with httpcore.AsyncConnectionPool(local_address="0.0.0.0") as http:
+    async with httpcore.AsyncConnectionPool(
+        backend="anyio", local_address="0.0.0.0"
+    ) as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
@@ -245,6 +250,7 @@ async def test_proxy_https_requests(
         ssl_context=ca_ssl_context,
         max_connections=max_connections,
         http2=http2,
+        backend="anyio",
     ) as http:
         http_version, status_code, reason, headers, stream = await http.request(
             method, url, headers
@@ -293,7 +299,7 @@ async def test_connection_pool_get_connection_info(
     expected_during_idle: dict,
 ) -> None:
     async with httpcore.AsyncConnectionPool(
-        http2=http2, keepalive_expiry=keepalive_expiry
+        backend="anyio", http2=http2, keepalive_expiry=keepalive_expiry
     ) as http:
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
@@ -324,7 +330,7 @@ async def test_connection_pool_get_connection_info(
 async def test_http_request_unix_domain_socket(uds_server: Server) -> None:
     uds = uds_server.config.uds
     assert uds is not None
-    async with httpcore.AsyncConnectionPool(uds=uds) as http:
+    async with httpcore.AsyncConnectionPool(backend="anyio", uds=uds) as http:
         method = b"GET"
         url = (b"http", b"localhost", None, b"/")
         headers = [(b"host", b"localhost")]
@@ -345,7 +351,7 @@ async def test_max_keepalive_connections_handled_correctly(
     max_keepalive: int, connections_number: int
 ) -> None:
     async with httpcore.AsyncConnectionPool(
-        max_keepalive_connections=max_keepalive, keepalive_expiry=60
+        backend="anyio", max_keepalive_connections=max_keepalive, keepalive_expiry=60
     ) as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")

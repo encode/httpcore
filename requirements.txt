@@ -1,9 +1,10 @@
 -e .[http2]
 
 # Optionals
+anyio >= 2.0.0rc2
+curio >= 1.4
 trio
 trio-typing
-curio
 
 # Docs
 mkautodoc

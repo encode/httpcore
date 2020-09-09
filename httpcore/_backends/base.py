@@ -25,6 +25,10 @@ def lookup_async_backend(name: str) -> "AsyncBackend":
         from .curio import CurioBackend
 
         return CurioBackend()
+    elif name == "anyio":
+        from .anyio import AnyIOBackend
+
+        return AnyIOBackend()
 
     raise ValueError("Invalid backend name {name!r}")
 
