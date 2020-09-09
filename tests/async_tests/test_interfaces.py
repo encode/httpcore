@@ -2,11 +2,11 @@ import platform
 import ssl
 
 import pytest
-import sniffio
 
 import httpcore
 from httpcore._types import URL
 from tests.conftest import Server, detect_backend
+from tests.utils import lookup_async_backend
 
 pytestmark = pytest.mark.anyio
 
@@ -205,12 +205,8 @@ async def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
 
 
 async def test_http_request_local_address() -> None:
-    exc = getattr(sniffio, "Async" + "LibraryNotFoundError")
-    try:
-        if sniffio.current_async_library() == "trio":
-            pytest.skip("The trio backend does not support local_address")
-    except exc:
-        pass
+    if lookup_async_backend() == "trio":
+        pytest.skip("The trio backend does not support local_address")
 
     async with httpcore.AsyncConnectionPool(local_address="0.0.0.0") as http:
         method = b"GET"
