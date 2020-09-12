@@ -5,8 +5,13 @@ import pytest
 
 import httpcore
 from httpcore._types import URL
-from tests.conftest import Server, detect_backend
+from tests.conftest import Server
 from tests.utils import lookup_sync_backend
+
+
+@pytest.fixture(params=["sync"])
+def backend(request):
+    return request.param
 
 
 def read_body(stream: httpcore.SyncByteStream) -> bytes:
@@ -20,8 +25,8 @@ def read_body(stream: httpcore.SyncByteStream) -> bytes:
 
 
 
-def test_http_request() -> None:
-    with httpcore.SyncConnectionPool() as http:
+def test_http_request(backend: str) -> None:
+    with httpcore.SyncConnectionPool(backend=backend) as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
@@ -37,8 +42,8 @@ def test_http_request() -> None:
 
 
 
-def test_https_request() -> None:
-    with httpcore.SyncConnectionPool() as http:
+def test_https_request(backend: str) -> None:
+    with httpcore.SyncConnectionPool(backend=backend) as http:
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
@@ -54,8 +59,8 @@ def test_https_request() -> None:
 
 
 
-def test_request_unsupported_protocol() -> None:
-    with httpcore.SyncConnectionPool() as http:
+def test_request_unsupported_protocol(backend: str) -> None:
+    with httpcore.SyncConnectionPool(backend=backend) as http:
         method = b"GET"
         url = (b"ftp", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
@@ -64,8 +69,8 @@ def test_request_unsupported_protocol() -> None:
 
 
 
-def test_http2_request() -> None:
-    with httpcore.SyncConnectionPool(http2=True) as http:
+def test_http2_request(backend: str) -> None:
+    with httpcore.SyncConnectionPool(backend=backend, http2=True) as http:
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
@@ -81,8 +86,8 @@ def test_http2_request() -> None:
 
 
 
-def test_closing_http_request() -> None:
-    with httpcore.SyncConnectionPool() as http:
+def test_closing_http_request(backend: str) -> None:
+    with httpcore.SyncConnectionPool(backend=backend) as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org"), (b"connection", b"close")]
@@ -98,8 +103,8 @@ def test_closing_http_request() -> None:
 
 
 
-def test_http_request_reuse_connection() -> None:
-    with httpcore.SyncConnectionPool() as http:
+def test_http_request_reuse_connection(backend: str) -> None:
+    with httpcore.SyncConnectionPool(backend=backend) as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
@@ -128,8 +133,8 @@ def test_http_request_reuse_connection() -> None:
 
 
 
-def test_https_request_reuse_connection() -> None:
-    with httpcore.SyncConnectionPool() as http:
+def test_https_request_reuse_connection(backend: str) -> None:
+    with httpcore.SyncConnectionPool(backend=backend) as http:
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
@@ -158,8 +163,8 @@ def test_https_request_reuse_connection() -> None:
 
 
 
-def test_http_request_cannot_reuse_dropped_connection() -> None:
-    with httpcore.SyncConnectionPool() as http:
+def test_http_request_cannot_reuse_dropped_connection(backend: str) -> None:
+    with httpcore.SyncConnectionPool(backend=backend) as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
@@ -193,13 +198,16 @@ def test_http_request_cannot_reuse_dropped_connection() -> None:
 
 @pytest.mark.parametrize("proxy_mode", ["DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY"])
 
-def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
+def test_http_proxy(proxy_server: URL, proxy_mode: str, backend: str) -> None:
     method = b"GET"
     url = (b"http", b"example.org", 80, b"/")
     headers = [(b"host", b"example.org")]
     max_connections = 1
     with httpcore.SyncHTTPProxy(
-        proxy_server, proxy_mode=proxy_mode, max_connections=max_connections
+        proxy_server,
+        proxy_mode=proxy_mode,
+        max_connections=max_connections,
+        backend=backend,
     ) as http:
         http_version, status_code, reason, headers, stream = http.request(
             method, url, headers
@@ -212,11 +220,13 @@ def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
 
 
 
-def test_http_request_local_address() -> None:
-    if lookup_sync_backend() == "trio":
+def test_http_request_local_address(backend: str) -> None:
+    if backend == "sync" and lookup_sync_backend() == "trio":
         pytest.skip("The trio backend does not support local_address")
 
-    with httpcore.SyncConnectionPool(local_address="0.0.0.0") as http:
+    with httpcore.SyncConnectionPool(
+        backend=backend, local_address="0.0.0.0"
+    ) as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
@@ -294,9 +304,10 @@ def test_connection_pool_get_connection_info(
     keepalive_expiry: float,
     expected_during_active: dict,
     expected_during_idle: dict,
+    backend: str,
 ) -> None:
     with httpcore.SyncConnectionPool(
-        http2=http2, keepalive_expiry=keepalive_expiry
+        http2=http2, keepalive_expiry=keepalive_expiry, backend=backend
     ) as http:
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
@@ -324,10 +335,12 @@ def test_connection_pool_get_connection_info(
     reason="Unix Domain Sockets only exist on Unix",
 )
 
-def test_http_request_unix_domain_socket(uds_server: Server) -> None:
+def test_http_request_unix_domain_socket(
+    uds_server: Server, backend: str
+) -> None:
     uds = uds_server.config.uds
     assert uds is not None
-    with httpcore.SyncConnectionPool(uds=uds) as http:
+    with httpcore.SyncConnectionPool(uds=uds, backend=backend) as http:
         method = b"GET"
         url = (b"http", b"localhost", None, b"/")
         headers = [(b"host", b"localhost")]
@@ -345,10 +358,10 @@ def test_http_request_unix_domain_socket(uds_server: Server) -> None:
 @pytest.mark.parametrize("connections_number", [4])
 
 def test_max_keepalive_connections_handled_correctly(
-    max_keepalive: int, connections_number: int
+    max_keepalive: int, connections_number: int, backend: str
 ) -> None:
     with httpcore.SyncConnectionPool(
-        max_keepalive_connections=max_keepalive, keepalive_expiry=60
+        max_keepalive_connections=max_keepalive, keepalive_expiry=60, backend=backend
     ) as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
@@ -371,7 +384,7 @@ def test_max_keepalive_connections_handled_correctly(
 
 
 def test_explicit_backend_name() -> None:
-    with httpcore.SyncConnectionPool(backend=detect_backend()) as http:
+    with httpcore.SyncConnectionPool(backend=lookup_sync_backend()) as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]

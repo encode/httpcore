@@ -124,7 +124,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
             self.streams[stream_id] = h2_stream
             self.events[stream_id] = []
             return await h2_stream.request(method, url, headers, stream, timeout)
-        except Exception:
+        except Exception:  # noqa: PIE786
             await self.max_streams_semaphore.release()
             raise
 

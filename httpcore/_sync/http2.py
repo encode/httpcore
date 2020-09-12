@@ -124,7 +124,7 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
             self.streams[stream_id] = h2_stream
             self.events[stream_id] = []
             return h2_stream.request(method, url, headers, stream, timeout)
-        except Exception:
+        except Exception:  # noqa: PIE786
             self.max_streams_semaphore.release()
             raise
 

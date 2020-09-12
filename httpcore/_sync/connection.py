@@ -113,7 +113,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
                 return self.backend.open_uds_stream(
                     self.uds, hostname, ssl_context, timeout
                 )
-        except Exception:
+        except Exception:  # noqa: PIE786
             self.connect_failed = True
             raise
 

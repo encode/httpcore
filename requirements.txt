@@ -1,9 +1,10 @@
 -e .[http2]
 
 # Optionals
+anyio ~= 2.0
+curio >= 1.4
 trio
 trio-typing
-curio
 
 # Docs
 mkautodoc
@@ -15,7 +16,6 @@ twine
 wheel
 
 # Tests & Linting
-anyio >= 2.0.0rc2
 autoflake
 black==20.8b1
 flake8
