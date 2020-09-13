@@ -66,8 +66,9 @@ def origin_to_url_string(origin: Origin) -> str:
     return f"{scheme.decode('ascii')}://{host.decode('ascii')}{port}"
 
 
-def _wait_io_events(socks: list, events: int, timeout: float = None) -> list:
-    # Better cross-platform approach than low-level `select.select()` calls.
+def _wait_for_io_events(socks: list, events: int, timeout: float = None) -> list:
+    # Prefer the `selectors` module rather than the lower-level `select` module to
+    # improve cross-platform support.
     # See: https://github.com/encode/httpcore/issues/182
     sel = selectors.DefaultSelector()
     for sock in socks:
@@ -76,4 +77,4 @@ def _wait_io_events(socks: list, events: int, timeout: float = None) -> list:
 
 
 def wait_for_read(socks: list, timeout: float = None) -> list:
-    return _wait_io_events(socks, events=selectors.EVENT_READ, timeout=timeout)
+    return _wait_for_io_events(socks, events=selectors.EVENT_READ, timeout=timeout)
