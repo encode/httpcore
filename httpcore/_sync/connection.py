@@ -1,7 +1,7 @@
 from ssl import SSLContext
 from typing import List, Optional, Tuple
 
-from .._backends.auto import SyncLock, SyncSocketStream, SyncBackend
+from .._backends.sync import SyncBackend, SyncLock, SyncSocketStream, SyncBackend
 from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, url_to_origin
 from .base import (
@@ -24,6 +24,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         ssl_context: SSLContext = None,
         socket: SyncSocketStream = None,
         local_address: str = None,
+        backend: SyncBackend = None,
     ):
         self.origin = origin
         self.http2 = http2
@@ -40,7 +41,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         self.is_http2 = False
         self.connect_failed = False
         self.expires_at: Optional[float] = None
-        self.backend = SyncBackend()
+        self.backend = SyncBackend() if backend is None else backend
 
     def __repr__(self) -> str:
         http_version = "UNKNOWN"
@@ -112,7 +113,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
                 return self.backend.open_uds_stream(
                     self.uds, hostname, ssl_context, timeout
                 )
-        except Exception:
+        except Exception:  # noqa: PIE786
             self.connect_failed = True
             raise
 

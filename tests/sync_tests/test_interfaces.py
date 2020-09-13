@@ -5,7 +5,8 @@ import pytest
 
 import httpcore
 from httpcore._types import URL
-from tests.conftest import Server
+from tests.conftest import Server, detect_backend
+from tests.utils import lookup_sync_backend
 
 
 def read_body(stream: httpcore.SyncByteStream) -> bytes:
@@ -198,7 +199,7 @@ def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
     headers = [(b"host", b"example.org")]
     max_connections = 1
     with httpcore.SyncHTTPProxy(
-        proxy_server, proxy_mode=proxy_mode, max_connections=max_connections,
+        proxy_server, proxy_mode=proxy_mode, max_connections=max_connections
     ) as http:
         http_version, status_code, reason, headers, stream = http.request(
             method, url, headers
@@ -211,8 +212,10 @@ def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
 
 
 
-# This doesn't run with trio, since trio doesn't support local_address.
 def test_http_request_local_address() -> None:
+    if lookup_sync_backend() == "trio":
+        pytest.skip("The trio backend does not support local_address")
+
     with httpcore.SyncConnectionPool(local_address="0.0.0.0") as http:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
@@ -230,10 +233,10 @@ def test_http_request_local_address() -> None:
 
 # mitmproxy does not support forwarding HTTPS requests
 @pytest.mark.parametrize("proxy_mode", ["DEFAULT", "TUNNEL_ONLY"])
-
 @pytest.mark.parametrize("http2", [False, True])
+
 def test_proxy_https_requests(
-    proxy_server: URL, ca_ssl_context: ssl.SSLContext, proxy_mode: str, http2: bool,
+    proxy_server: URL, ca_ssl_context: ssl.SSLContext, proxy_mode: str, http2: bool
 ) -> None:
     method = b"GET"
     url = (b"https", b"example.org", 443, b"/")
@@ -277,7 +280,12 @@ def test_proxy_https_requests(
             {"https://example.org": ["HTTP/1.1, ACTIVE", "HTTP/1.1, ACTIVE"]},
             {},
         ),
-        (True, 0.0, {"https://example.org": ["HTTP/2, ACTIVE, 2 streams"]}, {},),
+        (
+            True,
+            0.0,
+            {"https://example.org": ["HTTP/2, ACTIVE, 2 streams"]},
+            {},
+        ),
     ],
 )
 
@@ -333,9 +341,9 @@ def test_http_request_unix_domain_socket(uds_server: Server) -> None:
         assert body == b"Hello, world!"
 
 
-
 @pytest.mark.parametrize("max_keepalive", [1, 3, 5])
 @pytest.mark.parametrize("connections_number", [4])
+
 def test_max_keepalive_connections_handled_correctly(
     max_keepalive: int, connections_number: int
 ) -> None:
@@ -359,3 +367,20 @@ def test_max_keepalive_connections_handled_correctly(
 
             connections_in_pool = next(iter(stats.values()))
             assert len(connections_in_pool) == min(connections_number, max_keepalive)
+
+
+
+def test_explicit_backend_name() -> None:
+    with httpcore.SyncConnectionPool(backend=detect_backend()) as http:
+        method = b"GET"
+        url = (b"http", b"example.org", 80, b"/")
+        headers = [(b"host", b"example.org")]
+        http_version, status_code, reason, headers, stream = http.request(
+            method, url, headers
+        )
+        read_body(stream)
+
+        assert http_version == b"HTTP/1.1"
+        assert status_code == 200
+        assert reason == b"OK"
+        assert len(http._connections[url[:3]]) == 1  # type: ignore

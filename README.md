@@ -19,7 +19,7 @@ Some things HTTP Core does do:
 * Sending HTTP requests.
 * Provides both sync and async interfaces.
 * Supports HTTP/1.1 and HTTP/2.
-* Async backend support for `asyncio` and `trio`.
+* Async backend support for `asyncio`, `trio` and `curio`.
 * Automatic connection pooling.
 * HTTP(S) proxy support.
 

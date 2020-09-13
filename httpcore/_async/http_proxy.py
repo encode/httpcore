@@ -60,6 +60,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
         http2: bool = False,
+        backend: str = "auto",
         # Deprecated argument style:
         max_keepalive: int = None,
     ):
@@ -74,6 +75,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             max_keepalive_connections=max_keepalive_connections,
             keepalive_expiry=keepalive_expiry,
             http2=http2,
+            backend=backend,
             max_keepalive=max_keepalive,
         )
 
@@ -132,7 +134,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
         if connection is None:
             connection = AsyncHTTPConnection(
-                origin=origin, http2=self._http2, ssl_context=self._ssl_context,
+                origin=origin, http2=self._http2, ssl_context=self._ssl_context
             )
             await self._add_to_pool(connection)
 
@@ -248,7 +250,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             headers,
             stream,
         ) = await connection.request(
-            method, url, headers=headers, stream=stream, timeout=timeout,
+            method, url, headers=headers, stream=stream, timeout=timeout
         )
 
         wrapped_stream = ResponseByteStream(

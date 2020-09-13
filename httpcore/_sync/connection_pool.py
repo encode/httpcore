@@ -2,7 +2,8 @@ import warnings
 from ssl import SSLContext
 from typing import Iterator, Callable, Dict, List, Optional, Set, Tuple
 
-from .._backends.auto import SyncLock, SyncSemaphore, SyncBackend
+from .._backends.sync import SyncLock, SyncSemaphore
+from .._backends.base import lookup_sync_backend
 from .._exceptions import LocalProtocolError, PoolTimeout, UnsupportedProtocol
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
@@ -52,12 +53,12 @@ class ResponseByteStream(SyncByteStream):
 
     def close(self) -> None:
         try:
-            #  Call the underlying stream close callback.
+            # Call the underlying stream close callback.
             # This will be a call to `SyncHTTP11Connection._response_closed()`
             # or `SyncHTTP2Stream._response_closed()`.
             self.stream.close()
         finally:
-            #  Call the connection pool close callback.
+            # Call the connection pool close callback.
             # This will be a call to `SyncConnectionPool._response_closed()`.
             self.callback(self.connection)
 
@@ -83,6 +84,7 @@ class SyncConnectionPool(SyncHTTPTransport):
     `local_address="0.0.0.0"` will connect using an `AF_INET` address (IPv4),
     while using `local_address="::"` will connect using an `AF_INET6` address
     (IPv6).
+    * **backend** - `str` - A name indicating which concurrency backend to use.
     """
 
     def __init__(
@@ -95,6 +97,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         uds: str = None,
         local_address: str = None,
         max_keepalive: int = None,
+        backend: str = "sync",
     ):
         if max_keepalive is not None:
             warnings.warn(
@@ -112,7 +115,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         self._local_address = local_address
         self._connections: Dict[Origin, Set[SyncHTTPConnection]] = {}
         self._thread_lock = ThreadLock()
-        self._backend = SyncBackend()
+        self._backend = lookup_sync_backend(backend)
         self._next_keepalive_check = 0.0
 
         if http2:
@@ -178,6 +181,7 @@ class SyncConnectionPool(SyncHTTPTransport):
                         uds=self._uds,
                         ssl_context=self._ssl_context,
                         local_address=self._local_address,
+                        backend=self._backend,
                     )
                     logger.trace("created connection=%r", connection)
                     self._add_to_pool(connection, timeout=timeout)
@@ -190,7 +194,7 @@ class SyncConnectionPool(SyncHTTPTransport):
                 )
             except NewConnectionRequired:
                 connection = None
-            except Exception:
+            except Exception:  # noqa: PIE786
                 logger.trace("remove from pool connection=%r", connection)
                 self._remove_from_pool(connection)
                 raise
@@ -292,7 +296,7 @@ class SyncConnectionPool(SyncHTTPTransport):
             if (
                 connection.state == ConnectionState.IDLE
                 and connection.expires_at is not None
-                and now > connection.expires_at
+                and now >= connection.expires_at
             ):
                 connections_to_close.add(connection)
                 self._remove_from_pool(connection)

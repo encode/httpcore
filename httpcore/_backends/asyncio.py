@@ -78,7 +78,7 @@ async def backport_start_tls(
 
 class SocketStream(AsyncSocketStream):
     def __init__(
-        self, stream_reader: asyncio.StreamReader, stream_writer: asyncio.StreamWriter,
+        self, stream_reader: asyncio.StreamReader, stream_writer: asyncio.StreamWriter
     ):
         self.stream_reader = stream_reader
         self.stream_writer = stream_writer
@@ -131,12 +131,9 @@ class SocketStream(AsyncSocketStream):
         exc_map = {asyncio.TimeoutError: ReadTimeout, OSError: ReadError}
         async with self.read_lock:
             with map_exceptions(exc_map):
-                data = await asyncio.wait_for(
+                return await asyncio.wait_for(
                     self.stream_reader.read(n), timeout.get("read")
                 )
-                if data == b"":
-                    raise ReadError("Server disconnected while attempting read")
-                return data
 
     async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         if not data:
@@ -183,7 +180,7 @@ class Lock(AsyncLock):
     def __init__(self) -> None:
         self._lock = asyncio.Lock()
 
-    def release(self) -> None:
+    async def release(self) -> None:
         self._lock.release()
 
     async def acquire(self) -> None:
@@ -207,7 +204,7 @@ class Semaphore(AsyncSemaphore):
         except asyncio.TimeoutError:
             raise self.exc_class()
 
-    def release(self) -> None:
+    async def release(self) -> None:
         self.semaphore.release()
 
 
@@ -270,6 +267,6 @@ class AsyncioBackend(AsyncBackend):
     def create_semaphore(self, max_value: int, exc_class: type) -> AsyncSemaphore:
         return Semaphore(max_value, exc_class=exc_class)
 
-    def time(self) -> float:
+    async def time(self) -> float:
         loop = asyncio.get_event_loop()
         return loop.time()

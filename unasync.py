@@ -18,9 +18,10 @@ SUBS = [
     ('__aenter__', '__enter__'),
     ('__aexit__', '__exit__'),
     ('__aiter__', '__iter__'),
-    ('@pytest.mark.asyncio', ''),
-    ('@pytest.mark.trio', ''),
-    ('@pytest.mark.usefixtures.*', ''),
+    ('@pytest.mark.anyio', ''),
+    ('lookup_async_backend', "lookup_sync_backend"),
+    ('auto', 'sync'),
+    ('anyio', 'sync'),
 ]
 COMPILED_SUBS = [
     (re.compile(r'(^|\b)' + regex + r'($|\b)'), repl)

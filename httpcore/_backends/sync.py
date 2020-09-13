@@ -39,7 +39,7 @@ class SyncSocketStream:
         return "HTTP/1.1"
 
     def start_tls(
-        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict,
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict
     ) -> "SyncSocketStream":
         connect_timeout = timeout.get("connect")
         exc_map = {socket.timeout: ConnectTimeout, socket.error: ConnectError}
@@ -59,10 +59,7 @@ class SyncSocketStream:
         with self.read_lock:
             with map_exceptions(exc_map):
                 self.sock.settimeout(read_timeout)
-                data = self.sock.recv(n)
-                if data == b"":
-                    raise ReadError("Server disconnected while attempting read")
-                return data
+                return self.sock.recv(n)
 
     def write(self, data: bytes, timeout: TimeoutDict) -> None:
         write_timeout = timeout.get("write")
