@@ -5,6 +5,7 @@
 # Optionals
 trio
 trio-typing
+curio
 
 # Docs
 mkautodoc
