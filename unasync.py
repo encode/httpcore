@@ -23,7 +23,7 @@ SUBS = [
     (r'@pytest.fixture\(params=\["auto", "anyio"\]\)',
      '@pytest.fixture(params=["sync"])'),
     ('lookup_async_backend', "lookup_sync_backend"),
-    ('auto', 'sync')
+    ('auto', 'sync'),
 ]
 COMPILED_SUBS = [
     (re.compile(r'(^|\b)' + regex + r'($|\b)'), repl)
