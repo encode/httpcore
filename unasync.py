@@ -15,7 +15,6 @@ SUBS = [
     ('aclose', 'close'),
     ('aclose_func', 'close_func'),
     ('aiterator', 'iterator'),
-    ('lookup_async_backend', 'lookup_sync_backend'),
     ('__aenter__', '__enter__'),
     ('__aexit__', '__exit__'),
     ('__aiter__', '__iter__'),
