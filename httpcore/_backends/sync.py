@@ -1,4 +1,3 @@
-import select
 import socket
 import threading
 import time
@@ -17,6 +16,7 @@ from .._exceptions import (
     map_exceptions,
 )
 from .._types import TimeoutDict
+from .._utils import wait_for_read
 
 
 class SyncSocketStream:
@@ -78,8 +78,8 @@ class SyncSocketStream:
                 self.sock.close()
 
     def is_connection_dropped(self) -> bool:
-        rready, _wready, _xready = select.select([self.sock], [], [], 0)
-        return bool(rready)
+        rready = wait_for_read([self.sock], timeout=0)
+        return len(rready) > 0
 
 
 class SyncLock:
