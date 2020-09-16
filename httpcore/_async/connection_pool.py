@@ -6,7 +6,7 @@ from .._backends.auto import AsyncLock, AsyncSemaphore
 from .._backends.base import lookup_async_backend
 from .._exceptions import LocalProtocolError, PoolTimeout, UnsupportedProtocol
 from .._threadlock import ThreadLock
-from .._types import URL, Headers, Origin, TimeoutDict
+from .._types import Socks, URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, origin_to_url_string, url_to_origin
 from .base import (
     AsyncByteStream,
@@ -95,6 +95,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         keepalive_expiry: float = None,
         http2: bool = False,
         uds: str = None,
+        socks: Socks = None,
         local_address: str = None,
         max_keepalive: int = None,
         backend: str = "auto",
@@ -112,6 +113,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         self._keepalive_expiry = keepalive_expiry
         self._http2 = http2
         self._uds = uds
+        self._socks = socks
         self._local_address = local_address
         self._connections: Dict[Origin, Set[AsyncHTTPConnection]] = {}
         self._thread_lock = ThreadLock()
@@ -179,6 +181,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
                         origin=origin,
                         http2=self._http2,
                         uds=self._uds,
+                        socks=self._socks,
                         ssl_context=self._ssl_context,
                         local_address=self._local_address,
                         backend=self._backend,

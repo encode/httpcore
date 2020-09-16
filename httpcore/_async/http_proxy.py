@@ -1,6 +1,8 @@
 from ssl import SSLContext
 from typing import Tuple
 
+import socks
+
 from .._exceptions import ProxyError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger, url_to_origin
@@ -64,7 +66,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         # Deprecated argument style:
         max_keepalive: int = None,
     ):
-        assert proxy_mode in ("DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY")
+        assert proxy_mode in ("DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY", "SOCKS")
 
         self.proxy_origin = url_to_origin(proxy_url)
         self.proxy_headers = [] if proxy_headers is None else proxy_headers
@@ -104,6 +106,18 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             return await self._forward_request(
                 method, url, headers=headers, stream=stream, timeout=timeout
             )
+        elif self.proxy_mode == "SOCKS":
+            logger.trace(
+                    "socks_request proxy_origin=%r proxy_headers=%r method=%r url=%r",
+                    self.proxy_origin,
+                    self.proxy_headers,
+                    method,
+                    url,
+            )
+            return await self._socks_request(
+                method, url, headers=headers, stream=stream, timeout=timeout
+            )
+
         else:
             # By default HTTPS should be tunnelled.
             logger.trace(
@@ -116,6 +130,25 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             return await self._tunnel_request(
                 method, url, headers=headers, stream=stream, timeout=timeout
             )
+
+    async def _socks_request(
+        self,
+        method: bytes,
+        url: URL,
+        headers: Headers = None,
+        stream: AsyncByteStream = None,
+        timeout: TimeoutDict = None,
+    ) -> Tuple[bytes, int, bytes, Headers, AsyncByteStream]:
+        origin = self.proxy_origin
+        connection = await self._get_connection_from_pool(origin)
+
+        if connection is None:
+            connection = AsyncHTTPConnection(
+                origin=origin, http2=self._http2, ssl_context=self._ssl_context
+            )
+            await self._add_to_pool(connection)
+
+        assert False
 
     async def _forward_request(
         self,

@@ -2,6 +2,8 @@ import asyncio
 from ssl import SSLContext
 from typing import Optional
 
+import socks
+
 from .._exceptions import (
     CloseError,
     ConnectError,
@@ -257,6 +259,37 @@ class AsyncioBackend(AsyncBackend):
                 asyncio.open_unix_connection(path, ssl=ssl_context, **kwargs),
                 connect_timeout,
             )
+            return SocketStream(
+                stream_reader=stream_reader, stream_writer=stream_writer
+            )
+
+    async def open_socks_stream(
+        self,
+        hostname: bytes,
+        port: int,
+        proxy_hostname: bytes,
+        proxy_port: int,
+        proxy_type: bytes,
+        timeout: TimeoutDict,
+        *,
+        proxy_username=None,
+        proxy_password=None,
+    ):
+        assert proxy_type == b"SOCKS5"
+
+        host = hostname.decode("ascii")
+        proxy_host = proxy_hostname.decode("ascii")
+
+        sock = socks.socksocket()
+        sock.setblocking(False)
+        sock.set_proxy(socks.SOCKS5, proxy_host, proxy_port)
+
+        sock.connect((host, port))  # this operation is blocking !!!
+
+        exc_map = {asyncio.TimeoutError: ConnectTimeout, OSError: ConnectError}
+        with map_exceptions(exc_map):
+            stream_reader, stream_writer = await asyncio.open_connection(sock=sock)
+
             return SocketStream(
                 stream_reader=stream_reader, stream_writer=stream_writer
             )

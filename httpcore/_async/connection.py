@@ -2,7 +2,7 @@ from ssl import SSLContext
 from typing import List, Optional, Tuple
 
 from .._backends.auto import AsyncBackend, AsyncLock, AsyncSocketStream, AutoBackend
-from .._types import URL, Headers, Origin, TimeoutDict
+from .._types import Socks, URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, url_to_origin
 from .base import (
     AsyncByteStream,
@@ -20,6 +20,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         self,
         origin: Origin,
         http2: bool = False,
+        socks: Optional[Socks] = None,
         uds: str = None,
         ssl_context: SSLContext = None,
         socket: AsyncSocketStream = None,
@@ -29,6 +30,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         self.origin = origin
         self.http2 = http2
         self.uds = uds
+        self.socks = socks
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
         self.socket = socket
         self.local_address = local_address
@@ -101,7 +103,16 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         timeout = {} if timeout is None else timeout
         ssl_context = self.ssl_context if scheme == b"https" else None
         try:
-            if self.uds is None:
+            if self.socks:
+                return await self.backend.open_socks_stream(
+                    hostname,
+                    port,
+                    self.socks.proxy_host,
+                    self.socks.proxy_port,
+                    self.socks.socks_type,
+                    timeout,
+                )
+            elif self.uds is None:
                 return await self.backend.open_tcp_stream(
                     hostname,
                     port,

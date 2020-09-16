@@ -124,6 +124,20 @@ class AsyncBackend:
     ) -> AsyncSocketStream:
         raise NotImplementedError()  # pragma: no cover
 
+    async def open_socks_stream(
+        self,
+        hostname: bytes,
+        port: int,
+        proxy_hostname: bytes,
+        proxy_port: int,
+        proxy_type: bytes,
+        timeout: TimeoutDict,
+        *,
+        proxy_username=None,
+        proxy_password=None,
+    ):
+        raise NotImplementedError()  # pragma: no cover
+
     def create_lock(self) -> AsyncLock:
         raise NotImplementedError()  # pragma: no cover
 

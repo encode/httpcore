@@ -269,6 +269,31 @@ async def test_proxy_https_requests(
         assert reason == b"OK"
 
 
+@pytest.mark.anyio
+async def test_socks_proxy(proxy_server: URL, ca_ssl_context: ssl.SSLContext) -> None:
+    proxy_mode = "SOCKS"
+    http2 = False
+    method = b"GET"
+    url = (b"https", b"example.org", 443, b"/")
+    headers = [(b"host", b"example.org")]
+    max_connections = 1
+    async with httpcore.AsyncHTTPProxy(
+        proxy_server,
+        proxy_mode=proxy_mode,
+        ssl_context=ca_ssl_context,
+        max_connections=max_connections,
+        http2=http2,
+    ) as http:
+        http_version, status_code, reason, headers, stream = await http.request(
+            method, url, headers
+        )
+        _ = await read_body(stream)
+
+        assert http_version == (b"HTTP/2" if http2 else b"HTTP/1.1")
+        assert status_code == 200
+        assert reason == b"OK"
+
+
 @pytest.mark.parametrize(
     "http2,keepalive_expiry,expected_during_active,expected_during_idle",
     [
