@@ -4,6 +4,7 @@ import ssl
 import pytest
 
 import httpcore
+from httpcore._async.connection import SyncSOCKSConnection
 from httpcore._types import URL
 from tests.conftest import Server
 from tests.utils import lookup_sync_backend
@@ -397,3 +398,29 @@ def test_explicit_backend_name() -> None:
         assert status_code == 200
         assert reason == b"OK"
         assert len(http._connections[url[:3]]) == 1  # type: ignore
+
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        (b"http", b"example.com", 80, b"/"),
+        (b"https", b"example.com", 443, b"/"),
+    ],
+)
+@pytest.mark.parametrize("http2", [True, False])
+def test_socks5_proxy_connection_without_auth(socks5_proxy, url, http2):
+    (protocol, hostname, port, path) = url
+    origin = (protocol, hostname, port)
+    headers = [(b"host", hostname)]
+    method = b"GET"
+
+    with SyncSOCKSConnection(
+        origin, http2=http2, proxy_origin=socks5_proxy
+    ) as connection:
+        http_version, status_code, reason, headers, stream = connection.request(
+            method, url, headers
+        )
+
+        assert status_code == 200
+        assert reason == b"OK"
