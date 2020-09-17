@@ -30,3 +30,5 @@ pytest==6.0.2
 pytest-cov==2.10.1
 trustme==0.6.0
 uvicorn==0.11.8
+pproxy==2.3.5
+socksio==1.0.0

@@ -2,6 +2,7 @@ import asyncio
 import contextlib
 import os
 import ssl
+import subprocess
 import threading
 import time
 import typing
@@ -141,3 +142,14 @@ def uds_server() -> typing.Iterator[Server]:
             yield server
     finally:
         os.remove(uds)
+
+
+@pytest.fixture(scope="session")
+def socks5_proxy() -> typing.Tuple[bytes, bytes, int]:
+    proc = subprocess.Popen(["pproxy", "-l", "socks5://localhost:1085"])
+
+    try:
+        time.sleep(0.5)  # a small delay to let the pproxy start to serve
+        yield b"socks5", b"localhost", 1085
+    finally:
+        proc.kill()
