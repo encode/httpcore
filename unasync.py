@@ -7,6 +7,7 @@ SUBS = [
     ('AsyncIteratorByteStream', 'IteratorByteStream'),
     ('AsyncIterator', 'Iterator'),
     ('AutoBackend', 'SyncBackend'),
+    ('httpcore._async.connection.AsyncSOCKSConnection', 'httpcore._sync.connection.SyncSOCKSConnection'),
     ('Async([A-Z][A-Za-z0-9_]*)', r'Sync\2'),
     ('async def', 'def'),
     ('async with', 'with'),
