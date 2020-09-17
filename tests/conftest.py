@@ -145,7 +145,7 @@ def uds_server() -> typing.Iterator[Server]:
 
 
 @pytest.fixture(scope="session")
-def socks5_proxy() -> typing.Tuple[bytes, bytes, int]:
+def socks5_proxy() -> tuple:  # type: ignore
     proc = subprocess.Popen(["pproxy", "-l", "socks5://localhost:1085"])
 
     try:

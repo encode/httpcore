@@ -4,7 +4,6 @@ import ssl
 import pytest
 
 import httpcore
-from httpcore._async.connection import SyncSOCKSConnection
 from httpcore._types import URL
 from tests.conftest import Server
 from tests.utils import lookup_sync_backend
@@ -415,7 +414,7 @@ def test_socks5_proxy_connection_without_auth(socks5_proxy, url, http2):
     headers = [(b"host", hostname)]
     method = b"GET"
 
-    with SyncSOCKSConnection(
+    with httpcore._sync.connection.SyncSOCKSConnection(
         origin, http2=http2, proxy_origin=socks5_proxy
     ) as connection:
         http_version, status_code, reason, headers, stream = connection.request(
