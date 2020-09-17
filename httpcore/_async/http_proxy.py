@@ -106,18 +106,6 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             return await self._forward_request(
                 method, url, headers=headers, stream=stream, timeout=timeout
             )
-        elif self.proxy_mode == "SOCKS":
-            logger.trace(
-                    "socks_request proxy_origin=%r proxy_headers=%r method=%r url=%r",
-                    self.proxy_origin,
-                    self.proxy_headers,
-                    method,
-                    url,
-            )
-            return await self._socks_request(
-                method, url, headers=headers, stream=stream, timeout=timeout
-            )
-
         else:
             # By default HTTPS should be tunnelled.
             logger.trace(
@@ -130,25 +118,6 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             return await self._tunnel_request(
                 method, url, headers=headers, stream=stream, timeout=timeout
             )
-
-    async def _socks_request(
-        self,
-        method: bytes,
-        url: URL,
-        headers: Headers = None,
-        stream: AsyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, Headers, AsyncByteStream]:
-        origin = self.proxy_origin
-        connection = await self._get_connection_from_pool(origin)
-
-        if connection is None:
-            connection = AsyncHTTPConnection(
-                origin=origin, http2=self._http2, ssl_context=self._ssl_context
-            )
-            await self._add_to_pool(connection)
-
-        assert False
 
     async def _forward_request(
         self,
