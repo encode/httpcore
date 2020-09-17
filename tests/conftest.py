@@ -2,6 +2,7 @@ import asyncio
 import contextlib
 import os
 import ssl
+import subprocess
 import threading
 import time
 import typing
@@ -12,7 +13,7 @@ import uvicorn
 from mitmproxy import options, proxy
 from mitmproxy.tools.dump import DumpMaster
 
-from httpcore._types import URL
+from httpcore._types import Socks, URL
 
 PROXY_HOST = "127.0.0.1"
 PROXY_PORT = 8080
@@ -141,3 +142,27 @@ def uds_server() -> typing.Iterator[Server]:
             yield server
     finally:
         os.remove(uds)
+
+
+@pytest.fixture(scope="session")
+def socks5_proxy():
+    proc = None
+    try:
+        proc = subprocess.Popen(["pproxy", "-l", "socks5://localhost:1085"])
+        print(f"Started proxy on socks5://localhost:1085 [pid={proc.pid}]")
+        time.sleep(0.5)
+
+        yield Socks(b"SOCKS5", b"localhost", 1085)
+    finally:
+        print("we are killing the proxy")
+        if proc:
+            proc.kill()
+
+
+def detect_backend() -> str:
+    import sniffio
+
+    try:
+        return sniffio.current_async_library()
+    except sniffio.AsyncLibraryNotFoundError:
+        return "sync"
