@@ -1,6 +1,8 @@
 from ssl import SSLContext
 from typing import List, Optional, Tuple
 
+from socksio import socks5
+
 from .._backends.sync import SyncBackend, SyncLock, SyncSocketStream, SyncBackend
 from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, url_to_origin
@@ -162,3 +164,74 @@ class SyncHTTPConnection(SyncHTTPTransport):
         with self.request_lock:
             if self.connection is not None:
                 self.connection.close()
+
+
+class SyncSOCKSConnection(SyncHTTPConnection):
+    def __init__(
+        self,
+        origin: Origin,
+        http2: bool = False,
+        uds: str = None,
+        ssl_context: SSLContext = None,
+        socket: SyncSocketStream = None,
+        local_address: str = None,
+        backend: SyncBackend = None,
+        *,
+        proxy_origin: Origin,
+    ):
+        assert proxy_origin[0] in (b"socks5",)
+
+        super().__init__(
+            origin, http2, uds, ssl_context, socket, local_address, backend
+        )
+        self.proxy_origin = proxy_origin
+        self.proxy_connection = socks5.SOCKS5Connection()
+
+    def _open_socket(self, timeout: TimeoutDict = None) -> SyncSocketStream:
+        _, proxy_hostname, proxy_port = self.proxy_origin
+        scheme, hostname, port = self.origin
+        ssl_context = self.ssl_context if scheme == b"https" else None
+        timeout = timeout or {}
+
+        proxy_socket = self.backend.open_tcp_stream(
+            proxy_hostname,
+            proxy_port,
+            None,
+            timeout,
+            local_address=self.local_address,
+        )
+
+        request = socks5.SOCKS5AuthMethodsRequest(
+            [
+                socks5.SOCKS5AuthMethod.NO_AUTH_REQUIRED,
+                socks5.SOCKS5AuthMethod.USERNAME_PASSWORD,
+            ]
+        )
+
+        self.proxy_connection.send(request)
+
+        bytes_to_send = self.proxy_connection.data_to_send()
+        proxy_socket.write(bytes_to_send, timeout)
+
+        data = proxy_socket.read(1024, timeout)
+        event = self.proxy_connection.receive_data(data)
+
+        assert event.method == socks5.SOCKS5AuthMethod.NO_AUTH_REQUIRED
+
+        request = socks5.SOCKS5CommandRequest.from_address(
+            socks5.SOCKS5Command.CONNECT, (hostname, port)
+        )
+
+        self.proxy_connection.send(request)
+        bytes_to_send = self.proxy_connection.data_to_send()
+
+        proxy_socket.write(bytes_to_send, timeout)
+        data = proxy_socket.read(1024, timeout)
+        event = self.proxy_connection.receive_data(data)
+
+        assert event.reply_code == socks5.SOCKS5ReplyCode.SUCCEEDED
+
+        if ssl_context:
+            proxy_socket = proxy_socket.start_tls(hostname, ssl_context, timeout)
+
+        return proxy_socket

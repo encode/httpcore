@@ -3,6 +3,9 @@ from typing import List, Optional, Tuple
 
 from socksio import socks5
 
+from .._backends.auto import AsyncBackend, AsyncLock, AsyncSocketStream, AutoBackend
+from .._types import URL, Headers, Origin, TimeoutDict
+from .._utils import get_logger, url_to_origin
 from .base import (
     AsyncByteStream,
     AsyncHTTPTransport,
@@ -10,9 +13,6 @@ from .base import (
     NewConnectionRequired,
 )
 from .http import AsyncBaseHTTPConnection
-from .._backends.auto import AsyncBackend, AsyncLock, AsyncSocketStream, AutoBackend
-from .._types import Headers, Origin, TimeoutDict, URL
-from .._utils import get_logger, url_to_origin
 
 logger = get_logger(__name__)
 
