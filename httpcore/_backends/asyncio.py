@@ -270,6 +270,7 @@ class AsyncioBackend(AsyncBackend):
         proxy_hostname: bytes,
         proxy_port: int,
         proxy_type: bytes,
+        ssl_context: Optional[SSLContext],
         timeout: TimeoutDict,
         *,
         proxy_username=None,
@@ -288,7 +289,15 @@ class AsyncioBackend(AsyncBackend):
 
         exc_map = {asyncio.TimeoutError: ConnectTimeout, OSError: ConnectError}
         with map_exceptions(exc_map):
-            stream_reader, stream_writer = await asyncio.open_connection(sock=sock)
+            # if ssl_context:
+            #     ssl_context.wrap_socket(sock)
+            kwargs = {}
+            if ssl_context:
+                kwargs["server_hostname"] = host
+
+            stream_reader, stream_writer = await asyncio.open_connection(
+                sock=sock, ssl=ssl_context, **kwargs
+            )
 
             return SocketStream(
                 stream_reader=stream_reader, stream_writer=stream_writer

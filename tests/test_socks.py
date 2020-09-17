@@ -2,6 +2,7 @@ import pytest
 
 import httpcore
 from httpcore import AsyncByteStream
+from httpcore._types import Socks
 
 
 async def read_response(stream: AsyncByteStream) -> bytes:
@@ -19,14 +20,15 @@ async def read_response(stream: AsyncByteStream) -> bytes:
         (b"http", 80),
     ],
 )
+@pytest.mark.parametrize("proxy", [Socks(b"SOCKS5", b"localhost", 1085)])
 @pytest.mark.asyncio
-async def test_connection_pool_http(protocol, port):
+async def test_connection_pool_with_socks_proxy(protocol, port, proxy):
     hostname = b"example.com"
     url = (protocol, hostname, port, b"/")
     headers = [(b"host", hostname)]
     method = b"GET"
 
-    async with httpcore.AsyncConnectionPool() as pool:
+    async with httpcore.AsyncConnectionPool(socks=proxy) as pool:
 
         http_version, status_code, reason, headers, stream = await pool.request(
             method, url, headers

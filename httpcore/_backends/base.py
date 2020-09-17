@@ -131,6 +131,7 @@ class AsyncBackend:
         proxy_hostname: bytes,
         proxy_port: int,
         proxy_type: bytes,
+        ssl_context: Optional[SSLContext],
         timeout: TimeoutDict,
         *,
         proxy_username=None,

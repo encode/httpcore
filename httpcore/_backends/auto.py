@@ -54,6 +54,31 @@ class AutoBackend(AsyncBackend):
     ) -> AsyncSocketStream:
         return await self.backend.open_uds_stream(path, hostname, ssl_context, timeout)
 
+    async def open_socks_stream(
+        self,
+        hostname: bytes,
+        port: int,
+        proxy_hostname: bytes,
+        proxy_port: int,
+        proxy_type: bytes,
+        ssl_context: Optional[SSLContext],
+        timeout: TimeoutDict,
+        *,
+        proxy_username=None,
+        proxy_password=None,
+    ):
+        return await self.backend.open_socks_stream(
+            hostname,
+            port,
+            proxy_hostname,
+            proxy_port,
+            proxy_type,
+            ssl_context,
+            timeout,
+            proxy_username=proxy_username,
+            proxy_password=proxy_password,
+        )
+
     def create_lock(self) -> AsyncLock:
         return self.backend.create_lock()
 

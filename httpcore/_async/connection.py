@@ -110,6 +110,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
                     self.socks.proxy_host,
                     self.socks.proxy_port,
                     self.socks.socks_type,
+                    ssl_context,
                     timeout,
                 )
             elif self.uds is None:
