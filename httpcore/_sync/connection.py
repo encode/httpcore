@@ -201,14 +201,14 @@ class SyncSOCKSConnection(SyncHTTPConnection):
             local_address=self.local_address,
         )
 
-        request = socks5.SOCKS5AuthMethodsRequest(
+        auth_request = socks5.SOCKS5AuthMethodsRequest(
             [
                 socks5.SOCKS5AuthMethod.NO_AUTH_REQUIRED,
                 socks5.SOCKS5AuthMethod.USERNAME_PASSWORD,
             ]
         )
 
-        self.proxy_connection.send(request)
+        self.proxy_connection.send(auth_request)
 
         bytes_to_send = self.proxy_connection.data_to_send()
         proxy_socket.write(bytes_to_send, timeout)
@@ -216,20 +216,22 @@ class SyncSOCKSConnection(SyncHTTPConnection):
         data = proxy_socket.read(1024, timeout)
         event = self.proxy_connection.receive_data(data)
 
-        assert event.method == socks5.SOCKS5AuthMethod.NO_AUTH_REQUIRED
+        # development only assert
+        assert event.method == socks5.SOCKS5AuthMethod.NO_AUTH_REQUIRED  # type: ignore
 
-        request = socks5.SOCKS5CommandRequest.from_address(
+        connect_request = socks5.SOCKS5CommandRequest.from_address(
             socks5.SOCKS5Command.CONNECT, (hostname, port)
         )
 
-        self.proxy_connection.send(request)
+        self.proxy_connection.send(connect_request)
         bytes_to_send = self.proxy_connection.data_to_send()
 
         proxy_socket.write(bytes_to_send, timeout)
         data = proxy_socket.read(1024, timeout)
         event = self.proxy_connection.receive_data(data)
 
-        assert event.reply_code == socks5.SOCKS5ReplyCode.SUCCEEDED
+        # development only assert
+        assert event.reply_code == socks5.SOCKS5ReplyCode.SUCCEEDED  # type: ignore
 
         if ssl_context:
             proxy_socket = proxy_socket.start_tls(hostname, ssl_context, timeout)
