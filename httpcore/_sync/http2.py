@@ -8,7 +8,7 @@ from h2.config import H2Configuration
 from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
-from .._backends.auto import SyncLock, SyncSemaphore, SyncSocketStream, SyncBackend
+from .._backends.sync import SyncBackend, SyncLock, SyncSemaphore, SyncSocketStream
 from .._bytestreams import IteratorByteStream, PlainByteStream
 from .._exceptions import PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
@@ -124,7 +124,7 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
             self.streams[stream_id] = h2_stream
             self.events[stream_id] = []
             return h2_stream.request(method, url, headers, stream, timeout)
-        except Exception:
+        except Exception:  # noqa: PIE786
             self.max_streams_semaphore.release()
             raise
 
@@ -210,6 +210,9 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         Read some data from the network, and update the H2 state.
         """
         data = self.socket.read(self.READ_NUM_BYTES, timeout)
+        if data == b"":
+            raise RemoteProtocolError("Server disconnected")
+
         events = self.h2_state.receive_data(data)
         for event in events:
             event_stream_id = getattr(event, "stream_id", 0)
@@ -225,7 +228,7 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         self.socket.write(data_to_send, timeout)
 
     def send_headers(
-        self, stream_id: int, headers: Headers, end_stream: bool, timeout: TimeoutDict,
+        self, stream_id: int, headers: Headers, end_stream: bool, timeout: TimeoutDict
     ) -> None:
         logger.trace("send_headers stream_id=%r headers=%r", stream_id, headers)
         self.h2_state.send_headers(stream_id, headers, end_stream=end_stream)

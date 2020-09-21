@@ -19,9 +19,11 @@ SUBS = [
     ('__aenter__', '__enter__'),
     ('__aexit__', '__exit__'),
     ('__aiter__', '__iter__'),
-    ('@pytest.mark.asyncio', ''),
-    ('@pytest.mark.trio', ''),
-    ('@pytest.mark.usefixtures.*', ''),
+    ('@pytest.mark.anyio', ''),
+    (r'@pytest.fixture\(params=\["auto", "anyio"\]\)',
+     '@pytest.fixture(params=["sync"])'),
+    ('lookup_async_backend', "lookup_sync_backend"),
+    ('auto', 'sync'),
 ]
 COMPILED_SUBS = [
     (re.compile(r'(^|\b)' + regex + r'($|\b)'), repl)
@@ -37,7 +39,7 @@ def unasync_line(line):
 
 def unasync_file(in_path, out_path):
     with open(in_path, "r") as in_file:
-        with open(out_path, "w") as out_file:
+        with open(out_path, "w", newline="") as out_file:
             for line in in_file.readlines():
                 line = unasync_line(line)
                 out_file.write(line)

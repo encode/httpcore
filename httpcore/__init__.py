@@ -24,29 +24,37 @@ from ._sync.connection_pool import SyncConnectionPool
 from ._sync.http_proxy import SyncHTTPProxy
 
 __all__ = [
-    "AsyncHTTPTransport",
     "AsyncByteStream",
     "AsyncConnectionPool",
     "AsyncHTTPProxy",
-    "SyncHTTPTransport",
+    "AsyncHTTPTransport",
+    "AsyncIteratorByteStream",
+    "CloseError",
+    "ConnectError",
+    "ConnectTimeout",
+    "IteratorByteStream",
+    "LocalProtocolError",
+    "NetworkError",
+    "PlainByteStream",
+    "PoolTimeout",
+    "ProtocolError",
+    "ProxyError",
+    "ReadError",
+    "ReadTimeout",
+    "RemoteProtocolError",
     "SyncByteStream",
     "SyncConnectionPool",
     "SyncHTTPProxy",
+    "SyncHTTPTransport",
     "TimeoutException",
-    "PoolTimeout",
-    "ConnectTimeout",
-    "ReadTimeout",
-    "WriteTimeout",
-    "NetworkError",
-    "ConnectError",
-    "ReadError",
-    "WriteError",
-    "CloseError",
-    "LocalProtocolError",
-    "RemoteProtocolError",
     "UnsupportedProtocol",
-    "AsyncIteratorByteStream",
-    "IteratorByteStream",
-    "PlainByteStream",
+    "WriteError",
+    "WriteTimeout",
 ]
-__version__ = "0.10.1"
+__version__ = "0.10.2"
+
+__locals = locals()
+
+for _name in __all__:
+    if not _name.startswith("__"):
+        setattr(__locals[_name], "__module__", "httpcore")  # noqa

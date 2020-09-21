@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.10.2 (August 20th, 2020)
+
+### Added
+
+- Added Unix Domain Socket support. (Pull #139)
+
+### Fixed
+
+- Always include the port on proxy CONNECT requests. (Pull #154)
+- Fix `max_keepalive_connections` configuration. (Pull #153)
+- Fixes behaviour in HTTP/1.1 where server disconnects can be used to signal the end of the response body. (Pull #164)
+
 ## 0.10.1 (August 7th, 2020)
 
 - Include `max_keepalive_connections` on `AsyncHTTPProxy`/`SyncHTTPProxy` classes.

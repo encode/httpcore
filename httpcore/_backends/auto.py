@@ -24,6 +24,10 @@ class AutoBackend(AsyncBackend):
                 from .trio import TrioBackend
 
                 self._backend_implementation = TrioBackend()
+            elif backend == "curio":
+                from .curio import CurioBackend
+
+                self._backend_implementation = CurioBackend()
             else:  # pragma: nocover
                 raise RuntimeError(f"Unsupported concurrency backend {backend!r}")
         return self._backend_implementation
@@ -56,5 +60,5 @@ class AutoBackend(AsyncBackend):
     def create_semaphore(self, max_value: int, exc_class: type) -> AsyncSemaphore:
         return self.backend.create_semaphore(max_value, exc_class=exc_class)
 
-    def time(self) -> float:
-        return self.backend.time()
+    async def time(self) -> float:
+        return await self.backend.time()

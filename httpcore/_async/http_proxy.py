@@ -2,7 +2,7 @@ from ssl import SSLContext
 from typing import Tuple
 
 from .._exceptions import ProxyError
-from .._types import URL, Headers, Origin, TimeoutDict
+from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger, url_to_origin
 from .base import AsyncByteStream
 from .connection import AsyncHTTPConnection
@@ -15,7 +15,8 @@ def merge_headers(
     default_headers: Headers = None, override_headers: Headers = None
 ) -> Headers:
     """
-    Append default_headers and override_headers, de-duplicating if a key existing in both cases.
+    Append default_headers and override_headers, de-duplicating if a key existing in
+    both cases.
     """
     default_headers = [] if default_headers is None else default_headers
     override_headers = [] if override_headers is None else override_headers
@@ -59,6 +60,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
         http2: bool = False,
+        backend: str = "auto",
         # Deprecated argument style:
         max_keepalive: int = None,
     ):
@@ -73,6 +75,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             max_keepalive_connections=max_keepalive_connections,
             keepalive_expiry=keepalive_expiry,
             http2=http2,
+            backend=backend,
             max_keepalive=max_keepalive,
         )
 
@@ -131,7 +134,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
         if connection is None:
             connection = AsyncHTTPConnection(
-                origin=origin, http2=self._http2, ssl_context=self._ssl_context,
+                origin=origin, http2=self._http2, ssl_context=self._ssl_context
             )
             await self._add_to_pool(connection)
 
@@ -181,7 +184,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         connection = await self._get_connection_from_pool(origin)
 
         if connection is None:
-            scheme, host, port, _ = url
+            scheme, host, port = origin
 
             # First, create a connection to the proxy server
             proxy_connection = AsyncHTTPConnection(
@@ -194,10 +197,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
             # CONNECT www.example.org:80 HTTP/1.1
             # [proxy-headers]
-            if port is None:
-                target = host
-            else:
-                target = b"%b:%d" % (host, port)
+            target = b"%b:%d" % (host, port)
             connect_url = self.proxy_origin + (target,)
             connect_headers = [(b"Host", target), (b"Accept", b"*/*")]
             connect_headers = merge_headers(connect_headers, self.proxy_headers)

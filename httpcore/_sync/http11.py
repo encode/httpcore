@@ -3,7 +3,7 @@ from typing import Iterator, List, Tuple, Union
 
 import h11
 
-from .._backends.auto import SyncSocketStream
+from .._backends.sync import SyncSocketStream
 from .._bytestreams import IteratorByteStream, PlainByteStream
 from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
@@ -26,9 +26,7 @@ logger = get_logger(__name__)
 class SyncHTTP11Connection(SyncBaseHTTPConnection):
     READ_NUM_BYTES = 64 * 1024
 
-    def __init__(
-        self, socket: SyncSocketStream, ssl_context: SSLContext = None,
-    ):
+    def __init__(self, socket: SyncSocketStream, ssl_context: SSLContext = None):
         self.socket = socket
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
 
@@ -85,7 +83,7 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
         return self.socket
 
     def _send_request(
-        self, method: bytes, url: URL, headers: Headers, timeout: TimeoutDict,
+        self, method: bytes, url: URL, headers: Headers, timeout: TimeoutDict
     ) -> None:
         """
         Send the request line and headers.
