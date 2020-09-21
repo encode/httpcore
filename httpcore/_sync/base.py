@@ -1,8 +1,8 @@
 import enum
 from types import TracebackType
-from typing import Iterator, List, Tuple, Type
+from typing import Iterator, Tuple, Type
 
-from .._types import URL, Headers, T, TimeoutDict
+from .._types import URL, Headers, T
 
 
 class NewConnectionRequired(Exception):
@@ -67,8 +67,8 @@ class SyncHTTPTransport:
         url: URL,
         headers: Headers = None,
         stream: SyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
+        ext: dict = None,
+    ) -> Tuple[int, Headers, SyncByteStream, dict]:
         """
         The interface for sending a single HTTP request, and returning a response.
 
@@ -80,23 +80,17 @@ class SyncHTTPTransport:
         * **headers** - `Optional[List[Tuple[bytes, bytes]]]` - Any HTTP headers
         to send with the request.
         * **stream** - `Optional[SyncByteStream]` - The body of the HTTP request.
-        * **timeout** - `Optional[Dict[str, Optional[float]]]` - A dictionary of
-        timeout values for I/O operations. Supported keys are "pool" for acquiring a
-        connection from the connection pool, "read" for reading from the connection,
-        "write" for writing to the connection and "connect" for opening the connection.
-        Values are floating point seconds.
+        * **ext** - `Optional[dict]` - A dictionary of optional extensions.
 
         ** Returns:**
 
-        A five-tuple of:
+        A four-tuple of:
 
-        * **http_version** - `bytes` - The HTTP version used by the server,
-        such as `b'HTTP/1.1'`.
         * **status_code** - `int` - The HTTP status code, such as `200`.
-        * **reason_phrase** - `bytes` - Any HTTP reason phrase, such as `b'OK'`.
         * **headers** - `List[Tuple[bytes, bytes]]` - Any HTTP headers included
         on the response.
         * **stream** - `SyncByteStream` - The body of the HTTP response.
+        * **ext** - `dict` - A dictionary of optional extensions.
         """
         raise NotImplementedError()  # pragma: nocover
 

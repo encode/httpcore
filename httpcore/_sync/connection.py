@@ -1,5 +1,5 @@
 from ssl import SSLContext
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple, cast
 
 from .._backends.sync import SyncBackend, SyncLock, SyncSocketStream, SyncBackend
 from .._types import URL, Headers, Origin, TimeoutDict
@@ -72,9 +72,12 @@ class SyncHTTPConnection(SyncHTTPTransport):
         url: URL,
         headers: Headers = None,
         stream: SyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
+        ext: dict = None,
+    ) -> Tuple[int, Headers, SyncByteStream, dict]:
         assert url_to_origin(url) == self.origin
+        ext = {} if ext is None else ext
+        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+
         with self.request_lock:
             if self.state == ConnectionState.PENDING:
                 if not self.socket:
@@ -94,7 +97,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         logger.trace(
             "connection.request method=%r url=%r headers=%r", method, url, headers
         )
-        return self.connection.request(method, url, headers, stream, timeout)
+        return self.connection.request(method, url, headers, stream, ext)
 
     def _open_socket(self, timeout: TimeoutDict = None) -> SyncSocketStream:
         scheme, hostname, port = self.origin

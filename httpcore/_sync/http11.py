@@ -1,5 +1,5 @@
 from ssl import SSLContext
-from typing import Iterator, List, Tuple, Union
+from typing import Iterator, List, Tuple, Union, cast
 
 import h11
 
@@ -53,11 +53,12 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
         url: URL,
         headers: Headers = None,
         stream: SyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
+        ext: dict = None,
+    ) -> Tuple[int, Headers, SyncByteStream, dict]:
         headers = [] if headers is None else headers
         stream = PlainByteStream(b"") if stream is None else stream
-        timeout = {} if timeout is None else timeout
+        ext = {} if ext is None else ext
+        timeout = cast(TimeoutDict, ext.get("timeout", {}))
 
         self.state = ConnectionState.ACTIVE
 
@@ -73,7 +74,8 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
             iterator=self._receive_response_data(timeout),
             close_func=self._response_closed,
         )
-        return (http_version, status_code, reason_phrase, headers, response_stream)
+        ext = {"http_version": http_version, "reason": reason_phrase}
+        return (status_code, headers, response_stream, ext)
 
     def start_tls(
         self, hostname: bytes, timeout: TimeoutDict = None
