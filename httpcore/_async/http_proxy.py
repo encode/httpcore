@@ -250,7 +250,11 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             headers,
             stream,
         ) = await connection.arequest(
-            method, url, headers=headers, stream=stream, timeout=timeout,
+            method,
+            url,
+            headers=headers,
+            stream=stream,
+            timeout=timeout,
         )
 
         wrapped_stream = ResponseByteStream(

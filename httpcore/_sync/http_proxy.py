@@ -250,7 +250,11 @@ class SyncHTTPProxy(SyncConnectionPool):
             headers,
             stream,
         ) = connection.request(
-            method, url, headers=headers, stream=stream, timeout=timeout,
+            method,
+            url,
+            headers=headers,
+            stream=stream,
+            timeout=timeout,
         )
 
         wrapped_stream = ResponseByteStream(

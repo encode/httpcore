@@ -31,7 +31,10 @@ class SocketStream(AsyncSocketStream):
         return "HTTP/2" if alpn_protocol == "h2" else "HTTP/1.1"
 
     async def start_tls(
-        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict,
+        self,
+        hostname: bytes,
+        ssl_context: SSLContext,
+        timeout: TimeoutDict,
     ) -> "SocketStream":
         connect_timeout = timeout.get("connect")
         try:

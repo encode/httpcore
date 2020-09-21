@@ -290,7 +290,12 @@ async def test_proxy_https_requests(
             {"https://example.org": ["HTTP/1.1, ACTIVE", "HTTP/1.1, ACTIVE"]},
             {},
         ),
-        (True, 0.0, {"https://example.org": ["HTTP/2, ACTIVE, 2 streams"]}, {},),
+        (
+            True,
+            0.0,
+            {"https://example.org": ["HTTP/2, ACTIVE, 2 streams"]},
+            {},
+        ),
     ],
 )
 @pytest.mark.anyio

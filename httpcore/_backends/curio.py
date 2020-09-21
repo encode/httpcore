@@ -98,7 +98,8 @@ class SocketStream(AsyncSocketStream):
             )
 
             await curio.timeout_after(
-                connect_timeout, wrapped_sock.do_handshake(),
+                connect_timeout,
+                wrapped_sock.do_handshake(),
             )
 
             return SocketStream(wrapped_sock)
@@ -164,7 +165,8 @@ class CurioBackend(AsyncBackend):
 
         with map_exceptions(exc_map):
             sock: curio.io.Socket = await curio.timeout_after(
-                connect_timeout, curio.open_connection(hostname, port, **kwargs),
+                connect_timeout,
+                curio.open_connection(hostname, port, **kwargs),
             )
 
             return SocketStream(sock)
