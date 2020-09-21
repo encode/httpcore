@@ -23,7 +23,7 @@ async def test_http_request() -> None:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.request(
+        http_version, status_code, reason, headers, stream = await http.arequest(
             method, url, headers
         )
         body = await read_body(stream)
@@ -40,7 +40,7 @@ async def test_https_request() -> None:
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.request(
+        http_version, status_code, reason, headers, stream = await http.arequest(
             method, url, headers
         )
         body = await read_body(stream)
@@ -58,7 +58,7 @@ async def test_request_unsupported_protocol() -> None:
         url = (b"ftp", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
         with pytest.raises(httpcore.UnsupportedProtocol):
-            await http.request(method, url, headers)
+            await http.arequest(method, url, headers)
 
 
 @pytest.mark.usefixtures("async_environment")
@@ -67,7 +67,7 @@ async def test_http2_request() -> None:
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.request(
+        http_version, status_code, reason, headers, stream = await http.arequest(
             method, url, headers
         )
         body = await read_body(stream)
@@ -84,7 +84,7 @@ async def test_closing_http_request() -> None:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org"), (b"connection", b"close")]
-        http_version, status_code, reason, headers, stream = await http.request(
+        http_version, status_code, reason, headers, stream = await http.arequest(
             method, url, headers
         )
         body = await read_body(stream)
@@ -101,7 +101,7 @@ async def test_http_request_reuse_connection() -> None:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.request(
+        http_version, status_code, reason, headers, stream = await http.arequest(
             method, url, headers
         )
         body = await read_body(stream)
@@ -114,7 +114,7 @@ async def test_http_request_reuse_connection() -> None:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.request(
+        http_version, status_code, reason, headers, stream = await http.arequest(
             method, url, headers
         )
         body = await read_body(stream)
@@ -131,7 +131,7 @@ async def test_https_request_reuse_connection() -> None:
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.request(
+        http_version, status_code, reason, headers, stream = await http.arequest(
             method, url, headers
         )
         body = await read_body(stream)
@@ -144,7 +144,7 @@ async def test_https_request_reuse_connection() -> None:
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.request(
+        http_version, status_code, reason, headers, stream = await http.arequest(
             method, url, headers
         )
         body = await read_body(stream)
@@ -161,7 +161,7 @@ async def test_http_request_cannot_reuse_dropped_connection() -> None:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.request(
+        http_version, status_code, reason, headers, stream = await http.arequest(
             method, url, headers
         )
         body = await read_body(stream)
@@ -178,7 +178,7 @@ async def test_http_request_cannot_reuse_dropped_connection() -> None:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.request(
+        http_version, status_code, reason, headers, stream = await http.arequest(
             method, url, headers
         )
         body = await read_body(stream)
@@ -199,7 +199,7 @@ async def test_http_proxy(proxy_server: URL, proxy_mode: str) -> None:
     async with httpcore.AsyncHTTPProxy(
         proxy_server, proxy_mode=proxy_mode, max_connections=max_connections,
     ) as http:
-        http_version, status_code, reason, headers, stream = await http.request(
+        http_version, status_code, reason, headers, stream = await http.arequest(
             method, url, headers
         )
         body = await read_body(stream)
@@ -216,7 +216,7 @@ async def test_http_request_local_address() -> None:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.request(
+        http_version, status_code, reason, headers, stream = await http.arequest(
             method, url, headers
         )
         body = await read_body(stream)
@@ -245,7 +245,7 @@ async def test_proxy_https_requests(
         max_connections=max_connections,
         http2=http2,
     ) as http:
-        http_version, status_code, reason, headers, stream = await http.request(
+        http_version, status_code, reason, headers, stream = await http.arequest(
             method, url, headers
         )
         _ = await read_body(stream)
@@ -290,8 +290,8 @@ async def test_connection_pool_get_connection_info(
         url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
 
-        _, _, _, _, stream_1 = await http.request(method, url, headers)
-        _, _, _, _, stream_2 = await http.request(method, url, headers)
+        _, _, _, _, stream_1 = await http.arequest(method, url, headers)
+        _, _, _, _, stream_2 = await http.arequest(method, url, headers)
 
         try:
             stats = await http.get_connection_info()
@@ -319,7 +319,7 @@ async def test_http_request_unix_domain_socket(uds_server) -> None:
         method = b"GET"
         url = (b"http", b"localhost", None, b"/")
         headers = [(b"host", b"localhost")]
-        http_version, status_code, reason, headers, stream = await http.request(
+        http_version, status_code, reason, headers, stream = await http.arequest(
             method, url, headers
         )
         assert http_version == b"HTTP/1.1"
