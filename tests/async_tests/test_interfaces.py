@@ -369,7 +369,7 @@ async def test_max_keepalive_connections_handled_correctly(
 
         connections_streams = []
         for _ in range(connections_number):
-            _, _, _, _, stream = await http.request(method, url, headers)
+            _, _, _, _, stream = await http.arequest(method, url, headers)
             connections_streams.append(stream)
 
         try:
@@ -388,7 +388,7 @@ async def test_explicit_backend_name() -> None:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.request(
+        http_version, status_code, reason, headers, stream = await http.arequest(
             method, url, headers
         )
         await read_body(stream)
