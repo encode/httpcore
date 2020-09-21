@@ -72,7 +72,7 @@ def test_http2_request(backend: str) -> None:
         read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": b"HTTP/1.1", "reason": b"OK"}
+        assert ext == {"http_version": b"HTTP/2"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
