@@ -1,6 +1,5 @@
-from http import HTTPStatus
 from ssl import SSLContext
-from typing import AsyncIterator, Dict, List, Tuple
+from typing import AsyncIterator, Dict, List, Tuple, cast
 
 import h2.connection
 import h2.events
@@ -17,13 +16,6 @@ from .base import AsyncByteStream, ConnectionState, NewConnectionRequired
 from .http import AsyncBaseHTTPConnection
 
 logger = get_logger(__name__)
-
-
-def get_reason_phrase(status_code: int) -> bytes:
-    try:
-        return HTTPStatus(status_code).phrase.encode("ascii")
-    except ValueError:
-        return b""
 
 
 class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
@@ -99,9 +91,10 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         url: URL,
         headers: Headers = None,
         stream: AsyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
-        timeout = {} if timeout is None else timeout
+        ext: dict = None,
+    ) -> Tuple[int, Headers, AsyncByteStream, dict]:
+        ext = {} if ext is None else ext
+        timeout = cast(TimeoutDict, ext.get("timeout", {}))
 
         async with self.init_lock:
             if not self.sent_connection_init:
@@ -123,7 +116,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
             h2_stream = AsyncHTTP2Stream(stream_id=stream_id, connection=self)
             self.streams[stream_id] = h2_stream
             self.events[stream_id] = []
-            return await h2_stream.arequest(method, url, headers, stream, timeout)
+            return await h2_stream.arequest(method, url, headers, stream, ext)
         except Exception:  # noqa: PIE786
             self.max_streams_semaphore.release()
             raise
@@ -283,11 +276,12 @@ class AsyncHTTP2Stream:
         url: URL,
         headers: Headers = None,
         stream: AsyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
+        ext: dict = None,
+    ) -> Tuple[int, Headers, AsyncByteStream, dict]:
         headers = [] if headers is None else [(k.lower(), v) for (k, v) in headers]
         stream = PlainByteStream(b"") if stream is None else stream
-        timeout = {} if timeout is None else timeout
+        ext = {} if ext is None else ext
+        timeout = cast(TimeoutDict, ext.get("timeout", {}))
 
         # Send the request.
         seen_headers = set(key for key, value in headers)
@@ -301,12 +295,14 @@ class AsyncHTTP2Stream:
 
         # Receive the response.
         status_code, headers = await self.receive_response(timeout)
-        reason_phrase = get_reason_phrase(status_code)
         response_stream = AsyncIteratorByteStream(
             aiterator=self.body_iter(timeout), aclose_func=self._response_closed
         )
 
-        return (b"HTTP/2", status_code, reason_phrase, headers, response_stream)
+        ext = {
+            "http_version": "HTTP/2",
+        }
+        return (status_code, headers, response_stream, ext)
 
     async def send_headers(
         self,

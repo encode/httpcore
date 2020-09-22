@@ -1,6 +1,6 @@
 import warnings
 from ssl import SSLContext
-from typing import Iterator, Callable, Dict, List, Optional, Set, Tuple
+from typing import Iterator, Callable, Dict, List, Optional, Set, Tuple, cast
 
 from .._backends.sync import SyncLock, SyncSemaphore
 from .._backends.base import lookup_sync_backend
@@ -153,8 +153,8 @@ class SyncConnectionPool(SyncHTTPTransport):
         url: URL,
         headers: Headers = None,
         stream: SyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, Headers, SyncByteStream]:
+        ext: dict = None,
+    ) -> Tuple[int, Headers, SyncByteStream, dict]:
         if url[0] not in (b"http", b"https"):
             scheme = url[0].decode("latin-1")
             raise UnsupportedProtocol(f"Unsupported URL protocol {scheme!r}")
@@ -162,6 +162,8 @@ class SyncConnectionPool(SyncHTTPTransport):
             raise LocalProtocolError("Missing hostname in URL.")
 
         origin = url_to_origin(url)
+        ext = {} if ext is None else ext
+        timeout = cast(TimeoutDict, ext.get("timeout", {}))
 
         self._keepalive_sweep()
 
@@ -190,7 +192,7 @@ class SyncConnectionPool(SyncHTTPTransport):
 
             try:
                 response = connection.request(
-                    method, url, headers=headers, stream=stream, timeout=timeout
+                    method, url, headers=headers, stream=stream, ext=ext
                 )
             except NewConnectionRequired:
                 connection = None
@@ -199,10 +201,11 @@ class SyncConnectionPool(SyncHTTPTransport):
                 self._remove_from_pool(connection)
                 raise
 
+        status_code, headers, stream, ext = response
         wrapped_stream = ResponseByteStream(
-            response[4], connection=connection, callback=self._response_closed
+            stream, connection=connection, callback=self._response_closed
         )
-        return response[0], response[1], response[2], response[3], wrapped_stream
+        return status_code, headers, wrapped_stream, ext
 
     def _get_connection_from_pool(
         self, origin: Origin
@@ -305,10 +308,8 @@ class SyncConnectionPool(SyncHTTPTransport):
             connection.close()
 
     def _add_to_pool(
-        self, connection: SyncHTTPConnection, timeout: TimeoutDict = None
+        self, connection: SyncHTTPConnection, timeout: TimeoutDict
     ) -> None:
-        timeout = {} if timeout is None else timeout
-
         logger.trace("adding connection to pool=%r", connection)
         self._connection_semaphore.acquire(timeout=timeout.get("pool", None))
         with self._thread_lock:

@@ -30,14 +30,11 @@ async def test_http_request(backend: str) -> None:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.arequest(
-            method, url, headers
-        )
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
         await read_body(stream)
 
-        assert http_version == b"HTTP/1.1"
         assert status_code == 200
-        assert reason == b"OK"
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -47,14 +44,11 @@ async def test_https_request(backend: str) -> None:
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.arequest(
-            method, url, headers
-        )
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
         await read_body(stream)
 
-        assert http_version == b"HTTP/1.1"
         assert status_code == 200
-        assert reason == b"OK"
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -74,14 +68,11 @@ async def test_http2_request(backend: str) -> None:
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.arequest(
-            method, url, headers
-        )
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
         await read_body(stream)
 
-        assert http_version == b"HTTP/2"
         assert status_code == 200
-        assert reason == b"OK"
+        assert ext == {"http_version": "HTTP/2"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -91,14 +82,11 @@ async def test_closing_http_request(backend: str) -> None:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org"), (b"connection", b"close")]
-        http_version, status_code, reason, headers, stream = await http.arequest(
-            method, url, headers
-        )
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
         await read_body(stream)
 
-        assert http_version == b"HTTP/1.1"
         assert status_code == 200
-        assert reason == b"OK"
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert url[:3] not in http._connections  # type: ignore
 
 
@@ -108,27 +96,21 @@ async def test_http_request_reuse_connection(backend: str) -> None:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.arequest(
-            method, url, headers
-        )
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
         await read_body(stream)
 
-        assert http_version == b"HTTP/1.1"
         assert status_code == 200
-        assert reason == b"OK"
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.arequest(
-            method, url, headers
-        )
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
         await read_body(stream)
 
-        assert http_version == b"HTTP/1.1"
         assert status_code == 200
-        assert reason == b"OK"
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -138,27 +120,21 @@ async def test_https_request_reuse_connection(backend: str) -> None:
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.arequest(
-            method, url, headers
-        )
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
         await read_body(stream)
 
-        assert http_version == b"HTTP/1.1"
         assert status_code == 200
-        assert reason == b"OK"
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
         method = b"GET"
         url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.arequest(
-            method, url, headers
-        )
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
         await read_body(stream)
 
-        assert http_version == b"HTTP/1.1"
         assert status_code == 200
-        assert reason == b"OK"
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -168,14 +144,11 @@ async def test_http_request_cannot_reuse_dropped_connection(backend: str) -> Non
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.arequest(
-            method, url, headers
-        )
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
         await read_body(stream)
 
-        assert http_version == b"HTTP/1.1"
         assert status_code == 200
-        assert reason == b"OK"
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
         # Mock the connection as having been dropped.
@@ -185,14 +158,11 @@ async def test_http_request_cannot_reuse_dropped_connection(backend: str) -> Non
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.arequest(
-            method, url, headers
-        )
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
         await read_body(stream)
 
-        assert http_version == b"HTTP/1.1"
         assert status_code == 200
-        assert reason == b"OK"
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -209,14 +179,11 @@ async def test_http_proxy(proxy_server: URL, proxy_mode: str, backend: str) -> N
         max_connections=max_connections,
         backend=backend,
     ) as http:
-        http_version, status_code, reason, headers, stream = await http.arequest(
-            method, url, headers
-        )
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
         await read_body(stream)
 
-        assert http_version == b"HTTP/1.1"
         assert status_code == 200
-        assert reason == b"OK"
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
 
 
 @pytest.mark.anyio
@@ -230,14 +197,11 @@ async def test_http_request_local_address(backend: str) -> None:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.arequest(
-            method, url, headers
-        )
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
         await read_body(stream)
 
-        assert http_version == b"HTTP/1.1"
         assert status_code == 200
-        assert reason == b"OK"
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -259,14 +223,12 @@ async def test_proxy_https_requests(
         max_connections=max_connections,
         http2=http2,
     ) as http:
-        http_version, status_code, reason, headers, stream = await http.arequest(
-            method, url, headers
-        )
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
         _ = await read_body(stream)
 
-        assert http_version == (b"HTTP/2" if http2 else b"HTTP/1.1")
         assert status_code == 200
-        assert reason == b"OK"
+        assert ext["http_version"] == "HTTP/2" if http2 else "HTTP/1.1"
+        assert ext.get("reason", "") == "" if http2 else "OK"
 
 
 @pytest.mark.parametrize(
@@ -313,8 +275,8 @@ async def test_connection_pool_get_connection_info(
         url = (b"https", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
 
-        _, _, _, _, stream_1 = await http.arequest(method, url, headers)
-        _, _, _, _, stream_2 = await http.arequest(method, url, headers)
+        _, _, stream_1, _ = await http.arequest(method, url, headers)
+        _, _, stream_2, _ = await http.arequest(method, url, headers)
 
         try:
             stats = await http.get_connection_info()
@@ -344,12 +306,9 @@ async def test_http_request_unix_domain_socket(
         method = b"GET"
         url = (b"http", b"localhost", None, b"/")
         headers = [(b"host", b"localhost")]
-        http_version, status_code, reason, headers, stream = await http.arequest(
-            method, url, headers
-        )
-        assert http_version == b"HTTP/1.1"
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
         assert status_code == 200
-        assert reason == b"OK"
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         body = await read_body(stream)
         assert body == b"Hello, world!"
 
@@ -369,7 +328,7 @@ async def test_max_keepalive_connections_handled_correctly(
 
         connections_streams = []
         for _ in range(connections_number):
-            _, _, _, _, stream = await http.arequest(method, url, headers)
+            _, _, stream, _ = await http.arequest(method, url, headers)
             connections_streams.append(stream)
 
         try:
@@ -388,12 +347,9 @@ async def test_explicit_backend_name() -> None:
         method = b"GET"
         url = (b"http", b"example.org", 80, b"/")
         headers = [(b"host", b"example.org")]
-        http_version, status_code, reason, headers, stream = await http.arequest(
-            method, url, headers
-        )
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
         await read_body(stream)
 
-        assert http_version == b"HTTP/1.1"
         assert status_code == 200
-        assert reason == b"OK"
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
