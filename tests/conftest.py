@@ -1,18 +1,18 @@
 import asyncio
-import contextlib
 import os
 import ssl
+import sys
 import threading
-import time
 import typing
 
 import pytest
 import trustme
-import uvicorn
 from mitmproxy import options, proxy
 from mitmproxy.tools.dump import DumpMaster
 
 from httpcore._types import URL
+
+from .utils import Server
 
 PROXY_HOST = "127.0.0.1"
 PROXY_PORT = 8080
@@ -102,24 +102,21 @@ def proxy_server(example_org_cert_path: str) -> typing.Iterator[URL]:
         thread.join()
 
 
-class Server(uvicorn.Server):
-    def install_signal_handlers(self) -> None:
-        pass
+async def lifespan(receive: typing.Callable, send: typing.Callable) -> None:
+    message = await receive()
+    assert message["type"] == "lifespan.startup"
+    await send({"type": "lifespan.startup.complete"})
 
-    @contextlib.contextmanager
-    def serve_in_thread(self) -> typing.Iterator[None]:
-        thread = threading.Thread(target=self.run)
-        thread.start()
-        try:
-            while not self.started:
-                time.sleep(1e-3)
-            yield
-        finally:
-            self.should_exit = True
-            thread.join()
+    message = await receive()
+    assert message["type"] == "lifespan.shutdown"
+    await send({"type": "lifespan.shutdown.complete"})
 
 
 async def app(scope: dict, receive: typing.Callable, send: typing.Callable) -> None:
+    if scope["type"] == "lifespan":
+        await lifespan(receive, send)
+        return
+
     assert scope["type"] == "http"
     await send(
         {
@@ -133,11 +130,69 @@ async def app(scope: dict, receive: typing.Callable, send: typing.Callable) -> N
 
 @pytest.fixture(scope="session")
 def uds_server() -> typing.Iterator[Server]:
+    if sys.version_info < (3, 7):
+        pytest.skip(reason="Hypercorn requires Python 3.7 or higher")
+
     uds = "test_server.sock"
-    config = uvicorn.Config(app=app, lifespan="off", loop="asyncio", uds=uds)
-    server = Server(config=config)
+    server = Server(app=app, host=uds, port=0, bind=f"unix:{uds}")
+
     try:
         with server.serve_in_thread():
             yield server
     finally:
         os.remove(uds)
+
+
+@pytest.fixture(scope="session")
+def server() -> typing.Iterator[Server]:
+    if sys.version_info < (3, 7):
+        pytest.skip(reason="Hypercorn requires Python 3.7 or higher")
+
+    server = Server(app=app, host="localhost", port=8002)
+
+    with server.serve_in_thread():
+        yield server
+
+
+@pytest.fixture(scope="session")
+def localhost_cert(cert_authority: trustme.CA) -> trustme.LeafCert:
+    return cert_authority.issue_cert("localhost")
+
+
+@pytest.fixture(scope="session")
+def localhost_cert_path(localhost_cert: trustme.LeafCert) -> typing.Iterator[str]:
+    with localhost_cert.private_key_and_cert_chain_pem.tempfile() as tmp:
+        yield tmp
+
+
+@pytest.fixture(scope="session")
+def localhost_cert_pem_file(localhost_cert: trustme.LeafCert) -> typing.Iterator[str]:
+    with localhost_cert.cert_chain_pems[0].tempfile() as tmp:
+        yield tmp
+
+
+@pytest.fixture(scope="session")
+def localhost_cert_private_key_file(
+    localhost_cert: trustme.LeafCert,
+) -> typing.Iterator[str]:
+    with localhost_cert.private_key_pem.tempfile() as tmp:
+        yield tmp
+
+
+@pytest.fixture(scope="session")
+def https_server(
+    localhost_cert_pem_file: str, localhost_cert_private_key_file: str
+) -> typing.Iterator[Server]:
+    if sys.version_info < (3, 7):
+        pytest.skip(reason="Hypercorn requires Python 3.7 or higher")
+
+    server = Server(
+        app=app,
+        host="localhost",
+        port=8003,
+        certfile=localhost_cert_pem_file,
+        keyfile=localhost_cert_private_key_file,
+    )
+
+    with server.serve_in_thread():
+        yield server
