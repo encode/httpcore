@@ -38,6 +38,20 @@ def test_http_request(backend: str, server: Server) -> None:
 
 
 
+def test_http_request_live(backend: str) -> None:
+    with httpcore.SyncConnectionPool(backend=backend) as http:
+        method = b"GET"
+        url = (b"http", b"example.org", 80, b"/")
+        headers = [(b"host", b"example.org")]
+        status_code, headers, stream, ext = http.request(method, url, headers)
+        read_body(stream)
+
+        assert status_code == 200
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+        assert len(http._connections[url[:3]]) == 1  # type: ignore
+
+
+
 def test_https_request(backend: str, https_server: Server) -> None:
     with httpcore.SyncConnectionPool(backend=backend) as http:
         method = b"GET"
@@ -48,6 +62,20 @@ def test_https_request(backend: str, https_server: Server) -> None:
 
         assert status_code == 200
         assert ext == {"http_version": "HTTP/1.1", "reason": ""}
+        assert len(http._connections[url[:3]]) == 1  # type: ignore
+
+
+
+def test_https_request_live(backend: str) -> None:
+    with httpcore.SyncConnectionPool(backend=backend) as http:
+        method = b"GET"
+        url = (b"https", b"example.org", 443, b"/")
+        headers = [(b"host", b"example.org")]
+        status_code, headers, stream, ext = http.request(method, url, headers)
+        read_body(stream)
+
+        assert status_code == 200
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -67,6 +95,20 @@ def test_http2_request(backend: str, https_server: Server) -> None:
         method = b"GET"
         url = (b"https", *https_server.netloc, b"/")
         headers = [https_server.host_header()]
+        status_code, headers, stream, ext = http.request(method, url, headers)
+        read_body(stream)
+
+        assert status_code == 200
+        assert ext == {"http_version": "HTTP/2"}
+        assert len(http._connections[url[:3]]) == 1  # type: ignore
+
+
+
+def test_http2_request_live(backend: str, https_server: Server) -> None:
+    with httpcore.SyncConnectionPool(backend=backend, http2=True) as http:
+        method = b"GET"
+        url = (b"https", b"example.org", 443, b"/")
+        headers = [(b"host", b"example.org")]
         status_code, headers, stream, ext = http.request(method, url, headers)
         read_body(stream)
 
@@ -307,7 +349,6 @@ def test_http_request_unix_domain_socket(
     uds_server: Server, backend: str
 ) -> None:
     uds = uds_server.host
-    print(uds)
     assert uds is not None
     with httpcore.SyncConnectionPool(uds=uds, backend=backend) as http:
         method = b"GET"

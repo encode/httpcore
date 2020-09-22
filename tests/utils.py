@@ -4,10 +4,15 @@ import threading
 import time
 from typing import Callable, Iterator, Tuple
 
-import hypercorn.config
-import hypercorn.trio
 import sniffio
 import trio
+
+try:
+    from hypercorn import config as hypercorn_config, trio as hypercorn_trio
+except ImportError:
+    # Python 3.6.
+    hypercorn_config = None  # type: ignore
+    hypercorn_trio = None  # type: ignore
 
 
 def lookup_async_backend():
@@ -38,7 +43,7 @@ class Server:
         self.app = app
         self.host = host
         self.port = port
-        self.config = hypercorn.config.Config()
+        self.config = hypercorn_config.Config()
         self.config.bind = [bind]
         self.config.certfile = certfile
         self.config.keyfile = keyfile
@@ -59,7 +64,7 @@ class Server:
                 await trio.sleep(0.01)
 
         serve = functools.partial(
-            hypercorn.trio.serve, shutdown_trigger=shutdown_trigger
+            hypercorn_trio.serve, shutdown_trigger=shutdown_trigger
         )
 
         async def main() -> None:

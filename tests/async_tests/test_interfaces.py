@@ -38,6 +38,20 @@ async def test_http_request(backend: str, server: Server) -> None:
 
 
 @pytest.mark.anyio
+async def test_http_request_live(backend: str) -> None:
+    async with httpcore.AsyncConnectionPool(backend=backend) as http:
+        method = b"GET"
+        url = (b"http", b"example.org", 80, b"/")
+        headers = [(b"host", b"example.org")]
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
+        await read_body(stream)
+
+        assert status_code == 200
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+        assert len(http._connections[url[:3]]) == 1  # type: ignore
+
+
+@pytest.mark.anyio
 async def test_https_request(backend: str, https_server: Server) -> None:
     async with httpcore.AsyncConnectionPool(backend=backend) as http:
         method = b"GET"
@@ -48,6 +62,20 @@ async def test_https_request(backend: str, https_server: Server) -> None:
 
         assert status_code == 200
         assert ext == {"http_version": "HTTP/1.1", "reason": ""}
+        assert len(http._connections[url[:3]]) == 1  # type: ignore
+
+
+@pytest.mark.anyio
+async def test_https_request_live(backend: str) -> None:
+    async with httpcore.AsyncConnectionPool(backend=backend) as http:
+        method = b"GET"
+        url = (b"https", b"example.org", 443, b"/")
+        headers = [(b"host", b"example.org")]
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
+        await read_body(stream)
+
+        assert status_code == 200
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -67,6 +95,20 @@ async def test_http2_request(backend: str, https_server: Server) -> None:
         method = b"GET"
         url = (b"https", *https_server.netloc, b"/")
         headers = [https_server.host_header()]
+        status_code, headers, stream, ext = await http.arequest(method, url, headers)
+        await read_body(stream)
+
+        assert status_code == 200
+        assert ext == {"http_version": "HTTP/2"}
+        assert len(http._connections[url[:3]]) == 1  # type: ignore
+
+
+@pytest.mark.anyio
+async def test_http2_request_live(backend: str, https_server: Server) -> None:
+    async with httpcore.AsyncConnectionPool(backend=backend, http2=True) as http:
+        method = b"GET"
+        url = (b"https", b"example.org", 443, b"/")
+        headers = [(b"host", b"example.org")]
         status_code, headers, stream, ext = await http.arequest(method, url, headers)
         await read_body(stream)
 
