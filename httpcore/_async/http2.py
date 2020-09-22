@@ -300,7 +300,7 @@ class AsyncHTTP2Stream:
         )
 
         ext = {
-            "http_version": b"HTTP/2",
+            "http_version": "HTTP/2",
         }
         return (status_code, headers, response_stream, ext)
 

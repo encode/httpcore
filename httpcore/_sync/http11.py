@@ -74,7 +74,10 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
             iterator=self._receive_response_data(timeout),
             close_func=self._response_closed,
         )
-        ext = {"http_version": http_version, "reason": reason_phrase}
+        ext = {
+            "http_version": http_version.decode("ascii", errors="ignore"),
+            "reason": reason_phrase.decode("ascii", errors="ignore"),
+        }
         return (status_code, headers, response_stream, ext)
 
     def start_tls(

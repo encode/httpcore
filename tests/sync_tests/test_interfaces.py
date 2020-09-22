@@ -34,7 +34,7 @@ def test_http_request(backend: str) -> None:
         read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": b"HTTP/1.1", "reason": b"OK"}
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -48,7 +48,7 @@ def test_https_request(backend: str) -> None:
         read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": b"HTTP/1.1", "reason": b"OK"}
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -72,7 +72,7 @@ def test_http2_request(backend: str) -> None:
         read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": b"HTTP/2"}
+        assert ext == {"http_version": "HTTP/2"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -86,7 +86,7 @@ def test_closing_http_request(backend: str) -> None:
         read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": b"HTTP/1.1", "reason": b"OK"}
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert url[:3] not in http._connections  # type: ignore
 
 
@@ -100,7 +100,7 @@ def test_http_request_reuse_connection(backend: str) -> None:
         read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": b"HTTP/1.1", "reason": b"OK"}
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
         method = b"GET"
@@ -110,7 +110,7 @@ def test_http_request_reuse_connection(backend: str) -> None:
         read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": b"HTTP/1.1", "reason": b"OK"}
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -124,7 +124,7 @@ def test_https_request_reuse_connection(backend: str) -> None:
         read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": b"HTTP/1.1", "reason": b"OK"}
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
         method = b"GET"
@@ -134,7 +134,7 @@ def test_https_request_reuse_connection(backend: str) -> None:
         read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": b"HTTP/1.1", "reason": b"OK"}
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -148,7 +148,7 @@ def test_http_request_cannot_reuse_dropped_connection(backend: str) -> None:
         read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": b"HTTP/1.1", "reason": b"OK"}
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
         # Mock the connection as having been dropped.
@@ -162,7 +162,7 @@ def test_http_request_cannot_reuse_dropped_connection(backend: str) -> None:
         read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": b"HTTP/1.1", "reason": b"OK"}
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -183,7 +183,7 @@ def test_http_proxy(proxy_server: URL, proxy_mode: str, backend: str) -> None:
         read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": b"HTTP/1.1", "reason": b"OK"}
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
 
 
 
@@ -201,7 +201,7 @@ def test_http_request_local_address(backend: str) -> None:
         read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": b"HTTP/1.1", "reason": b"OK"}
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -226,13 +226,9 @@ def test_proxy_https_requests(
         status_code, headers, stream, ext = http.request(method, url, headers)
         _ = read_body(stream)
 
-        expected_ext = (
-            {"http_version": b"HTTP/2"}
-            if http2
-            else {"http_version": b"HTTP/1.1", "reason": b"OK"}
-        )
         assert status_code == 200
-        assert ext == expected_ext
+        assert ext["http_version"] == "HTTP/2" if http2 else "HTTP/1.1"
+        assert ext.get("reason", "") == "" if http2 else "OK"
 
 
 @pytest.mark.parametrize(
@@ -312,7 +308,7 @@ def test_http_request_unix_domain_socket(
         headers = [(b"host", b"localhost")]
         status_code, headers, stream, ext = http.request(method, url, headers)
         assert status_code == 200
-        assert ext == {"http_version": b"HTTP/1.1", "reason": b"OK"}
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         body = read_body(stream)
         assert body == b"Hello, world!"
 
@@ -355,5 +351,5 @@ def test_explicit_backend_name() -> None:
         read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": b"HTTP/1.1", "reason": b"OK"}
+        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore

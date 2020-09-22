@@ -74,7 +74,10 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
             aiterator=self._receive_response_data(timeout),
             aclose_func=self._response_closed,
         )
-        ext = {"http_version": http_version, "reason": reason_phrase}
+        ext = {
+            "http_version": http_version.decode("ascii", errors="ignore"),
+            "reason": reason_phrase.decode("ascii", errors="ignore"),
+        }
         return (status_code, headers, response_stream, ext)
 
     async def start_tls(
