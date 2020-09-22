@@ -66,15 +66,18 @@ def origin_to_url_string(origin: Origin) -> str:
     return f"{scheme.decode('ascii')}://{host.decode('ascii')}{port}"
 
 
-def _wait_for_io_events(socks: list, events: int, timeout: float = None) -> list:
-    # Prefer the `selectors` module rather than the lower-level `select` module to
-    # improve cross-platform support.
+def is_socket_at_eof(sock_fd: int) -> bool:
+    # 'Has the socket reached EOF?' is equivalent to 'Is the socket readable?'
+    # This is because if the other end has dropped the connection,
+    # a recv() call on the socket would return immediately (with empty bytes), and
+    # vice versa.
+    # See: https://github.com/encode/httpx/pull/143#issuecomment-515181778
+    # Typically we'd use the `select` module here, but we use the higher-level
+    # `selectors` module to improve cross-platform support.
     # See: https://github.com/encode/httpcore/issues/182
     sel = selectors.DefaultSelector()
-    for sock in socks:
-        sel.register(sock, events)
-    return [key.fileobj for key, mask in sel.select(timeout) if mask & events]
-
-
-def wait_for_read(socks: list, timeout: float = None) -> list:
-    return _wait_for_io_events(socks, events=selectors.EVENT_READ, timeout=timeout)
+    sel.register(sock_fd, selectors.EVENT_READ)
+    read_ready = [
+        key.fileobj for key, mask in sel.select(0) if mask & selectors.EVENT_READ
+    ]
+    return len(read_ready) > 0
