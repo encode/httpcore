@@ -38,7 +38,7 @@ class ResponseByteStream(AsyncByteStream):
         callback: Callable,
     ) -> None:
         """
-        A wrapper around the response stream that we return from `.request()`.
+        A wrapper around the response stream that we return from `.arequest()`.
 
         Ensures that when `stream.aclose()` is called, the connection pool
         is notified via a callback.
@@ -147,7 +147,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             self._internal_connection_acquiry_lock = self._backend.create_lock()
         return self._internal_connection_acquiry_lock
 
-    async def request(
+    async def arequest(
         self,
         method: bytes,
         url: URL,
@@ -189,7 +189,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
                     logger.trace("reuse connection=%r", connection)
 
             try:
-                response = await connection.request(
+                response = await connection.arequest(
                     method, url, headers=headers, stream=stream, timeout=timeout
                 )
             except NewConnectionRequired:

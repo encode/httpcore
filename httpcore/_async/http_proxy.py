@@ -79,7 +79,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             max_keepalive=max_keepalive,
         )
 
-    async def request(
+    async def arequest(
         self,
         method: bytes,
         url: URL,
@@ -158,7 +158,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             reason_phrase,
             headers,
             stream,
-        ) = await connection.request(
+        ) = await connection.arequest(
             method, url, headers=headers, stream=stream, timeout=timeout
         )
 
@@ -207,7 +207,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 proxy_reason_phrase,
                 _,
                 proxy_stream,
-            ) = await proxy_connection.request(
+            ) = await proxy_connection.arequest(
                 b"CONNECT", connect_url, headers=connect_headers, timeout=timeout
             )
             logger.trace(
@@ -249,8 +249,12 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             reason_phrase,
             headers,
             stream,
-        ) = await connection.request(
-            method, url, headers=headers, stream=stream, timeout=timeout
+        ) = await connection.arequest(
+            method,
+            url,
+            headers=headers,
+            stream=stream,
+            timeout=timeout,
         )
 
         wrapped_stream = ResponseByteStream(

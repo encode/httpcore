@@ -61,7 +61,7 @@ class AsyncHTTPTransport:
     the `request` method, and optionally the `close` method.
     """
 
-    async def request(
+    async def arequest(
         self,
         method: bytes,
         url: URL,

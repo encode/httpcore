@@ -47,7 +47,7 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         if self.state == ConnectionState.IDLE:
             self.state = ConnectionState.READY
 
-    async def request(
+    async def arequest(
         self,
         method: bytes,
         url: URL,
