@@ -8,28 +8,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 The Transport API with 0.11.0 has a couple of significant changes.
 
-Firstly we've moved changed the request interface in order to
-allow extensions, which will later enable us to support features
+Firstly we've moved changed the request interface in order to allow extensions, which will later enable us to support features
 such as trailing headers, HTTP/2 server push, and CONNECT/Upgrade connections.
 
 The interface changes from:
 
-```
-request(method, url, headers, stream, timeout):
+```python
+def request(method, url, headers, stream, timeout):
     return (http_version, status_code, reason, headers, stream)
 ```
 
 To instead including an optional dictionary of extensions on the request and response:
 
-```
-request(method, url, headers, stream, ext):
+```python
+def request(method, url, headers, stream, ext):
     return (status_code, headers, stream, ext)
 ```
 
+Having an open-ended extensions point will allow us to add later support for various optional features, that wouldn't otherwise be supported without these API changes.
+
+In particular:
+
+* Trailing headers support.
+* HTTP/2 Server Push
+* sendfile.
+* Exposing raw connection on CONNECT, Upgrade, HTTP/2 bi-di streaming.
+* Exposing debug information out of the API, including template name, template context.
+
+Currently extensions are limited to:
+
+* request: `timeout` - Optional. Timeout dictionary.
+* response: `http_version` - Optional. Include the HTTP version used on the response.
+* response: `reason` - Optional. Include the reason phrase used on the response. Only valid with HTTP/1.*.
+
+See https://github.com/encode/httpx/issues/1274#issuecomment-694884553 for the history behind this.
+
 Secondly, the async version of `request` is now namespaced as `arequest`.
 
-This allows concrete transports to support both sync and async implementations
-on the same class.
+This allows concrete transports to support both sync and async implementations on the same class.
 
 ### Added
 
