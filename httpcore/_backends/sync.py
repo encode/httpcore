@@ -16,7 +16,7 @@ from .._exceptions import (
     map_exceptions,
 )
 from .._types import TimeoutDict
-from .._utils import wait_for_read
+from .._utils import is_socket_at_eof
 
 
 class SyncSocketStream:
@@ -78,8 +78,7 @@ class SyncSocketStream:
                 self.sock.close()
 
     def is_connection_dropped(self) -> bool:
-        rready = wait_for_read([self.sock], timeout=0)
-        return len(rready) > 0
+        return is_socket_at_eof(self.sock)
 
 
 class SyncLock:

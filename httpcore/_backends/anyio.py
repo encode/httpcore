@@ -1,4 +1,3 @@
-import select
 from ssl import SSLContext
 from typing import Optional
 
@@ -17,6 +16,7 @@ from .._exceptions import (
     WriteTimeout,
 )
 from .._types import TimeoutDict
+from .._utils import is_socket_at_eof
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 
@@ -87,8 +87,7 @@ class SocketStream(AsyncSocketStream):
 
     def is_connection_dropped(self) -> bool:
         raw_socket = self.stream.extra(SocketAttribute.raw_socket)
-        rready, _wready, _xready = select.select([raw_socket], [], [], 0)
-        return bool(rready)
+        return is_socket_at_eof(raw_socket)
 
 
 class Lock(AsyncLock):

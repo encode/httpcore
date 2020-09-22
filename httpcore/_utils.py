@@ -1,6 +1,6 @@
 import logging
 import os
-import selectors
+import socket
 import sys
 import typing
 
@@ -66,15 +66,12 @@ def origin_to_url_string(origin: Origin) -> str:
     return f"{scheme.decode('ascii')}://{host.decode('ascii')}{port}"
 
 
-def _wait_for_io_events(socks: list, events: int, timeout: float = None) -> list:
-    # Prefer the `selectors` module rather than the lower-level `select` module to
-    # improve cross-platform support.
-    # See: https://github.com/encode/httpcore/issues/182
-    sel = selectors.DefaultSelector()
-    for sock in socks:
-        sel.register(sock, events)
-    return [key.fileobj for key, mask in sel.select(timeout) if mask & events]
+def is_socket_at_eof(sock: socket.socket) -> bool:
+    assert sock.gettimeout() == 0, "sock must be non-blocking."
 
-
-def wait_for_read(socks: list, timeout: float = None) -> list:
-    return _wait_for_io_events(socks, events=selectors.EVENT_READ, timeout=timeout)
+    try:
+        data = sock.recv(1, socket.MSG_PEEK)
+    except BlockingIOError:
+        return False
+    else:
+        return data == b""
