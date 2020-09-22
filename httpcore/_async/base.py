@@ -1,8 +1,8 @@
 import enum
 from types import TracebackType
-from typing import AsyncIterator, List, Tuple, Type
+from typing import AsyncIterator, Tuple, Type
 
-from .._types import URL, Headers, T, TimeoutDict
+from .._types import URL, Headers, T
 
 
 class NewConnectionRequired(Exception):
@@ -61,14 +61,14 @@ class AsyncHTTPTransport:
     the `request` method, and optionally the `close` method.
     """
 
-    async def request(
+    async def arequest(
         self,
         method: bytes,
         url: URL,
         headers: Headers = None,
         stream: AsyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
+        ext: dict = None,
+    ) -> Tuple[int, Headers, AsyncByteStream, dict]:
         """
         The interface for sending a single HTTP request, and returning a response.
 
@@ -80,23 +80,17 @@ class AsyncHTTPTransport:
         * **headers** - `Optional[List[Tuple[bytes, bytes]]]` - Any HTTP headers
         to send with the request.
         * **stream** - `Optional[AsyncByteStream]` - The body of the HTTP request.
-        * **timeout** - `Optional[Dict[str, Optional[float]]]` - A dictionary of
-        timeout values for I/O operations. Supported keys are "pool" for acquiring a
-        connection from the connection pool, "read" for reading from the connection,
-        "write" for writing to the connection and "connect" for opening the connection.
-        Values are floating point seconds.
+        * **ext** - `Optional[dict]` - A dictionary of optional extensions.
 
         ** Returns:**
 
-        A five-tuple of:
+        A four-tuple of:
 
-        * **http_version** - `bytes` - The HTTP version used by the server,
-        such as `b'HTTP/1.1'`.
         * **status_code** - `int` - The HTTP status code, such as `200`.
-        * **reason_phrase** - `bytes` - Any HTTP reason phrase, such as `b'OK'`.
         * **headers** - `List[Tuple[bytes, bytes]]` - Any HTTP headers included
         on the response.
         * **stream** - `AsyncByteStream` - The body of the HTTP response.
+        * **ext** - `dict` - A dictionary of optional extensions.
         """
         raise NotImplementedError()  # pragma: nocover
 

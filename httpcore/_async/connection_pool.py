@@ -1,6 +1,6 @@
 import warnings
 from ssl import SSLContext
-from typing import AsyncIterator, Callable, Dict, List, Optional, Set, Tuple
+from typing import AsyncIterator, Callable, Dict, List, Optional, Set, Tuple, cast
 
 from .._backends.auto import AsyncLock, AsyncSemaphore
 from .._backends.base import lookup_async_backend
@@ -38,7 +38,7 @@ class ResponseByteStream(AsyncByteStream):
         callback: Callable,
     ) -> None:
         """
-        A wrapper around the response stream that we return from `.request()`.
+        A wrapper around the response stream that we return from `.arequest()`.
 
         Ensures that when `stream.aclose()` is called, the connection pool
         is notified via a callback.
@@ -147,14 +147,14 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             self._internal_connection_acquiry_lock = self._backend.create_lock()
         return self._internal_connection_acquiry_lock
 
-    async def request(
+    async def arequest(
         self,
         method: bytes,
         url: URL,
         headers: Headers = None,
         stream: AsyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, Headers, AsyncByteStream]:
+        ext: dict = None,
+    ) -> Tuple[int, Headers, AsyncByteStream, dict]:
         if url[0] not in (b"http", b"https"):
             scheme = url[0].decode("latin-1")
             raise UnsupportedProtocol(f"Unsupported URL protocol {scheme!r}")
@@ -162,6 +162,8 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             raise LocalProtocolError("Missing hostname in URL.")
 
         origin = url_to_origin(url)
+        ext = {} if ext is None else ext
+        timeout = cast(TimeoutDict, ext.get("timeout", {}))
 
         await self._keepalive_sweep()
 
@@ -189,8 +191,8 @@ class AsyncConnectionPool(AsyncHTTPTransport):
                     logger.trace("reuse connection=%r", connection)
 
             try:
-                response = await connection.request(
-                    method, url, headers=headers, stream=stream, timeout=timeout
+                response = await connection.arequest(
+                    method, url, headers=headers, stream=stream, ext=ext
                 )
             except NewConnectionRequired:
                 connection = None
@@ -199,10 +201,11 @@ class AsyncConnectionPool(AsyncHTTPTransport):
                 await self._remove_from_pool(connection)
                 raise
 
+        status_code, headers, stream, ext = response
         wrapped_stream = ResponseByteStream(
-            response[4], connection=connection, callback=self._response_closed
+            stream, connection=connection, callback=self._response_closed
         )
-        return response[0], response[1], response[2], response[3], wrapped_stream
+        return status_code, headers, wrapped_stream, ext
 
     async def _get_connection_from_pool(
         self, origin: Origin
@@ -305,10 +308,8 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             await connection.aclose()
 
     async def _add_to_pool(
-        self, connection: AsyncHTTPConnection, timeout: TimeoutDict = None
+        self, connection: AsyncHTTPConnection, timeout: TimeoutDict
     ) -> None:
-        timeout = {} if timeout is None else timeout
-
         logger.trace("adding connection to pool=%r", connection)
         await self._connection_semaphore.acquire(timeout=timeout.get("pool", None))
         async with self._thread_lock:
