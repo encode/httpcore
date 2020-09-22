@@ -66,8 +66,14 @@ def origin_to_url_string(origin: Origin) -> str:
     return f"{scheme.decode('ascii')}://{host.decode('ascii')}{port}"
 
 
-def is_socket_at_eof(sock: socket.socket) -> bool:
-    assert sock.gettimeout() == 0, "sock must be non-blocking."
+def is_socket_at_eof(sock_fd: int) -> bool:
+    # Duplicate the socket from the file descriptor. (we do this so we always get a
+    # real `socket.socket` object, rather than a library-provided socket-like object,
+    # which may behave differently and/or may not have an implementation for `.recv()`.)
+    sock = socket.fromfd(sock_fd, socket.AF_INET, socket.SOCK_STREAM)
+    # Then put the copy into non-blocking mode. (We need this so that the `.recv()` call
+    # does not block.)
+    sock.setblocking(False)
 
     try:
         data = sock.recv(1, socket.MSG_PEEK)

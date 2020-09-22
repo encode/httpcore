@@ -132,7 +132,7 @@ class SocketStream(AsyncSocketStream):
         await self.socket.close()
 
     def is_connection_dropped(self) -> bool:
-        return is_socket_at_eof(self.socket._socket)
+        return is_socket_at_eof(self.socket.fileno())
 
 
 class CurioBackend(AsyncBackend):

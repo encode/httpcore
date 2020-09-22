@@ -87,7 +87,7 @@ class SocketStream(AsyncSocketStream):
 
     def is_connection_dropped(self) -> bool:
         raw_socket = self.stream.extra(SocketAttribute.raw_socket)
-        return is_socket_at_eof(raw_socket)
+        return is_socket_at_eof(raw_socket.fileno())
 
 
 class Lock(AsyncLock):
