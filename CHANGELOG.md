@@ -4,6 +4,43 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.11.0 (September 22nd, 2020)
+
+The Transport API with 0.11.0 has a couple of significant changes.
+
+Firstly we've moved changed the request interface in order to
+allow extensions, which will later enable us to support features
+such as trailing headers, HTTP/2 server push, and CONNECT/Upgrade connections.
+
+The interface changes from:
+
+```
+request(method, url, headers, stream, timeout):
+    return (http_version, status_code, reason, headers, stream)
+```
+
+To instead including an optional dictionary of extensions on the request and response:
+
+```
+request(method, url, headers, stream, ext):
+    return (status_code, headers, stream, ext)
+```
+
+Secondly, the async version of `request` is now namespaced as `arequest`.
+
+This allows concrete transports to support both sync and async implementations
+on the same class.
+
+### Added
+
+- Add curio support. (Pull #168)
+- Add anyio support, with `backend="anyio"`. (Pull #169)
+
+### Changed
+
+- Update the Transport API to use 'ext' for optional extensions. (Pull )
+- Update the Transport API to use `.request` and `.arequest` so implementations can support both sync and async. (Pull #189)
+
 ## 0.10.2 (August 20th, 2020)
 
 ### Added
