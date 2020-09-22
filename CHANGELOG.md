@@ -38,7 +38,7 @@ on the same class.
 
 ### Changed
 
-- Update the Transport API to use 'ext' for optional extensions. (Pull )
+- Update the Transport API to use 'ext' for optional extensions. (Pull #190)
 - Update the Transport API to use `.request` and `.arequest` so implementations can support both sync and async. (Pull #189)
 
 ## 0.10.2 (August 20th, 2020)
