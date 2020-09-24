@@ -74,33 +74,9 @@ async def read_body(stream: httpcore.AsyncByteStream) -> bytes:
 
 
 @pytest.mark.trio
-async def test_sequential_requests_h11() -> None:
-    async with ConnectionPool(http_version="HTTP/1.1") as http:
-        info = await http.get_connection_info()
-        assert info == {}
-
-        response = await http.arequest(b"GET", (b"http", b"example.org", None, b"/"))
-        status_code, headers, stream, ext = response
-        info = await http.get_connection_info()
-        assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
-
-        await read_body(stream)
-        info = await http.get_connection_info()
-        assert info == {"http://example.org": ["ConnectionState.IDLE"]}
-
-        response = await http.arequest(b"GET", (b"http", b"example.org", None, b"/"))
-        status_code, headers, stream, ext = response
-        info = await http.get_connection_info()
-        assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
-
-        await read_body(stream)
-        info = await http.get_connection_info()
-        assert info == {"http://example.org": ["ConnectionState.IDLE"]}
-
-
-@pytest.mark.trio
-async def test_sequential_requests_h2() -> None:
-    async with ConnectionPool(http_version="HTTP/2") as http:
+@pytest.mark.parametrize("http_version", ["HTTP/1.1", "HTTP/2"])
+async def test_sequential_requests(http_version) -> None:
+    async with ConnectionPool(http_version=http_version) as http:
         info = await http.get_connection_info()
         assert info == {}
 

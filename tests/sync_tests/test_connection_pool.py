@@ -74,33 +74,9 @@ def read_body(stream: httpcore.SyncByteStream) -> bytes:
 
 
 
-def test_sequential_requests_h11() -> None:
-    with ConnectionPool(http_version="HTTP/1.1") as http:
-        info = http.get_connection_info()
-        assert info == {}
-
-        response = http.request(b"GET", (b"http", b"example.org", None, b"/"))
-        status_code, headers, stream, ext = response
-        info = http.get_connection_info()
-        assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
-
-        read_body(stream)
-        info = http.get_connection_info()
-        assert info == {"http://example.org": ["ConnectionState.IDLE"]}
-
-        response = http.request(b"GET", (b"http", b"example.org", None, b"/"))
-        status_code, headers, stream, ext = response
-        info = http.get_connection_info()
-        assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
-
-        read_body(stream)
-        info = http.get_connection_info()
-        assert info == {"http://example.org": ["ConnectionState.IDLE"]}
-
-
-
-def test_sequential_requests_h2() -> None:
-    with ConnectionPool(http_version="HTTP/2") as http:
+@pytest.mark.parametrize("http_version", ["HTTP/1.1", "HTTP/2"])
+def test_sequential_requests(http_version) -> None:
+    with ConnectionPool(http_version=http_version) as http:
         info = http.get_connection_info()
         assert info == {}
 
