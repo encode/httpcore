@@ -27,6 +27,7 @@ isort==5.5.2
 mitmproxy==5.2
 mypy==0.782
 pytest==6.0.2
+pytest-trio==0.5.2
 pytest-cov==2.10.1
 trustme==0.6.0
 uvicorn==0.11.8
