@@ -2,7 +2,7 @@ import warnings
 from ssl import SSLContext
 from typing import AsyncIterator, Callable, Dict, List, Optional, Set, Tuple, cast
 
-from .._backends.auto import AsyncBackend, AsyncLock, AsyncSemaphore
+from .._backends.auto import AsyncLock, AsyncSemaphore
 from .._backends.base import lookup_async_backend
 from .._exceptions import LocalProtocolError, PoolTimeout, UnsupportedProtocol
 from .._threadlock import ThreadLock
@@ -150,11 +150,6 @@ class AsyncConnectionPool(AsyncHTTPTransport):
     def _create_connection(
         self,
         origin: Tuple[bytes, bytes, int],
-        backend: AsyncBackend,
-        http2: bool = False,
-        uds: str = None,
-        ssl_context: SSLContext = None,
-        local_address: str = None,
     ) -> AsyncHTTPConnection:
         return AsyncHTTPConnection(
             origin=origin,
@@ -195,14 +190,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
                 connection = await self._get_connection_from_pool(origin)
 
                 if connection is None:
-                    connection = self._create_connection(
-                        origin=origin,
-                        http2=self._http2,
-                        uds=self._uds,
-                        ssl_context=self._ssl_context,
-                        local_address=self._local_address,
-                        backend=self._backend,
-                    )
+                    connection = self._create_connection(origin=origin)
                     logger.trace("created connection=%r", connection)
                     await self._add_to_pool(connection, timeout=timeout)
                 else:
