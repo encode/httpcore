@@ -20,6 +20,7 @@ SUBS = [
     ('__aexit__', '__exit__'),
     ('__aiter__', '__iter__'),
     ('@pytest.mark.anyio', ''),
+    ('@pytest.mark.trio', ''),
     (r'@pytest.fixture\(params=\["auto", "anyio"\]\)',
      '@pytest.fixture(params=["sync"])'),
     ('lookup_async_backend', "lookup_sync_backend"),
