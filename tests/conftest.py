@@ -1,7 +1,9 @@
 import asyncio
 import contextlib
 import os
+import shlex
 import ssl
+import subprocess
 import threading
 import time
 import typing
@@ -12,7 +14,13 @@ import uvicorn
 from mitmproxy import options, proxy
 from mitmproxy.tools.dump import DumpMaster
 
-from httpcore._types import URL
+from httpcore._types import (
+    URL,
+    Socks4ProxyCredentials,
+    Socks5ProxyCredentials,
+    SocksProxyConfig,
+    SocksProxyType,
+)
 
 PROXY_HOST = "127.0.0.1"
 PROXY_PORT = 8080
@@ -141,3 +149,52 @@ def uds_server() -> typing.Iterator[Server]:
             yield server
     finally:
         os.remove(uds)
+
+
+class SocksProxyFixture(typing.NamedTuple):
+    socks5_with_auth: SocksProxyConfig
+    socks5_without_auth: SocksProxyConfig
+    socks4: SocksProxyConfig
+
+
+@pytest.fixture(scope="session")
+def socks() -> typing.Generator[SocksProxyFixture, None, None]:
+    socks4_type = SocksProxyType.socks4
+    no_auth_host = "localhost"
+    no_auth_port = 1085
+
+    socks5_type = SocksProxyType.socks5
+    auth_host = "localhost"
+    auth_port = 1086
+    auth_user = "user"
+    auth_pwd = "password"
+
+    cfg = SocksProxyFixture(
+        socks5_with_auth=SocksProxyConfig(
+            socks5_type, (no_auth_host.encode(), no_auth_port)
+        ),
+        socks5_without_auth=SocksProxyConfig(
+            socks5_type,
+            (auth_host.encode(), auth_port),
+            Socks5ProxyCredentials(auth_user.encode(), auth_pwd.encode()),
+        ),
+        socks4=SocksProxyConfig(
+            socks4_type,
+            (no_auth_host.encode(), no_auth_port),
+            Socks4ProxyCredentials(b"test_user_id"),
+        ),
+    )
+
+    command = (
+        f"pproxy -l socks4+socks5://{no_auth_host}:{no_auth_port} "
+        f"--auth 0 -l 'socks5://{auth_host}:{auth_port}#{auth_user}:{auth_pwd}'"
+    )
+
+    popen_args = shlex.split(command)
+
+    proc = subprocess.Popen(popen_args)
+    try:
+        time.sleep(1)  # a small delay to let the pproxy start to serve
+        yield cfg
+    finally:
+        proc.kill()
