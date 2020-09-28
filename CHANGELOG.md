@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.11.1 (September 28nd, 2020)
+
+### Fixed
+
+- Add await to async semaphore release() coroutine (#197)
+- Drop incorrect curio classifier (#192)
+
 ## 0.11.0 (September 22nd, 2020)
 
 The Transport API with 0.11.0 has a couple of significant changes.
