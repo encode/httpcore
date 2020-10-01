@@ -1,5 +1,3 @@
---use-feature="2020-resolver"
-
 -e .[http2]
 
 # Optionals
