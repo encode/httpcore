@@ -3,7 +3,7 @@ from typing import Tuple, cast
 
 from socksio import socks5
 
-from .._backends.base import SyncSocketStream
+from .._backends.sync import SyncSocketStream
 from .._exceptions import ProxyError
 from .._types import URL, Headers, Origin, SocksProxyCredentials, TimeoutDict
 from .base import SyncByteStream

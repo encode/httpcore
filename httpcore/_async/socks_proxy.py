@@ -185,6 +185,7 @@ class AsyncSocksProxy(AsyncConnectionPool):
         timeout = cast(TimeoutDict, ext.get("timeout", {}))
         scheme, remote_host, remote_port, path = url
         remote_origin = (scheme, remote_host, remote_port)
+        ssl_context = self._ssl_context if scheme == b"https" else None
         connection = await self._get_connection_from_pool(remote_origin)
 
         if connection is None:
@@ -200,6 +201,9 @@ class AsyncSocksProxy(AsyncConnectionPool):
             await self._proxy_protocol.connect(
                 socket, remote_host, remote_port, timeout
             )
+
+            if ssl_context:
+                socket = await socket.start_tls(remote_host, ssl_context, timeout)
 
             connection = AsyncHTTPConnection(
                 remote_origin,

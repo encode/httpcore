@@ -4,7 +4,7 @@ import ssl
 import pytest
 
 import httpcore
-from httpcore._types import URL
+from httpcore._types import SocksProxyCredentials, URL
 from tests.conftest import Server
 from tests.utils import lookup_async_backend
 
@@ -360,15 +360,12 @@ async def test_explicit_backend_name() -> None:
     "url",
     [
         (b"http", b"example.com", 80, b"/"),
-        # (b"https", b"example.com", 443, b"/"),
+        (b"https", b"example.com", 443, b"/"),
     ],
 )
 @pytest.mark.parametrize(
     "http2",
-    [
-        # True,
-        False,
-    ],
+    [True, False],
 )
 async def test_socks_proxy_connection_without_auth(url, http2):
     (_, hostname, *_) = url
@@ -378,6 +375,37 @@ async def test_socks_proxy_connection_without_auth(url, http2):
 
     async with httpcore.AsyncSocksProxy(
         proxy_origin, "socks5", None, http2=http2
+    ) as connection:
+        (
+            status_code,
+            headers,
+            stream,
+            ext,
+        ) = await connection.arequest(method, url, headers)
+
+        assert status_code == 200
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "url",
+    [
+        (b"http", b"example.com", 80, b"/"),
+        (b"https", b"example.com", 443, b"/"),
+    ],
+)
+@pytest.mark.parametrize("http2", [True, False])
+async def test_socks5_proxy_connection_with_auth(url, http2):
+    (_, hostname, *_) = url
+    proxy_origin = (b"socks5", b"localhost", 1086)
+    headers = [(b"host", hostname)]
+    method = b"GET"
+
+    async with httpcore.AsyncSocksProxy(
+        proxy_origin,
+        "socks5",
+        SocksProxyCredentials(username=b"username", password=b"password"),
+        http2=http2,
     ) as connection:
         (
             status_code,
