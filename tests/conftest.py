@@ -14,8 +14,12 @@ from mitmproxy.tools.dump import DumpMaster
 
 from httpcore._types import URL
 
+from .utils import Server
+
 PROXY_HOST = "127.0.0.1"
 PROXY_PORT = 8080
+SERVER_HOST = "example.org"
+HTTPS_SERVER_URL = "https://example.org"
 
 
 class RunNotify:
@@ -102,7 +106,7 @@ def proxy_server(example_org_cert_path: str) -> typing.Iterator[URL]:
         thread.join()
 
 
-class Server(uvicorn.Server):
+class UvicornServer(uvicorn.Server):
     def install_signal_handlers(self) -> None:
         pass
 
@@ -132,12 +136,22 @@ async def app(scope: dict, receive: typing.Callable, send: typing.Callable) -> N
 
 
 @pytest.fixture(scope="session")
-def uds_server() -> typing.Iterator[Server]:
+def uds_server() -> typing.Iterator[UvicornServer]:
     uds = "test_server.sock"
     config = uvicorn.Config(app=app, lifespan="off", loop="asyncio", uds=uds)
-    server = Server(config=config)
+    server = UvicornServer(config=config)
     try:
         with server.serve_in_thread():
             yield server
     finally:
         os.remove(uds)
+
+
+@pytest.fixture(scope="session")
+def server() -> Server:
+    return Server(SERVER_HOST, port=80)
+
+
+@pytest.fixture(scope="session")
+def https_server() -> Server:
+    return Server(SERVER_HOST, port=443)
