@@ -1,6 +1,7 @@
 from ._async.base import AsyncByteStream, AsyncHTTPTransport
 from ._async.connection_pool import AsyncConnectionPool
 from ._async.http_proxy import AsyncHTTPProxy
+from ._async.socks_proxy import AsyncSocksProxy
 from ._bytestreams import AsyncIteratorByteStream, IteratorByteStream, PlainByteStream
 from ._exceptions import (
     CloseError,
@@ -22,11 +23,13 @@ from ._exceptions import (
 from ._sync.base import SyncByteStream, SyncHTTPTransport
 from ._sync.connection_pool import SyncConnectionPool
 from ._sync.http_proxy import SyncHTTPProxy
+from ._sync.socks_proxy import SyncSocksProxy
 
 __all__ = [
     "AsyncByteStream",
     "AsyncConnectionPool",
     "AsyncHTTPProxy",
+    "AsyncSocksProxy",
     "AsyncHTTPTransport",
     "AsyncIteratorByteStream",
     "CloseError",
@@ -45,6 +48,7 @@ __all__ = [
     "SyncByteStream",
     "SyncConnectionPool",
     "SyncHTTPProxy",
+    "SyncSocksProxy",
     "SyncHTTPTransport",
     "TimeoutException",
     "UnsupportedProtocol",

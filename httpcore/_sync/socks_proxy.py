@@ -3,9 +3,10 @@ from typing import Tuple, cast
 
 from socksio import socks5
 
-from .. import SyncByteStream, ProxyError
 from .._backends.base import SyncSocketStream
+from .._exceptions import ProxyError
 from .._types import URL, Headers, Origin, SocksProxyCredentials, TimeoutDict
+from .base import SyncByteStream
 from .connection import SyncHTTPConnection
 from .connection_pool import SyncConnectionPool
 
@@ -182,24 +183,29 @@ class SyncSocksProxy(SyncConnectionPool):
 
         ext = {} if ext is None else ext
         timeout = cast(TimeoutDict, ext.get("timeout", {}))
-        scheme, host, port, path = url
-        origin = (scheme, host, port)
-        connection = self._get_connection_from_pool(origin)
+        scheme, remote_host, remote_port, path = url
+        remote_origin = (scheme, remote_host, remote_port)
+        connection = self._get_connection_from_pool(remote_origin)
 
         if connection is None:
-            _, hostname, port = self._proxy_origin
+            _, proxy_hostname, proxy_port = self._proxy_origin
             socket = self._backend.open_tcp_stream(
-                hostname,
-                port,
+                proxy_hostname,
+                proxy_port,
                 None,
                 timeout,
-                local_address=self._local_address,
+                local_address=None,
             )
 
-            self._proxy_protocol.connect(socket, hostname, port, timeout)
+            self._proxy_protocol.connect(
+                socket, remote_host, remote_port, timeout
+            )
 
             connection = SyncHTTPConnection(
-                origin, http2=self._http2, ssl_context=self._ssl_context, socket=socket
+                remote_origin,
+                http2=self._http2,
+                ssl_context=self._ssl_context,
+                socket=socket,
             )
 
             self._add_to_pool(connection, timeout)
