@@ -135,16 +135,17 @@ class SocketStream(AsyncSocketStream):
                     return await asyncio.wait_for(
                         self.stream_reader.read(n), timeout.get("read")
                     )
-                except AttributeError:  # pragma: nocover
-                    """
-                    We have to return empty string there due to one ugly bug in asyncio
-                    More information you can find in this issue:
-                        https://github.com/encode/httpx/issues/1213
-
-                    The empty byte-string returned from there caused
-                    httpcore.RemoteProtocolError at the top level
-                    """
-                    return b""
+                except AttributeError as ex:  # pragma: nocover
+                    if "resume_reading" in str(ex):
+                        # We have to return empty string there,
+                        #     due to one ugly bug in asyncio
+                        # More information you can find in this issue:
+                        #     https://github.com/encode/httpx/issues/1213
+                        #
+                        # The empty byte-string returned from there caused
+                        #     httpcore.RemoteProtocolError at the top level
+                        return b""
+                    raise
 
     async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         if not data:
