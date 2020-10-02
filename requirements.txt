@@ -1,32 +1,31 @@
---use-feature="2020-resolver"
-
 -e .[http2]
 
 # Optionals
-trio==0.16.0
+trio==0.17.0
 trio-typing==0.5.0
 curio==1.4
 
 # Docs
 mkautodoc==0.1.0
 mkdocs==1.1.2
-mkdocs-material==5.5.12
+mkdocs-material==6.0.1
 
 # Packaging
 twine==3.2.0
 wheel==0.35.1
 
 # Tests & Linting
-anyio==2.0.0
+anyio==2.0.2
 autoflake==1.4
 black==20.8b1
 flake8==3.8.3
 flake8-bugbear==20.1.4
 flake8-pie==0.6.1
-isort==5.5.2
+isort==5.5.4
 mitmproxy==5.2
 mypy==0.782
-pytest==6.0.2
+pytest==6.1.0
+pytest-trio==0.6.0
 pytest-cov==2.10.1
 trustme==0.6.0
-uvicorn==0.11.8
+uvicorn==0.12.1

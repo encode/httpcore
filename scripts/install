@@ -16,4 +16,4 @@ else
 fi
 
 "$PIP" install -U "pip >= 20.2" setuptools wheel
-"$PIP" install -r "$REQUIREMENTS"
+"$PIP" install --use-feature="2020-resolver" -r "$REQUIREMENTS"

@@ -147,6 +147,19 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             self._internal_connection_acquiry_lock = self._backend.create_lock()
         return self._internal_connection_acquiry_lock
 
+    def _create_connection(
+        self,
+        origin: Tuple[bytes, bytes, int],
+    ) -> AsyncHTTPConnection:
+        return AsyncHTTPConnection(
+            origin=origin,
+            http2=self._http2,
+            uds=self._uds,
+            ssl_context=self._ssl_context,
+            local_address=self._local_address,
+            backend=self._backend,
+        )
+
     async def arequest(
         self,
         method: bytes,
@@ -177,14 +190,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
                 connection = await self._get_connection_from_pool(origin)
 
                 if connection is None:
-                    connection = AsyncHTTPConnection(
-                        origin=origin,
-                        http2=self._http2,
-                        uds=self._uds,
-                        ssl_context=self._ssl_context,
-                        local_address=self._local_address,
-                        backend=self._backend,
-                    )
+                    connection = self._create_connection(origin=origin)
                     logger.trace("created connection=%r", connection)
                     await self._add_to_pool(connection, timeout=timeout)
                 else:
@@ -351,7 +357,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
 
         stats = {}
         for origin, connections in self._connections.items():
-            stats[origin_to_url_string(origin)] = [
-                connection.info() for connection in connections
-            ]
+            stats[origin_to_url_string(origin)] = sorted(
+                [connection.info() for connection in connections]
+            )
         return stats
