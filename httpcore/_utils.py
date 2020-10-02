@@ -83,17 +83,23 @@ def is_socket_at_eof(sock_fd: int, family: int, type: int) -> bool:
     sock = socket.fromfd(sock_fd, family, type)
 
     # Put the copy into non-blocking mode. We need this so that the `.recv()` call
-    # does not block.
+    # raises a `BlockingIOError` if the socket is still active, instead of blocking
+    # and returning actual data after a while.
     sock.setblocking(False)
 
-    # Then peek a byte of data, to see if there's someone still sending data on the
-    # other end, or if they disconnected.
+    # Then peek a byte of data to check on how the other end is doing...
     try:
         data = sock.recv(1, socket.MSG_PEEK)
     except BlockingIOError:
+        # The socket would block if we attempted to read.
+        # => There's still someone on the other end.
         return False
     else:
-        return data == b""
+        # The socket returned immediately if we attempted to read.
+        # => Can only happen if the server on the other end has disconnected, in which
+        # case `data` should be empty bytes.
+        assert data == b""
+        return True
     finally:
         # Dispose the copy.
         sock.close()
