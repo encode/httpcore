@@ -29,9 +29,9 @@ __all__ = [
     "AsyncByteStream",
     "AsyncConnectionPool",
     "AsyncHTTPProxy",
-    "AsyncSocksProxy",
     "AsyncHTTPTransport",
     "AsyncIteratorByteStream",
+    "AsyncSocksProxy",
     "CloseError",
     "ConnectError",
     "ConnectTimeout",
@@ -48,13 +48,14 @@ __all__ = [
     "SyncByteStream",
     "SyncConnectionPool",
     "SyncHTTPProxy",
-    "SyncSocksProxy",
     "SyncHTTPTransport",
+    "SyncSocksProxy",
     "TimeoutException",
     "UnsupportedProtocol",
     "WriteError",
     "WriteTimeout",
 ]
+
 __version__ = "0.11.1"
 
 __locals = locals()

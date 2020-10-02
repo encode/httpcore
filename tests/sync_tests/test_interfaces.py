@@ -360,24 +360,49 @@ def test_explicit_backend_name() -> None:
     "url",
     [
         (b"http", b"example.com", 80, b"/"),
-        # (b"https", b"example.com", 443, b"/"),
+        (b"https", b"example.com", 443, b"/"),
     ],
 )
 @pytest.mark.parametrize(
     "http2",
-    [
-        # True,
-        False,
-    ],
+    [True, False],
 )
-def test_socks_proxy_connection_without_auth(url, http2):
+def test_socks_proxy_connection_without_auth(socks_proxy, url, http2):
     (_, hostname, *_) = url
-    proxy_origin = (b"socks5", b"localhost", 1085)
+    proxy_origin = socks_proxy.without_auth
     headers = [(b"host", hostname)]
     method = b"GET"
 
     with httpcore.SyncSocksProxy(
         proxy_origin, "socks5", None, http2=http2
+    ) as connection:
+        (
+            status_code,
+            headers,
+            stream,
+            ext,
+        ) = connection.request(method, url, headers)
+
+        assert status_code == 200
+
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        (b"http", b"example.com", 80, b"/"),
+        (b"https", b"example.com", 443, b"/"),
+    ],
+)
+@pytest.mark.parametrize("http2", [True, False])
+def test_socks5_proxy_connection_with_auth(socks_proxy, url, http2):
+    (_, hostname, *_) = url
+    proxy_origin, credentials = socks_proxy.with_auth
+    headers = [(b"host", hostname)]
+    method = b"GET"
+
+    with httpcore.SyncSocksProxy(
+        proxy_origin, "socks5", credentials, http2=http2
     ) as connection:
         (
             status_code,

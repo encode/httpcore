@@ -13,6 +13,6 @@ TimeoutDict = Mapping[str, Optional[float]]
 
 
 class SocksProxyCredentials(NamedTuple):
-    username: bytes = None
-    password: bytes = None
-    userid: bytes = None
+    username: Optional[bytes] = None
+    password: Optional[bytes] = None
+    userid: Optional[bytes] = None

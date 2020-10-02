@@ -4,6 +4,7 @@ import os
 import sys
 
 SUBS = [
+    ('from .._backends.base import AsyncSocketStream', 'from .._backends.sync import SyncSocketStream'),
     ('AsyncIteratorByteStream', 'IteratorByteStream'),
     ('AsyncIterator', 'Iterator'),
     ('AutoBackend', 'SyncBackend'),

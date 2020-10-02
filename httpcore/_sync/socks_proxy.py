@@ -49,7 +49,11 @@ class SyncSocks5ProxyProtocol(SyncSocksProxyProtocol):
         is_auth_required = self._check_for_authentication(socket, timeout)
 
         if is_auth_required:
-            if self.proxy_credentials is None:
+            if (
+                self.proxy_credentials is None
+                or self.proxy_credentials.username is None
+                or self.proxy_credentials.password is None
+            ):
                 raise ProxyError(
                     "This proxy requires auth, but you didn't set user/password"
                 )
@@ -184,7 +188,12 @@ class SyncSocksProxy(SyncConnectionPool):
         ext = {} if ext is None else ext
         timeout = cast(TimeoutDict, ext.get("timeout", {}))
         scheme, remote_host, remote_port, path = url
+
+        if remote_port is None:
+            remote_port = 443 if scheme == b"https" else 80
+
         remote_origin = (scheme, remote_host, remote_port)
+        ssl_context = self._ssl_context if scheme == b"https" else None
         connection = self._get_connection_from_pool(remote_origin)
 
         if connection is None:
@@ -200,6 +209,9 @@ class SyncSocksProxy(SyncConnectionPool):
             self._proxy_protocol.connect(
                 socket, remote_host, remote_port, timeout
             )
+
+            if ssl_context:
+                socket = socket.start_tls(remote_host, ssl_context, timeout)
 
             connection = SyncHTTPConnection(
                 remote_origin,

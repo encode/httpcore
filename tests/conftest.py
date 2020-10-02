@@ -12,7 +12,7 @@ import pytest
 import trustme
 import uvicorn
 
-from httpcore._types import Origin, SocksProxyCredentials, URL
+from httpcore._types import URL, Origin, SocksProxyCredentials
 
 
 @pytest.fixture(scope="session")

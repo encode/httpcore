@@ -4,7 +4,7 @@ import ssl
 import pytest
 
 import httpcore
-from httpcore._types import SocksProxyCredentials, URL
+from httpcore._types import URL
 from tests.conftest import Server
 from tests.utils import lookup_async_backend
 
