@@ -12,7 +12,7 @@ import pytest
 import trustme
 import uvicorn
 
-from httpcore._types import URL
+from httpcore._types import Origin, SocksProxyCredentials, URL
 
 
 @pytest.fixture(scope="session")
@@ -54,6 +54,54 @@ def proxy_server() -> typing.Iterator[URL]:
         print(f"HTTP proxy started on http://{http_proxy_host}:{http_proxy_port}/")
 
         yield b"http", http_proxy_host.encode(), http_proxy_port, b"/"
+    finally:
+        if proc is not None:
+            proc.kill()
+
+
+SocksFixture = typing.NamedTuple(
+    "SocksFixture",
+    [
+        ("with_auth", typing.Tuple[Origin, SocksProxyCredentials]),
+        ("without_auth", Origin),
+    ],
+)
+
+
+@pytest.fixture(scope="session")
+def socks_proxy() -> typing.Iterator[SocksFixture]:
+    no_auth_host = "127.0.01"
+    no_auth_port = 1085
+
+    auth_host = "127.0.0.1"
+    auth_port = 1086
+    auth_user = "username"
+    auth_pwd = "password"
+
+    proc = None
+    try:
+        command_str = (
+            f"pproxy -l socks5://{no_auth_host}:{no_auth_port} "
+            f"--auth 0 -l 'socks5://{auth_host}:{auth_port}#{auth_user}:{auth_pwd}'"
+        )
+
+        command = shlex.split(command_str)
+        proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        wait_until_pproxy_serve_on_port(auth_host, auth_port)
+        wait_until_pproxy_serve_on_port(no_auth_host, no_auth_port)
+
+        yield SocksFixture(
+            with_auth=(
+                (
+                    b"socks5",
+                    auth_host.encode(),
+                    auth_port,
+                ),
+                SocksProxyCredentials(auth_user.encode(), auth_pwd.encode()),
+            ),
+            without_auth=(b"socks5", no_auth_host.encode(), no_auth_port),
+        )
     finally:
         if proc is not None:
             proc.kill()
