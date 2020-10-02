@@ -86,8 +86,8 @@ class SocketStream(AsyncSocketStream):
                 raise CloseError from exc
 
     def is_connection_dropped(self) -> bool:
-        raw_socket = self.stream.extra(SocketAttribute.raw_socket)
-        return is_socket_at_eof(raw_socket.fileno())
+        sock = self.stream.extra(SocketAttribute.raw_socket)
+        return is_socket_at_eof(sock.fileno(), sock.family, sock.type)
 
 
 class Lock(AsyncLock):

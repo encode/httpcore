@@ -164,7 +164,7 @@ class SocketStream(AsyncSocketStream):
     def is_connection_dropped(self) -> bool:
         transport = self.stream_reader._transport  # type: ignore
         sock: socket.socket = transport.get_extra_info("socket")
-        return is_socket_at_eof(sock.fileno())
+        return is_socket_at_eof(sock.fileno(), sock.family, sock.type)
 
 
 class Lock(AsyncLock):

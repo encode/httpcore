@@ -66,18 +66,34 @@ def origin_to_url_string(origin: Origin) -> str:
     return f"{scheme.decode('ascii')}://{host.decode('ascii')}{port}"
 
 
-def is_socket_at_eof(sock_fd: int) -> bool:
-    # Duplicate the socket from the file descriptor. (we do this so we always get a
-    # real `socket.socket` object, rather than a library-provided socket-like object,
-    # which may behave differently and/or may not have an implementation for `.recv()`.)
-    sock = socket.fromfd(sock_fd, socket.AF_INET, socket.SOCK_STREAM)
-    # Then put the copy into non-blocking mode. (We need this so that the `.recv()` call
-    # does not block.)
+def is_socket_at_eof(sock_fd: int, family: int, type: int) -> bool:
+    """
+    Return whether a socket, as identified by its file descriptor, has reached
+    EOF, i.e. whether its read buffer is empty.
+
+    If we're still expecting data, then the socket being at EOF most likely means
+    that the server has disconnected.
+    """
+    # Duplicate the socket, so we get a distinct throw-away copy.
+    # (We do this instead of accepting a `socket` object from the backend-specific
+    # implementation, because those may not actually be *real* `socket` objects.
+    # We can't use `socket.socket(sock_fd)` either, although it auto-populates family
+    # and type, because it would *replace* the existing socket, making the previous
+    # file descriptor obsolete.)
+    sock = socket.fromfd(sock_fd, family, type)
+
+    # Put the copy into non-blocking mode. We need this so that the `.recv()` call
+    # does not block.
     sock.setblocking(False)
 
+    # Then peek a byte of data, to see if there's someone still sending data on the
+    # other end, or if they disconnected.
     try:
         data = sock.recv(1, socket.MSG_PEEK)
     except BlockingIOError:
         return False
     else:
         return data == b""
+    finally:
+        # Dispose the copy.
+        sock.close()

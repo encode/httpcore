@@ -78,7 +78,8 @@ class SyncSocketStream:
                 self.sock.close()
 
     def is_connection_dropped(self) -> bool:
-        return is_socket_at_eof(self.sock.fileno())
+        sock = self.sock
+        return is_socket_at_eof(sock.fileno(), sock.family, sock.type)
 
 
 class SyncLock:
