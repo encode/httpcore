@@ -47,7 +47,8 @@ with httpcore.SyncConnectionPool() as http:
         method=b'GET',
         url=(b'https', b'example.org', 443, b'/'),
         headers=[(b'host', b'example.org'), (b'user-agent', 'httpcore')]
-    ) as (status_code, headers, stream, ext):
+    ) as response:
+        status_code, headers, stream, ext = response
         body = b''.join([chunk for chunk in stream])
 
     print(status_code, body)
@@ -61,7 +62,8 @@ async with httpcore.AsyncConnectionPool() as http:
         method=b'GET',
         url=(b'https', b'example.org', 443, b'/'),
         headers=[(b'host', b'example.org'), (b'user-agent', 'httpcore')]
-    ) as (status_code, headers, stream, ext):
+    ) as response:
+        status_code, headers, stream, ext = response
         body = b''.join([chunk async for chunk in stream])
 
     print(status_code, body)
