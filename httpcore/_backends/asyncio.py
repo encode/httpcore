@@ -138,12 +138,13 @@ class SocketStream(AsyncSocketStream):
                 except AttributeError as ex:  # pragma: nocover
                     if "resume_reading" in str(ex):
                         # We have to return empty string there,
-                        #     due to one ugly bug in asyncio
+                        # due to one ugly bug in asyncio
                         # More information you can find in this issue:
-                        #     https://github.com/encode/httpx/issues/1213
+                        # https://github.com/encode/httpx/issues/1213
                         #
-                        # The empty byte-string returned from there caused
-                        #     httpcore.RemoteProtocolError at the top level
+                        # Returning an empty byte-string will eventually raise
+                        # an httpcore.RemoteProtocolError to the user when this
+                        # goes through our HTTP parsing layer.
                         return b""
                     raise
 
