@@ -2,14 +2,12 @@ import contextlib
 import os
 import shlex
 import socket
-import ssl
 import subprocess
 import threading
 import time
 import typing
 
 import pytest
-import trustme
 import uvicorn
 
 from httpcore._types import URL
@@ -18,18 +16,6 @@ from .utils import Server
 
 SERVER_HOST = "example.org"
 HTTPS_SERVER_URL = "https://example.org"
-
-
-@pytest.fixture(scope="session")
-def cert_authority() -> trustme.CA:
-    return trustme.CA()
-
-
-@pytest.fixture()
-def ca_ssl_context(cert_authority: trustme.CA) -> ssl.SSLContext:
-    ctx = ssl.create_default_context()
-    cert_authority.configure_trust(ctx)
-    return ctx
 
 
 def wait_until_pproxy_serve_on_port(host: str, port: int):
