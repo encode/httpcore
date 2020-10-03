@@ -1,8 +1,5 @@
 import contextlib
 import os
-import shlex
-import socket
-import subprocess
 import threading
 import time
 import typing
@@ -12,42 +9,19 @@ import uvicorn
 
 from httpcore._types import URL
 
-from .utils import Server
+from .utils import Server, http_proxy_server
 
 SERVER_HOST = "example.org"
 HTTPS_SERVER_URL = "https://example.org"
 
 
-def wait_until_pproxy_serve_on_port(host: str, port: int):
-    while True:
-        try:
-            sock = socket.create_connection((host, port))
-        except ConnectionRefusedError:
-            time.sleep(0.25)
-        else:
-            sock.close()
-            break
-
-
 @pytest.fixture(scope="session")
 def proxy_server() -> typing.Iterator[URL]:
-    http_proxy_host = "127.0.0.1"
-    http_proxy_port = 8080
+    proxy_host = "127.0.0.1"
+    proxy_port = 8080
 
-    proc = None
-    try:
-        command_str = f"pproxy -l http://{http_proxy_host}:{http_proxy_port}/"
-        command = shlex.split(command_str)
-        proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        wait_until_pproxy_serve_on_port(http_proxy_host, http_proxy_port)
-
-        print(f"HTTP proxy started on http://{http_proxy_host}:{http_proxy_port}/")
-
-        yield b"http", http_proxy_host.encode(), http_proxy_port, b"/"
-    finally:
-        if proc is not None:
-            proc.kill()
+    with http_proxy_server(proxy_host, proxy_port) as proxy_server_fixture:
+        yield proxy_server_fixture
 
 
 class UvicornServer(uvicorn.Server):
