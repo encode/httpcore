@@ -1,10 +1,10 @@
-from contextlib import AsyncExitStack, asynccontextmanager
 from typing import AsyncIterator, Tuple
 
 import pytest
 
 import httpcore
 from httpcore._async.base import ConnectionState
+from httpcore._compat import AsyncExitStack, asynccontextmanager
 from httpcore._types import URL, Headers
 
 

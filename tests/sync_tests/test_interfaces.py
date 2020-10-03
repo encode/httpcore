@@ -1,11 +1,11 @@
 import platform
 import ssl
-from contextlib import ExitStack
 from functools import partial
 
 import pytest
 
 import httpcore
+from httpcore._compat import ExitStack
 from httpcore._types import URL
 from tests.conftest import HTTPS_SERVER_URL, UvicornServer
 from tests.utils import Server, lookup_sync_backend
