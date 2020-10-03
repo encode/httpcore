@@ -167,13 +167,13 @@ class SyncHTTPProxy(SyncConnectionPool):
         url = self.proxy_origin + (target,)
         headers = merge_headers(self.proxy_headers, headers)
 
-        with connection.request(
-            method, url, headers=headers, stream=stream, ext=ext
-        ) as response:
-            try:
+        try:
+            with connection.request(
+                method, url, headers=headers, stream=stream, ext=ext
+            ) as response:
                 yield response
-            finally:
-                self._response_closed(connection)
+        finally:
+            self._response_closed(connection)
 
     @contextmanager
     def _tunnel_request(
@@ -253,17 +253,14 @@ class SyncHTTPProxy(SyncConnectionPool):
 
             # Once the connection has been established we can send requests on
             # it as normal.
-            response = exit_stack.enter_context(
-                connection.request(
+            try:
+                with connection.request(
                     method,
                     url,
                     headers=headers,
                     stream=stream,
                     ext=ext,
-                )
-            )
-
-            try:
-                yield response
+                ) as response:
+                    yield response
             finally:
                 self._response_closed(connection)

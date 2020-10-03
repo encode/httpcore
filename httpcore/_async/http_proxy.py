@@ -167,13 +167,13 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         url = self.proxy_origin + (target,)
         headers = merge_headers(self.proxy_headers, headers)
 
-        async with connection.arequest(
-            method, url, headers=headers, stream=stream, ext=ext
-        ) as response:
-            try:
+        try:
+            async with connection.arequest(
+                method, url, headers=headers, stream=stream, ext=ext
+            ) as response:
                 yield response
-            finally:
-                await self._response_closed(connection)
+        finally:
+            await self._response_closed(connection)
 
     @asynccontextmanager
     async def _tunnel_request(
@@ -253,17 +253,14 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
             # Once the connection has been established we can send requests on
             # it as normal.
-            response = await exit_stack.enter_async_context(
-                connection.arequest(
+            try:
+                async with connection.arequest(
                     method,
                     url,
                     headers=headers,
                     stream=stream,
                     ext=ext,
-                )
-            )
-
-            try:
-                yield response
+                ) as response:
+                    yield response
             finally:
                 await self._response_closed(connection)
