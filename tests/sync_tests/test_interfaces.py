@@ -1,5 +1,7 @@
 import platform
 import ssl
+from contextlib import ExitStack
+from functools import partial
 
 import pytest
 
@@ -15,13 +17,7 @@ def backend(request):
 
 
 def read_body(stream: httpcore.SyncByteStream) -> bytes:
-    try:
-        body = []
-        for chunk in stream:
-            body.append(chunk)
-        return b"".join(body)
-    finally:
-        stream.close()
+    return b"".join([chunk for chunk in stream])
 
 
 
@@ -30,8 +26,9 @@ def test_http_request(backend: str, server: Server) -> None:
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
         headers = [server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
-        read_body(stream)
+        with http.request(method, url, headers) as response:
+            status_code, headers, stream, ext = response
+            read_body(stream)
 
         assert status_code == 200
         assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
@@ -44,8 +41,9 @@ def test_https_request(backend: str, https_server: Server) -> None:
         method = b"GET"
         url = (b"https", *https_server.netloc, b"/")
         headers = [https_server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
-        read_body(stream)
+        with http.request(method, url, headers) as response:
+            status_code, headers, stream, ext = response
+            read_body(stream)
 
         assert status_code == 200
         assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
@@ -59,7 +57,8 @@ def test_request_unsupported_protocol(backend: str) -> None:
         url = (b"ftp", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
         with pytest.raises(httpcore.UnsupportedProtocol):
-            http.request(method, url, headers)
+            with http.request(method, url, headers):
+                pass  # pragma: no cover
 
 
 
@@ -68,8 +67,9 @@ def test_http2_request(backend: str, https_server: Server) -> None:
         method = b"GET"
         url = (b"https", *https_server.netloc, b"/")
         headers = [https_server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
-        read_body(stream)
+        with http.request(method, url, headers) as response:
+            status_code, headers, stream, ext = response
+            read_body(stream)
 
         assert status_code == 200
         assert ext == {"http_version": "HTTP/2"}
@@ -82,8 +82,9 @@ def test_closing_http_request(backend: str, server: Server) -> None:
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
         headers = [server.host_header, (b"connection", b"close")]
-        status_code, headers, stream, ext = http.request(method, url, headers)
-        read_body(stream)
+        with http.request(method, url, headers) as response:
+            status_code, headers, stream, ext = response
+            read_body(stream)
 
         assert status_code == 200
         assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
@@ -96,8 +97,9 @@ def test_http_request_reuse_connection(backend: str, server: Server) -> None:
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
         headers = [server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
-        read_body(stream)
+        with http.request(method, url, headers) as response:
+            status_code, headers, stream, ext = response
+            read_body(stream)
 
         assert status_code == 200
         assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
@@ -106,8 +108,9 @@ def test_http_request_reuse_connection(backend: str, server: Server) -> None:
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
         headers = [server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
-        read_body(stream)
+        with http.request(method, url, headers) as response:
+            status_code, headers, stream, ext = response
+            read_body(stream)
 
         assert status_code == 200
         assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
@@ -122,8 +125,9 @@ def test_https_request_reuse_connection(
         method = b"GET"
         url = (b"https", *https_server.netloc, b"/")
         headers = [https_server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
-        read_body(stream)
+        with http.request(method, url, headers) as response:
+            status_code, headers, stream, ext = response
+            read_body(stream)
 
         assert status_code == 200
         assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
@@ -132,8 +136,9 @@ def test_https_request_reuse_connection(
         method = b"GET"
         url = (b"https", *https_server.netloc, b"/")
         headers = [https_server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
-        read_body(stream)
+        with http.request(method, url, headers) as response:
+            status_code, headers, stream, ext = response
+            read_body(stream)
 
         assert status_code == 200
         assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
@@ -148,8 +153,9 @@ def test_http_request_cannot_reuse_dropped_connection(
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
         headers = [server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
-        read_body(stream)
+        with http.request(method, url, headers) as response:
+            status_code, headers, stream, ext = response
+            read_body(stream)
 
         assert status_code == 200
         assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
@@ -162,8 +168,9 @@ def test_http_request_cannot_reuse_dropped_connection(
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
         headers = [server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
-        read_body(stream)
+        with http.request(method, url, headers) as response:
+            status_code, headers, stream, ext = response
+            read_body(stream)
 
         assert status_code == 200
         assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
@@ -185,8 +192,9 @@ def test_http_proxy(
         max_connections=max_connections,
         backend=backend,
     ) as http:
-        status_code, headers, stream, ext = http.request(method, url, headers)
-        read_body(stream)
+        with http.request(method, url, headers) as response:
+            status_code, headers, stream, ext = response
+            read_body(stream)
 
         assert status_code == 200
         assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
@@ -203,8 +211,9 @@ def test_http_request_local_address(backend: str, server: Server) -> None:
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
         headers = [server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
-        read_body(stream)
+        with http.request(method, url, headers) as response:
+            status_code, headers, stream, ext = response
+            read_body(stream)
 
         assert status_code == 200
         assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
@@ -233,8 +242,9 @@ def test_proxy_https_requests(
         max_connections=max_connections,
         http2=http2,
     ) as http:
-        status_code, headers, stream, ext = http.request(method, url, headers)
-        _ = read_body(stream)
+        with http.request(method, url, headers) as response:
+            status_code, headers, stream, ext = response
+            _ = read_body(stream)
 
         assert status_code == 200
         assert ext["http_version"] == "HTTP/2" if http2 else "HTTP/1.1"
@@ -286,15 +296,20 @@ def test_connection_pool_get_connection_info(
         url = (b"https", *https_server.netloc, b"/")
         headers = [https_server.host_header]
 
-        _, _, stream_1, _ = http.request(method, url, headers)
-        _, _, stream_2, _ = http.request(method, url, headers)
+        with ExitStack() as exit_stack:
+            _, _, stream_1, _ = exit_stack.enter_context(
+                http.request(method, url, headers)
+            )
+            _, _, stream_2, _ = exit_stack.enter_context(
+                http.request(method, url, headers)
+            )
 
-        try:
-            stats = http.get_connection_info()
-            assert stats == expected_during_active
-        finally:
-            read_body(stream_1)
-            read_body(stream_2)
+            try:
+                stats = http.get_connection_info()
+                assert stats == expected_during_active
+            finally:
+                read_body(stream_1)
+                read_body(stream_2)
 
         stats = http.get_connection_info()
         assert stats == expected_during_idle
@@ -317,11 +332,12 @@ def test_http_request_unix_domain_socket(
         method = b"GET"
         url = (b"http", b"localhost", None, b"/")
         headers = [(b"host", b"localhost")]
-        status_code, headers, stream, ext = http.request(method, url, headers)
-        assert status_code == 200
-        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
-        body = read_body(stream)
-        assert body == b"Hello, world!"
+        with http.request(method, url, headers) as response:
+            status_code, headers, stream, ext = response
+            assert status_code == 200
+            assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+            body = read_body(stream)
+            assert body == b"Hello, world!"
 
 
 @pytest.mark.parametrize("max_keepalive", [1, 3, 5])
@@ -337,19 +353,17 @@ def test_max_keepalive_connections_handled_correctly(
         url = (b"http", *server.netloc, b"/")
         headers = [server.host_header]
 
-        connections_streams = []
-        for _ in range(connections_number):
-            _, _, stream, _ = http.request(method, url, headers)
-            connections_streams.append(stream)
+        with ExitStack() as exit_stack:
+            for _ in range(connections_number):
+                _, _, stream, _ = exit_stack.enter_context(
+                    http.request(method, url, headers)
+                )
+                exit_stack.callback(partial(read_body, stream))
 
-        try:
-            for i in range(len(connections_streams)):
-                read_body(connections_streams[i])
-        finally:
-            stats = http.get_connection_info()
+        stats = http.get_connection_info()
 
-            connections_in_pool = next(iter(stats.values()))
-            assert len(connections_in_pool) == min(connections_number, max_keepalive)
+        connections_in_pool = next(iter(stats.values()))
+        assert len(connections_in_pool) == min(connections_number, max_keepalive)
 
 
 
@@ -358,8 +372,9 @@ def test_explicit_backend_name(server: Server) -> None:
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
         headers = [server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
-        read_body(stream)
+        with http.request(method, url, headers) as response:
+            status_code, headers, stream, ext = response
+            read_body(stream)
 
         assert status_code == 200
         assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}

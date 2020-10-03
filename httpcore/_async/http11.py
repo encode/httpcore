@@ -5,6 +5,7 @@ import h11
 
 from .._backends.auto import AsyncSocketStream
 from .._bytestreams import AsyncIteratorByteStream, PlainByteStream
+from .._compat import asynccontextmanager
 from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
@@ -47,6 +48,7 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         if self.state == ConnectionState.IDLE:
             self.state = ConnectionState.READY
 
+    @asynccontextmanager
     async def arequest(
         self,
         method: bytes,
@@ -54,7 +56,7 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         headers: Headers = None,
         stream: AsyncByteStream = None,
         ext: dict = None,
-    ) -> Tuple[int, Headers, AsyncByteStream, dict]:
+    ) -> AsyncIterator[Tuple[int, Headers, AsyncByteStream, dict]]:
         headers = [] if headers is None else headers
         stream = PlainByteStream(b"") if stream is None else stream
         ext = {} if ext is None else ext
@@ -78,7 +80,10 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
             "http_version": http_version.decode("ascii", errors="ignore"),
             "reason": reason_phrase.decode("ascii", errors="ignore"),
         }
-        return (status_code, headers, response_stream, ext)
+        try:
+            yield (status_code, headers, response_stream, ext)
+        finally:
+            await response_stream.aclose()
 
     async def start_tls(
         self, hostname: bytes, timeout: TimeoutDict = None

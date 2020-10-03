@@ -9,6 +9,7 @@ from h2.settings import SettingCodes, Settings
 
 from .._backends.sync import SyncBackend, SyncLock, SyncSemaphore, SyncSocketStream
 from .._bytestreams import IteratorByteStream, PlainByteStream
+from .._compat import contextmanager
 from .._exceptions import PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
@@ -85,6 +86,7 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         if self.state == ConnectionState.IDLE:
             self.state = ConnectionState.READY
 
+    @contextmanager
     def request(
         self,
         method: bytes,
@@ -92,7 +94,7 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         headers: Headers = None,
         stream: SyncByteStream = None,
         ext: dict = None,
-    ) -> Tuple[int, Headers, SyncByteStream, dict]:
+    ) -> Iterator[Tuple[int, Headers, SyncByteStream, dict]]:
         ext = {} if ext is None else ext
         timeout = cast(TimeoutDict, ext.get("timeout", {}))
 
@@ -116,7 +118,10 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
             h2_stream = SyncHTTP2Stream(stream_id=stream_id, connection=self)
             self.streams[stream_id] = h2_stream
             self.events[stream_id] = []
-            return h2_stream.request(method, url, headers, stream, ext)
+            with h2_stream.request(
+                method, url, headers, stream, ext
+            ) as response:
+                yield response
         except Exception:  # noqa: PIE786
             self.max_streams_semaphore.release()
             raise
@@ -270,6 +275,7 @@ class SyncHTTP2Stream:
         self.stream_id = stream_id
         self.connection = connection
 
+    @contextmanager
     def request(
         self,
         method: bytes,
@@ -277,7 +283,7 @@ class SyncHTTP2Stream:
         headers: Headers = None,
         stream: SyncByteStream = None,
         ext: dict = None,
-    ) -> Tuple[int, Headers, SyncByteStream, dict]:
+    ) -> Iterator[Tuple[int, Headers, SyncByteStream, dict]]:
         headers = [] if headers is None else [(k.lower(), v) for (k, v) in headers]
         stream = PlainByteStream(b"") if stream is None else stream
         ext = {} if ext is None else ext
@@ -302,7 +308,11 @@ class SyncHTTP2Stream:
         ext = {
             "http_version": "HTTP/2",
         }
-        return (status_code, headers, response_stream, ext)
+
+        try:
+            yield (status_code, headers, response_stream, ext)
+        finally:
+            response_stream.close()
 
     def send_headers(
         self,

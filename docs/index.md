@@ -43,16 +43,12 @@ Here's an example of making an HTTP GET request using `httpcore`...
 
 ```python
 with httpcore.SyncConnectionPool() as http:
-    status_code, headers, stream, ext = http.request(
+    with http.request(
         method=b'GET',
         url=(b'https', b'example.org', 443, b'/'),
         headers=[(b'host', b'example.org'), (b'user-agent', 'httpcore')]
-    )
-
-    try:
+    ) as (status_code, headers, stream, ext):
         body = b''.join([chunk for chunk in stream])
-    finally:
-        stream.close()
 
     print(status_code, body)
 ```
@@ -61,16 +57,12 @@ Or, using async...
 
 ```python
 async with httpcore.AsyncConnectionPool() as http:
-    status_code, headers, stream, ext = await http.arequest(
+    async with http.arequest(
         method=b'GET',
         url=(b'https', b'example.org', 443, b'/'),
         headers=[(b'host', b'example.org'), (b'user-agent', 'httpcore')]
-    )
-
-    try:
+    ) as (status_code, headers, stream, ext):
         body = b''.join([chunk async for chunk in stream])
-    finally:
-        await stream.aclose()
 
     print(status_code, body)
 ```

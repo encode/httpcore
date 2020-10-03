@@ -1,6 +1,6 @@
 import enum
 from types import TracebackType
-from typing import AsyncIterator, Tuple, Type
+from typing import AsyncContextManager, AsyncIterator, Tuple, Type
 
 from .._types import URL, Headers, T
 
@@ -57,18 +57,18 @@ class AsyncHTTPTransport:
     """
     The base interface for sending HTTP requests.
 
-    Concete implementations should subclass this class, and implement
+    Concrete implementations should subclass this class, and implement
     the `request` method, and optionally the `close` method.
     """
 
-    async def arequest(
+    def arequest(
         self,
         method: bytes,
         url: URL,
         headers: Headers = None,
         stream: AsyncByteStream = None,
         ext: dict = None,
-    ) -> Tuple[int, Headers, AsyncByteStream, dict]:
+    ) -> AsyncContextManager[Tuple[int, Headers, AsyncByteStream, dict]]:
         """
         The interface for sending a single HTTP request, and returning a response.
 
@@ -84,7 +84,7 @@ class AsyncHTTPTransport:
 
         ** Returns:**
 
-        A four-tuple of:
+        A context manager yielding a four-tuple of:
 
         * **status_code** - `int` - The HTTP status code, such as `200`.
         * **headers** - `List[Tuple[bytes, bytes]]` - Any HTTP headers included

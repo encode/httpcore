@@ -1,9 +1,11 @@
 import warnings
+from functools import partial
 from ssl import SSLContext
-from typing import AsyncIterator, Callable, Dict, List, Optional, Set, Tuple, cast
+from typing import AsyncIterator, Dict, List, Optional, Set, Tuple, cast
 
 from .._backends.auto import AsyncLock, AsyncSemaphore
 from .._backends.base import lookup_async_backend
+from .._compat import AsyncExitStack, asynccontextmanager
 from .._exceptions import LocalProtocolError, PoolTimeout, UnsupportedProtocol
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
@@ -28,39 +30,6 @@ class NullSemaphore(AsyncSemaphore):
 
     async def release(self) -> None:
         return
-
-
-class ResponseByteStream(AsyncByteStream):
-    def __init__(
-        self,
-        stream: AsyncByteStream,
-        connection: AsyncHTTPConnection,
-        callback: Callable,
-    ) -> None:
-        """
-        A wrapper around the response stream that we return from `.arequest()`.
-
-        Ensures that when `stream.aclose()` is called, the connection pool
-        is notified via a callback.
-        """
-        self.stream = stream
-        self.connection = connection
-        self.callback = callback
-
-    async def __aiter__(self) -> AsyncIterator[bytes]:
-        async for chunk in self.stream:
-            yield chunk
-
-    async def aclose(self) -> None:
-        try:
-            # Call the underlying stream close callback.
-            # This will be a call to `AsyncHTTP11Connection._response_closed()`
-            # or `AsyncHTTP2Stream._response_closed()`.
-            await self.stream.aclose()
-        finally:
-            # Call the connection pool close callback.
-            # This will be a call to `AsyncConnectionPool._response_closed()`.
-            await self.callback(self.connection)
 
 
 class AsyncConnectionPool(AsyncHTTPTransport):
@@ -160,6 +129,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             backend=self._backend,
         )
 
+    @asynccontextmanager
     async def arequest(
         self,
         method: bytes,
@@ -167,7 +137,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         headers: Headers = None,
         stream: AsyncByteStream = None,
         ext: dict = None,
-    ) -> Tuple[int, Headers, AsyncByteStream, dict]:
+    ) -> AsyncIterator[Tuple[int, Headers, AsyncByteStream, dict]]:
         if url[0] not in (b"http", b"https"):
             scheme = url[0].decode("latin-1")
             raise UnsupportedProtocol(f"Unsupported URL protocol {scheme!r}")
@@ -180,38 +150,45 @@ class AsyncConnectionPool(AsyncHTTPTransport):
 
         await self._keepalive_sweep()
 
-        connection: Optional[AsyncHTTPConnection] = None
-        while connection is None:
-            async with self._connection_acquiry_lock:
-                # We get-or-create a connection as an atomic operation, to ensure
-                # that HTTP/2 requests issued in close concurrency will end up
-                # on the same connection.
-                logger.trace("get_connection_from_pool=%r", origin)
-                connection = await self._get_connection_from_pool(origin)
+        async with AsyncExitStack() as exit_stack:
+            connection: Optional[AsyncHTTPConnection] = None
+            while connection is None:
+                async with self._connection_acquiry_lock:
+                    # We get-or-create a connection as an atomic operation, to ensure
+                    # that HTTP/2 requests issued in close concurrency will end up
+                    # on the same connection.
+                    logger.trace("get_connection_from_pool=%r", origin)
+                    connection = await self._get_connection_from_pool(origin)
 
-                if connection is None:
-                    connection = self._create_connection(origin=origin)
-                    logger.trace("created connection=%r", connection)
-                    await self._add_to_pool(connection, timeout=timeout)
-                else:
-                    logger.trace("reuse connection=%r", connection)
+                    if connection is None:
+                        connection = self._create_connection(origin=origin)
+                        logger.trace("created connection=%r", connection)
+                        await self._add_to_pool(connection, timeout=timeout)
+                    else:
+                        logger.trace("reuse connection=%r", connection)
 
-            try:
-                response = await connection.arequest(
-                    method, url, headers=headers, stream=stream, ext=ext
-                )
-            except NewConnectionRequired:
-                connection = None
-            except Exception:  # noqa: PIE786
-                logger.trace("remove from pool connection=%r", connection)
-                await self._remove_from_pool(connection)
-                raise
+                try:
+                    # Push this callback onto the stack *before* making the request,
+                    # so that it's effectively executed *after* the response is closed.
+                    exit_stack.push_async_callback(
+                        partial(self._response_closed, connection)
+                    )
 
-        status_code, headers, stream, ext = response
-        wrapped_stream = ResponseByteStream(
-            stream, connection=connection, callback=self._response_closed
-        )
-        return status_code, headers, wrapped_stream, ext
+                    response = await exit_stack.enter_async_context(
+                        connection.arequest(
+                            method, url, headers=headers, stream=stream, ext=ext
+                        )
+                    )
+                except NewConnectionRequired:
+                    exit_stack.pop_all()  # Drop any registered callbacks.
+                    connection = None
+                except Exception:  # noqa: PIE786
+                    logger.trace("remove from pool connection=%r", connection)
+                    exit_stack.pop_all()  # Drop any registered callbacks.
+                    await self._remove_from_pool(connection)
+                    raise
+
+            yield response
 
     async def _get_connection_from_pool(
         self, origin: Origin

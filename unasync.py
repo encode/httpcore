@@ -6,6 +6,11 @@ import sys
 SUBS = [
     ('AsyncIteratorByteStream', 'IteratorByteStream'),
     ('AsyncIterator', 'Iterator'),
+    ('asynccontextmanager', 'contextmanager'),
+    ('AsyncContextManager', 'ContextManager'),
+    ('AsyncExitStack', 'ExitStack'),
+    ('enter_async_context', 'enter_context'),
+    ('push_async_callback', 'callback'),
     ('AutoBackend', 'SyncBackend'),
     ('Async([A-Z][A-Za-z0-9_]*)', r'Sync\2'),
     ('async def', 'def'),

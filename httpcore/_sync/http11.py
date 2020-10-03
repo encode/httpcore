@@ -5,6 +5,7 @@ import h11
 
 from .._backends.sync import SyncSocketStream
 from .._bytestreams import IteratorByteStream, PlainByteStream
+from .._compat import contextmanager
 from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
@@ -47,6 +48,7 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
         if self.state == ConnectionState.IDLE:
             self.state = ConnectionState.READY
 
+    @contextmanager
     def request(
         self,
         method: bytes,
@@ -54,7 +56,7 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
         headers: Headers = None,
         stream: SyncByteStream = None,
         ext: dict = None,
-    ) -> Tuple[int, Headers, SyncByteStream, dict]:
+    ) -> Iterator[Tuple[int, Headers, SyncByteStream, dict]]:
         headers = [] if headers is None else headers
         stream = PlainByteStream(b"") if stream is None else stream
         ext = {} if ext is None else ext
@@ -78,7 +80,10 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
             "http_version": http_version.decode("ascii", errors="ignore"),
             "reason": reason_phrase.decode("ascii", errors="ignore"),
         }
-        return (status_code, headers, response_stream, ext)
+        try:
+            yield (status_code, headers, response_stream, ext)
+        finally:
+            response_stream.close()
 
     def start_tls(
         self, hostname: bytes, timeout: TimeoutDict = None

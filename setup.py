@@ -53,7 +53,13 @@ setup(
     packages=get_packages("httpcore"),
     include_package_data=True,
     zip_safe=False,
-    install_requires=["h11>=0.8,<0.10", "sniffio==1.*"],
+    install_requires=[
+        "h11>=0.8,<0.10",
+        "sniffio==1.*",
+        # Backports.
+        "async_generator; python_version<'3.7'",
+        "async-exit-stack; python_version<'3.7'",
+    ],
     extras_require={
         "http2": ["h2==3.*"],
     },

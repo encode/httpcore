@@ -1,6 +1,6 @@
 import enum
 from types import TracebackType
-from typing import Iterator, Tuple, Type
+from typing import ContextManager, Iterator, Tuple, Type
 
 from .._types import URL, Headers, T
 
@@ -57,7 +57,7 @@ class SyncHTTPTransport:
     """
     The base interface for sending HTTP requests.
 
-    Concete implementations should subclass this class, and implement
+    Concrete implementations should subclass this class, and implement
     the `request` method, and optionally the `close` method.
     """
 
@@ -68,7 +68,7 @@ class SyncHTTPTransport:
         headers: Headers = None,
         stream: SyncByteStream = None,
         ext: dict = None,
-    ) -> Tuple[int, Headers, SyncByteStream, dict]:
+    ) -> ContextManager[Tuple[int, Headers, SyncByteStream, dict]]:
         """
         The interface for sending a single HTTP request, and returning a response.
 
@@ -84,7 +84,7 @@ class SyncHTTPTransport:
 
         ** Returns:**
 
-        A four-tuple of:
+        A context manager yielding a four-tuple of:
 
         * **status_code** - `int` - The HTTP status code, such as `200`.
         * **headers** - `List[Tuple[bytes, bytes]]` - Any HTTP headers included

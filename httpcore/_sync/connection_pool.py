@@ -1,9 +1,11 @@
 import warnings
+from functools import partial
 from ssl import SSLContext
-from typing import Iterator, Callable, Dict, List, Optional, Set, Tuple, cast
+from typing import Iterator, Dict, List, Optional, Set, Tuple, cast
 
 from .._backends.sync import SyncLock, SyncSemaphore
 from .._backends.base import lookup_sync_backend
+from .._compat import ExitStack, contextmanager
 from .._exceptions import LocalProtocolError, PoolTimeout, UnsupportedProtocol
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
@@ -28,39 +30,6 @@ class NullSemaphore(SyncSemaphore):
 
     def release(self) -> None:
         return
-
-
-class ResponseByteStream(SyncByteStream):
-    def __init__(
-        self,
-        stream: SyncByteStream,
-        connection: SyncHTTPConnection,
-        callback: Callable,
-    ) -> None:
-        """
-        A wrapper around the response stream that we return from `.request()`.
-
-        Ensures that when `stream.close()` is called, the connection pool
-        is notified via a callback.
-        """
-        self.stream = stream
-        self.connection = connection
-        self.callback = callback
-
-    def __iter__(self) -> Iterator[bytes]:
-        for chunk in self.stream:
-            yield chunk
-
-    def close(self) -> None:
-        try:
-            # Call the underlying stream close callback.
-            # This will be a call to `SyncHTTP11Connection._response_closed()`
-            # or `SyncHTTP2Stream._response_closed()`.
-            self.stream.close()
-        finally:
-            # Call the connection pool close callback.
-            # This will be a call to `SyncConnectionPool._response_closed()`.
-            self.callback(self.connection)
 
 
 class SyncConnectionPool(SyncHTTPTransport):
@@ -160,6 +129,7 @@ class SyncConnectionPool(SyncHTTPTransport):
             backend=self._backend,
         )
 
+    @contextmanager
     def request(
         self,
         method: bytes,
@@ -167,7 +137,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         headers: Headers = None,
         stream: SyncByteStream = None,
         ext: dict = None,
-    ) -> Tuple[int, Headers, SyncByteStream, dict]:
+    ) -> Iterator[Tuple[int, Headers, SyncByteStream, dict]]:
         if url[0] not in (b"http", b"https"):
             scheme = url[0].decode("latin-1")
             raise UnsupportedProtocol(f"Unsupported URL protocol {scheme!r}")
@@ -180,38 +150,45 @@ class SyncConnectionPool(SyncHTTPTransport):
 
         self._keepalive_sweep()
 
-        connection: Optional[SyncHTTPConnection] = None
-        while connection is None:
-            with self._connection_acquiry_lock:
-                # We get-or-create a connection as an atomic operation, to ensure
-                # that HTTP/2 requests issued in close concurrency will end up
-                # on the same connection.
-                logger.trace("get_connection_from_pool=%r", origin)
-                connection = self._get_connection_from_pool(origin)
+        with ExitStack() as exit_stack:
+            connection: Optional[SyncHTTPConnection] = None
+            while connection is None:
+                with self._connection_acquiry_lock:
+                    # We get-or-create a connection as an atomic operation, to ensure
+                    # that HTTP/2 requests issued in close concurrency will end up
+                    # on the same connection.
+                    logger.trace("get_connection_from_pool=%r", origin)
+                    connection = self._get_connection_from_pool(origin)
 
-                if connection is None:
-                    connection = self._create_connection(origin=origin)
-                    logger.trace("created connection=%r", connection)
-                    self._add_to_pool(connection, timeout=timeout)
-                else:
-                    logger.trace("reuse connection=%r", connection)
+                    if connection is None:
+                        connection = self._create_connection(origin=origin)
+                        logger.trace("created connection=%r", connection)
+                        self._add_to_pool(connection, timeout=timeout)
+                    else:
+                        logger.trace("reuse connection=%r", connection)
 
-            try:
-                response = connection.request(
-                    method, url, headers=headers, stream=stream, ext=ext
-                )
-            except NewConnectionRequired:
-                connection = None
-            except Exception:  # noqa: PIE786
-                logger.trace("remove from pool connection=%r", connection)
-                self._remove_from_pool(connection)
-                raise
+                try:
+                    # Push this callback onto the stack *before* making the request,
+                    # so that it's effectively executed *after* the response is closed.
+                    exit_stack.callback(
+                        partial(self._response_closed, connection)
+                    )
 
-        status_code, headers, stream, ext = response
-        wrapped_stream = ResponseByteStream(
-            stream, connection=connection, callback=self._response_closed
-        )
-        return status_code, headers, wrapped_stream, ext
+                    response = exit_stack.enter_context(
+                        connection.request(
+                            method, url, headers=headers, stream=stream, ext=ext
+                        )
+                    )
+                except NewConnectionRequired:
+                    exit_stack.pop_all()  # Drop any registered callbacks.
+                    connection = None
+                except Exception:  # noqa: PIE786
+                    logger.trace("remove from pool connection=%r", connection)
+                    exit_stack.pop_all()  # Drop any registered callbacks.
+                    self._remove_from_pool(connection)
+                    raise
+
+            yield response
 
     def _get_connection_from_pool(
         self, origin: Origin

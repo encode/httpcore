@@ -1,7 +1,8 @@
 from ssl import SSLContext
-from typing import Optional, Tuple, cast
+from typing import AsyncIterator, Optional, Tuple, cast
 
 from .._backends.auto import AsyncBackend, AsyncLock, AsyncSocketStream, AutoBackend
+from .._compat import asynccontextmanager
 from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, url_to_origin
 from .base import (
@@ -66,6 +67,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
             self._request_lock = self.backend.create_lock()
         return self._request_lock
 
+    @asynccontextmanager
     async def arequest(
         self,
         method: bytes,
@@ -73,7 +75,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         headers: Headers = None,
         stream: AsyncByteStream = None,
         ext: dict = None,
-    ) -> Tuple[int, Headers, AsyncByteStream, dict]:
+    ) -> AsyncIterator[Tuple[int, Headers, AsyncByteStream, dict]]:
         assert url_to_origin(url) == self.origin
         ext = {} if ext is None else ext
         timeout = cast(TimeoutDict, ext.get("timeout", {}))
@@ -97,7 +99,10 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         logger.trace(
             "connection.arequest method=%r url=%r headers=%r", method, url, headers
         )
-        return await self.connection.arequest(method, url, headers, stream, ext)
+        async with self.connection.arequest(
+            method, url, headers, stream, ext
+        ) as response:
+            yield response
 
     async def _open_socket(self, timeout: TimeoutDict = None) -> AsyncSocketStream:
         scheme, hostname, port = self.origin
