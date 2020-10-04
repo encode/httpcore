@@ -20,8 +20,8 @@ def proxy_server() -> typing.Iterator[URL]:
     proxy_host = "127.0.0.1"
     proxy_port = 8080
 
-    with http_proxy_server(proxy_host, proxy_port) as proxy_server_fixture:
-        yield proxy_server_fixture
+    with http_proxy_server(proxy_host, proxy_port) as proxy_url:
+        yield proxy_url
 
 
 class UvicornServer(uvicorn.Server):

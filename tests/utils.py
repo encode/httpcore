@@ -15,7 +15,7 @@ def lookup_sync_backend():
     return "sync"
 
 
-def wait_until_pproxy_serve_on_port(host: str, port: int):
+def _wait_can_connect(host: str, port: int):
     while True:
         try:
             sock = socket.create_connection((host, port))
@@ -52,7 +52,7 @@ def http_proxy_server(proxy_host: str, proxy_port: int):
         command = ["pproxy", "-l", f"http://{proxy_host}:{proxy_port}/"]
         proc = subprocess.Popen(command)
 
-        wait_until_pproxy_serve_on_port(proxy_host, proxy_port)
+        _wait_can_connect(proxy_host, proxy_port)
 
         yield b"http", proxy_host.encode(), proxy_port, b"/"
     finally:
