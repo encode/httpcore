@@ -8,7 +8,7 @@ export SOURCE_FILES="httpcore tests"
 
 set -x
 
-${PREFIX}autoflake --in-place --recursive $SOURCE_FILES
+${PREFIX}autoflake --in-place --recursive --remove-all-unused-imports --ignore-init-module-imports $SOURCE_FILES
 ${PREFIX}isort --project=httpcore $SOURCE_FILES
 ${PREFIX}black $SOURCE_FILES
 
