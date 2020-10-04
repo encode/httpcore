@@ -22,10 +22,9 @@ flake8==3.8.4
 flake8-bugbear==20.1.4
 flake8-pie==0.6.1
 isort==5.5.4
-mitmproxy==5.2
 mypy==0.782
+pproxy==2.3.5
 pytest==6.1.0
 pytest-trio==0.6.0
 pytest-cov==2.10.1
-trustme==0.6.0
 uvicorn==0.12.1
