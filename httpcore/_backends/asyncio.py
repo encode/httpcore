@@ -138,7 +138,7 @@ class SocketStream(AsyncSocketStream):
                 except AttributeError as exc:  # pragma: nocover
                     if "resume_reading" in str(exc):
                         # Python's asyncio has a bug that can occur when a
-                        # connection has been closed, while it is paused.
+                        # connection has been closed, while it is paused.
                         # See: https://github.com/encode/httpx/issues/1213
                         #
                         # Returning an empty byte-string to indicate connection
