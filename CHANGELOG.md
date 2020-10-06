@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.12.0 (October 6th, 2020)
+
+### Changed
+
+- HTTP header casing is now preserved, rather than always sent in lowercase.
+
+### Fixed
+
+- Gracefully handle a stdlib asyncio bug when a connection is closed while it is in a paused-for-reading state. (#201)
+
 ## 0.11.1 (September 28nd, 2020)
 
 ### Fixed
