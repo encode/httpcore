@@ -135,16 +135,15 @@ class SocketStream(AsyncSocketStream):
                     return await asyncio.wait_for(
                         self.stream_reader.read(n), timeout.get("read")
                     )
-                except AttributeError as ex:  # pragma: nocover
-                    if "resume_reading" in str(ex):
-                        # We have to return empty string there,
-                        # due to one ugly bug in asyncio
-                        # More information you can find in this issue:
-                        # https://github.com/encode/httpx/issues/1213
+                except AttributeError as exc:  # pragma: nocover
+                    if "resume_reading" in str(exc):
+                        # Python's asyncio has a bug that can occur when a
+                        # connection has been closed, while it is paused.
+                        # See: https://github.com/encode/httpx/issues/1213
                         #
-                        # Returning an empty byte-string will eventually raise
-                        # an httpcore.RemoteProtocolError to the user when this
-                        # goes through our HTTP parsing layer.
+                        # Returning an empty byte-string to indicate connection
+                        # close will eventually raise an httpcore.RemoteProtocolError
+                        # to the user when this goes through our HTTP parsing layer.
                         return b""
                     raise
 
