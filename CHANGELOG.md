@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
-- HTTP header casing is now preserved, rather than always sent in lowercase.
+- HTTP header casing is now preserved, rather than always sent in lowercase. (#215)
 
 ### Fixed
 
