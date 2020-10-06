@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - HTTP header casing is now preserved, rather than always sent in lowercase. (#216 and python-hyper/h11#104)
+
+### Added
+
 - Add Python 3.9 to officially supported versions.
 
 ### Fixed
