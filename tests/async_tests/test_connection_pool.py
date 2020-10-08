@@ -1,11 +1,13 @@
+import importlib.util
 from typing import AsyncIterator, Tuple, Type
-from unittest.mock import patch
 
 import pytest
 
 import httpcore
+from httpcore import LocalProtocolError
 from httpcore._async.base import ConnectionState
-from httpcore._types import URL, Headers
+from httpcore._types import URL, Headers, Origin
+from tests.utils import Server, patch_callable
 
 
 class MockConnection(object):
@@ -200,14 +202,12 @@ async def test_connection_with_exception_has_been_removed_from_pool():
         assert len(await http.get_connection_info()) == 0
 
 
-@patch("importlib.util.find_spec", autospec=True)
 @pytest.mark.trio
-async def test_that_we_cannot_start_http2_connection_without_h2_lib(find_spec_mock):
-    find_spec_mock.return_value = None
-
-    with pytest.raises(ImportError):
-        async with httpcore.AsyncConnectionPool(http2=True):
-            pass
+async def test_that_we_cannot_start_http2_connection_without_h2_lib():
+    with patch_callable(importlib.util, "find_spec", lambda _: None):
+        with pytest.raises(ImportError):
+            async with httpcore.AsyncConnectionPool(http2=True):
+                pass
 
 
 @pytest.mark.trio
@@ -221,3 +221,44 @@ async def test_that_we_can_reuse_pending_http2_connection():
         info = await http.get_connection_info()
 
         assert info == {"http://example.org": ["ConnectionState.PENDING"]}
+
+
+@pytest.mark.trio
+async def test_that_we_cannot_request_url_without_host():
+    async with ConnectionPool(http_version="HTTP/2") as http:
+        with pytest.raises(LocalProtocolError):
+            await http.arequest(b"GET", (b"http", b"", None, b"/"))
+
+
+async def _new_conn_from_pool(Self: httpcore.AsyncConnectionPool, origin: Origin):
+    origin_callable = Self._origin__get_connection_from_pool  # type: ignore
+    result = await origin_callable(origin)
+
+    try:
+        return result
+    finally:
+        if result is not None:
+            await result.aclose()
+
+
+@pytest.mark.trio
+async def test_that_new_connection_is_created_when_its_required(
+    https_server: Server,
+):
+    method = b"GET"
+    url = (b"https", *https_server.netloc, b"/")
+
+    headers = [https_server.host_header]
+    async with httpcore.AsyncConnectionPool(http2=False) as http:
+        with patch_callable(
+            httpcore.AsyncConnectionPool,
+            "_get_connection_from_pool",
+            _new_conn_from_pool,
+        ):
+            _, _, stream, _ = await http.arequest(method, url, headers)
+
+            await read_body(stream)
+
+            _, _, stream, _ = await http.arequest(method, url, headers)
+
+            await read_body(stream)
