@@ -361,3 +361,31 @@ async def test_explicit_backend_name(server: Server) -> None:
         assert status_code == 200
         assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("too_many_open_files_minus_one")
+async def test_detect_broken_connection_many_open_files(
+    backend: str, server: Server
+) -> None:
+    """
+    Regression test for: https://github.com/encode/httpcore/issues/182
+    """
+    async with httpcore.AsyncConnectionPool(backend=backend) as http:
+        method = b"GET"
+        url = (b"http", *server.netloc, b"/")
+        headers = [server.host_header]
+
+        # * First attempt will be successful because it will grab the last
+        # available fd before what select() supports on the platform.
+        # * Second attempt would have failed without a fix, due to a "filedescriptor
+        # out of range in select()" exception.
+        for _ in range(2):
+            status_code, response_headers, stream, ext = await http.arequest(
+                method, url, headers
+            )
+            await read_body(stream)
+
+            assert status_code == 200
+            assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+            assert len(http._connections[url[:3]]) == 1  # type: ignore

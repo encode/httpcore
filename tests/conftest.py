@@ -1,6 +1,8 @@
+import platform
 import contextlib
 import os
 import threading
+import tempfile
 import time
 import typing
 
@@ -73,3 +75,28 @@ def server() -> Server:
 @pytest.fixture(scope="session")
 def https_server() -> Server:
     return Server(SERVER_HOST, port=443)
+
+
+@pytest.fixture(scope="function")
+def too_many_open_files_minus_one() -> typing.Iterator[None]:
+    if platform.system() == "Windows":
+        max_num_descriptors = 512
+    else:
+        max_num_descriptors = 1024
+
+    file_descriptors = []
+
+    try:
+        f = tempfile.NamedTemporaryFile(delete=False)
+        f.write(b"***")
+        f.flush()
+        file_descriptors.append(f.fileno())
+        # Leave one file descriptor available for a transport to perform
+        # a successful request.
+        for _ in range(max_num_descriptors - 1):
+            fd = os.dup(f.fileno())
+            file_descriptors.append(fd)
+        yield
+    finally:
+        for fd in file_descriptors:
+            os.close(fd)
