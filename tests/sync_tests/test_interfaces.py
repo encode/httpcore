@@ -361,3 +361,30 @@ def test_explicit_backend_name(server: Server) -> None:
         assert status_code == 200
         assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
+
+
+
+def test_connection_pool_warns_but_accepts_max_keepalive(server: Server):
+    max_keepalive_connections = 10
+    method = b"GET"
+    url = (b"http", *server.netloc, b"/")
+    headers = [server.host_header]
+
+    with pytest.warns(DeprecationWarning):
+        with httpcore.SyncConnectionPool(
+            max_keepalive=max_keepalive_connections, keepalive_expiry=60
+        ) as http:
+
+            connections_streams = []
+            for _ in range(max_keepalive_connections + 1):
+                _, _, stream, _ = http.request(method, url, headers)
+                connections_streams.append(stream)
+
+            try:
+                for i in range(len(connections_streams)):
+                    read_body(connections_streams[i])
+            finally:
+                stats = http.get_connection_info()
+
+                connections_in_pool = next(iter(stats.values()))
+                assert len(connections_in_pool) == max_keepalive_connections
