@@ -1,4 +1,5 @@
 from typing import AsyncIterator, Tuple, Type
+from unittest.mock import patch
 
 import pytest
 
@@ -181,3 +182,13 @@ async def test_connection_with_exception_has_been_removed_from_pool():
             await http.arequest(b"GET", (b"http", b"example.org", None, b"/"))
 
         assert len(await http.get_connection_info()) == 0
+
+
+@patch("importlib.util.find_spec", autospec=True)
+@pytest.mark.trio
+async def test_that_we_cannot_start_http2_connection_without_h2_lib(find_spec_mock):
+    find_spec_mock.return_value = None
+
+    with pytest.raises(ImportError):
+        async with httpcore.AsyncConnectionPool(http2=True):
+            pass

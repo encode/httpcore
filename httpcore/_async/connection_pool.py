@@ -1,3 +1,4 @@
+import importlib.util
 import warnings
 from ssl import SSLContext
 from typing import AsyncIterator, Callable, Dict, List, Optional, Set, Tuple, cast
@@ -119,9 +120,9 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         self._next_keepalive_check = 0.0
 
         if http2:
-            try:
-                import h2  # noqa: F401
-            except ImportError:
+            http2_spec = importlib.util.find_spec("h2")
+
+            if http2_spec is None:
                 raise ImportError(
                     "Attempted to use http2=True, but the 'h2' "
                     "package is not installed. Use 'pip install httpcore[http2]'."
