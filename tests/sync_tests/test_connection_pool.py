@@ -1,5 +1,5 @@
-import importlib.util
 from typing import Iterator, Tuple, Type
+from unittest.mock import patch
 
 import pytest
 
@@ -7,7 +7,7 @@ import httpcore
 from httpcore import LocalProtocolError
 from httpcore._async.base import ConnectionState
 from httpcore._types import URL, Headers, Origin
-from tests.utils import Server, patch_callable
+from tests.utils import Server
 
 
 class MockConnection(object):
@@ -202,12 +202,16 @@ def test_connection_with_exception_has_been_removed_from_pool():
         assert len(http.get_connection_info()) == 0
 
 
+@patch("importlib.util.find_spec", autospec=True)
 
-def test_that_we_cannot_create_http2_connection_pool_without_h2_lib():
-    with patch_callable(importlib.util, "find_spec", lambda _: None):
-        with pytest.raises(ImportError):
-            with httpcore.SyncConnectionPool(http2=True):
-                pass
+def test_that_we_cannot_create_http2_connection_pool_without_h2_lib(
+    find_spec_mock,
+):
+    find_spec_mock.return_value = None
+
+    with pytest.raises(ImportError):
+        with httpcore.SyncConnectionPool(http2=True):
+            pass
 
 
 
@@ -230,15 +234,15 @@ def test_that_we_cannot_request_url_without_host():
             http.request(b"GET", (b"http", b"", None, b"/"))
 
 
-def _new_conn_from_pool(Self: httpcore.SyncConnectionPool, origin: Origin):
-    origin_callable = Self._origin__get_connection_from_pool  # type: ignore
-    result = origin_callable(origin)
+class RequiringNewConnectionPool(httpcore.SyncConnectionPool):
+    def _get_connection_from_pool(self, origin: Origin):
+        result = super()._get_connection_from_pool(origin)
 
-    try:
-        return result
-    finally:
-        if result is not None:
-            result.close()
+        try:
+            return result
+        finally:
+            if result is not None:
+                result.close()
 
 
 
@@ -249,16 +253,11 @@ def test_that_new_connection_is_created_when_its_required(
     url = (b"https", *https_server.netloc, b"/")
 
     headers = [https_server.host_header]
-    with httpcore.SyncConnectionPool(http2=False) as http:
-        with patch_callable(
-            httpcore.SyncConnectionPool,
-            "_get_connection_from_pool",
-            _new_conn_from_pool,
-        ):
-            _, _, stream, _ = http.request(method, url, headers)
+    with RequiringNewConnectionPool(http2=False) as http:
+        _, _, stream, _ = http.request(method, url, headers)
 
-            read_body(stream)
+        read_body(stream)
 
-            _, _, stream, _ = http.request(method, url, headers)
+        _, _, stream, _ = http.request(method, url, headers)
 
-            read_body(stream)
+        read_body(stream)

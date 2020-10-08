@@ -58,16 +58,3 @@ def http_proxy_server(proxy_host: str, proxy_port: int):
     finally:
         if proc is not None:
             proc.kill()
-
-
-@contextlib.contextmanager
-def patch_callable(klass, method, replacement):
-    origin = getattr(klass, method)
-
-    try:
-        setattr(klass, method, replacement)
-        setattr(klass, f"_origin_{method}", origin)
-        yield
-    finally:
-        setattr(klass, method, origin)
-        delattr(klass, f"_origin_{method}")
