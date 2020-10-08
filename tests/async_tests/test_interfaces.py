@@ -363,7 +363,7 @@ async def test_explicit_backend_name(server: Server) -> None:
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
-@pytest.mark.trio
+@pytest.mark.anyio
 async def test_connection_pool_warns_but_accepts_max_keepalive(server: Server):
     max_keepalive_connections = 10
     method = b"GET"
