@@ -1,7 +1,7 @@
 import contextlib
 import os
-import threading
 import tempfile
+import threading
 import time
 import typing
 
