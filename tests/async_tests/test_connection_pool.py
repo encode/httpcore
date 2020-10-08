@@ -1,4 +1,4 @@
-from typing import AsyncIterator, Tuple
+from typing import AsyncIterator, Tuple, Type
 
 import pytest
 
@@ -53,14 +53,31 @@ class MockConnection(object):
         return False
 
 
+class BrokenConnection(MockConnection):
+    async def arequest(
+        self,
+        method: bytes,
+        url: URL,
+        headers: Headers = None,
+        stream: httpcore.AsyncByteStream = None,
+        ext: dict = None,
+    ) -> Tuple[int, Headers, httpcore.AsyncByteStream, dict]:
+        raise ConnectionRefusedError
+
+
 class ConnectionPool(httpcore.AsyncConnectionPool):
-    def __init__(self, http_version: str):
+    def __init__(
+        self,
+        http_version: str,
+        connection_class: Type = MockConnection,
+    ):
         super().__init__()
         self.http_version = http_version
+        self.connection_class = connection_class
         assert http_version in ("HTTP/1.1", "HTTP/2")
 
     def _create_connection(self, **kwargs):
-        return MockConnection(self.http_version)
+        return self.connection_class(self.http_version)
 
 
 async def read_body(stream: httpcore.AsyncByteStream) -> bytes:
@@ -153,3 +170,14 @@ async def test_concurrent_requests_h2() -> None:
         await read_body(stream_2)
         info = await http.get_connection_info()
         assert info == {"http://example.org": ["ConnectionState.IDLE"]}
+
+
+@pytest.mark.trio
+async def test_connection_with_exception_has_been_removed_from_pool():
+    async with ConnectionPool(
+        http_version="HTTP/2", connection_class=BrokenConnection
+    ) as http:
+        with pytest.raises(ConnectionRefusedError):
+            await http.arequest(b"GET", (b"http", b"example.org", None, b"/"))
+
+        assert len(await http.get_connection_info()) == 0
