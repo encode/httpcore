@@ -1,5 +1,4 @@
 import platform
-import ssl
 from functools import partial
 
 import pytest
