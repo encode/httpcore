@@ -91,9 +91,8 @@ class SocketStream(AsyncSocketStream):
             stream = stream.transport_stream
         assert isinstance(stream, trio.SocketStream)
 
-        # Counter-intuitively, what we really want to know here is whether the socket is
-        # *readable*, i.e. whether it would return immediately with empty bytes if we
-        # called `.recv()` on it, indicating that the other end has closed the socket.
+        # The other end has closed the connection if and only if the socket is readable,
+        # i.e. if it would return immediately with b"" if we called .recv() on it.
         # See: https://github.com/encode/httpx/pull/143#issuecomment-515181778
         return stream.socket.is_readable()
 

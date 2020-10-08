@@ -66,18 +66,25 @@ def origin_to_url_string(origin: Origin) -> str:
     return f"{scheme.decode('ascii')}://{host.decode('ascii')}{port}"
 
 
-def is_socket_at_eof(sock_fd: int) -> bool:
-    # 'Has the socket reached EOF?' is equivalent to 'Is the socket readable?'
-    # This is because if the other end has dropped the connection,
-    # a recv() call on the socket would return immediately (with empty bytes), and
-    # vice versa.
-    # See: https://github.com/encode/httpx/pull/143#issuecomment-515181778
-    # Typically we'd use the `select` module here, but we use the higher-level
-    # `selectors` module to improve cross-platform support.
+def is_socket_readable(sock_fd: int) -> bool:
+    """
+    Return whether a socket, as identifed by its file descriptor, is readable.
+
+    "A socket is readable" means that it would return immediately with b"" if we
+    called .recv() on it.
+
+    This is also equivalent to "the connection has been closed on the other end".
+
+    See: https://github.com/encode/httpx/pull/143#issuecomment-515181778
+    """
+    # NOTE: We prefer the `selectors` module to `select`, because of known limitations
+    # of `select` on Linux when dealing with many open file descriptors.
     # See: https://github.com/encode/httpcore/issues/182
+    # On Windows `select` is just fine, but that's also what `DefaultSelector` uses
+    # there, so `selectors` is really the generally-appropriate solution.
+    # See: https://github.com/encode/httpcore/pull/193#issuecomment-703129316
     sel = selectors.DefaultSelector()
-    sel.register(sock_fd, selectors.EVENT_READ)
-    read_ready = [
-        key.fileobj for key, mask in sel.select(0) if mask & selectors.EVENT_READ
-    ]
+    event = selectors.EVENT_READ
+    sel.register(sock_fd, event)
+    read_ready = [key.fileobj for key, mask in sel.select(0) if mask & event]
     return len(read_ready) > 0

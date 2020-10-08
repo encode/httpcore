@@ -14,7 +14,7 @@ from .._exceptions import (
     map_exceptions,
 )
 from .._types import TimeoutDict
-from .._utils import get_logger, is_socket_at_eof
+from .._utils import get_logger, is_socket_readable
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 logger = get_logger(__name__)
@@ -132,7 +132,7 @@ class SocketStream(AsyncSocketStream):
         await self.socket.close()
 
     def is_connection_dropped(self) -> bool:
-        return is_socket_at_eof(self.socket.fileno())
+        return is_socket_readable(self.socket.fileno())
 
 
 class CurioBackend(AsyncBackend):

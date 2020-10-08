@@ -16,7 +16,7 @@ from .._exceptions import (
     WriteTimeout,
 )
 from .._types import TimeoutDict
-from .._utils import is_socket_at_eof
+from .._utils import is_socket_readable
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 
@@ -86,8 +86,8 @@ class SocketStream(AsyncSocketStream):
                 raise CloseError from exc
 
     def is_connection_dropped(self) -> bool:
-        raw_socket = self.stream.extra(SocketAttribute.raw_socket)
-        return is_socket_at_eof(raw_socket.fileno())
+        sock = self.stream.extra(SocketAttribute.raw_socket)
+        return is_socket_readable(sock.fileno())
 
 
 class Lock(AsyncLock):

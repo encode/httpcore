@@ -14,7 +14,7 @@ from .._exceptions import (
     map_exceptions,
 )
 from .._types import TimeoutDict
-from .._utils import is_socket_at_eof
+from .._utils import is_socket_readable
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 SSL_MONKEY_PATCH_APPLIED = False
@@ -176,7 +176,7 @@ class SocketStream(AsyncSocketStream):
     def is_connection_dropped(self) -> bool:
         transport = self.stream_reader._transport  # type: ignore
         sock: socket.socket = transport.get_extra_info("socket")
-        return is_socket_at_eof(sock.fileno())
+        return is_socket_readable(sock.fileno())
 
 
 class Lock(AsyncLock):
