@@ -365,6 +365,10 @@ async def test_explicit_backend_name(server: Server) -> None:
 
 @pytest.mark.anyio
 @pytest.mark.usefixtures("too_many_open_files_minus_one")
+@pytest.mark.skipif(
+    platform.system() not in ("Linux", "Darwin"),
+    reason="Not a problem on Windows",
+)
 async def test_detect_broken_connection_many_open_files(
     backend: str, server: Server
 ) -> None:

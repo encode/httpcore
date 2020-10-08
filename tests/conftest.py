@@ -1,4 +1,3 @@
-import platform
 import contextlib
 import os
 import threading
@@ -79,10 +78,10 @@ def https_server() -> Server:
 
 @pytest.fixture(scope="function")
 def too_many_open_files_minus_one() -> typing.Iterator[None]:
-    if platform.system() == "Windows":
-        max_num_descriptors = 512
-    else:
-        max_num_descriptors = 1024
+    # See: https://man7.org/linux/man-pages/man2/select.2.html#top_of_page
+    # "To monitor file descriptors greater than 1023, use poll or epoll instead."
+    # (This is what the bug fix consisted in.)
+    max_num_descriptors = 1024
 
     file_descriptors = []
 
