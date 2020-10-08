@@ -133,9 +133,21 @@ class SocketStream(AsyncSocketStream):
         exc_map = {asyncio.TimeoutError: ReadTimeout, OSError: ReadError}
         async with self.read_lock:
             with map_exceptions(exc_map):
-                return await asyncio.wait_for(
-                    self.stream_reader.read(n), timeout.get("read")
-                )
+                try:
+                    return await asyncio.wait_for(
+                        self.stream_reader.read(n), timeout.get("read")
+                    )
+                except AttributeError as exc:  # pragma: nocover
+                    if "resume_reading" in str(exc):
+                        # Python's asyncio has a bug that can occur when a
+                        # connection has been closed, while it is paused.
+                        # See: https://github.com/encode/httpx/issues/1213
+                        #
+                        # Returning an empty byte-string to indicate connection
+                        # close will eventually raise an httpcore.RemoteProtocolError
+                        # to the user when this goes through our HTTP parsing layer.
+                        return b""
+                    raise
 
     async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         if not data:
