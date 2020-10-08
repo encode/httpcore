@@ -226,7 +226,6 @@ def test_http_request_local_address(backend: str, server: Server) -> None:
 
 def test_proxy_https_requests(
     proxy_server: URL,
-    ca_ssl_context: ssl.SSLContext,
     proxy_mode: str,
     http2: bool,
     https_server: Server,
@@ -238,7 +237,6 @@ def test_proxy_https_requests(
     with httpcore.SyncHTTPProxy(
         proxy_server,
         proxy_mode=proxy_mode,
-        ssl_context=ca_ssl_context,
         max_connections=max_connections,
         http2=http2,
     ) as http:

@@ -54,14 +54,14 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        "h11>=0.8,<0.10",
+        "h11==0.*",
         "sniffio==1.*",
         # Backports.
         "async_generator; python_version<'3.7'",
         "async-exit-stack; python_version<'3.7'",
     ],
     extras_require={
-        "http2": ["h2==3.*"],
+        "http2": ["h2>=3,<5"],
     },
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -76,6 +76,7 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3 :: Only",
     ],
 )

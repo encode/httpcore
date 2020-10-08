@@ -138,8 +138,17 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
             event = await self._receive_event(timeout)
             if isinstance(event, h11.Response):
                 break
+
         http_version = b"HTTP/" + event.http_version
-        return http_version, event.status_code, event.reason, event.headers
+
+        if hasattr(event.headers, "raw_items"):
+            # h11 version 0.11+ supports a `raw_items` interface to get the
+            # raw header casing, rather than the enforced lowercase headers.
+            headers = event.headers.raw_items()
+        else:
+            headers = event.headers
+
+        return http_version, event.status_code, event.reason, headers
 
     async def _receive_response_data(
         self, timeout: TimeoutDict

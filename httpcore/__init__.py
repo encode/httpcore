@@ -51,7 +51,7 @@ __all__ = [
     "WriteError",
     "WriteTimeout",
 ]
-__version__ = "0.11.1"
+__version__ = "0.12.0"
 
 __locals = locals()
 
