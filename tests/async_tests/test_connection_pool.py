@@ -54,6 +54,20 @@ class MockConnection(object):
         return False
 
 
+class AlwaysPendingConnection(MockConnection):
+    async def arequest(
+        self,
+        method: bytes,
+        url: URL,
+        headers: Headers = None,
+        stream: httpcore.AsyncByteStream = None,
+        ext: dict = None,
+    ) -> Tuple[int, Headers, httpcore.AsyncByteStream, dict]:
+        result = await super().arequest(method, url, headers, stream, ext)
+        self.state = ConnectionState.PENDING
+        return result
+
+
 class BrokenConnection(MockConnection):
     async def arequest(
         self,
@@ -74,6 +88,8 @@ class ConnectionPool(httpcore.AsyncConnectionPool):
     ):
         super().__init__()
         self.http_version = http_version
+        if http_version == "HTTP/2":
+            self._http2 = True
         self.connection_class = connection_class
         assert http_version in ("HTTP/1.1", "HTTP/2")
 
@@ -192,3 +208,16 @@ async def test_that_we_cannot_start_http2_connection_without_h2_lib(find_spec_mo
     with pytest.raises(ImportError):
         async with httpcore.AsyncConnectionPool(http2=True):
             pass
+
+
+@pytest.mark.trio
+async def test_that_we_can_reuse_pending_http2_connection():
+    async with ConnectionPool(
+        http_version="HTTP/2", connection_class=AlwaysPendingConnection
+    ) as http:
+        for _ in range(2):
+            _ = await http.arequest(b"GET", (b"http", b"example.org", None, b"/"))
+
+        info = await http.get_connection_info()
+
+        assert info == {"http://example.org": ["ConnectionState.PENDING"]}

@@ -255,7 +255,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         elif self._http2 and pending_connection is not None and not seen_http11:
             # If we have a PENDING connection, and no HTTP/1.1 connections
             # on this origin, then we can attempt to share the connection.
-            logger.trace("reusing pending connection=%r", connection)
+            logger.trace("reusing pending connection=%r", pending_connection)
             reuse_connection = pending_connection
 
         # Close any dropped connections.
