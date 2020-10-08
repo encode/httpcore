@@ -70,7 +70,7 @@ class AlwaysPendingConnection(MockConnection):
         return result
 
 
-class BrokenConnection(MockConnection):
+class RefusedConnection(MockConnection):
     async def arequest(
         self,
         method: bytes,
@@ -194,7 +194,7 @@ async def test_concurrent_requests_h2() -> None:
 @pytest.mark.trio
 async def test_connection_with_exception_has_been_removed_from_pool():
     async with ConnectionPool(
-        http_version="HTTP/2", connection_class=BrokenConnection
+        http_version="HTTP/2", connection_class=RefusedConnection
     ) as http:
         with pytest.raises(ConnectionRefusedError):
             await http.arequest(b"GET", (b"http", b"example.org", None, b"/"))
@@ -203,7 +203,7 @@ async def test_connection_with_exception_has_been_removed_from_pool():
 
 
 @pytest.mark.trio
-async def test_that_we_cannot_start_http2_connection_without_h2_lib():
+async def test_that_we_cannot_create_http2_connection_pool_without_h2_lib():
     with patch_callable(importlib.util, "find_spec", lambda _: None):
         with pytest.raises(ImportError):
             async with httpcore.AsyncConnectionPool(http2=True):
