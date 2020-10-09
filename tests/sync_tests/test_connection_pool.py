@@ -1,3 +1,4 @@
+import importlib.util
 from typing import Iterator, Tuple, Type
 from unittest.mock import patch
 
@@ -97,6 +98,18 @@ class ConnectionPool(httpcore.SyncConnectionPool):
 
     def _create_connection(self, **kwargs):
         return self.connection_class(self.http_version)
+
+
+class RequiringNewConnectionPool(httpcore.SyncConnectionPool):
+    def _get_connection_from_pool(self, origin: Origin):
+        result = super()._get_connection_from_pool(origin)
+
+        try:
+            return result
+        finally:
+            if result is not None:
+                # we cannot reuse this connection after being closed
+                result.close()
 
 
 def read_body(stream: httpcore.SyncByteStream) -> bytes:
@@ -202,16 +215,12 @@ def test_connection_with_exception_has_been_removed_from_pool():
         assert len(http.get_connection_info()) == 0
 
 
-@patch("importlib.util.find_spec", autospec=True)
 
-def test_that_we_cannot_create_http2_connection_pool_without_h2_lib(
-    find_spec_mock,
-):
-    find_spec_mock.return_value = None
-
-    with pytest.raises(ImportError):
-        with httpcore.SyncConnectionPool(http2=True):
-            pass
+def test_that_we_cannot_create_http2_connection_pool_without_h2_lib():
+    with patch.object(importlib.util, "find_spec", return_value=None):
+        with pytest.raises(ImportError):
+            with httpcore.SyncConnectionPool(http2=True):
+                pass  # pragma: nocover
 
 
 
@@ -234,25 +243,14 @@ def test_that_we_cannot_request_url_without_host():
             http.request(b"GET", (b"http", b"", None, b"/"))
 
 
-class RequiringNewConnectionPool(httpcore.SyncConnectionPool):
-    def _get_connection_from_pool(self, origin: Origin):
-        result = super()._get_connection_from_pool(origin)
-
-        try:
-            return result
-        finally:
-            if result is not None:
-                result.close()
-
-
 
 def test_that_new_connection_is_created_when_its_required(
     https_server: Server,
 ):
     method = b"GET"
     url = (b"https", *https_server.netloc, b"/")
-
     headers = [https_server.host_header]
+
     with RequiringNewConnectionPool(http2=False) as http:
         _, _, stream, _ = http.request(method, url, headers)
 

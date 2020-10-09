@@ -1,3 +1,4 @@
+import importlib.util
 from typing import AsyncIterator, Tuple, Type
 from unittest.mock import patch
 
@@ -97,6 +98,18 @@ class ConnectionPool(httpcore.AsyncConnectionPool):
 
     def _create_connection(self, **kwargs):
         return self.connection_class(self.http_version)
+
+
+class RequiringNewConnectionPool(httpcore.AsyncConnectionPool):
+    async def _get_connection_from_pool(self, origin: Origin):
+        result = await super()._get_connection_from_pool(origin)
+
+        try:
+            return result
+        finally:
+            if result is not None:
+                # we cannot reuse this connection after being closed
+                await result.aclose()
 
 
 async def read_body(stream: httpcore.AsyncByteStream) -> bytes:
@@ -202,16 +215,12 @@ async def test_connection_with_exception_has_been_removed_from_pool():
         assert len(await http.get_connection_info()) == 0
 
 
-@patch("importlib.util.find_spec", autospec=True)
 @pytest.mark.trio
-async def test_that_we_cannot_create_http2_connection_pool_without_h2_lib(
-    find_spec_mock,
-):
-    find_spec_mock.return_value = None
-
-    with pytest.raises(ImportError):
-        async with httpcore.AsyncConnectionPool(http2=True):
-            pass
+async def test_that_we_cannot_create_http2_connection_pool_without_h2_lib():
+    with patch.object(importlib.util, "find_spec", return_value=None):
+        with pytest.raises(ImportError):
+            async with httpcore.AsyncConnectionPool(http2=True):
+                pass  # pragma: nocover
 
 
 @pytest.mark.trio
@@ -234,25 +243,14 @@ async def test_that_we_cannot_request_url_without_host():
             await http.arequest(b"GET", (b"http", b"", None, b"/"))
 
 
-class RequiringNewConnectionPool(httpcore.AsyncConnectionPool):
-    async def _get_connection_from_pool(self, origin: Origin):
-        result = await super()._get_connection_from_pool(origin)
-
-        try:
-            return result
-        finally:
-            if result is not None:
-                await result.aclose()
-
-
 @pytest.mark.trio
 async def test_that_new_connection_is_created_when_its_required(
     https_server: Server,
 ):
     method = b"GET"
     url = (b"https", *https_server.netloc, b"/")
-
     headers = [https_server.host_header]
+
     async with RequiringNewConnectionPool(http2=False) as http:
         _, _, stream, _ = await http.arequest(method, url, headers)
 
