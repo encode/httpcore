@@ -34,10 +34,7 @@ class AsyncMockBackend(AutoBackend):
 
 async def read_body(stream: httpcore.AsyncByteStream) -> bytes:
     try:
-        body = []
-        async for chunk in stream:
-            body.append(chunk)
-        return b"".join(body)
+        return b"".join([chunk async for chunk in stream])
     finally:
         await stream.aclose()
 
