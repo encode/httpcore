@@ -80,6 +80,8 @@ def uds_server() -> typing.Iterator[UvicornServer]:
 
 @pytest.fixture(scope="session")
 def server() -> typing.Iterator[Server]:
+    server: Server  # Please mypy.
+
     if hypercorn is None:
         server = LiveServer(host=SERVER_HOST, port=SERVER_HTTP_PORT)
         yield server
@@ -124,6 +126,8 @@ def localhost_cert_private_key_file(
 def https_server(
     localhost_cert_pem_file: str, localhost_cert_private_key_file: str
 ) -> typing.Iterator[Server]:
+    server: Server  # Please mypy.
+
     if hypercorn is None:
         server = LiveServer(host=SERVER_HOST, port=SERVER_HTTPS_PORT)
         yield server
@@ -136,6 +140,5 @@ def https_server(
         certfile=localhost_cert_pem_file,
         keyfile=localhost_cert_private_key_file,
     )
-
     with server.serve_in_thread():
         yield server
