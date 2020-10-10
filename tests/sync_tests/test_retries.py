@@ -34,10 +34,7 @@ class SyncMockBackend(SyncBackend):
 
 def read_body(stream: httpcore.SyncByteStream) -> bytes:
     try:
-        body = []
-        for chunk in stream:
-            body.append(chunk)
-        return b"".join(body)
+        return b"".join([chunk for chunk in stream])
     finally:
         stream.close()
 
