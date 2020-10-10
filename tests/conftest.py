@@ -79,7 +79,7 @@ def uds_server() -> typing.Iterator[UvicornServer]:
 
 
 @pytest.fixture(scope="session")
-def server() -> typing.Iterator[Server]:
+def server() -> typing.Iterator[Server]:  # pragma: no cover
     server: Server  # Please mypy.
 
     if hypercorn is None:
@@ -125,7 +125,7 @@ def localhost_cert_private_key_file(
 @pytest.fixture(scope="session")
 def https_server(
     localhost_cert_pem_file: str, localhost_cert_private_key_file: str
-) -> typing.Iterator[Server]:
+) -> typing.Iterator[Server]:  # pragma: no cover
     server: Server  # Please mypy.
 
     if hypercorn is None:
