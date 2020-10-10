@@ -204,3 +204,6 @@ class CurioBackend(AsyncBackend):
 
     async def time(self) -> float:
         return await curio.clock()
+
+    async def sleep(self, seconds: float) -> None:
+        await curio.sleep(seconds)

@@ -1,8 +1,18 @@
 import warnings
 from ssl import SSLContext
-from typing import AsyncIterator, Callable, Dict, List, Optional, Set, Tuple, cast
+from typing import (
+    AsyncIterator,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
-from .._backends.auto import AsyncLock, AsyncSemaphore
+from .._backends.auto import AsyncBackend, AsyncLock, AsyncSemaphore
 from .._backends.base import lookup_async_backend
 from .._exceptions import LocalProtocolError, PoolTimeout, UnsupportedProtocol
 from .._threadlock import ThreadLock
@@ -84,6 +94,8 @@ class AsyncConnectionPool(AsyncHTTPTransport):
     `local_address="0.0.0.0"` will connect using an `AF_INET` address (IPv4),
     while using `local_address="::"` will connect using an `AF_INET6` address
     (IPv6).
+    * **retries** - `int` - The maximum number of retries when trying to establish a
+    connection.
     * **backend** - `str` - A name indicating which concurrency backend to use.
     """
 
@@ -96,8 +108,9 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         http2: bool = False,
         uds: str = None,
         local_address: str = None,
+        retries: int = 0,
         max_keepalive: int = None,
-        backend: str = "auto",
+        backend: Union[AsyncBackend, str] = "auto",
     ):
         if max_keepalive is not None:
             warnings.warn(
@@ -106,6 +119,9 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             )
             max_keepalive_connections = max_keepalive
 
+        if isinstance(backend, str):
+            backend = lookup_async_backend(backend)
+
         self._ssl_context = SSLContext() if ssl_context is None else ssl_context
         self._max_connections = max_connections
         self._max_keepalive_connections = max_keepalive_connections
@@ -113,9 +129,10 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         self._http2 = http2
         self._uds = uds
         self._local_address = local_address
+        self._retries = retries
         self._connections: Dict[Origin, Set[AsyncHTTPConnection]] = {}
         self._thread_lock = ThreadLock()
-        self._backend = lookup_async_backend(backend)
+        self._backend = backend
         self._next_keepalive_check = 0.0
 
         if http2:
@@ -157,6 +174,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             uds=self._uds,
             ssl_context=self._ssl_context,
             local_address=self._local_address,
+            retries=self._retries,
             backend=self._backend,
         )
 

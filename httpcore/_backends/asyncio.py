@@ -282,3 +282,6 @@ class AsyncioBackend(AsyncBackend):
     async def time(self) -> float:
         loop = asyncio.get_event_loop()
         return loop.time()
+
+    async def sleep(self, seconds: float) -> None:
+        await asyncio.sleep(seconds)
