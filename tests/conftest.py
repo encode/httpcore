@@ -14,7 +14,7 @@ from .utils import HypercornServer, LiveServer, Server, http_proxy_server
 
 try:
     import hypercorn
-except ImportError:
+except ImportError:  # pragma: no cover
     # Python 3.6.
     hypercorn = None  # type: ignore
     SERVER_HOST = "example.org"

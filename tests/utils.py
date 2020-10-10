@@ -11,7 +11,7 @@ import trio
 
 try:
     from hypercorn import config as hypercorn_config, trio as hypercorn_trio
-except ImportError:
+except ImportError:  # pragma: no cover
     # Python 3.6.
     hypercorn_config = None  # type: ignore
     hypercorn_trio = None  # type: ignore
@@ -54,7 +54,7 @@ class Server:
         raise NotImplementedError  # pragma: no cover
 
 
-class LiveServer(Server):
+class LiveServer(Server):  # pragma: no cover
     """
     A test server running on a live location.
     """
@@ -74,7 +74,7 @@ class LiveServer(Server):
         return (b"host", self._host.encode("ascii"))
 
 
-class HypercornServer(Server):
+class HypercornServer(Server):  # pragma: no cover
     """
     A test server running in-process, powered by Hypercorn.
     """
