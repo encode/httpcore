@@ -62,3 +62,6 @@ class AutoBackend(AsyncBackend):
 
     async def time(self) -> float:
         return await self.backend.time()
+
+    async def sleep(self, seconds: float) -> None:
+        await self.backend.sleep(seconds)

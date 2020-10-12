@@ -192,3 +192,6 @@ class AnyIOBackend(AsyncBackend):
 
     async def time(self) -> float:
         return await anyio.current_time()
+
+    async def sleep(self, seconds: float) -> None:
+        await anyio.sleep(seconds)
