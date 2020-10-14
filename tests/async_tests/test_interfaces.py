@@ -191,6 +191,36 @@ async def test_http_proxy(
         assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
 
 
+@pytest.mark.parametrize("proxy_mode", ["DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY"])
+@pytest.mark.parametrize("protocol,port", [(b"http", 80), (b"https", 443)])
+@pytest.mark.trio
+async def test_proxy_socket_does_not_leak_when_the_connection_hasnt_been_added_to_pool(
+    proxy_server: URL,
+    server: Server,
+    proxy_mode: str,
+    protocol: bytes,
+    port: int,
+):
+    method = b"GET"
+    url = (protocol, b"example.com", port, b"/")
+    headers = [(b"host", b"example.org")]
+
+    with pytest.warns(None) as recorded_warnings:
+        async with httpcore.AsyncHTTPProxy(proxy_server, proxy_mode=proxy_mode) as http:
+            for _ in range(100):
+                try:
+                    _ = await http.arequest(method, url, headers)
+                except httpcore.RemoteProtocolError:
+                    pass
+
+    # have to filter out https://github.com/encode/httpx/issues/825 from other tests
+    warnings_list = [
+        *filter(lambda warn: "asyncio" not in warn.filename, recorded_warnings.list)
+    ]
+
+    assert len(warnings_list) == 0
+
+
 @pytest.mark.anyio
 async def test_http_request_local_address(backend: str, server: Server) -> None:
     if backend == "auto" and lookup_async_backend() == "trio":
