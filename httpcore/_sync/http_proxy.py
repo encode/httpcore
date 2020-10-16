@@ -207,41 +207,51 @@ class SyncHTTPProxy(SyncConnectionPool):
             connect_url = self.proxy_origin + (target,)
             connect_headers = [(b"Host", target), (b"Accept", b"*/*")]
             connect_headers = merge_headers(connect_headers, self.proxy_headers)
-            (proxy_status_code, _, proxy_stream, _) = proxy_connection.request(
-                b"CONNECT", connect_url, headers=connect_headers, ext=ext
-            )
 
-            proxy_reason = get_reason_phrase(proxy_status_code)
-            logger.trace(
-                "tunnel_response proxy_status_code=%r proxy_reason=%r ",
-                proxy_status_code,
-                proxy_reason,
-            )
-            # Read the response data without closing the socket
-            for _ in proxy_stream:
-                pass
+            try:
+                (
+                    proxy_status_code,
+                    _,
+                    proxy_stream,
+                    _,
+                ) = proxy_connection.request(
+                    b"CONNECT", connect_url, headers=connect_headers, ext=ext
+                )
 
-            # See if the tunnel was successfully established.
-            if proxy_status_code < 200 or proxy_status_code > 299:
-                msg = "%d %s" % (proxy_status_code, proxy_reason)
-                raise ProxyError(msg)
+                proxy_reason = get_reason_phrase(proxy_status_code)
+                logger.trace(
+                    "tunnel_response proxy_status_code=%r proxy_reason=%r ",
+                    proxy_status_code,
+                    proxy_reason,
+                )
+                # Read the response data without closing the socket
+                for _ in proxy_stream:
+                    pass
 
-            # Upgrade to TLS if required
-            # We assume the target speaks TLS on the specified port
-            if scheme == b"https":
-                proxy_connection.start_tls(host, timeout)
+                # See if the tunnel was successfully established.
+                if proxy_status_code < 200 or proxy_status_code > 299:
+                    msg = "%d %s" % (proxy_status_code, proxy_reason)
+                    raise ProxyError(msg)
 
-            # The CONNECT request is successful, so we have now SWITCHED PROTOCOLS.
-            # This means the proxy connection is now unusable, and we must create
-            # a new one for regular requests, making sure to use the same socket to
-            # retain the tunnel.
-            connection = SyncHTTPConnection(
-                origin=origin,
-                http2=self._http2,
-                ssl_context=self._ssl_context,
-                socket=proxy_connection.socket,
-            )
-            self._add_to_pool(connection, timeout)
+                # Upgrade to TLS if required
+                # We assume the target speaks TLS on the specified port
+                if scheme == b"https":
+                    proxy_connection.start_tls(host, timeout)
+
+                # The CONNECT request is successful, so we have now SWITCHED PROTOCOLS.
+                # This means the proxy connection is now unusable, and we must create
+                # a new one for regular requests, making sure to use the same socket to
+                # retain the tunnel.
+                connection = SyncHTTPConnection(
+                    origin=origin,
+                    http2=self._http2,
+                    ssl_context=self._ssl_context,
+                    socket=proxy_connection.socket,
+                )
+                self._add_to_pool(connection, timeout)
+            except Exception:
+                proxy_connection.close()
+                raise
 
         # Once the connection has been established we can send requests on
         # it as normal.
