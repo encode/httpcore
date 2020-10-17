@@ -202,8 +202,8 @@ def test_proxy_socket_does_not_leak_when_the_connection_hasnt_been_added_to_pool
     port: int,
 ):
     method = b"GET"
-    url = (protocol, b"example.com", port, b"/")
-    headers = [(b"host", b"example.org")]
+    url = (protocol, b"blockedhost.example.com", port, b"/")
+    headers = [(b"host", b"blockedhost.example.com")]
 
     with pytest.warns(None) as recorded_warnings:
         with httpcore.SyncHTTPProxy(proxy_server, proxy_mode=proxy_mode) as http:
