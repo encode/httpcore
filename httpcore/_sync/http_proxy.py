@@ -249,9 +249,9 @@ class SyncHTTPProxy(SyncConnectionPool):
                     socket=proxy_connection.socket,
                 )
                 self._add_to_pool(connection, timeout)
-            except Exception:
+            except Exception as exc:
                 proxy_connection.close()
-                raise
+                raise ProxyError(exc)
 
         # Once the connection has been established we can send requests on
         # it as normal.

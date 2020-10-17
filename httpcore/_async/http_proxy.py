@@ -249,9 +249,9 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                     socket=proxy_connection.socket,
                 )
                 await self._add_to_pool(connection, timeout)
-            except Exception:
+            except Exception as exc:
                 await proxy_connection.aclose()
-                raise
+                raise ProxyError(exc)
 
         # Once the connection has been established we can send requests on
         # it as normal.
