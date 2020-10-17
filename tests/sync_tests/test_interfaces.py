@@ -214,11 +214,11 @@ def test_proxy_socket_does_not_leak_when_the_connection_hasnt_been_added_to_pool
                     pass
 
     # have to filter out https://github.com/encode/httpx/issues/825 from other tests
-    warnings_list = [
+    warnings = [
         *filter(lambda warn: "asyncio" not in warn.filename, recorded_warnings.list)
     ]
 
-    assert len(warnings_list) == 0
+    assert len(warnings) == 0
 
 
 
