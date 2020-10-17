@@ -1,7 +1,7 @@
 import itertools
 import logging
 import os
-import selectors
+import select
 import sys
 import typing
 
@@ -80,18 +80,17 @@ def is_socket_readable(sock_fd: int) -> bool:
     "A socket is readable" means that the read buffer isn't empty, i.e. that calling
     .recv() on it would immediately return some data.
     """
-    # NOTE: check for readability without actually attempting to read, because we don't
-    # want to block forever if it's not readable. Instead, we use a select-based
-    # approach.
-    # Note that we use `selectors` rather than `select`, because of known limitations
-    # of `select()` on Linux when dealing with many open file descriptors.
-    # See: https://github.com/encode/httpcore/issues/182
-    # On Windows `select()` is just fine, and it also happens to be what the
-    # `selectors.DefaultSelector()` class uses.
-    # So, all in all, `selectors` should work just fine everywhere.
-    # See: https://github.com/encode/httpcore/pull/193#issuecomment-703129316
-    sel = selectors.DefaultSelector()
-    event = selectors.EVENT_READ
-    sel.register(sock_fd, event)
-    read_ready = [key.fileobj for key, mask in sel.select(0) if mask & event]
-    return len(read_ready) > 0
+    # NOTE: we want check for readability without actually attempting to read, because
+    # we don't want to block forever if it's not readable.
+
+    # The implementation below was stolen from:
+    # https://github.com/python-trio/trio/blob/20ee2b1b7376db637435d80e266212a35837ddcc/trio/_socket.py#L471-L478
+    # See also: https://github.com/encode/httpcore/pull/193#issuecomment-703129316
+
+    # Use select.select on Windows, and select.poll everywhere else
+    if sys.platform == "win32":
+        rready, _, _ = select.select([sock_fd], [], [], 0)
+        return bool(rready)
+    p = select.poll()
+    p.register(sock_fd, select.POLLIN)
+    return bool(p.poll(0))
