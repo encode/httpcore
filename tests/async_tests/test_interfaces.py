@@ -210,7 +210,7 @@ async def test_proxy_socket_does_not_leak_when_the_connection_hasnt_been_added_t
             for _ in range(100):
                 try:
                     _ = await http.arequest(method, url, headers)
-                except httpcore.RemoteProtocolError:
+                except (httpcore.ProxyError, httpcore.RemoteProtocolError):
                     pass
 
     # have to filter out https://github.com/encode/httpx/issues/825 from other tests

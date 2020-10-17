@@ -237,21 +237,21 @@ class SyncHTTPProxy(SyncConnectionPool):
                 # We assume the target speaks TLS on the specified port
                 if scheme == b"https":
                     proxy_connection.start_tls(host, timeout)
-
-                # The CONNECT request is successful, so we have now SWITCHED PROTOCOLS.
-                # This means the proxy connection is now unusable, and we must create
-                # a new one for regular requests, making sure to use the same socket to
-                # retain the tunnel.
-                connection = SyncHTTPConnection(
-                    origin=origin,
-                    http2=self._http2,
-                    ssl_context=self._ssl_context,
-                    socket=proxy_connection.socket,
-                )
-                self._add_to_pool(connection, timeout)
             except Exception as exc:
                 proxy_connection.close()
                 raise ProxyError(exc)
+
+            # The CONNECT request is successful, so we have now SWITCHED PROTOCOLS.
+            # This means the proxy connection is now unusable, and we must create
+            # a new one for regular requests, making sure to use the same socket to
+            # retain the tunnel.
+            connection = SyncHTTPConnection(
+                origin=origin,
+                http2=self._http2,
+                ssl_context=self._ssl_context,
+                socket=proxy_connection.socket,
+            )
+            self._add_to_pool(connection, timeout)
 
         # Once the connection has been established we can send requests on
         # it as normal.
