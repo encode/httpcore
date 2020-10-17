@@ -1,3 +1,4 @@
+import itertools
 import logging
 import os
 import selectors
@@ -64,6 +65,12 @@ def origin_to_url_string(origin: Origin) -> str:
     scheme, host, explicit_port = origin
     port = f":{explicit_port}" if explicit_port != DEFAULT_PORTS[scheme] else ""
     return f"{scheme.decode('ascii')}://{host.decode('ascii')}{port}"
+
+
+def exponential_backoff(factor: float) -> typing.Iterator[float]:
+    yield 0
+    for n in itertools.count(2):
+        yield factor * (2 ** (n - 2))
 
 
 def is_socket_readable(sock_fd: int) -> bool:
