@@ -132,3 +132,6 @@ class AsyncBackend:
 
     async def time(self) -> float:
         raise NotImplementedError()  # pragma: no cover
+
+    async def sleep(self, seconds: float) -> None:
+        raise NotImplementedError()  # pragma: no cover
