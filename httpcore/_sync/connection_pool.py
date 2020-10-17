@@ -245,7 +245,14 @@ class SyncConnectionPool(SyncHTTPTransport):
                 seen_http11 = True
 
             if connection.state == ConnectionState.IDLE:
-                if connection.is_connection_dropped():
+                if connection.is_socket_readable():
+                    # If the socket is readable while the connection is idle (meaning
+                    # we don't expect the server to send any data), then the only valid
+                    # reason is that the other end has disconnected, which means we
+                    # should drop the connection too.
+                    # (For a detailed run-through of what a "readable" socket is, and
+                    # why this is the best thing for us to do here, see:
+                    # https://github.com/encode/httpx/pull/143#issuecomment-515181778)
                     logger.trace("removing dropped idle connection=%r", connection)
                     # IDLE connections that have been dropped should be
                     # removed from the pool.

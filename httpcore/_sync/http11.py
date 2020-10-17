@@ -201,5 +201,5 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
 
             self.socket.close()
 
-    def is_connection_dropped(self) -> bool:
-        return self.socket.is_connection_dropped()
+    def is_socket_readable(self) -> bool:
+        return self.socket.is_readable()

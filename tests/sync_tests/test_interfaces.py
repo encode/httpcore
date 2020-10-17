@@ -156,7 +156,7 @@ def test_http_request_cannot_reuse_dropped_connection(
 
         # Mock the connection as having been dropped.
         connection = list(http._connections[url[:3]])[0]  # type: ignore
-        connection.is_connection_dropped = lambda: True  # type: ignore
+        connection.is_socket_readable = lambda: True  # type: ignore
 
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
@@ -361,3 +361,32 @@ def test_explicit_backend_name(server: Server) -> None:
         assert status_code == 200
         assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
+
+
+
+@pytest.mark.usefixtures("too_many_open_files_minus_one")
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only a problem on Linux")
+def test_broken_socket_detection_many_open_files(
+    backend: str, server: Server
+) -> None:
+    """
+    Regression test for: https://github.com/encode/httpcore/issues/182
+    """
+    with httpcore.SyncConnectionPool(backend=backend) as http:
+        method = b"GET"
+        url = (b"http", *server.netloc, b"/")
+        headers = [server.host_header]
+
+        # * First attempt will be successful because it will grab the last
+        # available fd before what select() supports on the platform.
+        # * Second attempt would have failed without a fix, due to a "filedescriptor
+        # out of range in select()" exception.
+        for _ in range(2):
+            status_code, response_headers, stream, ext = http.request(
+                method, url, headers
+            )
+            read_body(stream)
+
+            assert status_code == 200
+            assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+            assert len(http._connections[url[:3]]) == 1  # type: ignore
