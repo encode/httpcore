@@ -156,7 +156,7 @@ async def test_http_request_cannot_reuse_dropped_connection(
 
         # Mock the connection as having been dropped.
         connection = list(http._connections[url[:3]])[0]  # type: ignore
-        connection.is_connection_dropped = lambda: True  # type: ignore
+        connection.is_socket_readable = lambda: True  # type: ignore
 
         method = b"GET"
         url = (b"http", *server.netloc, b"/")

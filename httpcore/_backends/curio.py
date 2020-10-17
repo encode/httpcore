@@ -131,7 +131,7 @@ class SocketStream(AsyncSocketStream):
         await self.stream.close()
         await self.socket.close()
 
-    def is_connection_dropped(self) -> bool:
+    def is_readable(self) -> bool:
         return is_socket_readable(self.socket.fileno())
 
 

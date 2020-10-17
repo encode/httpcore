@@ -77,7 +77,7 @@ class SyncSocketStream:
             with map_exceptions({socket.error: CloseError}):
                 self.sock.close()
 
-    def is_connection_dropped(self) -> bool:
+    def is_readable(self) -> bool:
         return is_socket_readable(self.sock.fileno())
 
 

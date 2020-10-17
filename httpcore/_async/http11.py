@@ -201,5 +201,5 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
 
             await self.socket.aclose()
 
-    def is_connection_dropped(self) -> bool:
-        return self.socket.is_connection_dropped()
+    def is_socket_readable(self) -> bool:
+        return self.socket.is_readable()

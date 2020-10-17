@@ -173,7 +173,7 @@ class SocketStream(AsyncSocketStream):
             with map_exceptions({OSError: CloseError}):
                 self.stream_writer.close()
 
-    def is_connection_dropped(self) -> bool:
+    def is_readable(self) -> bool:
         transport = self.stream_reader._transport  # type: ignore
         sock: socket.socket = transport.get_extra_info("socket")
         return is_socket_readable(sock.fileno())

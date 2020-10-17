@@ -165,8 +165,8 @@ class SyncHTTPConnection(SyncHTTPTransport):
             return ConnectionState.PENDING
         return self.connection.get_state()
 
-    def is_connection_dropped(self) -> bool:
-        return self.connection is not None and self.connection.is_connection_dropped()
+    def is_socket_readable(self) -> bool:
+        return self.connection is not None and self.connection.is_socket_readable()
 
     def mark_as_ready(self) -> None:
         if self.connection is not None:

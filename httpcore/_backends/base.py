@@ -63,7 +63,7 @@ class AsyncSocketStream:
     async def aclose(self) -> None:
         raise NotImplementedError()  # pragma: no cover
 
-    def is_connection_dropped(self) -> bool:
+    def is_readable(self) -> bool:
         raise NotImplementedError()  # pragma: no cover
 
 

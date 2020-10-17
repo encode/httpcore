@@ -85,7 +85,7 @@ class SocketStream(AsyncSocketStream):
             except BrokenResourceError as exc:
                 raise CloseError from exc
 
-    def is_connection_dropped(self) -> bool:
+    def is_readable(self) -> bool:
         sock = self.stream.extra(SocketAttribute.raw_socket)
         return is_socket_readable(sock.fileno())
 

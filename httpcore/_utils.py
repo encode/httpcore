@@ -77,18 +77,18 @@ def is_socket_readable(sock_fd: int) -> bool:
     """
     Return whether a socket, as identifed by its file descriptor, is readable.
 
-    "A socket is readable" means that it would return immediately with b"" if we
-    called .recv() on it.
-
-    This is also equivalent to "the connection has been closed on the other end".
-
-    See: https://github.com/encode/httpx/pull/143#issuecomment-515181778
+    "A socket is readable" means that the read buffer isn't empty, i.e. that calling
+    .recv() on it would immediately return some data.
     """
-    # NOTE: We prefer the `selectors` module to `select`, because of known limitations
-    # of `select` on Linux when dealing with many open file descriptors.
+    # NOTE: check for readability without actually attempting to read, because we don't
+    # want to block forever if it's not readable. Instead, we use a select-based
+    # approach.
+    # Note that we use `selectors` rather than `select`, because of known limitations
+    # of `select()` on Linux when dealing with many open file descriptors.
     # See: https://github.com/encode/httpcore/issues/182
-    # On Windows `select` is just fine, but that's also what `DefaultSelector` uses
-    # there, so `selectors` is really the generally-appropriate solution.
+    # On Windows `select()` is just fine, and it also happens to be what the
+    # `selectors.DefaultSelector()` class uses.
+    # So, all in all, `selectors` should work just fine everywhere.
     # See: https://github.com/encode/httpcore/pull/193#issuecomment-703129316
     sel = selectors.DefaultSelector()
     event = selectors.EVENT_READ
