@@ -1,4 +1,3 @@
-import select
 from ssl import SSLContext, SSLSocket
 from typing import Optional
 
@@ -15,7 +14,7 @@ from .._exceptions import (
     map_exceptions,
 )
 from .._types import TimeoutDict
-from .._utils import get_logger
+from .._utils import get_logger, is_socket_readable
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 logger = get_logger(__name__)
@@ -132,10 +131,8 @@ class SocketStream(AsyncSocketStream):
         await self.stream.close()
         await self.socket.close()
 
-    def is_connection_dropped(self) -> bool:
-        rready, _, _ = select.select([self.socket.fileno()], [], [], 0)
-
-        return bool(rready)
+    def is_readable(self) -> bool:
+        return is_socket_readable(self.socket.fileno())
 
 
 class CurioBackend(AsyncBackend):

@@ -49,7 +49,7 @@ class MockConnection(object):
     def mark_as_ready(self) -> None:
         self.state = ConnectionState.READY
 
-    def is_connection_dropped(self) -> bool:
+    def is_socket_readable(self) -> bool:
         return False
 
 

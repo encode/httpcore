@@ -73,3 +73,29 @@ def server() -> Server:
 @pytest.fixture(scope="session")
 def https_server() -> Server:
     return Server(SERVER_HOST, port=443)
+
+
+@pytest.fixture(scope="function")
+def too_many_open_files_minus_one() -> typing.Iterator[None]:
+    # Fixture for test regression on https://github.com/encode/httpcore/issues/182
+    # Max number of descriptors chosen according to:
+    # See: https://man7.org/linux/man-pages/man2/select.2.html#top_of_page
+    # "To monitor file descriptors greater than 1023, use poll or epoll instead."
+    max_num_descriptors = 1023
+
+    files = []
+
+    while True:
+        f = open("/dev/null")
+        # Leave one file descriptor available for a transport to perform
+        # a successful request.
+        if f.fileno() > max_num_descriptors - 1:
+            f.close()
+            break
+        files.append(f)
+
+    try:
+        yield
+    finally:
+        for f in files:
+            f.close()
