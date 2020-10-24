@@ -1,4 +1,3 @@
-import socket
 from ssl import SSLContext
 from typing import Optional
 
@@ -139,7 +138,6 @@ class AnyIOBackend(AsyncBackend):
         unicode_host = hostname.decode("utf-8")
         exc_map = {
             OSError: ConnectError,
-            socket.gaierror: ConnectError,
             TimeoutError: ConnectTimeout,
             BrokenResourceError: ConnectError,
         }

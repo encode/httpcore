@@ -1,4 +1,3 @@
-import socket
 from ssl import SSLContext
 from typing import Optional
 
@@ -147,7 +146,6 @@ class TrioBackend(AsyncBackend):
         kwargs: dict = {} if local_address is None else {"local_address": local_address}
         exc_map = {
             OSError: ConnectError,
-            socket.gaierror: ConnectError,
             trio.TooSlowError: ConnectTimeout,
             trio.BrokenResourceError: ConnectError,
         }
