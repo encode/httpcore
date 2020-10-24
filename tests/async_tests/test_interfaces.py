@@ -396,7 +396,7 @@ async def test_broken_socket_detection_many_open_files(
 @pytest.mark.parametrize(
     "url",
     [
-        pytest.param((b"http", b"localhost", 123456, b"/"), id="connection-refused"),
+        pytest.param((b"http", b"localhost", 12345, b"/"), id="connection-refused"),
         pytest.param(
             (b"http", b"doesnotexistatall.org", None, b"/"), id="dns-resolution-failed"
         ),
