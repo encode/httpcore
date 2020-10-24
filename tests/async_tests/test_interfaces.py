@@ -390,3 +390,36 @@ async def test_broken_socket_detection_many_open_files(
             assert status_code == 200
             assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
             assert len(http._connections[url[:3]]) == 1  # type: ignore
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "url",
+    [
+        pytest.param((b"http", b"localhost", 123456, b"/"), id="connection-refused"),
+        pytest.param(
+            (b"http", b"doesnotexistatall.org", None, b"/"), id="nodename-not-found"
+        ),
+    ],
+)
+async def test_cannot_connect_tcp(backend: str, url) -> None:
+    """
+    A properly wrapped error is raised when connecting to the server fails.
+    """
+    async with httpcore.AsyncConnectionPool(backend=backend) as http:
+        method = b"GET"
+        with pytest.raises(httpcore.ConnectError):
+            await http.arequest(method, url)
+
+
+@pytest.mark.anyio
+async def test_cannot_connect_uds(backend: str) -> None:
+    """
+    A properly wrapped error is raised when connecting to the UDS server fails.
+    """
+    uds = "/tmp/doesnotexist.sock"
+    method = b"GET"
+    url = (b"http", b"localhost", None, b"/")
+    async with httpcore.AsyncConnectionPool(backend=backend, uds=uds) as http:
+        with pytest.raises(httpcore.ConnectError):
+            await http.arequest(method, url)

@@ -1,3 +1,4 @@
+import socket
 from ssl import SSLContext, SSLSocket
 from typing import Optional
 
@@ -180,6 +181,7 @@ class CurioBackend(AsyncBackend):
             curio.TaskTimeout: ConnectTimeout,
             curio.CurioError: ConnectError,
             OSError: ConnectError,
+            socket.gaierror: ConnectError,
         }
         host = hostname.decode("ascii")
         kwargs = (

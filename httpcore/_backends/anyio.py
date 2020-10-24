@@ -1,3 +1,4 @@
+import socket
 from ssl import SSLContext
 from typing import Optional
 
@@ -14,6 +15,7 @@ from .._exceptions import (
     ReadTimeout,
     WriteError,
     WriteTimeout,
+    map_exceptions,
 )
 from .._types import TimeoutDict
 from .._utils import is_socket_readable
@@ -135,8 +137,14 @@ class AnyIOBackend(AsyncBackend):
     ) -> AsyncSocketStream:
         connect_timeout = timeout.get("connect")
         unicode_host = hostname.decode("utf-8")
+        exc_map = {
+            OSError: ConnectError,
+            socket.gaierror: ConnectError,
+            TimeoutError: ConnectTimeout,
+            BrokenResourceError: ConnectError,
+        }
 
-        try:
+        with map_exceptions(exc_map):
             async with anyio.fail_after(connect_timeout):
                 stream: anyio.abc.ByteStream
                 stream = await anyio.connect_tcp(
@@ -149,10 +157,6 @@ class AnyIOBackend(AsyncBackend):
                         ssl_context=ssl_context,
                         standard_compatible=False,
                     )
-        except TimeoutError:
-            raise ConnectTimeout from None
-        except BrokenResourceError as exc:
-            raise ConnectError from exc
 
         return SocketStream(stream=stream)
 
@@ -165,8 +169,13 @@ class AnyIOBackend(AsyncBackend):
     ) -> AsyncSocketStream:
         connect_timeout = timeout.get("connect")
         unicode_host = hostname.decode("utf-8")
+        exc_map = {
+            OSError: ConnectError,
+            TimeoutError: ConnectTimeout,
+            BrokenResourceError: ConnectError,
+        }
 
-        try:
+        with map_exceptions(exc_map):
             async with anyio.fail_after(connect_timeout):
                 stream: anyio.abc.ByteStream = await anyio.connect_unix(path)
                 if ssl_context:
@@ -176,10 +185,6 @@ class AnyIOBackend(AsyncBackend):
                         ssl_context=ssl_context,
                         standard_compatible=False,
                     )
-        except TimeoutError:
-            raise ConnectTimeout from None
-        except BrokenResourceError as exc:
-            raise ConnectError from exc
 
         return SocketStream(stream=stream)
 
