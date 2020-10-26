@@ -145,6 +145,7 @@ class TrioBackend(AsyncBackend):
         #  argument has been passed.
         kwargs: dict = {} if local_address is None else {"local_address": local_address}
         exc_map = {
+            OSError: ConnectError,
             trio.TooSlowError: ConnectTimeout,
             trio.BrokenResourceError: ConnectError,
         }
@@ -172,6 +173,7 @@ class TrioBackend(AsyncBackend):
     ) -> AsyncSocketStream:
         connect_timeout = none_as_inf(timeout.get("connect"))
         exc_map = {
+            OSError: ConnectError,
             trio.TooSlowError: ConnectTimeout,
             trio.BrokenResourceError: ConnectError,
         }
