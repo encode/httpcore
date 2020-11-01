@@ -26,5 +26,5 @@ isort==5.5.4
 mypy==0.790
 pproxy==2.3.7
 pytest==6.1.1
-pytest-trio==0.6.0
+pytest-trio==0.7.0
 uvicorn==0.12.1
