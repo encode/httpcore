@@ -5,14 +5,26 @@ import time
 import typing
 
 import pytest
+import trustme
 import uvicorn
 
 from httpcore._types import URL
 
-from .utils import Server, http_proxy_server
+from .utils import HypercornServer, LiveServer, Server, http_proxy_server
 
-SERVER_HOST = "example.org"
-HTTPS_SERVER_URL = "https://example.org"
+try:
+    import hypercorn
+except ImportError:  # pragma: no cover  # Python 3.6
+    hypercorn = None  # type: ignore
+    SERVER_HOST = "example.org"
+    SERVER_HTTP_PORT = 80
+    SERVER_HTTPS_PORT = 443
+    HTTPS_SERVER_URL = "https://example.org"
+else:
+    SERVER_HOST = "localhost"
+    SERVER_HTTP_PORT = 8002
+    SERVER_HTTPS_PORT = 8003
+    HTTPS_SERVER_URL = f"https://localhost:{SERVER_HTTPS_PORT}"
 
 
 @pytest.fixture(scope="session")
@@ -66,13 +78,69 @@ def uds_server() -> typing.Iterator[UvicornServer]:
 
 
 @pytest.fixture(scope="session")
-def server() -> Server:
-    return Server(SERVER_HOST, port=80)
+def server() -> typing.Iterator[Server]:  # pragma: no cover
+    server: Server  # Please mypy.
+
+    if hypercorn is None:
+        server = LiveServer(host=SERVER_HOST, port=SERVER_HTTP_PORT)
+        yield server
+        return
+
+    server = HypercornServer(app=app, host=SERVER_HOST, port=SERVER_HTTP_PORT)
+    with server.serve_in_thread():
+        yield server
 
 
 @pytest.fixture(scope="session")
-def https_server() -> Server:
-    return Server(SERVER_HOST, port=443)
+def cert_authority() -> trustme.CA:
+    return trustme.CA()
+
+
+@pytest.fixture(scope="session")
+def localhost_cert(cert_authority: trustme.CA) -> trustme.LeafCert:
+    return cert_authority.issue_cert("localhost")
+
+
+@pytest.fixture(scope="session")
+def localhost_cert_path(localhost_cert: trustme.LeafCert) -> typing.Iterator[str]:
+    with localhost_cert.private_key_and_cert_chain_pem.tempfile() as tmp:
+        yield tmp
+
+
+@pytest.fixture(scope="session")
+def localhost_cert_pem_file(localhost_cert: trustme.LeafCert) -> typing.Iterator[str]:
+    with localhost_cert.cert_chain_pems[0].tempfile() as tmp:
+        yield tmp
+
+
+@pytest.fixture(scope="session")
+def localhost_cert_private_key_file(
+    localhost_cert: trustme.LeafCert,
+) -> typing.Iterator[str]:
+    with localhost_cert.private_key_pem.tempfile() as tmp:
+        yield tmp
+
+
+@pytest.fixture(scope="session")
+def https_server(
+    localhost_cert_pem_file: str, localhost_cert_private_key_file: str
+) -> typing.Iterator[Server]:  # pragma: no cover
+    server: Server  # Please mypy.
+
+    if hypercorn is None:
+        server = LiveServer(host=SERVER_HOST, port=SERVER_HTTPS_PORT)
+        yield server
+        return
+
+    server = HypercornServer(
+        app=app,
+        host=SERVER_HOST,
+        port=SERVER_HTTPS_PORT,
+        certfile=localhost_cert_pem_file,
+        keyfile=localhost_cert_private_key_file,
+    )
+    with server.serve_in_thread():
+        yield server
 
 
 @pytest.fixture(scope="function")
