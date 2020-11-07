@@ -4,7 +4,7 @@ import pytest
 
 import httpcore
 from httpcore._types import URL
-from tests.conftest import HTTPS_SERVER_URL, UvicornServer
+from tests.conftest import HTTPS_SERVER_URL
 from tests.utils import Server, lookup_async_backend
 
 
@@ -347,17 +347,17 @@ async def test_connection_pool_get_connection_info(
 )
 @pytest.mark.anyio
 async def test_http_request_unix_domain_socket(
-    uds_server: UvicornServer, backend: str
+    uds_server: Server, backend: str
 ) -> None:
-    uds = uds_server.config.uds
-    assert uds is not None
+    uds = uds_server.uds
     async with httpcore.AsyncConnectionPool(uds=uds, backend=backend) as http:
         method = b"GET"
         url = (b"http", b"localhost", None, b"/")
         headers = [(b"host", b"localhost")]
         status_code, headers, stream, ext = await http.arequest(method, url, headers)
         assert status_code == 200
-        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+        reason = "OK" if uds_server.sends_reason else ""
+        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
         body = await read_body(stream)
         assert body == b"Hello, world!"
 

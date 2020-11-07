@@ -29,4 +29,4 @@ pproxy==2.3.7
 pytest==6.1.2
 pytest-trio==0.7.0
 trustme==0.6.0
-uvicorn==0.12.1
+uvicorn==0.12.1; python_version < '3.7'
