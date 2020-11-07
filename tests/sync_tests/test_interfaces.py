@@ -430,7 +430,8 @@ def test_broken_socket_detection_many_open_files(
             read_body(stream)
 
             assert status_code == 200
-            assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+            reason = "OK" if server.sends_reason else ""
+            assert ext == {"http_version": "HTTP/1.1", "reason": reason}
             assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
