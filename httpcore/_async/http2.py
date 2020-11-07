@@ -158,8 +158,8 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
     def is_closed(self) -> bool:
         return False
 
-    def is_connection_dropped(self) -> bool:
-        return self.socket.is_connection_dropped()
+    def is_socket_readable(self) -> bool:
+        return self.socket.is_readable()
 
     async def aclose(self) -> None:
         logger.trace("close_connection=%r", self)

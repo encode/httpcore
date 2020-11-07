@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.12.1 (November 7th, 2020)
+
+### Added
+
+- Add connect retries. (Pull #221)
+
+### Fixed
+
+- Tweak detection of dropped connections, resolving an issue with open files limits on Linux. (Pull #185)
+- Avoid leaking connections when establishing an HTTP tunnel to a proxy has failed. (Pull #223)
+- Properly wrap OS errors when using `trio`. (Pull #225)
+
 ## 0.12.0 (October 6th, 2020)
 
 ### Changed

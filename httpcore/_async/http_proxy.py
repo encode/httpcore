@@ -207,29 +207,39 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             connect_url = self.proxy_origin + (target,)
             connect_headers = [(b"Host", target), (b"Accept", b"*/*")]
             connect_headers = merge_headers(connect_headers, self.proxy_headers)
-            (proxy_status_code, _, proxy_stream, _) = await proxy_connection.arequest(
-                b"CONNECT", connect_url, headers=connect_headers, ext=ext
-            )
 
-            proxy_reason = get_reason_phrase(proxy_status_code)
-            logger.trace(
-                "tunnel_response proxy_status_code=%r proxy_reason=%r ",
-                proxy_status_code,
-                proxy_reason,
-            )
-            # Read the response data without closing the socket
-            async for _ in proxy_stream:
-                pass
+            try:
+                (
+                    proxy_status_code,
+                    _,
+                    proxy_stream,
+                    _,
+                ) = await proxy_connection.arequest(
+                    b"CONNECT", connect_url, headers=connect_headers, ext=ext
+                )
 
-            # See if the tunnel was successfully established.
-            if proxy_status_code < 200 or proxy_status_code > 299:
-                msg = "%d %s" % (proxy_status_code, proxy_reason)
-                raise ProxyError(msg)
+                proxy_reason = get_reason_phrase(proxy_status_code)
+                logger.trace(
+                    "tunnel_response proxy_status_code=%r proxy_reason=%r ",
+                    proxy_status_code,
+                    proxy_reason,
+                )
+                # Read the response data without closing the socket
+                async for _ in proxy_stream:
+                    pass
 
-            # Upgrade to TLS if required
-            # We assume the target speaks TLS on the specified port
-            if scheme == b"https":
-                await proxy_connection.start_tls(host, timeout)
+                # See if the tunnel was successfully established.
+                if proxy_status_code < 200 or proxy_status_code > 299:
+                    msg = "%d %s" % (proxy_status_code, proxy_reason)
+                    raise ProxyError(msg)
+
+                # Upgrade to TLS if required
+                # We assume the target speaks TLS on the specified port
+                if scheme == b"https":
+                    await proxy_connection.start_tls(host, timeout)
+            except Exception as exc:
+                await proxy_connection.aclose()
+                raise ProxyError(exc)
 
             # The CONNECT request is successful, so we have now SWITCHED PROTOCOLS.
             # This means the proxy connection is now unusable, and we must create

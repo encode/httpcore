@@ -1,4 +1,5 @@
 import asyncio
+import socket
 from ssl import SSLContext
 from typing import Optional
 
@@ -13,6 +14,7 @@ from .._exceptions import (
     map_exceptions,
 )
 from .._types import TimeoutDict
+from .._utils import is_socket_readable
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 SSL_MONKEY_PATCH_APPLIED = False
@@ -171,21 +173,10 @@ class SocketStream(AsyncSocketStream):
             with map_exceptions({OSError: CloseError}):
                 self.stream_writer.close()
 
-    def is_connection_dropped(self) -> bool:
-        # Counter-intuitively, what we really want to know here is whether the socket is
-        # *readable*, i.e. whether it would return immediately with empty bytes if we
-        # called `.recv()` on it, indicating that the other end has closed the socket.
-        # See: https://github.com/encode/httpx/pull/143#issuecomment-515181778
-        #
-        # As it turns out, asyncio checks for readability in the background
-        # (see: https://github.com/encode/httpx/pull/276#discussion_r322000402),
-        # so checking for EOF or readability here would yield the same result.
-        #
-        # At the cost of rigour, we check for EOF instead of readability because asyncio
-        # does not expose any public API to check for readability.
-        # (For a solution that uses private asyncio APIs, see:
-        # https://github.com/encode/httpx/pull/143#issuecomment-515202982)
-        return self.stream_reader.at_eof()
+    def is_readable(self) -> bool:
+        transport = self.stream_reader._transport  # type: ignore
+        sock: socket.socket = transport.get_extra_info("socket")
+        return is_socket_readable(sock.fileno())
 
 
 class Lock(AsyncLock):

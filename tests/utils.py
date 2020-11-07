@@ -2,9 +2,10 @@ import contextlib
 import functools
 import socket
 import subprocess
+import tempfile
 import threading
 import time
-from typing import Callable, Iterator, Tuple
+from typing import Callable, Iterator, List, Tuple
 
 import sniffio
 import trio
@@ -141,15 +142,50 @@ class HypercornServer(Server):  # pragma: no cover
 
 @contextlib.contextmanager
 def http_proxy_server(proxy_host: str, proxy_port: int):
+    """
+    This function launches pproxy process like this:
+    $ pproxy -b <blocked_hosts_file> -l http://127.0.0.1:8080
+    What does it mean?
+    It runs HTTP proxy on 127.0.0.1:8080 and blocks access to some external hosts,
+        specified in blocked_hosts_file
 
+    Relevant pproxy docs could be found in their github repo:
+        https://github.com/qwj/python-proxy
+    """
     proc = None
-    try:
-        command = ["pproxy", "-l", f"http://{proxy_host}:{proxy_port}/"]
-        proc = subprocess.Popen(command)
 
-        _wait_can_connect(proxy_host, proxy_port)
+    with create_proxy_block_file(["blockedhost.example.com"]) as block_file_name:
+        try:
+            command = [
+                "pproxy",
+                "-b",
+                block_file_name,
+                "-l",
+                f"http://{proxy_host}:{proxy_port}/",
+            ]
+            proc = subprocess.Popen(command)
 
-        yield b"http", proxy_host.encode(), proxy_port, b"/"
-    finally:
-        if proc is not None:
-            proc.kill()
+            _wait_can_connect(proxy_host, proxy_port)
+
+            yield b"http", proxy_host.encode(), proxy_port, b"/"
+        finally:
+            if proc is not None:
+                proc.kill()
+
+
+@contextlib.contextmanager
+def create_proxy_block_file(blocked_domains: List[str]):
+    """
+    The context manager yields pproxy block file.
+    This file should contain line delimited hostnames. We use it in the following test:
+        test_proxy_socket_does_not_leak_when_the_connection_hasnt_been_added_to_pool
+    """
+    with tempfile.NamedTemporaryFile(delete=True, mode="w+") as file:
+
+        for domain in blocked_domains:
+            file.write(domain)
+            file.write("\n")
+
+        file.flush()
+
+        yield file.name

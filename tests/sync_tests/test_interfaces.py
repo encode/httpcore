@@ -164,7 +164,7 @@ def test_http_request_cannot_reuse_dropped_connection(
 
         # Mock the connection as having been dropped.
         connection = list(http._connections[url[:3]])[0]  # type: ignore
-        connection.is_connection_dropped = lambda: True  # type: ignore
+        connection.is_socket_readable = lambda: True  # type: ignore
 
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
@@ -199,6 +199,36 @@ def test_http_proxy(
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
         assert ext == {"http_version": "HTTP/1.1", "reason": reason}
+
+
+@pytest.mark.parametrize("proxy_mode", ["DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY"])
+@pytest.mark.parametrize("protocol,port", [(b"http", 80), (b"https", 443)])
+
+def test_proxy_socket_does_not_leak_when_the_connection_hasnt_been_added_to_pool(
+    proxy_server: URL,
+    server: Server,
+    proxy_mode: str,
+    protocol: bytes,
+    port: int,
+):
+    method = b"GET"
+    url = (protocol, b"blockedhost.example.com", port, b"/")
+    headers = [(b"host", b"blockedhost.example.com")]
+
+    with pytest.warns(None) as recorded_warnings:
+        with httpcore.SyncHTTPProxy(proxy_server, proxy_mode=proxy_mode) as http:
+            for _ in range(100):
+                try:
+                    _ = http.request(method, url, headers)
+                except (httpcore.ProxyError, httpcore.RemoteProtocolError):
+                    pass
+
+    # have to filter out https://github.com/encode/httpx/issues/825 from other tests
+    warnings = [
+        *filter(lambda warn: "asyncio" not in warn.filename, recorded_warnings.list)
+    ]
+
+    assert len(warnings) == 0
 
 
 
@@ -373,3 +403,65 @@ def test_explicit_backend_name(server: Server) -> None:
         reason = "OK" if server.sends_reason else ""
         assert ext == {"http_version": "HTTP/1.1", "reason": reason}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
+
+
+
+@pytest.mark.usefixtures("too_many_open_files_minus_one")
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only a problem on Linux")
+def test_broken_socket_detection_many_open_files(
+    backend: str, server: Server
+) -> None:
+    """
+    Regression test for: https://github.com/encode/httpcore/issues/182
+    """
+    with httpcore.SyncConnectionPool(backend=backend) as http:
+        method = b"GET"
+        url = (b"http", *server.netloc, b"/")
+        headers = [server.host_header]
+
+        # * First attempt will be successful because it will grab the last
+        # available fd before what select() supports on the platform.
+        # * Second attempt would have failed without a fix, due to a "filedescriptor
+        # out of range in select()" exception.
+        for _ in range(2):
+            status_code, response_headers, stream, ext = http.request(
+                method, url, headers
+            )
+            read_body(stream)
+
+            assert status_code == 200
+            assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+            assert len(http._connections[url[:3]]) == 1  # type: ignore
+
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        pytest.param((b"http", b"localhost", 12345, b"/"), id="connection-refused"),
+        pytest.param(
+            (b"http", b"doesnotexistatall.org", None, b"/"), id="dns-resolution-failed"
+        ),
+    ],
+)
+def test_cannot_connect_tcp(backend: str, url) -> None:
+    """
+    A properly wrapped error is raised when connecting to the server fails.
+    """
+    with httpcore.SyncConnectionPool(backend=backend) as http:
+        method = b"GET"
+        with pytest.raises(httpcore.ConnectError):
+            http.request(method, url)
+
+
+
+def test_cannot_connect_uds(backend: str) -> None:
+    """
+    A properly wrapped error is raised when connecting to the UDS server fails.
+    """
+    uds = "/tmp/doesnotexist.sock"
+    method = b"GET"
+    url = (b"http", b"localhost", None, b"/")
+    with httpcore.SyncConnectionPool(backend=backend, uds=uds) as http:
+        with pytest.raises(httpcore.ConnectError):
+            http.request(method, url)
