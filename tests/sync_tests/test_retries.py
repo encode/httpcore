@@ -92,7 +92,7 @@ def test_retries_enabled(server: Server) -> None:
         backend.push(httpcore.ConnectError(), None)
         response = http.request(method, url, headers)
         assert backend.pop_open_tcp_stream_intervals() == [
-            pytest.approx(0, abs=1e-3),  # Retry immediately.
+            pytest.approx(0, abs=5e-3),  # Retry immediately.
         ]
         status_code, _, stream, _ = response
         assert status_code == 200
@@ -107,7 +107,7 @@ def test_retries_enabled(server: Server) -> None:
         )
         response = http.request(method, url, headers)
         assert backend.pop_open_tcp_stream_intervals() == [
-            pytest.approx(0, abs=1e-3),  # Retry immediately.
+            pytest.approx(0, abs=5e-3),  # Retry immediately.
             pytest.approx(0.5, rel=0.1),  # First backoff.
             pytest.approx(1.0, rel=0.1),  # Second (increased) backoff.
         ]
