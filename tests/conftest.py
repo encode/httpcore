@@ -6,7 +6,6 @@ import typing
 
 import pytest
 import trustme
-import uvicorn
 
 from httpcore._types import URL
 
@@ -36,23 +35,6 @@ def proxy_server() -> typing.Iterator[URL]:
         yield proxy_url
 
 
-class UvicornServer(uvicorn.Server):
-    def install_signal_handlers(self) -> None:
-        pass
-
-    @contextlib.contextmanager
-    def serve_in_thread(self) -> typing.Iterator[None]:
-        thread = threading.Thread(target=self.run)
-        thread.start()
-        try:
-            while not self.started:
-                time.sleep(1e-3)
-            yield
-        finally:
-            self.should_exit = True
-            thread.join()
-
-
 async def app(scope: dict, receive: typing.Callable, send: typing.Callable) -> None:
     assert scope["type"] == "http"
     await send(
@@ -66,15 +48,52 @@ async def app(scope: dict, receive: typing.Callable, send: typing.Callable) -> N
 
 
 @pytest.fixture(scope="session")
-def uds_server() -> typing.Iterator[UvicornServer]:
+def uds() -> typing.Iterator[str]:
     uds = "test_server.sock"
-    config = uvicorn.Config(app=app, lifespan="off", loop="asyncio", uds=uds)
-    server = UvicornServer(config=config)
     try:
-        with server.serve_in_thread():
-            yield server
+        yield uds
     finally:
         os.remove(uds)
+
+
+@pytest.fixture(scope="session")
+def uds_server(uds: str) -> typing.Iterator[Server]:
+    if hypercorn is not None:
+        server = HypercornServer(app=app, bind=f"unix:{uds}")
+        with server.serve_in_thread():
+            yield server
+    else:
+        # On Python 3.6, use Uvicorn as a fallback.
+        import uvicorn
+
+        class UvicornServer(Server, uvicorn.Server):
+            sends_reason = True
+
+            @property
+            def uds(self) -> str:
+                uds = self.config.uds
+                assert uds is not None
+                return uds
+
+            def install_signal_handlers(self) -> None:
+                pass
+
+            @contextlib.contextmanager
+            def serve_in_thread(self) -> typing.Iterator[None]:
+                thread = threading.Thread(target=self.run)
+                thread.start()
+                try:
+                    while not self.started:
+                        time.sleep(1e-3)
+                    yield
+                finally:
+                    self.should_exit = True
+                    thread.join()
+
+        config = uvicorn.Config(app=app, lifespan="off", loop="asyncio", uds=uds)
+        server = UvicornServer(config=config)
+        with server.serve_in_thread():
+            yield server
 
 
 @pytest.fixture(scope="session")
@@ -86,7 +105,7 @@ def server() -> typing.Iterator[Server]:  # pragma: no cover
         yield server
         return
 
-    server = HypercornServer(app=app, host=SERVER_HOST, port=SERVER_HTTP_PORT)
+    server = HypercornServer(app=app, bind=f"{SERVER_HOST}:{SERVER_HTTP_PORT}")
     with server.serve_in_thread():
         yield server
 
@@ -134,8 +153,7 @@ def https_server(
 
     server = HypercornServer(
         app=app,
-        host=SERVER_HOST,
-        port=SERVER_HTTPS_PORT,
+        bind=f"{SERVER_HOST}:{SERVER_HTTPS_PORT}",
         certfile=localhost_cert_pem_file,
         keyfile=localhost_cert_private_key_file,
     )

@@ -50,6 +50,10 @@ class Server:
         raise NotImplementedError  # pragma: no cover
 
     @property
+    def uds(self) -> str:
+        raise NotImplementedError  # pragma: no cover
+
+    @property
     def host_header(self) -> Tuple[bytes, bytes]:
         raise NotImplementedError  # pragma: no cover
 
@@ -84,18 +88,14 @@ class HypercornServer(Server):  # pragma: no cover  # Python 3.7+ only
     def __init__(
         self,
         app: Callable,
-        host: str,
-        port: int,
-        bind: str = None,
+        bind: str,
         certfile: str = None,
         keyfile: str = None,
     ) -> None:
         assert hypercorn_config is not None
         self._app = app
-        self._host = host
-        self._port = port
         self._config = hypercorn_config.Config()
-        self._config.bind = [bind or f"{host}:{port}"]
+        self._config.bind = [bind]
         self._config.certfile = certfile
         self._config.keyfile = keyfile
         self._config.worker_class = "asyncio"
@@ -104,11 +104,20 @@ class HypercornServer(Server):  # pragma: no cover  # Python 3.7+ only
 
     @property
     def netloc(self) -> Tuple[bytes, int]:
-        return (self._host.encode("ascii"), self._port)
+        bind = self._config.bind[0]
+        host, port = bind.split(":")
+        return (host.encode("ascii"), int(port))
 
     @property
     def host_header(self) -> Tuple[bytes, bytes]:
-        return (b"host", self._host.encode("ascii"))
+        return (b"host", self.netloc[0])
+
+    @property
+    def uds(self) -> str:
+        bind = self._config.bind[0]
+        scheme, _, uds = bind.partition(":")
+        assert scheme == "unix"
+        return uds
 
     def _run(self) -> None:
         async def shutdown_trigger() -> None:
