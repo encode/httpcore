@@ -107,15 +107,18 @@ class SocketStream(AsyncSocketStream):
 
         loop_start_tls = getattr(loop, "start_tls", backport_start_tls)
 
-        transport = await asyncio.wait_for(
-            loop_start_tls(
-                transport,
-                protocol,
-                ssl_context,
-                server_hostname=hostname.decode("ascii"),
-            ),
-            timeout=timeout.get("connect"),
-        )
+        exc_map = {asyncio.TimeoutError: ConnectTimeout, OSError: ConnectError}
+
+        with map_exceptions(exc_map):
+            transport = await asyncio.wait_for(
+                loop_start_tls(
+                    transport,
+                    protocol,
+                    ssl_context,
+                    server_hostname=hostname.decode("ascii"),
+                ),
+                timeout=timeout.get("connect"),
+            )
 
         stream_reader.set_transport(transport)
         stream_writer = asyncio.StreamWriter(
