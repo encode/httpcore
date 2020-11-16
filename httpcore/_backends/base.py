@@ -63,7 +63,7 @@ class AsyncSocketStream:
     async def aclose(self) -> None:
         raise NotImplementedError()  # pragma: no cover
 
-    def is_connection_dropped(self) -> bool:
+    def is_readable(self) -> bool:
         raise NotImplementedError()  # pragma: no cover
 
 
@@ -131,4 +131,7 @@ class AsyncBackend:
         raise NotImplementedError()  # pragma: no cover
 
     async def time(self) -> float:
+        raise NotImplementedError()  # pragma: no cover
+
+    async def sleep(self, seconds: float) -> None:
         raise NotImplementedError()  # pragma: no cover

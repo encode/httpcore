@@ -1,4 +1,3 @@
-import select
 from ssl import SSLContext
 from typing import Optional
 
@@ -15,8 +14,10 @@ from .._exceptions import (
     ReadTimeout,
     WriteError,
     WriteTimeout,
+    map_exceptions,
 )
 from .._types import TimeoutDict
+from .._utils import is_socket_readable
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 
@@ -85,10 +86,9 @@ class SocketStream(AsyncSocketStream):
             except BrokenResourceError as exc:
                 raise CloseError from exc
 
-    def is_connection_dropped(self) -> bool:
-        raw_socket = self.stream.extra(SocketAttribute.raw_socket)
-        rready, _wready, _xready = select.select([raw_socket], [], [], 0)
-        return bool(rready)
+    def is_readable(self) -> bool:
+        sock = self.stream.extra(SocketAttribute.raw_socket)
+        return is_socket_readable(sock.fileno())
 
 
 class Lock(AsyncLock):
@@ -136,8 +136,13 @@ class AnyIOBackend(AsyncBackend):
     ) -> AsyncSocketStream:
         connect_timeout = timeout.get("connect")
         unicode_host = hostname.decode("utf-8")
+        exc_map = {
+            OSError: ConnectError,
+            TimeoutError: ConnectTimeout,
+            BrokenResourceError: ConnectError,
+        }
 
-        try:
+        with map_exceptions(exc_map):
             async with anyio.fail_after(connect_timeout):
                 stream: anyio.abc.ByteStream
                 stream = await anyio.connect_tcp(
@@ -150,10 +155,6 @@ class AnyIOBackend(AsyncBackend):
                         ssl_context=ssl_context,
                         standard_compatible=False,
                     )
-        except TimeoutError:
-            raise ConnectTimeout from None
-        except BrokenResourceError as exc:
-            raise ConnectError from exc
 
         return SocketStream(stream=stream)
 
@@ -166,8 +167,13 @@ class AnyIOBackend(AsyncBackend):
     ) -> AsyncSocketStream:
         connect_timeout = timeout.get("connect")
         unicode_host = hostname.decode("utf-8")
+        exc_map = {
+            OSError: ConnectError,
+            TimeoutError: ConnectTimeout,
+            BrokenResourceError: ConnectError,
+        }
 
-        try:
+        with map_exceptions(exc_map):
             async with anyio.fail_after(connect_timeout):
                 stream: anyio.abc.ByteStream = await anyio.connect_unix(path)
                 if ssl_context:
@@ -177,10 +183,6 @@ class AnyIOBackend(AsyncBackend):
                         ssl_context=ssl_context,
                         standard_compatible=False,
                     )
-        except TimeoutError:
-            raise ConnectTimeout from None
-        except BrokenResourceError as exc:
-            raise ConnectError from exc
 
         return SocketStream(stream=stream)
 
@@ -192,3 +194,6 @@ class AnyIOBackend(AsyncBackend):
 
     async def time(self) -> float:
         return await anyio.current_time()
+
+    async def sleep(self, seconds: float) -> None:
+        await anyio.sleep(seconds)

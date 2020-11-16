@@ -1,5 +1,7 @@
+import itertools
 import logging
 import os
+import select
 import sys
 import typing
 
@@ -63,3 +65,32 @@ def origin_to_url_string(origin: Origin) -> str:
     scheme, host, explicit_port = origin
     port = f":{explicit_port}" if explicit_port != DEFAULT_PORTS[scheme] else ""
     return f"{scheme.decode('ascii')}://{host.decode('ascii')}{port}"
+
+
+def exponential_backoff(factor: float) -> typing.Iterator[float]:
+    yield 0
+    for n in itertools.count(2):
+        yield factor * (2 ** (n - 2))
+
+
+def is_socket_readable(sock_fd: int) -> bool:
+    """
+    Return whether a socket, as identifed by its file descriptor, is readable.
+
+    "A socket is readable" means that the read buffer isn't empty, i.e. that calling
+    .recv() on it would immediately return some data.
+    """
+    # NOTE: we want check for readability without actually attempting to read, because
+    # we don't want to block forever if it's not readable.
+
+    # The implementation below was stolen from:
+    # https://github.com/python-trio/trio/blob/20ee2b1b7376db637435d80e266212a35837ddcc/trio/_socket.py#L471-L478
+    # See also: https://github.com/encode/httpcore/pull/193#issuecomment-703129316
+
+    # Use select.select on Windows, and select.poll everywhere else
+    if sys.platform == "win32":
+        rready, _, _ = select.select([sock_fd], [], [], 0)
+        return bool(rready)
+    p = select.poll()
+    p.register(sock_fd, select.POLLIN)
+    return bool(p.poll(0))

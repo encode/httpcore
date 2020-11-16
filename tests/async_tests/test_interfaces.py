@@ -6,7 +6,7 @@ import pytest
 import httpcore
 from httpcore._compat import AsyncExitStack
 from httpcore._types import URL
-from tests.conftest import HTTPS_SERVER_URL, UvicornServer
+from tests.conftest import HTTPS_SERVER_URL
 from tests.utils import Server, lookup_async_backend
 
 
@@ -30,7 +30,8 @@ async def test_http_request(backend: str, server: Server) -> None:
             await read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+        reason = "OK" if server.sends_reason else ""
+        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -45,7 +46,8 @@ async def test_https_request(backend: str, https_server: Server) -> None:
             await read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+        reason = "OK" if https_server.sends_reason else ""
+        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -86,7 +88,8 @@ async def test_closing_http_request(backend: str, server: Server) -> None:
             await read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+        reason = "OK" if server.sends_reason else ""
+        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
         assert url[:3] not in http._connections  # type: ignore
 
 
@@ -101,7 +104,8 @@ async def test_http_request_reuse_connection(backend: str, server: Server) -> No
             await read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+        reason = "OK" if server.sends_reason else ""
+        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
         method = b"GET"
@@ -112,7 +116,8 @@ async def test_http_request_reuse_connection(backend: str, server: Server) -> No
             await read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+        reason = "OK" if server.sends_reason else ""
+        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -129,7 +134,8 @@ async def test_https_request_reuse_connection(
             await read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+        reason = "OK" if https_server.sends_reason else ""
+        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
         method = b"GET"
@@ -140,7 +146,8 @@ async def test_https_request_reuse_connection(
             await read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+        reason = "OK" if https_server.sends_reason else ""
+        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -157,12 +164,13 @@ async def test_http_request_cannot_reuse_dropped_connection(
             await read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+        reason = "OK" if server.sends_reason else ""
+        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
         # Mock the connection as having been dropped.
         connection = list(http._connections[url[:3]])[0]  # type: ignore
-        connection.is_connection_dropped = lambda: True  # type: ignore
+        connection.is_socket_readable = lambda: True  # type: ignore
 
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
@@ -172,7 +180,8 @@ async def test_http_request_cannot_reuse_dropped_connection(
             await read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+        reason = "OK" if server.sends_reason else ""
+        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -196,7 +205,39 @@ async def test_http_proxy(
             await read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+        reason = "OK" if server.sends_reason else ""
+        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
+
+
+@pytest.mark.parametrize("proxy_mode", ["DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY"])
+@pytest.mark.parametrize("protocol,port", [(b"http", 80), (b"https", 443)])
+@pytest.mark.trio
+async def test_proxy_socket_does_not_leak_when_the_connection_hasnt_been_added_to_pool(
+    proxy_server: URL,
+    server: Server,
+    proxy_mode: str,
+    protocol: bytes,
+    port: int,
+):
+    method = b"GET"
+    url = (protocol, b"blockedhost.example.com", port, b"/")
+    headers = [(b"host", b"blockedhost.example.com")]
+
+    with pytest.warns(None) as recorded_warnings:
+        async with httpcore.AsyncHTTPProxy(proxy_server, proxy_mode=proxy_mode) as http:
+            for _ in range(100):
+                try:
+                    async with http.arequest(method, url, headers) as _:
+                        pass
+                except (httpcore.ProxyError, httpcore.RemoteProtocolError):
+                    pass
+
+    # have to filter out https://github.com/encode/httpx/issues/825 from other tests
+    warnings = [
+        *filter(lambda warn: "asyncio" not in warn.filename, recorded_warnings.list)
+    ]
+
+    assert len(warnings) == 0
 
 
 @pytest.mark.anyio
@@ -215,7 +256,8 @@ async def test_http_request_local_address(backend: str, server: Server) -> None:
             await read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+        reason = "OK" if server.sends_reason else ""
+        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
 
 
@@ -321,10 +363,9 @@ async def test_connection_pool_get_connection_info(
 )
 @pytest.mark.anyio
 async def test_http_request_unix_domain_socket(
-    uds_server: UvicornServer, backend: str
+    uds_server: Server, backend: str
 ) -> None:
-    uds = uds_server.config.uds
-    assert uds is not None
+    uds = uds_server.uds
     async with httpcore.AsyncConnectionPool(uds=uds, backend=backend) as http:
         method = b"GET"
         url = (b"http", b"localhost", None, b"/")
@@ -332,7 +373,8 @@ async def test_http_request_unix_domain_socket(
         async with http.arequest(method, url, headers) as response:
             status_code, headers, stream, ext = response
             assert status_code == 200
-            assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+            expected_reason = "OK" if uds_server.sends_reason else ""
+            assert ext == {"http_version": "HTTP/1.1", "reason": expected_reason}
             body = await read_body(stream)
             assert body == b"Hello, world!"
 
@@ -374,5 +416,70 @@ async def test_explicit_backend_name(server: Server) -> None:
             await read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": "HTTP/1.1", "reason": "OK"}
+        reason = "OK" if server.sends_reason else ""
+        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
         assert len(http._connections[url[:3]]) == 1  # type: ignore
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("too_many_open_files_minus_one")
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only a problem on Linux")
+async def test_broken_socket_detection_many_open_files(
+    backend: str, server: Server
+) -> None:
+    """
+    Regression test for: https://github.com/encode/httpcore/issues/182
+    """
+    async with httpcore.AsyncConnectionPool(backend=backend) as http:
+        method = b"GET"
+        url = (b"http", *server.netloc, b"/")
+        headers = [server.host_header]
+
+        # * First attempt will be successful because it will grab the last
+        # available fd before what select() supports on the platform.
+        # * Second attempt would have failed without a fix, due to a "filedescriptor
+        # out of range in select()" exception.
+        for _ in range(2):
+            async with http.arequest(method, url, headers) as response:
+                status_code, response_headers, stream, ext = response
+                await read_body(stream)
+
+            assert status_code == 200
+            reason = "OK" if server.sends_reason else ""
+            assert ext == {"http_version": "HTTP/1.1", "reason": reason}
+            assert len(http._connections[url[:3]]) == 1  # type: ignore
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "url",
+    [
+        pytest.param((b"http", b"localhost", 12345, b"/"), id="connection-refused"),
+        pytest.param(
+            (b"http", b"doesnotexistatall.org", None, b"/"), id="dns-resolution-failed"
+        ),
+    ],
+)
+async def test_cannot_connect_tcp(backend: str, url) -> None:
+    """
+    A properly wrapped error is raised when connecting to the server fails.
+    """
+    async with httpcore.AsyncConnectionPool(backend=backend) as http:
+        method = b"GET"
+        with pytest.raises(httpcore.ConnectError):
+            async with http.arequest(method, url) as _:
+                pass
+
+
+@pytest.mark.anyio
+async def test_cannot_connect_uds(backend: str) -> None:
+    """
+    A properly wrapped error is raised when connecting to the UDS server fails.
+    """
+    uds = "/tmp/doesnotexist.sock"
+    method = b"GET"
+    url = (b"http", b"localhost", None, b"/")
+    async with httpcore.AsyncConnectionPool(backend=backend, uds=uds) as http:
+        with pytest.raises(httpcore.ConnectError):
+            async with http.arequest(method, url) as _:
+                pass
