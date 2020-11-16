@@ -301,18 +301,14 @@ class SyncHTTP2Stream:
 
         # Receive the response.
         status_code, headers = self.receive_response(timeout)
-        response_stream = IteratorByteStream(
-            iterator=self.body_iter(timeout), close_func=self._response_closed
-        )
+        response_stream = IteratorByteStream(iterator=self.body_iter(timeout))
 
         ext = {
             "http_version": "HTTP/2",
         }
 
-        try:
-            yield (status_code, headers, response_stream, ext)
-        finally:
-            response_stream.close()
+        yield (status_code, headers, response_stream, ext)
+        self._response_closed()
 
     def send_headers(
         self,

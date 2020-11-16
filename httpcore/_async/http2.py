@@ -301,18 +301,14 @@ class AsyncHTTP2Stream:
 
         # Receive the response.
         status_code, headers = await self.receive_response(timeout)
-        response_stream = AsyncIteratorByteStream(
-            aiterator=self.body_iter(timeout), aclose_func=self._response_closed
-        )
+        response_stream = AsyncIteratorByteStream(aiterator=self.body_iter(timeout))
 
         ext = {
             "http_version": "HTTP/2",
         }
 
-        try:
-            yield (status_code, headers, response_stream, ext)
-        finally:
-            await response_stream.aclose()
+        yield (status_code, headers, response_stream, ext)
+        await self._response_closed()
 
     async def send_headers(
         self,
