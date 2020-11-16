@@ -74,16 +74,13 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         ) = await self._receive_response(timeout)
         response_stream = AsyncIteratorByteStream(
             aiterator=self._receive_response_data(timeout),
-            aclose_func=self._response_closed,
         )
         ext = {
             "http_version": http_version.decode("ascii", errors="ignore"),
             "reason": reason_phrase.decode("ascii", errors="ignore"),
         }
-        try:
-            yield (status_code, headers, response_stream, ext)
-        finally:
-            await response_stream.aclose()
+        yield (status_code, headers, response_stream, ext)
+        await self._response_closed()
 
     async def start_tls(
         self, hostname: bytes, timeout: TimeoutDict = None

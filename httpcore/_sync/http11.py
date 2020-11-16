@@ -74,16 +74,13 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
         ) = self._receive_response(timeout)
         response_stream = IteratorByteStream(
             iterator=self._receive_response_data(timeout),
-            close_func=self._response_closed,
         )
         ext = {
             "http_version": http_version.decode("ascii", errors="ignore"),
             "reason": reason_phrase.decode("ascii", errors="ignore"),
         }
-        try:
-            yield (status_code, headers, response_stream, ext)
-        finally:
-            response_stream.close()
+        yield (status_code, headers, response_stream, ext)
+        self._response_closed()
 
     def start_tls(
         self, hostname: bytes, timeout: TimeoutDict = None
