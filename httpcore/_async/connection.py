@@ -1,9 +1,10 @@
 from ssl import SSLContext
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple, cast
 
-from .._backends.auto import AsyncLock, AsyncSocketStream, AutoBackend
+from .._backends.auto import AsyncBackend, AsyncLock, AsyncSocketStream, AutoBackend
+from .._exceptions import ConnectError, ConnectTimeout
 from .._types import URL, Headers, Origin, TimeoutDict
-from .._utils import get_logger, url_to_origin
+from .._utils import exponential_backoff, get_logger, url_to_origin
 from .base import (
     AsyncByteStream,
     AsyncHTTPTransport,
@@ -13,6 +14,8 @@ from .base import (
 from .http import AsyncBaseHTTPConnection
 
 logger = get_logger(__name__)
+
+RETRIES_BACKOFF_FACTOR = 0.5  # 0s, 0.5s, 1s, 2s, 4s, etc.
 
 
 class AsyncHTTPConnection(AsyncHTTPTransport):
@@ -24,6 +27,8 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         ssl_context: SSLContext = None,
         socket: AsyncSocketStream = None,
         local_address: str = None,
+        retries: int = 0,
+        backend: AsyncBackend = None,
     ):
         self.origin = origin
         self.http2 = http2
@@ -31,6 +36,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
         self.socket = socket
         self.local_address = local_address
+        self.retries = retries
 
         if self.http2:
             self.ssl_context.set_alpn_protocols(["http/1.1", "h2"])
@@ -40,7 +46,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         self.is_http2 = False
         self.connect_failed = False
         self.expires_at: Optional[float] = None
-        self.backend = AutoBackend()
+        self.backend = AutoBackend() if backend is None else backend
 
     def __repr__(self) -> str:
         http_version = "UNKNOWN"
@@ -65,15 +71,18 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
             self._request_lock = self.backend.create_lock()
         return self._request_lock
 
-    async def request(
+    async def arequest(
         self,
         method: bytes,
         url: URL,
         headers: Headers = None,
         stream: AsyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
+        ext: dict = None,
+    ) -> Tuple[int, Headers, AsyncByteStream, dict]:
         assert url_to_origin(url) == self.origin
+        ext = {} if ext is None else ext
+        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+
         async with self.request_lock:
             if self.state == ConnectionState.PENDING:
                 if not self.socket:
@@ -91,30 +100,42 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
 
         assert self.connection is not None
         logger.trace(
-            "connection.request method=%r url=%r headers=%r", method, url, headers
+            "connection.arequest method=%r url=%r headers=%r", method, url, headers
         )
-        return await self.connection.request(method, url, headers, stream, timeout)
+        return await self.connection.arequest(method, url, headers, stream, ext)
 
     async def _open_socket(self, timeout: TimeoutDict = None) -> AsyncSocketStream:
         scheme, hostname, port = self.origin
         timeout = {} if timeout is None else timeout
         ssl_context = self.ssl_context if scheme == b"https" else None
-        try:
-            if self.uds is None:
-                return await self.backend.open_tcp_stream(
-                    hostname,
-                    port,
-                    ssl_context,
-                    timeout,
-                    local_address=self.local_address,
-                )
-            else:
-                return await self.backend.open_uds_stream(
-                    self.uds, hostname, ssl_context, timeout
-                )
-        except Exception:
-            self.connect_failed = True
-            raise
+
+        retries_left = self.retries
+        delays = exponential_backoff(factor=RETRIES_BACKOFF_FACTOR)
+
+        while True:
+            try:
+                if self.uds is None:
+                    return await self.backend.open_tcp_stream(
+                        hostname,
+                        port,
+                        ssl_context,
+                        timeout,
+                        local_address=self.local_address,
+                    )
+                else:
+                    return await self.backend.open_uds_stream(
+                        self.uds, hostname, ssl_context, timeout
+                    )
+            except (ConnectError, ConnectTimeout):
+                if retries_left <= 0:
+                    self.connect_failed = True
+                    raise
+                retries_left -= 1
+                delay = next(delays)
+                await self.backend.sleep(delay)
+            except Exception:  # noqa: PIE786
+                self.connect_failed = True
+                raise
 
     def _create_connection(self, socket: AsyncSocketStream) -> None:
         http_version = socket.get_http_version()
@@ -144,8 +165,8 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
             return ConnectionState.PENDING
         return self.connection.get_state()
 
-    def is_connection_dropped(self) -> bool:
-        return self.connection is not None and self.connection.is_connection_dropped()
+    def is_socket_readable(self) -> bool:
+        return self.connection is not None and self.connection.is_socket_readable()
 
     def mark_as_ready(self) -> None:
         if self.connection is not None:

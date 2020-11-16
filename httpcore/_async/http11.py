@@ -1,5 +1,5 @@
 from ssl import SSLContext
-from typing import AsyncIterator, List, Tuple, Union
+from typing import AsyncIterator, List, Tuple, Union, cast
 
 import h11
 
@@ -47,17 +47,18 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         if self.state == ConnectionState.IDLE:
             self.state = ConnectionState.READY
 
-    async def request(
+    async def arequest(
         self,
         method: bytes,
         url: URL,
         headers: Headers = None,
         stream: AsyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
+        ext: dict = None,
+    ) -> Tuple[int, Headers, AsyncByteStream, dict]:
         headers = [] if headers is None else headers
         stream = PlainByteStream(b"") if stream is None else stream
-        timeout = {} if timeout is None else timeout
+        ext = {} if ext is None else ext
+        timeout = cast(TimeoutDict, ext.get("timeout", {}))
 
         self.state = ConnectionState.ACTIVE
 
@@ -73,7 +74,11 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
             aiterator=self._receive_response_data(timeout),
             aclose_func=self._response_closed,
         )
-        return (http_version, status_code, reason_phrase, headers, response_stream)
+        ext = {
+            "http_version": http_version.decode("ascii", errors="ignore"),
+            "reason": reason_phrase.decode("ascii", errors="ignore"),
+        }
+        return (status_code, headers, response_stream, ext)
 
     async def start_tls(
         self, hostname: bytes, timeout: TimeoutDict = None
@@ -128,8 +133,17 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
             event = await self._receive_event(timeout)
             if isinstance(event, h11.Response):
                 break
+
         http_version = b"HTTP/" + event.http_version
-        return http_version, event.status_code, event.reason, event.headers
+
+        if hasattr(event.headers, "raw_items"):
+            # h11 version 0.11+ supports a `raw_items` interface to get the
+            # raw header casing, rather than the enforced lowercase headers.
+            headers = event.headers.raw_items()
+        else:
+            headers = event.headers
+
+        return http_version, event.status_code, event.reason, headers
 
     async def _receive_response_data(
         self, timeout: TimeoutDict
@@ -187,5 +201,5 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
 
             await self.socket.aclose()
 
-    def is_connection_dropped(self) -> bool:
-        return self.socket.is_connection_dropped()
+    def is_socket_readable(self) -> bool:
+        return self.socket.is_readable()

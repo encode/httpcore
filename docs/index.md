@@ -19,7 +19,7 @@ Some things HTTP Core does do:
 * Sending HTTP requests.
 * Provides both sync and async interfaces.
 * Supports HTTP/1.1 and HTTP/2.
-* Async backend support for `asyncio` and `trio`.
+* Async backend support for `asyncio`, `trio` and `curio`.
 * Automatic connection pooling.
 * HTTP(S) proxy support.
 
@@ -42,10 +42,28 @@ $ pip install httpcore[http2]
 Here's an example of making an HTTP GET request using `httpcore`...
 
 ```python
-async with httpcore.AsyncConnectionPool() as http:
-    http_version, status_code, reason_phrase, headers, stream = await http.request(
+with httpcore.SyncConnectionPool() as http:
+    status_code, headers, stream, ext = http.request(
         method=b'GET',
-        url=(b'https', b'example.org', 433, b'/'),
+        url=(b'https', b'example.org', 443, b'/'),
+        headers=[(b'host', b'example.org'), (b'user-agent', 'httpcore')]
+    )
+
+    try:
+        body = b''.join([chunk for chunk in stream])
+    finally:
+        stream.close()
+
+    print(status_code, body)
+```
+
+Or, using async...
+
+```python
+async with httpcore.AsyncConnectionPool() as http:
+    status_code, headers, stream, ext = await http.arequest(
+        method=b'GET',
+        url=(b'https', b'example.org', 443, b'/'),
         headers=[(b'host', b'example.org'), (b'user-agent', 'httpcore')]
     )
 

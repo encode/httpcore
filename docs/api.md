@@ -7,7 +7,7 @@ interface which transport classes need to implement.
 
 ::: httpcore.AsyncHTTPTransport
     :docstring:
-    :members: request aclose
+    :members: arequest aclose
 
 ::: httpcore.AsyncByteStream
     :docstring:

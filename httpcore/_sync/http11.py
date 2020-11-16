@@ -1,9 +1,9 @@
 from ssl import SSLContext
-from typing import Iterator, List, Tuple, Union
+from typing import Iterator, List, Tuple, Union, cast
 
 import h11
 
-from .._backends.auto import SyncSocketStream
+from .._backends.sync import SyncSocketStream
 from .._bytestreams import IteratorByteStream, PlainByteStream
 from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
@@ -53,11 +53,12 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
         url: URL,
         headers: Headers = None,
         stream: SyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
+        ext: dict = None,
+    ) -> Tuple[int, Headers, SyncByteStream, dict]:
         headers = [] if headers is None else headers
         stream = PlainByteStream(b"") if stream is None else stream
-        timeout = {} if timeout is None else timeout
+        ext = {} if ext is None else ext
+        timeout = cast(TimeoutDict, ext.get("timeout", {}))
 
         self.state = ConnectionState.ACTIVE
 
@@ -73,7 +74,11 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
             iterator=self._receive_response_data(timeout),
             close_func=self._response_closed,
         )
-        return (http_version, status_code, reason_phrase, headers, response_stream)
+        ext = {
+            "http_version": http_version.decode("ascii", errors="ignore"),
+            "reason": reason_phrase.decode("ascii", errors="ignore"),
+        }
+        return (status_code, headers, response_stream, ext)
 
     def start_tls(
         self, hostname: bytes, timeout: TimeoutDict = None
@@ -128,8 +133,17 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
             event = self._receive_event(timeout)
             if isinstance(event, h11.Response):
                 break
+
         http_version = b"HTTP/" + event.http_version
-        return http_version, event.status_code, event.reason, event.headers
+
+        if hasattr(event.headers, "raw_items"):
+            # h11 version 0.11+ supports a `raw_items` interface to get the
+            # raw header casing, rather than the enforced lowercase headers.
+            headers = event.headers.raw_items()
+        else:
+            headers = event.headers
+
+        return http_version, event.status_code, event.reason, headers
 
     def _receive_response_data(
         self, timeout: TimeoutDict
@@ -187,5 +201,5 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
 
             self.socket.close()
 
-    def is_connection_dropped(self) -> bool:
-        return self.socket.is_connection_dropped()
+    def is_socket_readable(self) -> bool:
+        return self.socket.is_readable()

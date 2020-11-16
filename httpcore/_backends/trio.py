@@ -82,7 +82,7 @@ class SocketStream(AsyncSocketStream):
             with map_exceptions({trio.BrokenResourceError: CloseError}):
                 await self.stream.aclose()
 
-    def is_connection_dropped(self) -> bool:
+    def is_readable(self) -> bool:
         # Adapted from: https://github.com/encode/httpx/pull/143#issuecomment-515202982
         stream = self.stream
 
@@ -91,10 +91,6 @@ class SocketStream(AsyncSocketStream):
             stream = stream.transport_stream
         assert isinstance(stream, trio.SocketStream)
 
-        # Counter-intuitively, what we really want to know here is whether the socket is
-        # *readable*, i.e. whether it would return immediately with empty bytes if we
-        # called `.recv()` on it, indicating that the other end has closed the socket.
-        # See: https://github.com/encode/httpx/pull/143#issuecomment-515181778
         return stream.socket.is_readable()
 
 
@@ -149,6 +145,7 @@ class TrioBackend(AsyncBackend):
         #  argument has been passed.
         kwargs: dict = {} if local_address is None else {"local_address": local_address}
         exc_map = {
+            OSError: ConnectError,
             trio.TooSlowError: ConnectTimeout,
             trio.BrokenResourceError: ConnectError,
         }
@@ -176,6 +173,7 @@ class TrioBackend(AsyncBackend):
     ) -> AsyncSocketStream:
         connect_timeout = none_as_inf(timeout.get("connect"))
         exc_map = {
+            OSError: ConnectError,
             trio.TooSlowError: ConnectTimeout,
             trio.BrokenResourceError: ConnectError,
         }
@@ -200,3 +198,6 @@ class TrioBackend(AsyncBackend):
 
     async def time(self) -> float:
         return trio.current_time()
+
+    async def sleep(self, seconds: float) -> None:
+        await trio.sleep(seconds)

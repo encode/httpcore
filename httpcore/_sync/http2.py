@@ -1,6 +1,5 @@
-from http import HTTPStatus
 from ssl import SSLContext
-from typing import Iterator, Dict, List, Tuple
+from typing import Iterator, Dict, List, Tuple, cast
 
 import h2.connection
 import h2.events
@@ -8,7 +7,7 @@ from h2.config import H2Configuration
 from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
-from .._backends.auto import SyncLock, SyncSemaphore, SyncSocketStream, SyncBackend
+from .._backends.sync import SyncBackend, SyncLock, SyncSemaphore, SyncSocketStream
 from .._bytestreams import IteratorByteStream, PlainByteStream
 from .._exceptions import PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
@@ -17,13 +16,6 @@ from .base import SyncByteStream, ConnectionState, NewConnectionRequired
 from .http import SyncBaseHTTPConnection
 
 logger = get_logger(__name__)
-
-
-def get_reason_phrase(status_code: int) -> bytes:
-    try:
-        return HTTPStatus(status_code).phrase.encode("ascii")
-    except ValueError:
-        return b""
 
 
 class SyncHTTP2Connection(SyncBaseHTTPConnection):
@@ -99,9 +91,10 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         url: URL,
         headers: Headers = None,
         stream: SyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
-        timeout = {} if timeout is None else timeout
+        ext: dict = None,
+    ) -> Tuple[int, Headers, SyncByteStream, dict]:
+        ext = {} if ext is None else ext
+        timeout = cast(TimeoutDict, ext.get("timeout", {}))
 
         with self.init_lock:
             if not self.sent_connection_init:
@@ -123,8 +116,8 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
             h2_stream = SyncHTTP2Stream(stream_id=stream_id, connection=self)
             self.streams[stream_id] = h2_stream
             self.events[stream_id] = []
-            return h2_stream.request(method, url, headers, stream, timeout)
-        except Exception:
+            return h2_stream.request(method, url, headers, stream, ext)
+        except Exception:  # noqa: PIE786
             self.max_streams_semaphore.release()
             raise
 
@@ -165,8 +158,8 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
     def is_closed(self) -> bool:
         return False
 
-    def is_connection_dropped(self) -> bool:
-        return self.socket.is_connection_dropped()
+    def is_socket_readable(self) -> bool:
+        return self.socket.is_readable()
 
     def close(self) -> None:
         logger.trace("close_connection=%r", self)
@@ -283,11 +276,12 @@ class SyncHTTP2Stream:
         url: URL,
         headers: Headers = None,
         stream: SyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
+        ext: dict = None,
+    ) -> Tuple[int, Headers, SyncByteStream, dict]:
         headers = [] if headers is None else [(k.lower(), v) for (k, v) in headers]
         stream = PlainByteStream(b"") if stream is None else stream
-        timeout = {} if timeout is None else timeout
+        ext = {} if ext is None else ext
+        timeout = cast(TimeoutDict, ext.get("timeout", {}))
 
         # Send the request.
         seen_headers = set(key for key, value in headers)
@@ -301,12 +295,14 @@ class SyncHTTP2Stream:
 
         # Receive the response.
         status_code, headers = self.receive_response(timeout)
-        reason_phrase = get_reason_phrase(status_code)
         response_stream = IteratorByteStream(
             iterator=self.body_iter(timeout), close_func=self._response_closed
         )
 
-        return (b"HTTP/2", status_code, reason_phrase, headers, response_stream)
+        ext = {
+            "http_version": "HTTP/2",
+        }
+        return (status_code, headers, response_stream, ext)
 
     def send_headers(
         self,

@@ -12,15 +12,19 @@ SUBS = [
     ('async with', 'with'),
     ('async for', 'for'),
     ('await ', ''),
+    ('arequest', 'request'),
     ('aclose', 'close'),
     ('aclose_func', 'close_func'),
     ('aiterator', 'iterator'),
     ('__aenter__', '__enter__'),
     ('__aexit__', '__exit__'),
     ('__aiter__', '__iter__'),
-    ('@pytest.mark.asyncio', ''),
+    ('@pytest.mark.anyio', ''),
     ('@pytest.mark.trio', ''),
-    ('@pytest.mark.usefixtures.*', ''),
+    (r'@pytest.fixture\(params=\["auto", "anyio"\]\)',
+     '@pytest.fixture(params=["sync"])'),
+    ('lookup_async_backend', "lookup_sync_backend"),
+    ('auto', 'sync'),
 ]
 COMPILED_SUBS = [
     (re.compile(r'(^|\b)' + regex + r'($|\b)'), repl)

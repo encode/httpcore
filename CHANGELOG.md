@@ -4,6 +4,92 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.12.1 (November 7th, 2020)
+
+### Added
+
+- Add connect retries. (Pull #221)
+
+### Fixed
+
+- Tweak detection of dropped connections, resolving an issue with open files limits on Linux. (Pull #185)
+- Avoid leaking connections when establishing an HTTP tunnel to a proxy has failed. (Pull #223)
+- Properly wrap OS errors when using `trio`. (Pull #225)
+
+## 0.12.0 (October 6th, 2020)
+
+### Changed
+
+- HTTP header casing is now preserved, rather than always sent in lowercase. (#216 and python-hyper/h11#104)
+
+### Added
+
+- Add Python 3.9 to officially supported versions.
+
+### Fixed
+
+- Gracefully handle a stdlib asyncio bug when a connection is closed while it is in a paused-for-reading state. (#201)
+
+## 0.11.1 (September 28nd, 2020)
+
+### Fixed
+
+- Add await to async semaphore release() coroutine (#197)
+- Drop incorrect curio classifier (#192)
+
+## 0.11.0 (September 22nd, 2020)
+
+The Transport API with 0.11.0 has a couple of significant changes.
+
+Firstly we've moved changed the request interface in order to allow extensions, which will later enable us to support features
+such as trailing headers, HTTP/2 server push, and CONNECT/Upgrade connections.
+
+The interface changes from:
+
+```python
+def request(method, url, headers, stream, timeout):
+    return (http_version, status_code, reason, headers, stream)
+```
+
+To instead including an optional dictionary of extensions on the request and response:
+
+```python
+def request(method, url, headers, stream, ext):
+    return (status_code, headers, stream, ext)
+```
+
+Having an open-ended extensions point will allow us to add later support for various optional features, that wouldn't otherwise be supported without these API changes.
+
+In particular:
+
+* Trailing headers support.
+* HTTP/2 Server Push
+* sendfile.
+* Exposing raw connection on CONNECT, Upgrade, HTTP/2 bi-di streaming.
+* Exposing debug information out of the API, including template name, template context.
+
+Currently extensions are limited to:
+
+* request: `timeout` - Optional. Timeout dictionary.
+* response: `http_version` - Optional. Include the HTTP version used on the response.
+* response: `reason` - Optional. Include the reason phrase used on the response. Only valid with HTTP/1.*.
+
+See https://github.com/encode/httpx/issues/1274#issuecomment-694884553 for the history behind this.
+
+Secondly, the async version of `request` is now namespaced as `arequest`.
+
+This allows concrete transports to support both sync and async implementations on the same class.
+
+### Added
+
+- Add curio support. (Pull #168)
+- Add anyio support, with `backend="anyio"`. (Pull #169)
+
+### Changed
+
+- Update the Transport API to use 'ext' for optional extensions. (Pull #190)
+- Update the Transport API to use `.request` and `.arequest` so implementations can support both sync and async. (Pull #189)
+
 ## 0.10.2 (August 20th, 2020)
 
 ### Added

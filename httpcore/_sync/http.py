@@ -1,4 +1,4 @@
-from .._backends.auto import SyncSocketStream
+from .._backends.sync import SyncSocketStream
 from .._types import TimeoutDict
 from .base import SyncHTTPTransport, ConnectionState
 
@@ -20,9 +20,9 @@ class SyncBaseHTTPConnection(SyncHTTPTransport):
         """
         raise NotImplementedError()  # pragma: nocover
 
-    def is_connection_dropped(self) -> bool:
+    def is_socket_readable(self) -> bool:
         """
-        Return 'True' if the connection has been dropped by the remote end.
+        Return 'True' if the underlying network socket is readable.
         """
         raise NotImplementedError()  # pragma: nocover
 
