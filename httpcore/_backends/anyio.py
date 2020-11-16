@@ -137,8 +137,8 @@ class AnyIOBackend(AsyncBackend):
         connect_timeout = timeout.get("connect")
         unicode_host = hostname.decode("utf-8")
         exc_map = {
-            OSError: ConnectError,
             TimeoutError: ConnectTimeout,
+            OSError: ConnectError,
             BrokenResourceError: ConnectError,
         }
 
@@ -168,8 +168,8 @@ class AnyIOBackend(AsyncBackend):
         connect_timeout = timeout.get("connect")
         unicode_host = hostname.decode("utf-8")
         exc_map = {
-            OSError: ConnectError,
             TimeoutError: ConnectTimeout,
+            OSError: ConnectError,
             BrokenResourceError: ConnectError,
         }
 
