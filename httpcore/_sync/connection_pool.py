@@ -1,11 +1,10 @@
 import warnings
-from functools import partial
 from ssl import SSLContext
 from typing import Iterator, Dict, List, Optional, Set, Tuple, cast
 
 from .._backends.sync import SyncLock, SyncSemaphore
 from .._backends.base import lookup_sync_backend
-from .._compat import ExitStack, contextmanager
+from .._compat import contextmanager
 from .._exceptions import LocalProtocolError, PoolTimeout, UnsupportedProtocol
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
@@ -150,45 +149,34 @@ class SyncConnectionPool(SyncHTTPTransport):
 
         self._keepalive_sweep()
 
-        with ExitStack() as exit_stack:
-            connection: Optional[SyncHTTPConnection] = None
-            while connection is None:
-                with self._connection_acquiry_lock:
-                    # We get-or-create a connection as an atomic operation, to ensure
-                    # that HTTP/2 requests issued in close concurrency will end up
-                    # on the same connection.
-                    logger.trace("get_connection_from_pool=%r", origin)
-                    connection = self._get_connection_from_pool(origin)
+        connection: Optional[SyncHTTPConnection] = None
+        while connection is None:
+            with self._connection_acquiry_lock:
+                # We get-or-create a connection as an atomic operation, to ensure
+                # that HTTP/2 requests issued in close concurrency will end up
+                # on the same connection.
+                logger.trace("get_connection_from_pool=%r", origin)
+                connection = self._get_connection_from_pool(origin)
 
-                    if connection is None:
-                        connection = self._create_connection(origin=origin)
-                        logger.trace("created connection=%r", connection)
-                        self._add_to_pool(connection, timeout=timeout)
-                    else:
-                        logger.trace("reuse connection=%r", connection)
+                if connection is None:
+                    connection = self._create_connection(origin=origin)
+                    logger.trace("created connection=%r", connection)
+                    self._add_to_pool(connection, timeout=timeout)
+                else:
+                    logger.trace("reuse connection=%r", connection)
 
-                try:
-                    # Push this callback onto the stack *before* making the request,
-                    # so that it's effectively executed *after* the response is closed.
-                    exit_stack.callback(
-                        partial(self._response_closed, connection)
-                    )
+            try:
+                with connection.request(
+                    method, url, headers=headers, stream=stream, ext=ext
+                ) as response:
+                    yield response
+            except NewConnectionRequired:
+                connection = None
+            except Exception:  # noqa: PIE786
+                logger.trace("remove from pool connection=%r", connection)
+                self._remove_from_pool(connection)
 
-                    response = exit_stack.enter_context(
-                        connection.request(
-                            method, url, headers=headers, stream=stream, ext=ext
-                        )
-                    )
-                except NewConnectionRequired:
-                    exit_stack.pop_all()  # Drop any registered callbacks.
-                    connection = None
-                except Exception:  # noqa: PIE786
-                    logger.trace("remove from pool connection=%r", connection)
-                    exit_stack.pop_all()  # Drop any registered callbacks.
-                    self._remove_from_pool(connection)
-                    raise
-
-            yield response
+        self._response_closed(connection)
 
     def _get_connection_from_pool(
         self, origin: Origin
