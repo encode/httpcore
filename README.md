@@ -48,7 +48,7 @@ with httpcore.SyncConnectionPool() as http:
         url=(b'https', b'example.org', 443, b'/'),
         headers=[(b'host', b'example.org'), (b'user-agent', 'httpcore')]
     ) as response:
-        status_code, headers, stream, ext = respnose
+        status_code, headers, stream, ext = response
         body = b''.join([chunk for chunk in stream])
 
     print(status_code, body)
