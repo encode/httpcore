@@ -307,8 +307,10 @@ class AsyncHTTP2Stream:
             "http_version": "HTTP/2",
         }
 
-        yield (status_code, headers, response_stream, ext)
-        await self._response_closed()
+        try:
+            yield (status_code, headers, response_stream, ext)
+        finally:
+            await self._response_closed()
 
     async def send_headers(
         self,
