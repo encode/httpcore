@@ -1,6 +1,6 @@
 import enum
 from types import TracebackType
-from typing import AsyncContextManager, AsyncIterable, AsyncIterator, Tuple, Type
+from typing import AsyncContextManager, AsyncIterable, Tuple, Type
 
 from .._types import URL, Headers, T
 
@@ -30,21 +30,6 @@ class ConnectionState(enum.IntEnum):
     FULL = 3  # Active requests, no more stream IDs available.
     IDLE = 4  # No active requests.
     CLOSED = 5  # Connection closed.
-
-
-class AsyncByteStream:
-    """
-    The base interface for request and response bodies.
-
-    Concrete implementations should subclass this class, and implement
-    the `\\__aiter__` method, and optionally the `aclose` method.
-    """
-
-    async def __aiter__(self) -> AsyncIterator[bytes]:
-        """
-        Yield bytes representing the request or response body.
-        """
-        yield b""  # pragma: nocover
 
 
 class AsyncHTTPTransport:

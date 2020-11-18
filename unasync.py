@@ -4,7 +4,6 @@ import os
 import sys
 
 SUBS = [
-    ('AsyncIteratorByteStream', 'IteratorByteStream'),
     ('AsyncIterator', 'Iterator'),
     ('AsyncIterable', 'Iterable'),
     ('asynccontextmanager', 'contextmanager'),

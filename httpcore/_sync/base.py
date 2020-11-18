@@ -1,6 +1,6 @@
 import enum
 from types import TracebackType
-from typing import ContextManager, Iterable, Iterator, Tuple, Type
+from typing import ContextManager, Iterable, Tuple, Type
 
 from .._types import URL, Headers, T
 
@@ -32,21 +32,6 @@ class ConnectionState(enum.IntEnum):
     CLOSED = 5  # Connection closed.
 
 
-class SyncByteStream:
-    """
-    The base interface for request and response bodies.
-
-    Concrete implementations should subclass this class, and implement
-    the `\\__iter__` method, and optionally the `close` method.
-    """
-
-    def __iter__(self) -> Iterator[bytes]:
-        """
-        Yield bytes representing the request or response body.
-        """
-        yield b""  # pragma: nocover
-
-
 class SyncHTTPTransport:
     """
     The base interface for sending HTTP requests.
@@ -73,7 +58,7 @@ class SyncHTTPTransport:
         of (scheme, host, port, path).
         * **headers** - `Optional[List[Tuple[bytes, bytes]]]` - Any HTTP headers
         to send with the request.
-        * **stream** - `Optional[SyncByteStream]` - The body of the HTTP request.
+        * **stream** - `Optional[Iterable[bytes]]` - The body of the HTTP request.
         * **ext** - `Optional[dict]` - A dictionary of optional extensions.
 
         ** Returns:**
@@ -83,7 +68,7 @@ class SyncHTTPTransport:
         * **status_code** - `int` - The HTTP status code, such as `200`.
         * **headers** - `List[Tuple[bytes, bytes]]` - Any HTTP headers included
         on the response.
-        * **stream** - `SyncByteStream` - The body of the HTTP response.
+        * **stream** - `Iterable[bytes]` - The body of the HTTP response.
         * **ext** - `dict` - A dictionary of optional extensions.
         """
         raise NotImplementedError()  # pragma: nocover

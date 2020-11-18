@@ -1,4 +1,4 @@
-from ._async.base import AsyncByteStream, AsyncHTTPTransport
+from ._async.base import AsyncHTTPTransport
 from ._async.connection_pool import AsyncConnectionPool
 from ._async.http_proxy import AsyncHTTPProxy
 from ._bytestreams import PlainByteStream
@@ -19,12 +19,11 @@ from ._exceptions import (
     WriteError,
     WriteTimeout,
 )
-from ._sync.base import SyncByteStream, SyncHTTPTransport
+from ._sync.base import SyncHTTPTransport
 from ._sync.connection_pool import SyncConnectionPool
 from ._sync.http_proxy import SyncHTTPProxy
 
 __all__ = [
-    "AsyncByteStream",
     "AsyncConnectionPool",
     "AsyncHTTPProxy",
     "AsyncHTTPTransport",
@@ -40,7 +39,6 @@ __all__ = [
     "ReadError",
     "ReadTimeout",
     "RemoteProtocolError",
-    "SyncByteStream",
     "SyncConnectionPool",
     "SyncHTTPProxy",
     "SyncHTTPTransport",
