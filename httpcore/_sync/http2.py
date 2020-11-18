@@ -105,8 +105,7 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
                 self.send_connection_init(timeout)
                 self.sent_connection_init = True
 
-        self.max_streams_semaphore.acquire()
-        try:
+        with self.max_streams_semaphore:
             try:
                 stream_id = self.h2_state.get_next_available_stream_id()
             except NoAvailableStreamIDError:
@@ -122,9 +121,6 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
                 method, url, headers, stream, ext
             ) as response:
                 yield response
-        except Exception:  # noqa: PIE786
-            self.max_streams_semaphore.release()
-            raise
 
     def send_connection_init(self, timeout: TimeoutDict) -> None:
         """
@@ -256,18 +252,15 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         self.socket.write(data_to_send, timeout)
 
     def close_stream(self, stream_id: int) -> None:
-        try:
-            logger.trace("close_stream stream_id=%r", stream_id)
-            del self.streams[stream_id]
-            del self.events[stream_id]
+        logger.trace("close_stream stream_id=%r", stream_id)
+        del self.streams[stream_id]
+        del self.events[stream_id]
 
-            if not self.streams:
-                if self.state == ConnectionState.ACTIVE:
-                    self.state = ConnectionState.IDLE
-                elif self.state == ConnectionState.FULL:
-                    self.close()
-        finally:
-            self.max_streams_semaphore.release()
+        if not self.streams:
+            if self.state == ConnectionState.ACTIVE:
+                self.state = ConnectionState.IDLE
+            elif self.state == ConnectionState.FULL:
+                self.close()
 
 
 class SyncHTTP2Stream:

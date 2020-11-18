@@ -96,6 +96,17 @@ class AsyncSemaphore:
     Abstracts away any asyncio-specific interfaces.
     """
 
+    async def __aenter__(self) -> None:
+        await self.acquire()
+
+    async def __aexit__(
+        self,
+        exc_type: Type[BaseException] = None,
+        exc_value: BaseException = None,
+        traceback: TracebackType = None,
+    ) -> None:
+        await self.release()
+
     async def acquire(self, timeout: float = None) -> None:
         raise NotImplementedError()  # pragma: no cover
 

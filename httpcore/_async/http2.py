@@ -105,8 +105,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
                 await self.send_connection_init(timeout)
                 self.sent_connection_init = True
 
-        await self.max_streams_semaphore.acquire()
-        try:
+        async with self.max_streams_semaphore:
             try:
                 stream_id = self.h2_state.get_next_available_stream_id()
             except NoAvailableStreamIDError:
@@ -122,9 +121,6 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
                 method, url, headers, stream, ext
             ) as response:
                 yield response
-        except Exception:  # noqa: PIE786
-            await self.max_streams_semaphore.release()
-            raise
 
     async def send_connection_init(self, timeout: TimeoutDict) -> None:
         """
@@ -256,18 +252,15 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         await self.socket.write(data_to_send, timeout)
 
     async def close_stream(self, stream_id: int) -> None:
-        try:
-            logger.trace("close_stream stream_id=%r", stream_id)
-            del self.streams[stream_id]
-            del self.events[stream_id]
+        logger.trace("close_stream stream_id=%r", stream_id)
+        del self.streams[stream_id]
+        del self.events[stream_id]
 
-            if not self.streams:
-                if self.state == ConnectionState.ACTIVE:
-                    self.state = ConnectionState.IDLE
-                elif self.state == ConnectionState.FULL:
-                    await self.aclose()
-        finally:
-            await self.max_streams_semaphore.release()
+        if not self.streams:
+            if self.state == ConnectionState.ACTIVE:
+                self.state = ConnectionState.IDLE
+            elif self.state == ConnectionState.FULL:
+                await self.aclose()
 
 
 class AsyncHTTP2Stream:

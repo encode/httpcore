@@ -109,6 +109,17 @@ class SyncSemaphore:
         self.exc_class = exc_class
         self._semaphore = threading.Semaphore(max_value)
 
+    def __enter__(self) -> None:
+        self.acquire()
+
+    def __exit__(
+        self,
+        exc_type: Type[BaseException] = None,
+        exc_value: BaseException = None,
+        traceback: TracebackType = None,
+    ) -> None:
+        self.release()
+
     def acquire(self, timeout: float = None) -> None:
         if not self._semaphore.acquire(timeout=timeout):  # type: ignore
             raise self.exc_class()
