@@ -1,4 +1,4 @@
-from typing import AsyncIterator, Callable, Iterator
+from typing import AsyncIterator, Iterator
 
 from ._async.base import AsyncByteStream
 from ._sync.base import SyncByteStream
@@ -37,17 +37,12 @@ class IteratorByteStream(SyncByteStream):
     ```
     """
 
-    def __init__(self, iterator: Iterator[bytes], close_func: Callable = None) -> None:
+    def __init__(self, iterator: Iterator[bytes]) -> None:
         self._iterator = iterator
-        self._close_func = close_func
 
     def __iter__(self) -> Iterator[bytes]:
         for chunk in self._iterator:
             yield chunk
-
-    def close(self) -> None:
-        if self._close_func is not None:
-            self._close_func()
 
 
 class AsyncIteratorByteStream(AsyncByteStream):
@@ -63,16 +58,9 @@ class AsyncIteratorByteStream(AsyncByteStream):
     ```
     """
 
-    def __init__(
-        self, aiterator: AsyncIterator[bytes], aclose_func: Callable = None
-    ) -> None:
+    def __init__(self, aiterator: AsyncIterator[bytes]) -> None:
         self._aiterator = aiterator
-        self._aclose_func = aclose_func
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
         async for chunk in self._aiterator:
             yield chunk
-
-    async def aclose(self) -> None:
-        if self._aclose_func is not None:
-            await self._aclose_func()

@@ -46,12 +46,6 @@ class SyncByteStream:
         """
         yield b""  # pragma: nocover
 
-    def close(self) -> None:
-        """
-        Must be called by the client to indicate that the stream has been closed.
-        """
-        pass  # pragma: nocover
-
 
 class SyncHTTPTransport:
     """

@@ -46,12 +46,6 @@ class AsyncByteStream:
         """
         yield b""  # pragma: nocover
 
-    async def aclose(self) -> None:
-        """
-        Must be called by the client to indicate that the stream has been closed.
-        """
-        pass  # pragma: nocover
-
 
 class AsyncHTTPTransport:
     """

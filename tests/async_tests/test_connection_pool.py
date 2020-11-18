@@ -36,14 +36,12 @@ class MockConnection(httpcore.AsyncHTTPTransport):
         async def aiterator() -> AsyncIterator[bytes]:
             yield b""
 
-        stream = httpcore.AsyncIteratorByteStream(
-            aiterator=aiterator(), aclose_func=on_close
-        )
+        stream = httpcore.AsyncIteratorByteStream(aiterator=aiterator())
 
         try:
             yield 200, [], stream, {}
         finally:
-            await stream.aclose()
+            await on_close()
 
     async def aclose(self):
         pass

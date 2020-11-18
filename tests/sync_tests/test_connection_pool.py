@@ -36,14 +36,12 @@ class MockConnection(httpcore.SyncHTTPTransport):
         def iterator() -> Iterator[bytes]:
             yield b""
 
-        stream = httpcore.IteratorByteStream(
-            iterator=iterator(), close_func=on_close
-        )
+        stream = httpcore.IteratorByteStream(iterator=iterator())
 
         try:
             yield 200, [], stream, {}
         finally:
-            stream.close()
+            on_close()
 
     def close(self):
         pass
