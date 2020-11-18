@@ -1,6 +1,6 @@
 import enum
 from types import TracebackType
-from typing import ContextManager, Iterator, Tuple, Type
+from typing import ContextManager, Iterable, Iterator, Tuple, Type
 
 from .._types import URL, Headers, T
 
@@ -60,9 +60,9 @@ class SyncHTTPTransport:
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: SyncByteStream = None,
+        stream: Iterable[bytes] = None,
         ext: dict = None,
-    ) -> ContextManager[Tuple[int, Headers, SyncByteStream, dict]]:
+    ) -> ContextManager[Tuple[int, Headers, Iterable[bytes], dict]]:
         """
         The interface for sending a single HTTP request, and returning a response.
 

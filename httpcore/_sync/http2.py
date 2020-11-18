@@ -1,5 +1,5 @@
 from ssl import SSLContext
-from typing import Iterator, Dict, List, Tuple, cast
+from typing import Iterable, Iterator, Dict, List, Tuple, cast
 
 import h2.connection
 import h2.events
@@ -8,12 +8,12 @@ from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
 from .._backends.sync import SyncBackend, SyncLock, SyncSemaphore, SyncSocketStream
-from .._bytestreams import IteratorByteStream, PlainByteStream
+from .._bytestreams import PlainByteStream
 from .._compat import contextmanager
 from .._exceptions import PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
-from .base import SyncByteStream, ConnectionState, NewConnectionRequired
+from .base import ConnectionState, NewConnectionRequired
 from .http import SyncBaseHTTPConnection
 
 logger = get_logger(__name__)
@@ -92,9 +92,9 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: SyncByteStream = None,
+        stream: Iterable[bytes] = None,
         ext: dict = None,
-    ) -> Iterator[Tuple[int, Headers, SyncByteStream, dict]]:
+    ) -> Iterator[Tuple[int, Headers, Iterable[bytes], dict]]:
         ext = {} if ext is None else ext
         timeout = cast(TimeoutDict, ext.get("timeout", {}))
 
@@ -281,9 +281,9 @@ class SyncHTTP2Stream:
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: SyncByteStream = None,
+        stream: Iterable[bytes] = None,
         ext: dict = None,
-    ) -> Iterator[Tuple[int, Headers, SyncByteStream, dict]]:
+    ) -> Iterator[Tuple[int, Headers, Iterable[bytes], dict]]:
         headers = [] if headers is None else [(k.lower(), v) for (k, v) in headers]
         stream = PlainByteStream(b"") if stream is None else stream
         ext = {} if ext is None else ext
@@ -301,7 +301,7 @@ class SyncHTTP2Stream:
 
         # Receive the response.
         status_code, headers = self.receive_response(timeout)
-        response_stream = IteratorByteStream(iterator=self.body_iter(timeout))
+        response_stream = self.body_iter(timeout)
 
         ext = {
             "http_version": "HTTP/2",
@@ -337,7 +337,9 @@ class SyncHTTP2Stream:
 
         self.connection.send_headers(self.stream_id, headers, end_stream, timeout)
 
-    def send_body(self, stream: SyncByteStream, timeout: TimeoutDict) -> None:
+    def send_body(
+        self, stream: Iterable[bytes], timeout: TimeoutDict
+    ) -> None:
         for data in stream:
             while data:
                 max_flow = self.connection.wait_for_outgoing_flow(

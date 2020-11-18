@@ -1,15 +1,15 @@
 from ssl import SSLContext
-from typing import AsyncIterator, List, Tuple, Union, cast
+from typing import AsyncIterable, AsyncIterator, List, Tuple, Union, cast
 
 import h11
 
 from .._backends.auto import AsyncSocketStream
-from .._bytestreams import AsyncIteratorByteStream, PlainByteStream
+from .._bytestreams import PlainByteStream
 from .._compat import asynccontextmanager
 from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
-from .base import AsyncByteStream, ConnectionState
+from .base import ConnectionState
 from .http import AsyncBaseHTTPConnection
 
 H11Event = Union[
@@ -54,9 +54,9 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: AsyncByteStream = None,
+        stream: AsyncIterable[bytes] = None,
         ext: dict = None,
-    ) -> AsyncIterator[Tuple[int, Headers, AsyncByteStream, dict]]:
+    ) -> AsyncIterator[Tuple[int, Headers, AsyncIterable[bytes], dict]]:
         headers = [] if headers is None else headers
         stream = PlainByteStream(b"") if stream is None else stream
         ext = {} if ext is None else ext
@@ -72,9 +72,7 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
             reason_phrase,
             headers,
         ) = await self._receive_response(timeout)
-        response_stream = AsyncIteratorByteStream(
-            aiterator=self._receive_response_data(timeout),
-        )
+        response_stream = self._receive_response_data(timeout)
         ext = {
             "http_version": http_version.decode("ascii", errors="ignore"),
             "reason": reason_phrase.decode("ascii", errors="ignore"),
@@ -104,7 +102,7 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         await self._send_event(event, timeout)
 
     async def _send_request_body(
-        self, stream: AsyncByteStream, timeout: TimeoutDict
+        self, stream: AsyncIterable[bytes], timeout: TimeoutDict
     ) -> None:
         """
         Send the request body.

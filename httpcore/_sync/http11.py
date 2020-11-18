@@ -1,15 +1,15 @@
 from ssl import SSLContext
-from typing import Iterator, List, Tuple, Union, cast
+from typing import Iterable, Iterator, List, Tuple, Union, cast
 
 import h11
 
 from .._backends.sync import SyncSocketStream
-from .._bytestreams import IteratorByteStream, PlainByteStream
+from .._bytestreams import PlainByteStream
 from .._compat import contextmanager
 from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
-from .base import SyncByteStream, ConnectionState
+from .base import ConnectionState
 from .http import SyncBaseHTTPConnection
 
 H11Event = Union[
@@ -54,9 +54,9 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: SyncByteStream = None,
+        stream: Iterable[bytes] = None,
         ext: dict = None,
-    ) -> Iterator[Tuple[int, Headers, SyncByteStream, dict]]:
+    ) -> Iterator[Tuple[int, Headers, Iterable[bytes], dict]]:
         headers = [] if headers is None else headers
         stream = PlainByteStream(b"") if stream is None else stream
         ext = {} if ext is None else ext
@@ -72,9 +72,7 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
             reason_phrase,
             headers,
         ) = self._receive_response(timeout)
-        response_stream = IteratorByteStream(
-            iterator=self._receive_response_data(timeout),
-        )
+        response_stream = self._receive_response_data(timeout)
         ext = {
             "http_version": http_version.decode("ascii", errors="ignore"),
             "reason": reason_phrase.decode("ascii", errors="ignore"),
@@ -104,7 +102,7 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
         self._send_event(event, timeout)
 
     def _send_request_body(
-        self, stream: SyncByteStream, timeout: TimeoutDict
+        self, stream: Iterable[bytes], timeout: TimeoutDict
     ) -> None:
         """
         Send the request body.

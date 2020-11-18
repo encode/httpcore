@@ -1,17 +1,12 @@
 from ssl import SSLContext
-from typing import AsyncIterator, Optional, Tuple, cast
+from typing import AsyncIterable, AsyncIterator, Optional, Tuple, cast
 
 from .._backends.auto import AsyncBackend, AsyncLock, AsyncSocketStream, AutoBackend
 from .._compat import asynccontextmanager
 from .._exceptions import ConnectError, ConnectTimeout
 from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import exponential_backoff, get_logger, url_to_origin
-from .base import (
-    AsyncByteStream,
-    AsyncHTTPTransport,
-    ConnectionState,
-    NewConnectionRequired,
-)
+from .base import AsyncHTTPTransport, ConnectionState, NewConnectionRequired
 from .http import AsyncBaseHTTPConnection
 
 logger = get_logger(__name__)
@@ -78,9 +73,9 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: AsyncByteStream = None,
+        stream: AsyncIterable[bytes] = None,
         ext: dict = None,
-    ) -> AsyncIterator[Tuple[int, Headers, AsyncByteStream, dict]]:
+    ) -> AsyncIterator[Tuple[int, Headers, AsyncIterable[bytes], dict]]:
         assert url_to_origin(url) == self.origin
         ext = {} if ext is None else ext
         timeout = cast(TimeoutDict, ext.get("timeout", {}))

@@ -1,6 +1,6 @@
 import queue
 import time
-from typing import Any, List, Optional
+from typing import Any, Iterable, List, Optional
 
 import pytest
 
@@ -32,7 +32,7 @@ class SyncMockBackend(SyncBackend):
         return super().open_tcp_stream(*args, **kwargs)
 
 
-def read_body(stream: httpcore.SyncByteStream) -> bytes:
+def read_body(stream: Iterable[bytes]) -> bytes:
     return b"".join([chunk for chunk in stream])
 
 

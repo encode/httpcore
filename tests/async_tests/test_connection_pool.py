@@ -1,4 +1,4 @@
-from typing import AsyncIterator, Tuple
+from typing import AsyncIterable, AsyncIterator, Tuple
 
 import pytest
 
@@ -22,9 +22,9 @@ class MockConnection(httpcore.AsyncHTTPTransport):
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: httpcore.AsyncByteStream = None,
+        stream: AsyncIterable[bytes] = None,
         ext: dict = None,
-    ) -> AsyncIterator[Tuple[int, Headers, httpcore.AsyncByteStream, dict]]:
+    ) -> AsyncIterator[Tuple[int, Headers, AsyncIterable[bytes], dict]]:
         self.state = ConnectionState.ACTIVE
         self.stream_count += 1
 
@@ -36,7 +36,7 @@ class MockConnection(httpcore.AsyncHTTPTransport):
         async def aiterator() -> AsyncIterator[bytes]:
             yield b""
 
-        stream = httpcore.AsyncIteratorByteStream(aiterator=aiterator())
+        stream = aiterator()
 
         try:
             yield 200, [], stream, {}
@@ -66,7 +66,7 @@ class ConnectionPool(httpcore.AsyncConnectionPool):
         return MockConnection(self.http_version)
 
 
-async def read_body(stream: httpcore.AsyncByteStream) -> bytes:
+async def read_body(stream: AsyncIterable[bytes]) -> bytes:
     return b"".join([chunk async for chunk in stream])
 
 

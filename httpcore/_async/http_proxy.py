@@ -1,12 +1,11 @@
 from http import HTTPStatus
 from ssl import SSLContext
-from typing import AsyncIterator, Tuple, cast
+from typing import AsyncIterable, AsyncIterator, Tuple, cast
 
 from .._compat import AsyncExitStack, asynccontextmanager
 from .._exceptions import ProxyError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger, url_to_origin
-from .base import AsyncByteStream
 from .connection import AsyncHTTPConnection
 from .connection_pool import AsyncConnectionPool
 
@@ -94,9 +93,9 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: AsyncByteStream = None,
+        stream: AsyncIterable[bytes] = None,
         ext: dict = None,
-    ) -> AsyncIterator[Tuple[int, Headers, AsyncByteStream, dict]]:
+    ) -> AsyncIterator[Tuple[int, Headers, AsyncIterable[bytes], dict]]:
         if self._keepalive_expiry is not None:
             await self._keepalive_sweep()
 
@@ -135,9 +134,9 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: AsyncByteStream = None,
+        stream: AsyncIterable[bytes] = None,
         ext: dict = None,
-    ) -> AsyncIterator[Tuple[int, Headers, AsyncByteStream, dict]]:
+    ) -> AsyncIterator[Tuple[int, Headers, AsyncIterable[bytes], dict]]:
         """
         Forwarded proxy requests include the entire URL as the HTTP target,
         rather than just the path.
@@ -181,9 +180,9 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: AsyncByteStream = None,
+        stream: AsyncIterable[bytes] = None,
         ext: dict = None,
-    ) -> AsyncIterator[Tuple[int, Headers, AsyncByteStream, dict]]:
+    ) -> AsyncIterator[Tuple[int, Headers, AsyncIterable[bytes], dict]]:
         """
         Tunnelled proxy requests require an initial CONNECT request to
         establish the connection, and then send regular requests.

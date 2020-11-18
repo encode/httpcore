@@ -1,4 +1,4 @@
-from typing import Iterator, Tuple
+from typing import Iterable, Iterator, Tuple
 
 import pytest
 
@@ -22,9 +22,9 @@ class MockConnection(httpcore.SyncHTTPTransport):
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: httpcore.SyncByteStream = None,
+        stream: Iterable[bytes] = None,
         ext: dict = None,
-    ) -> Iterator[Tuple[int, Headers, httpcore.SyncByteStream, dict]]:
+    ) -> Iterator[Tuple[int, Headers, Iterable[bytes], dict]]:
         self.state = ConnectionState.ACTIVE
         self.stream_count += 1
 
@@ -36,7 +36,7 @@ class MockConnection(httpcore.SyncHTTPTransport):
         def iterator() -> Iterator[bytes]:
             yield b""
 
-        stream = httpcore.IteratorByteStream(iterator=iterator())
+        stream = iterator()
 
         try:
             yield 200, [], stream, {}
@@ -66,7 +66,7 @@ class ConnectionPool(httpcore.SyncConnectionPool):
         return MockConnection(self.http_version)
 
 
-def read_body(stream: httpcore.SyncByteStream) -> bytes:
+def read_body(stream: Iterable[bytes]) -> bytes:
     return b"".join([chunk for chunk in stream])
 
 

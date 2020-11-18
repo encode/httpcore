@@ -1,6 +1,6 @@
 import queue
 import time
-from typing import Any, List, Optional
+from typing import Any, AsyncIterable, List, Optional
 
 import pytest
 
@@ -32,7 +32,7 @@ class AsyncMockBackend(AutoBackend):
         return await super().open_tcp_stream(*args, **kwargs)
 
 
-async def read_body(stream: httpcore.AsyncByteStream) -> bytes:
+async def read_body(stream: AsyncIterable[bytes]) -> bytes:
     return b"".join([chunk async for chunk in stream])
 
 

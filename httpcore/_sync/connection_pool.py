@@ -1,6 +1,16 @@
 import warnings
 from ssl import SSLContext
-from typing import Iterator, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import (
+    Iterable,
+    Iterator,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 from .._backends.sync import SyncBackend, SyncLock, SyncSemaphore
 from .._backends.base import lookup_sync_backend
@@ -9,12 +19,7 @@ from .._exceptions import LocalProtocolError, PoolTimeout, UnsupportedProtocol
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, origin_to_url_string, url_to_origin
-from .base import (
-    SyncByteStream,
-    SyncHTTPTransport,
-    ConnectionState,
-    NewConnectionRequired,
-)
+from .base import SyncHTTPTransport, ConnectionState, NewConnectionRequired
 from .connection import SyncHTTPConnection
 
 logger = get_logger(__name__)
@@ -142,9 +147,9 @@ class SyncConnectionPool(SyncHTTPTransport):
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: SyncByteStream = None,
+        stream: Iterable[bytes] = None,
         ext: dict = None,
-    ) -> Iterator[Tuple[int, Headers, SyncByteStream, dict]]:
+    ) -> Iterator[Tuple[int, Headers, Iterable[bytes], dict]]:
         if url[0] not in (b"http", b"https"):
             scheme = url[0].decode("latin-1")
             raise UnsupportedProtocol(f"Unsupported URL protocol {scheme!r}")

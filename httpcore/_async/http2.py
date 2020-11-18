@@ -1,5 +1,5 @@
 from ssl import SSLContext
-from typing import AsyncIterator, Dict, List, Tuple, cast
+from typing import AsyncIterable, AsyncIterator, Dict, List, Tuple, cast
 
 import h2.connection
 import h2.events
@@ -8,12 +8,12 @@ from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
 from .._backends.auto import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
-from .._bytestreams import AsyncIteratorByteStream, PlainByteStream
+from .._bytestreams import PlainByteStream
 from .._compat import asynccontextmanager
 from .._exceptions import PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
-from .base import AsyncByteStream, ConnectionState, NewConnectionRequired
+from .base import ConnectionState, NewConnectionRequired
 from .http import AsyncBaseHTTPConnection
 
 logger = get_logger(__name__)
@@ -92,9 +92,9 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: AsyncByteStream = None,
+        stream: AsyncIterable[bytes] = None,
         ext: dict = None,
-    ) -> AsyncIterator[Tuple[int, Headers, AsyncByteStream, dict]]:
+    ) -> AsyncIterator[Tuple[int, Headers, AsyncIterable[bytes], dict]]:
         ext = {} if ext is None else ext
         timeout = cast(TimeoutDict, ext.get("timeout", {}))
 
@@ -281,9 +281,9 @@ class AsyncHTTP2Stream:
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: AsyncByteStream = None,
+        stream: AsyncIterable[bytes] = None,
         ext: dict = None,
-    ) -> AsyncIterator[Tuple[int, Headers, AsyncByteStream, dict]]:
+    ) -> AsyncIterator[Tuple[int, Headers, AsyncIterable[bytes], dict]]:
         headers = [] if headers is None else [(k.lower(), v) for (k, v) in headers]
         stream = PlainByteStream(b"") if stream is None else stream
         ext = {} if ext is None else ext
@@ -301,7 +301,7 @@ class AsyncHTTP2Stream:
 
         # Receive the response.
         status_code, headers = await self.receive_response(timeout)
-        response_stream = AsyncIteratorByteStream(aiterator=self.body_iter(timeout))
+        response_stream = self.body_iter(timeout)
 
         ext = {
             "http_version": "HTTP/2",
@@ -337,7 +337,9 @@ class AsyncHTTP2Stream:
 
         await self.connection.send_headers(self.stream_id, headers, end_stream, timeout)
 
-    async def send_body(self, stream: AsyncByteStream, timeout: TimeoutDict) -> None:
+    async def send_body(
+        self, stream: AsyncIterable[bytes], timeout: TimeoutDict
+    ) -> None:
         async for data in stream:
             while data:
                 max_flow = await self.connection.wait_for_outgoing_flow(

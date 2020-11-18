@@ -1,6 +1,6 @@
 import enum
 from types import TracebackType
-from typing import AsyncContextManager, AsyncIterator, Tuple, Type
+from typing import AsyncContextManager, AsyncIterable, AsyncIterator, Tuple, Type
 
 from .._types import URL, Headers, T
 
@@ -60,9 +60,9 @@ class AsyncHTTPTransport:
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: AsyncByteStream = None,
+        stream: AsyncIterable[bytes] = None,
         ext: dict = None,
-    ) -> AsyncContextManager[Tuple[int, Headers, AsyncByteStream, dict]]:
+    ) -> AsyncContextManager[Tuple[int, Headers, AsyncIterable[bytes], dict]]:
         """
         The interface for sending a single HTTP request, and returning a response.
 
@@ -73,7 +73,7 @@ class AsyncHTTPTransport:
         of (scheme, host, port, path).
         * **headers** - `Optional[List[Tuple[bytes, bytes]]]` - Any HTTP headers
         to send with the request.
-        * **stream** - `Optional[AsyncByteStream]` - The body of the HTTP request.
+        * **stream** - `Optional[AsyncIterable[bytes]]` - The body of the HTTP request.
         * **ext** - `Optional[dict]` - A dictionary of optional extensions.
 
         ** Returns:**
@@ -83,7 +83,7 @@ class AsyncHTTPTransport:
         * **status_code** - `int` - The HTTP status code, such as `200`.
         * **headers** - `List[Tuple[bytes, bytes]]` - Any HTTP headers included
         on the response.
-        * **stream** - `AsyncByteStream` - The body of the HTTP response.
+        * **stream** - `AsyncIterable[bytes]` - The body of the HTTP response.
         * **ext** - `dict` - A dictionary of optional extensions.
         """
         raise NotImplementedError()  # pragma: nocover

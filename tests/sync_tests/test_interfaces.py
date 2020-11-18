@@ -1,5 +1,6 @@
 import platform
 from functools import partial
+from typing import Iterable
 
 import pytest
 
@@ -15,7 +16,7 @@ def backend(request):
     return request.param
 
 
-def read_body(stream: httpcore.SyncByteStream) -> bytes:
+def read_body(stream: Iterable[bytes]) -> bytes:
     return b"".join([chunk for chunk in stream])
 
 

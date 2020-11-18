@@ -1,17 +1,12 @@
 from ssl import SSLContext
-from typing import Iterator, Optional, Tuple, cast
+from typing import Iterable, Iterator, Optional, Tuple, cast
 
 from .._backends.sync import SyncBackend, SyncLock, SyncSocketStream, SyncBackend
 from .._compat import contextmanager
 from .._exceptions import ConnectError, ConnectTimeout
 from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import exponential_backoff, get_logger, url_to_origin
-from .base import (
-    SyncByteStream,
-    SyncHTTPTransport,
-    ConnectionState,
-    NewConnectionRequired,
-)
+from .base import SyncHTTPTransport, ConnectionState, NewConnectionRequired
 from .http import SyncBaseHTTPConnection
 
 logger = get_logger(__name__)
@@ -78,9 +73,9 @@ class SyncHTTPConnection(SyncHTTPTransport):
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: SyncByteStream = None,
+        stream: Iterable[bytes] = None,
         ext: dict = None,
-    ) -> Iterator[Tuple[int, Headers, SyncByteStream, dict]]:
+    ) -> Iterator[Tuple[int, Headers, Iterable[bytes], dict]]:
         assert url_to_origin(url) == self.origin
         ext = {} if ext is None else ext
         timeout = cast(TimeoutDict, ext.get("timeout", {}))

@@ -1,6 +1,16 @@
 import warnings
 from ssl import SSLContext
-from typing import AsyncIterator, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import (
+    AsyncIterable,
+    AsyncIterator,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 from .._backends.auto import AsyncBackend, AsyncLock, AsyncSemaphore
 from .._backends.base import lookup_async_backend
@@ -9,12 +19,7 @@ from .._exceptions import LocalProtocolError, PoolTimeout, UnsupportedProtocol
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, origin_to_url_string, url_to_origin
-from .base import (
-    AsyncByteStream,
-    AsyncHTTPTransport,
-    ConnectionState,
-    NewConnectionRequired,
-)
+from .base import AsyncHTTPTransport, ConnectionState, NewConnectionRequired
 from .connection import AsyncHTTPConnection
 
 logger = get_logger(__name__)
@@ -142,9 +147,9 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: AsyncByteStream = None,
+        stream: AsyncIterable[bytes] = None,
         ext: dict = None,
-    ) -> AsyncIterator[Tuple[int, Headers, AsyncByteStream, dict]]:
+    ) -> AsyncIterator[Tuple[int, Headers, AsyncIterable[bytes], dict]]:
         if url[0] not in (b"http", b"https"):
             scheme = url[0].decode("latin-1")
             raise UnsupportedProtocol(f"Unsupported URL protocol {scheme!r}")

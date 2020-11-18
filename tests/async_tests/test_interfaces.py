@@ -1,5 +1,6 @@
 import platform
 from functools import partial
+from typing import AsyncIterable
 
 import pytest
 
@@ -15,7 +16,7 @@ def backend(request):
     return request.param
 
 
-async def read_body(stream: httpcore.AsyncByteStream) -> bytes:
+async def read_body(stream: AsyncIterable[bytes]) -> bytes:
     return b"".join([chunk async for chunk in stream])
 
 

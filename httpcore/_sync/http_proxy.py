@@ -1,12 +1,11 @@
 from http import HTTPStatus
 from ssl import SSLContext
-from typing import Iterator, Tuple, cast
+from typing import Iterable, Iterator, Tuple, cast
 
 from .._compat import ExitStack, contextmanager
 from .._exceptions import ProxyError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger, url_to_origin
-from .base import SyncByteStream
 from .connection import SyncHTTPConnection
 from .connection_pool import SyncConnectionPool
 
@@ -94,9 +93,9 @@ class SyncHTTPProxy(SyncConnectionPool):
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: SyncByteStream = None,
+        stream: Iterable[bytes] = None,
         ext: dict = None,
-    ) -> Iterator[Tuple[int, Headers, SyncByteStream, dict]]:
+    ) -> Iterator[Tuple[int, Headers, Iterable[bytes], dict]]:
         if self._keepalive_expiry is not None:
             self._keepalive_sweep()
 
@@ -135,9 +134,9 @@ class SyncHTTPProxy(SyncConnectionPool):
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: SyncByteStream = None,
+        stream: Iterable[bytes] = None,
         ext: dict = None,
-    ) -> Iterator[Tuple[int, Headers, SyncByteStream, dict]]:
+    ) -> Iterator[Tuple[int, Headers, Iterable[bytes], dict]]:
         """
         Forwarded proxy requests include the entire URL as the HTTP target,
         rather than just the path.
@@ -181,9 +180,9 @@ class SyncHTTPProxy(SyncConnectionPool):
         method: bytes,
         url: URL,
         headers: Headers = None,
-        stream: SyncByteStream = None,
+        stream: Iterable[bytes] = None,
         ext: dict = None,
-    ) -> Iterator[Tuple[int, Headers, SyncByteStream, dict]]:
+    ) -> Iterator[Tuple[int, Headers, Iterable[bytes], dict]]:
         """
         Tunnelled proxy requests require an initial CONNECT request to
         establish the connection, and then send regular requests.
