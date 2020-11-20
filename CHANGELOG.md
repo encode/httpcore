@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.12.2 (November 20th, 2020)
+
+### Fixed
+
+- Properly wrap connect errors on the asyncio backend. (Pull #235)
+- Fix `ImportError` occurring on Python 3.9 when using the HTTP/1.1 sync client in a multithreaded context. (Pull #237)
+
 ## 0.12.1 (November 7th, 2020)
 
 ### Added
