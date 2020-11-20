@@ -19,7 +19,7 @@ def read_body(stream: httpcore.SyncByteStream) -> bytes:
 )
 def test_threadsafe_basic(server: Server, http2: bool) -> None:
     """
-    The sync connection pool can be made to perform requests concurrently using
+    The sync connection pool can be used to perform requests concurrently using
     threads.
 
     Also a regression test for: https://github.com/encode/httpx/issues/1393
