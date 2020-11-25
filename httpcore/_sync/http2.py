@@ -314,17 +314,25 @@ class SyncHTTP2Stream:
     ) -> None:
         scheme, hostname, port, path = url
         default_port = {b"http": 80, b"https": 443}.get(scheme)
-        if port is None or port == default_port:
+
+        authority = None
+        for k, v in headers:
+            if k == b"host":
+                authority = v
+                break
+
+        if not authority:
             authority = hostname
-        else:
-            authority = b"%s:%d" % (hostname, port)
+
+        if port and port != default_port:
+            authority = b"%s:%d" % (authority, port)
 
         headers = [
             (b":method", method),
             (b":authority", authority),
             (b":scheme", scheme),
             (b":path", path),
-        ] + [(k, v) for k, v in headers if k not in (b"host", b"transfer-encoding")]
+        ] + [(k, v) for k, v in headers if k not in (b"host", b"transfer-encoding", b":method", b":authority", b":scheme", b":path")]
         end_stream = not has_body
 
         self.connection.send_headers(self.stream_id, headers, end_stream, timeout)
