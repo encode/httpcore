@@ -12,6 +12,7 @@ from .base import (
     NewConnectionRequired,
 )
 from .http import SyncBaseHTTPConnection
+from .http11 import SyncHTTP11Connection
 
 logger = get_logger(__name__)
 
@@ -150,8 +151,6 @@ class SyncHTTPConnection(SyncHTTPTransport):
                 socket=socket, backend=self.backend, ssl_context=self.ssl_context
             )
         else:
-            from .http11 import SyncHTTP11Connection
-
             self.is_http11 = True
             self.connection = SyncHTTP11Connection(
                 socket=socket, ssl_context=self.ssl_context
