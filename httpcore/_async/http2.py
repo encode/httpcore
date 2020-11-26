@@ -336,7 +336,19 @@ class AsyncHTTP2Stream:
             (b":authority", authority),
             (b":scheme", scheme),
             (b":path", path),
-        ] + [(k, v) for k, v in headers if k not in (b"host", b"transfer-encoding", b":method", b":authority", b":scheme", b":path")]
+        ] + [
+            (k, v)
+            for k, v in headers
+            if k
+            not in (
+                b"host",
+                b"transfer-encoding",
+                b":method",
+                b":authority",
+                b":scheme",
+                b":path",
+            )
+        ]
         end_stream = not has_body
 
         await self.connection.send_headers(self.stream_id, headers, end_stream, timeout)
