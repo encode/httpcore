@@ -325,10 +325,10 @@ class AsyncHTTP2Stream:
                 authority = v
                 break
 
-        if not authority:
+        if authority is None:
             authority = hostname
 
-        if port and port != default_port:
+        if port is not None and port != default_port:
             authority = b"%s:%d" % (authority, port)
 
         headers = [
