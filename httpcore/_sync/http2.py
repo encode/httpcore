@@ -315,6 +315,10 @@ class SyncHTTP2Stream:
         scheme, hostname, port, path = url
         default_port = {b"http": 80, b"https": 443}.get(scheme)
 
+        # In HTTP/2 the ':authority' pseudo-header is used instead of 'Host'.
+        # For convenience we automatically treat any 'Host' header value
+        # as a value for ':authority', allowing users to pass 'Host' whenever they
+        # want to customize the host header regardless of the HTTP version in use.
         authority = None
         for k, v in headers:
             if k == b"host":
