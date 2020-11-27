@@ -313,12 +313,11 @@ class AsyncHTTP2Stream:
         timeout: TimeoutDict,
     ) -> None:
         scheme, hostname, port, path = url
-        default_port = {b"http": 80, b"https": 443}.get(scheme)
 
         # In HTTP/2 the ':authority' pseudo-header is used instead of 'Host'.
-        # For convenience we automatically treat any 'Host' header value
-        # as a value for ':authority', allowing users to pass 'Host' whenever they
-        # want to customize the host header regardless of the HTTP version in use.
+        # In order to gracefully handle HTTP/1.1 and HTTP/2 we always require
+        # HTTP/1.1 style headers, and map them appropriately if we end up on
+        # an HTTP/2 connection.
         authority = None
         for k, v in headers:
             if k == b"host":
@@ -326,10 +325,11 @@ class AsyncHTTP2Stream:
                 break
 
         if authority is None:
-            authority = hostname
-
-        if port is not None and port != default_port:
-            authority = b"%s:%d" % (authority, port)
+            default_port = {b"http": 80, b"https": 443}.get(scheme)
+            if port is not None and port != default_port:
+                authority = b"%s:%d" % (authority, port)
+            else:
+                authority = hostname
 
         headers = [
             (b":method", method),
@@ -343,10 +343,6 @@ class AsyncHTTP2Stream:
             not in (
                 b"host",
                 b"transfer-encoding",
-                b":method",
-                b":authority",
-                b":scheme",
-                b":path",
             )
         ]
         end_stream = not has_body
