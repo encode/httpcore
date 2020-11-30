@@ -3,6 +3,7 @@ import socket
 from ssl import SSLContext
 from typing import Optional
 
+from .. import _utils
 from .._exceptions import (
     CloseError,
     ConnectError,
@@ -14,7 +15,6 @@ from .._exceptions import (
     map_exceptions,
 )
 from .._types import TimeoutDict
-from .._utils import is_socket_readable
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 SSL_MONKEY_PATCH_APPLIED = False
@@ -165,21 +165,40 @@ class SocketStream(AsyncSocketStream):
                 )
 
     async def aclose(self) -> None:
-        # NOTE: StreamWriter instances expose a '.wait_closed()' coroutine function,
-        # but using it has caused compatibility issues with certain sites in
-        # the past (see https://github.com/encode/httpx/issues/634), which is
-        # why we don't call it here.
-        # This is fine, though, because '.aclose()' schedules the actual closing of the
-        # stream, meaning that at best it will happen during the next event loop
-        # iteration, and at worst asyncio will take care of it on program exit.
+        # SSL connections should issue the close and then abort, rather than
+        # waiting for the remote end of the connection to signal the EOF.
+        #
+        # See:
+        #
+        # * https://bugs.python.org/issue39758
+        # * https://github.com/python-trio/trio/blob/
+        #             31e2ae866ad549f1927d45ce073d4f0ea9f12419/trio/_ssl.py#L779-L829
+        #
+        # And related issues caused if we simply omit the 'wait_closed' call,
+        # without first using `.abort()`
+        #
+        # * https://github.com/encode/httpx/issues/825
+        # * https://github.com/encode/httpx/issues/914
+        is_ssl = self.stream_writer.get_extra_info("ssl_object") is not None
+
         async with self.write_lock:
             with map_exceptions({OSError: CloseError}):
                 self.stream_writer.close()
+                if is_ssl:
+                    # Give the connection a chance to write any data in the buffer,
+                    # and then forcibly tear down the SSL connection.
+                    await asyncio.sleep(0)
+                    self.stream_writer.transport.abort()  # type: ignore
+                if hasattr(self.stream_writer, "wait_closed"):
+                    # Python 3.7+ only.
+                    await self.stream_writer.wait_closed()  # type: ignore
 
     def is_readable(self) -> bool:
         transport = self.stream_reader._transport  # type: ignore
-        sock: socket.socket = transport.get_extra_info("socket")
-        return is_socket_readable(sock.fileno())
+        sock: Optional[socket.socket] = transport.get_extra_info("socket")
+        # If socket was detatched from the transport, most likely connection was reset.
+        # Hence make it readable to notify users to poll the socket.
+        return sock is None or _utils.is_socket_readable(sock.fileno())
 
 
 class Lock(AsyncLock):

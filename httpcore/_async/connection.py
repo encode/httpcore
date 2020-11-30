@@ -8,6 +8,7 @@ from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import exponential_backoff, get_logger, url_to_origin
 from .base import AsyncHTTPTransport, ConnectionState, NewConnectionRequired
 from .http import AsyncBaseHTTPConnection
+from .http11 import AsyncHTTP11Connection
 
 logger = get_logger(__name__)
 
@@ -150,8 +151,6 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
                 socket=socket, backend=self.backend, ssl_context=self.ssl_context
             )
         else:
-            from .http11 import AsyncHTTP11Connection
-
             self.is_http11 = True
             self.connection = AsyncHTTP11Connection(
                 socket=socket, ssl_context=self.ssl_context

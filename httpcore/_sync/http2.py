@@ -314,18 +314,38 @@ class SyncHTTP2Stream:
         timeout: TimeoutDict,
     ) -> None:
         scheme, hostname, port, path = url
-        default_port = {b"http": 80, b"https": 443}.get(scheme)
-        if port is None or port == default_port:
-            authority = hostname
-        else:
-            authority = b"%s:%d" % (hostname, port)
+
+        # In HTTP/2 the ':authority' pseudo-header is used instead of 'Host'.
+        # In order to gracefully handle HTTP/1.1 and HTTP/2 we always require
+        # HTTP/1.1 style headers, and map them appropriately if we end up on
+        # an HTTP/2 connection.
+        authority = None
+        for k, v in headers:
+            if k == b"host":
+                authority = v
+                break
+
+        if authority is None:
+            default_port = {b"http": 80, b"https": 443}.get(scheme)
+            if port is not None and port != default_port:
+                authority = b"%s:%d" % (authority, port)
+            else:
+                authority = hostname
 
         headers = [
             (b":method", method),
             (b":authority", authority),
             (b":scheme", scheme),
             (b":path", path),
-        ] + [(k, v) for k, v in headers if k not in (b"host", b"transfer-encoding")]
+        ] + [
+            (k, v)
+            for k, v in headers
+            if k
+            not in (
+                b"host",
+                b"transfer-encoding",
+            )
+        ]
         end_stream = not has_body
 
         self.connection.send_headers(self.stream_id, headers, end_stream, timeout)

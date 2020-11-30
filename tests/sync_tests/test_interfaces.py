@@ -1,4 +1,5 @@
 import platform
+import sys
 from functools import partial
 from typing import Iterable
 
@@ -482,5 +483,42 @@ def test_cannot_connect_uds(backend: str) -> None:
     url = (b"http", b"localhost", None, b"/")
     with httpcore.SyncConnectionPool(backend=backend, uds=uds) as http:
         with pytest.raises(httpcore.ConnectError):
-            with http.request(method, url) as _:
-                pass
+            http.request(method, url)
+
+
+@pytest.mark.skipif(
+    sys.version_info[:2] < (3, 7),
+    reason="Hypercorn doesn't support python < 3.7 (this test is local-only)",
+)
+
+def test_connection_timeout_tcp(backend: str, server: Server) -> None:
+    # we try to access http server using https. It caused some SSL timeouts
+    # in TLSStream.wrap inside inside AnyIOBackend.open_tcp_stream
+    method = b"GET"
+    url = (b"https", *server.netloc, b"/")
+    headers = [server.host_header]
+    ext = {"timeout": {"connect": 0.1}}
+
+    with httpcore.SyncConnectionPool(backend=backend) as http:
+        with pytest.raises(httpcore.ConnectTimeout):
+            http.request(method, url, headers, ext=ext)
+
+
+@pytest.mark.skipif(
+    sys.version_info[:2] < (3, 7),
+    reason="Hypercorn doesn't support python < 3.7 (this test is local-only)",
+)
+
+def test_connection_timeout_uds(
+    backend: str, uds_server: Server, uds: str
+) -> None:
+    # we try to access http server using https. It caused some SSL timeouts
+    # in TLSStream.wrap inside AnyIOBackend.open_uds_stream
+    method = b"GET"
+    url = (b"https", b"localhost", None, b"/")
+    headers = [(b"host", b"localhost")]
+    ext = {"timeout": {"connect": 0.1}}
+
+    with httpcore.SyncConnectionPool(uds=uds, backend=backend) as http:
+        with pytest.raises(httpcore.ConnectTimeout):
+            http.request(method, url, headers, ext=ext)
