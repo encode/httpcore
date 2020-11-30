@@ -58,11 +58,11 @@ def test_no_retries(server: Server) -> None:
 
         with pytest.raises(httpcore.ConnectTimeout):
             with http.request(method, url, headers) as response:
-                pass
+                pass  # pragma: no cover
 
         with pytest.raises(httpcore.ConnectError):
             with http.request(method, url, headers) as response:
-                pass
+                pass  # pragma: no cover
 
 
 
@@ -118,11 +118,11 @@ def test_retries_enabled(server: Server) -> None:
         backend.push(httpcore.ReadTimeout(), httpcore.NetworkError())
         with pytest.raises(httpcore.ReadTimeout):
             with http.request(method, url, headers) as response:
-                pass
+                pass  # pragma: no cover
 
         with pytest.raises(httpcore.NetworkError):
             with http.request(method, url, headers) as response:
-                pass
+                pass  # pragma: no cover
 
 
 
@@ -149,4 +149,4 @@ def test_retries_exceeded(server: Server) -> None:
         backend.push(httpcore.ConnectError(), httpcore.ConnectTimeout())
         with pytest.raises(httpcore.ConnectTimeout):
             with http.request(method, url, headers) as response:
-                pass
+                pass  # pragma: no cover

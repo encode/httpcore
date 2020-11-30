@@ -470,7 +470,7 @@ def test_cannot_connect_tcp(backend: str, url) -> None:
         method = b"GET"
         with pytest.raises(httpcore.ConnectError):
             with http.request(method, url) as _:
-                pass
+                pass  # pragma: no cover
 
 
 

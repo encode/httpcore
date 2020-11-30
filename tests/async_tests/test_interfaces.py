@@ -470,7 +470,7 @@ async def test_cannot_connect_tcp(backend: str, url) -> None:
         method = b"GET"
         with pytest.raises(httpcore.ConnectError):
             async with http.arequest(method, url) as _:
-                pass
+                pass  # pragma: no cover
 
 
 @pytest.mark.anyio
