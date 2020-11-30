@@ -196,8 +196,9 @@ class SocketStream(AsyncSocketStream):
     def is_readable(self) -> bool:
         transport = self.stream_reader._transport  # type: ignore
         sock: Optional[socket.socket] = transport.get_extra_info("socket")
-        # If socket was detatched from the transport, most likely connection was reset.
+        # If socket was detached from the transport, most likely connection was reset.
         # Hence make it readable to notify users to poll the socket.
+        # We'd expect the read operation to return `b""` indicating the socket closure.
         return sock is None or _utils.is_socket_readable(sock.fileno())
 
 
