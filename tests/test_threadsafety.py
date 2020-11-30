@@ -1,4 +1,5 @@
 import concurrent.futures
+from typing import Iterable
 
 import pytest
 
@@ -7,11 +8,8 @@ import httpcore
 from .utils import Server
 
 
-def read_body(stream: httpcore.SyncByteStream) -> bytes:
-    try:
-        return b"".join(chunk for chunk in stream)
-    finally:
-        stream.close()
+def read_body(stream: Iterable[bytes]) -> bytes:
+    return b"".join(chunk for chunk in stream)
 
 
 @pytest.mark.parametrize(
@@ -30,8 +28,9 @@ def test_threadsafe_basic(server: Server, http2: bool) -> None:
             method = b"GET"
             url = (b"http", *server.netloc, b"/")
             headers = [server.host_header]
-            status_code, headers, stream, ext = http.request(method, url, headers)
-            read_body(stream)
+            with http.request(method, url, headers) as response:
+                status_code, _, stream, _ = response
+                read_body(stream)
             return status_code
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:

@@ -483,7 +483,8 @@ async def test_cannot_connect_uds(backend: str) -> None:
     url = (b"http", b"localhost", None, b"/")
     async with httpcore.AsyncConnectionPool(backend=backend, uds=uds) as http:
         with pytest.raises(httpcore.ConnectError):
-            await http.arequest(method, url)
+            async with http.arequest(method, url):
+                pass  # pragma: no cover
 
 
 @pytest.mark.skipif(
@@ -501,7 +502,8 @@ async def test_connection_timeout_tcp(backend: str, server: Server) -> None:
 
     async with httpcore.AsyncConnectionPool(backend=backend) as http:
         with pytest.raises(httpcore.ConnectTimeout):
-            await http.arequest(method, url, headers, ext=ext)
+            async with http.arequest(method, url, headers, ext=ext):
+                pass  # pragma: no cover
 
 
 @pytest.mark.skipif(
@@ -521,4 +523,5 @@ async def test_connection_timeout_uds(
 
     async with httpcore.AsyncConnectionPool(uds=uds, backend=backend) as http:
         with pytest.raises(httpcore.ConnectTimeout):
-            await http.arequest(method, url, headers, ext=ext)
+            async with http.arequest(method, url, headers, ext=ext):
+                pass  # pragma: no cover

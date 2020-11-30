@@ -483,7 +483,8 @@ def test_cannot_connect_uds(backend: str) -> None:
     url = (b"http", b"localhost", None, b"/")
     with httpcore.SyncConnectionPool(backend=backend, uds=uds) as http:
         with pytest.raises(httpcore.ConnectError):
-            http.request(method, url)
+            with http.request(method, url):
+                pass  # pragma: no cover
 
 
 @pytest.mark.skipif(
@@ -501,7 +502,8 @@ def test_connection_timeout_tcp(backend: str, server: Server) -> None:
 
     with httpcore.SyncConnectionPool(backend=backend) as http:
         with pytest.raises(httpcore.ConnectTimeout):
-            http.request(method, url, headers, ext=ext)
+            with http.request(method, url, headers, ext=ext):
+                pass  # pragma: no cover
 
 
 @pytest.mark.skipif(
@@ -521,4 +523,5 @@ def test_connection_timeout_uds(
 
     with httpcore.SyncConnectionPool(uds=uds, backend=backend) as http:
         with pytest.raises(httpcore.ConnectTimeout):
-            http.request(method, url, headers, ext=ext)
+            with http.request(method, url, headers, ext=ext):
+                pass  # pragma: no cover
