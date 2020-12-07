@@ -120,7 +120,11 @@ class SocketStream(AsyncSocketStream):
                 timeout=timeout.get("connect"),
             )
 
-        stream_reader.set_transport(transport)
+        # Initialize the protocol, so the reader is made aware of being tied to
+        # a TLS connection.
+        # See: https://github.com/encode/httpx/issues/859
+        protocol.connection_made(transport)
+
         stream_writer = asyncio.StreamWriter(
             transport=transport, protocol=protocol, reader=stream_reader, loop=loop
         )
