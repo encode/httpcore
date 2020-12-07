@@ -120,7 +120,7 @@ class SocketStream(AsyncSocketStream):
                 timeout=timeout.get("connect"),
             )
 
-        # Initialize the protocol, so the reader is made aware of being tied to
+        # Initialize the protocol, so it is made aware of being tied to
         # a TLS connection.
         # See: https://github.com/encode/httpx/issues/859
         protocol.connection_made(transport)
