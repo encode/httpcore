@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.12.3 (December 7th, 2020)
+
+### Fixed
+
+- Abort SSL connections on close rather than waiting for remote EOF when using `asyncio`.  (Pull #167)
+- Fix exception raised in case of connect timeouts when using the `anyio` backend. (Pull #236)
+- Fix `Host` header precedence for `:authority` in HTTP/2. (Pull #241, #243)
+- Handle extra edge case when detecting for socket readability when using `asyncio`. (Pull #242, #244)
+- Fix `asyncio` SSL warning when using proxy tunneling. (Pull #249)
+
 ## 0.12.2 (November 20th, 2020)
 
 ### Fixed
