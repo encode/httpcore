@@ -188,8 +188,9 @@ class SyncHTTPProxy(SyncConnectionPool):
         timeout = cast(TimeoutDict, ext.get("timeout", {}))
         origin = url_to_origin(url)
         connection = self._get_connection_from_pool(origin)
+        proxy_scheme, _, _ = self.proxy_origin
 
-        if connection is None:
+        if connection is None and proxy_scheme == b"http":
             scheme, host, port = origin
 
             # First, create a connection to the proxy server
@@ -250,6 +251,16 @@ class SyncHTTPProxy(SyncConnectionPool):
                 http2=self._http2,
                 ssl_context=self._ssl_context,
                 socket=proxy_connection.socket,
+            )
+            self._add_to_pool(connection, timeout)
+        elif connection is None:
+            # HTTPS requests issued through an HTTPS proxy don't need proxying
+            # at all. Send them through directly.
+            assert proxy_scheme == b"https"
+            connection = SyncHTTPConnection(
+                origin=origin,
+                http2=self._http2,
+                ssl_context=self._ssl_context,
             )
             self._add_to_pool(connection, timeout)
 
