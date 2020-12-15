@@ -116,6 +116,12 @@ def cert_authority() -> trustme.CA:
 
 
 @pytest.fixture(scope="session")
+def ca_cert_file(cert_authority: trustme.CA) -> typing.Iterator[str]:
+    with cert_authority.cert_pem.tempfile() as tmp:
+        yield tmp
+
+
+@pytest.fixture(scope="session")
 def localhost_cert(cert_authority: trustme.CA) -> trustme.LeafCert:
     return cert_authority.issue_cert("localhost")
 
@@ -142,7 +148,9 @@ def localhost_cert_private_key_file(
 
 @pytest.fixture(scope="session")
 def https_server(
-    localhost_cert_pem_file: str, localhost_cert_private_key_file: str
+    localhost_cert_pem_file: str,
+    localhost_cert_private_key_file: str,
+    ca_cert_file: str,
 ) -> typing.Iterator[Server]:  # pragma: no cover
     server: Server  # Please mypy.
 
@@ -156,6 +164,7 @@ def https_server(
         bind=f"{SERVER_HOST}:{SERVER_HTTPS_PORT}",
         certfile=localhost_cert_pem_file,
         keyfile=localhost_cert_private_key_file,
+        cafile=ca_cert_file,
     )
     with server.serve_in_thread():
         yield server

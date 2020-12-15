@@ -1,6 +1,7 @@
 import contextlib
 import functools
 import socket
+import ssl
 import subprocess
 import tempfile
 import threading
@@ -57,6 +58,10 @@ class Server:
     def host_header(self) -> Tuple[bytes, bytes]:
         raise NotImplementedError  # pragma: no cover
 
+    @property
+    def client_ssl_context(self) -> ssl.SSLContext:
+        raise NotImplementedError  # pragma: no cover
+
 
 class LiveServer(Server):  # pragma: no cover  # Python 3.6 only
     """
@@ -77,6 +82,10 @@ class LiveServer(Server):  # pragma: no cover  # Python 3.6 only
     def host_header(self) -> Tuple[bytes, bytes]:
         return (b"host", self._host.encode("ascii"))
 
+    @property
+    def client_ssl_context(self) -> ssl.SSLContext:
+        return ssl.create_default_context()
+
 
 class HypercornServer(Server):  # pragma: no cover  # Python 3.7+ only
     """
@@ -91,6 +100,7 @@ class HypercornServer(Server):  # pragma: no cover  # Python 3.7+ only
         bind: str,
         certfile: str = None,
         keyfile: str = None,
+        cafile: str = None,
     ) -> None:
         assert hypercorn_config is not None
         self._app = app
@@ -101,6 +111,7 @@ class HypercornServer(Server):  # pragma: no cover  # Python 3.7+ only
         self._config.worker_class = "asyncio"
         self._started = False
         self._should_exit = False
+        self._cafile = cafile
 
     @property
     def netloc(self) -> Tuple[bytes, int]:
@@ -118,6 +129,13 @@ class HypercornServer(Server):  # pragma: no cover  # Python 3.7+ only
         scheme, _, uds = bind.partition(":")
         assert scheme == "unix"
         return uds
+
+    @property
+    def client_ssl_context(self) -> ssl.SSLContext:
+        assert self._cafile is not None
+        ssl_context = ssl.create_default_context()
+        ssl_context.load_verify_locations(self._cafile)
+        return ssl_context
 
     def _run(self) -> None:
         async def shutdown_trigger() -> None:

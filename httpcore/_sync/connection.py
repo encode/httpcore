@@ -1,4 +1,4 @@
-from ssl import SSLContext
+import ssl
 from typing import Optional, Tuple, cast
 
 from .._backends.sync import SyncBackend, SyncLock, SyncSocketStream, SyncBackend
@@ -25,7 +25,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         origin: Origin,
         http2: bool = False,
         uds: str = None,
-        ssl_context: SSLContext = None,
+        ssl_context: ssl.SSLContext = None,
         socket: SyncSocketStream = None,
         local_address: str = None,
         retries: int = 0,
@@ -34,12 +34,14 @@ class SyncHTTPConnection(SyncHTTPTransport):
         self.origin = origin
         self.http2 = http2
         self.uds = uds
-        self.ssl_context = SSLContext() if ssl_context is None else ssl_context
+        self.ssl_context = (
+            ssl.create_default_context() if ssl_context is None else ssl_context
+        )
         self.socket = socket
         self.local_address = local_address
         self.retries = retries
 
-        if self.http2:
+        if self.http2 and self.ssl_context is not None:
             self.ssl_context.set_alpn_protocols(["http/1.1", "h2"])
 
         self.connection: Optional[SyncBaseHTTPConnection] = None

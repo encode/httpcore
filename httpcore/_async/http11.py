@@ -1,4 +1,4 @@
-from ssl import SSLContext
+import ssl
 from typing import AsyncIterator, List, Tuple, Union, cast
 
 import h11
@@ -26,9 +26,11 @@ logger = get_logger(__name__)
 class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
     READ_NUM_BYTES = 64 * 1024
 
-    def __init__(self, socket: AsyncSocketStream, ssl_context: SSLContext = None):
+    def __init__(self, socket: AsyncSocketStream, ssl_context: ssl.SSLContext = None):
         self.socket = socket
-        self.ssl_context = SSLContext() if ssl_context is None else ssl_context
+        self.ssl_context = (
+            ssl.create_default_context() if ssl_context is None else ssl_context
+        )
 
         self.h11_state = h11.Connection(our_role=h11.CLIENT)
 

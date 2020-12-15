@@ -1,4 +1,4 @@
-from ssl import SSLContext
+import ssl
 from typing import AsyncIterator, Dict, List, Tuple, cast
 
 import h2.connection
@@ -26,10 +26,12 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         self,
         socket: AsyncSocketStream,
         backend: AsyncBackend,
-        ssl_context: SSLContext = None,
+        ssl_context: ssl.SSLContext = None,
     ):
         self.socket = socket
-        self.ssl_context = SSLContext() if ssl_context is None else ssl_context
+        self.ssl_context = (
+            ssl.create_default_context() if ssl_context is None else ssl_context
+        )
 
         self.backend = backend
         self.h2_state = h2.connection.H2Connection(config=self.CONFIG)

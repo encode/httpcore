@@ -41,7 +41,9 @@ async def test_http_request(backend: str, server: Server) -> None:
 
 @pytest.mark.anyio
 async def test_https_request(backend: str, https_server: Server) -> None:
-    async with httpcore.AsyncConnectionPool(backend=backend) as http:
+    async with httpcore.AsyncConnectionPool(
+        backend=backend, ssl_context=https_server.client_ssl_context
+    ) as http:
         method = b"GET"
         url = (b"https", *https_server.netloc, b"/")
         headers = [https_server.host_header]
@@ -66,7 +68,9 @@ async def test_request_unsupported_protocol(backend: str) -> None:
 
 @pytest.mark.anyio
 async def test_http2_request(backend: str, https_server: Server) -> None:
-    async with httpcore.AsyncConnectionPool(backend=backend, http2=True) as http:
+    async with httpcore.AsyncConnectionPool(
+        backend=backend, http2=True, ssl_context=https_server.client_ssl_context
+    ) as http:
         method = b"GET"
         url = (b"https", *https_server.netloc, b"/")
         headers = [https_server.host_header]
@@ -123,7 +127,10 @@ async def test_http_request_reuse_connection(backend: str, server: Server) -> No
 async def test_https_request_reuse_connection(
     backend: str, https_server: Server
 ) -> None:
-    async with httpcore.AsyncConnectionPool(backend=backend) as http:
+    async with httpcore.AsyncConnectionPool(
+        backend=backend,
+        ssl_context=https_server.client_ssl_context,
+    ) as http:
         method = b"GET"
         url = (b"https", *https_server.netloc, b"/")
         headers = [https_server.host_header]
@@ -271,6 +278,7 @@ async def test_proxy_https_requests(
         proxy_mode=proxy_mode,
         max_connections=max_connections,
         http2=http2,
+        ssl_context=https_server.client_ssl_context,
     ) as http:
         status_code, headers, stream, ext = await http.arequest(method, url, headers)
         _ = await read_body(stream)
@@ -319,7 +327,10 @@ async def test_connection_pool_get_connection_info(
     https_server: Server,
 ) -> None:
     async with httpcore.AsyncConnectionPool(
-        http2=http2, keepalive_expiry=keepalive_expiry, backend=backend
+        http2=http2,
+        ssl_context=https_server.client_ssl_context,
+        keepalive_expiry=keepalive_expiry,
+        backend=backend,
     ) as http:
         method = b"GET"
         url = (b"https", *https_server.netloc, b"/")
