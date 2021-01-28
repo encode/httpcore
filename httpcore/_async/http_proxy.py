@@ -68,6 +68,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
         http2: bool = False,
+        http2_prior_knowledge: bool = False,
         backend: str = "auto",
         # Deprecated argument style:
         max_keepalive: int = None,
@@ -83,6 +84,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             max_keepalive_connections=max_keepalive_connections,
             keepalive_expiry=keepalive_expiry,
             http2=http2,
+            http2_prior_knowledge=http2_prior_knowledge,
             backend=backend,
             max_keepalive=max_keepalive,
         )
@@ -144,7 +146,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
         if connection is None:
             connection = AsyncHTTPConnection(
-                origin=origin, http2=self._http2, ssl_context=self._ssl_context
+                origin=origin, http2=self._http2, http2_prior_knowledge=self._http2_prior_knowledge, ssl_context=self._ssl_context
             )
             await self._add_to_pool(connection, timeout)
 
@@ -196,6 +198,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             proxy_connection = AsyncHTTPConnection(
                 origin=self.proxy_origin,
                 http2=self._http2,
+                http2_prior_knowledge=self._http2_prior_knowledge,
                 ssl_context=self._ssl_context,
             )
 
@@ -248,6 +251,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             connection = AsyncHTTPConnection(
                 origin=origin,
                 http2=self._http2,
+                http2_prior_knowledge=self._http2_prior_knowledge,
                 ssl_context=self._ssl_context,
                 socket=proxy_connection.socket,
             )

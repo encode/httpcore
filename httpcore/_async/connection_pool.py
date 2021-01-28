@@ -106,6 +106,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
         http2: bool = False,
+        http2_prior_knowledge: bool = False,
         uds: str = None,
         local_address: str = None,
         retries: int = 0,
@@ -127,6 +128,9 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         self._max_keepalive_connections = max_keepalive_connections
         self._keepalive_expiry = keepalive_expiry
         self._http2 = http2
+        self._http2_prior_knowledge = http2_prior_knowledge
+        if http2_prior_knowledge:
+            self._http2 = True
         self._uds = uds
         self._local_address = local_address
         self._retries = retries
@@ -171,6 +175,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         return AsyncHTTPConnection(
             origin=origin,
             http2=self._http2,
+            http2_prior_knowledge=self._http2_prior_knowledge,
             uds=self._uds,
             ssl_context=self._ssl_context,
             local_address=self._local_address,
