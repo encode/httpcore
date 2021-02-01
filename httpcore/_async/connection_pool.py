@@ -88,6 +88,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
     * **keepalive_expiry** - `Optional[float]` - The maximum time to allow
     before closing a keep-alive connection.
     * **http2** - `bool` - Enable HTTP/2 support.
+    * **http2_prior_knowledge** - `bool` - Enforce HTTP/2 usage.
     * **uds** - `str` - Path to a Unix Domain Socket to use instead of TCP sockets.
     * **local_address** - `Optional[str]` - Local address to connect from. Can
     also be used to connect using a particular address family. Using

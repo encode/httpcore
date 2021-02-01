@@ -56,6 +56,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
     * **max_keepalive_connections** - `Optional[int]` - The maximum number of
     connections to allow before closing keep-alive connections.
     * **http2** - `bool` - Enable HTTP/2 support.
+    * **http2_prior_knowledge** - `bool` - Enforce HTTP/2 usage.
     """
 
     def __init__(
@@ -146,7 +147,10 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
         if connection is None:
             connection = AsyncHTTPConnection(
-                origin=origin, http2=self._http2, http2_prior_knowledge=self._http2_prior_knowledge, ssl_context=self._ssl_context
+                origin=origin,
+                http2=self._http2,
+                http2_prior_knowledge=self._http2_prior_knowledge,
+                ssl_context=self._ssl_context,
             )
             await self._add_to_pool(connection, timeout)
 
