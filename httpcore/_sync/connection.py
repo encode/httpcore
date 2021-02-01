@@ -24,6 +24,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         self,
         origin: Origin,
         http2: bool = False,
+        http2_prior_knowledge: bool = False,
         uds: str = None,
         ssl_context: SSLContext = None,
         socket: SyncSocketStream = None,
@@ -33,6 +34,9 @@ class SyncHTTPConnection(SyncHTTPTransport):
     ):
         self.origin = origin
         self.http2 = http2
+        self.http2_prior_knowledge = http2_prior_knowledge
+        if http2_prior_knowledge:
+            self.http2 = True
         self.uds = uds
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
         self.socket = socket
@@ -140,6 +144,8 @@ class SyncHTTPConnection(SyncHTTPTransport):
 
     def _create_connection(self, socket: SyncSocketStream) -> None:
         http_version = socket.get_http_version()
+        if self.http2_prior_knowledge:
+            http_version = "HTTP/2"
         logger.trace(
             "create_connection socket=%r http_version=%r", socket, http_version
         )
