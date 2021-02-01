@@ -56,7 +56,6 @@ class SyncHTTPProxy(SyncConnectionPool):
     * **max_keepalive_connections** - `Optional[int]` - The maximum number of
     connections to allow before closing keep-alive connections.
     * **http2** - `bool` - Enable HTTP/2 support.
-    * **http2_prior_knowledge** - `bool` - Enforce HTTP/2 usage.
     """
 
     def __init__(
@@ -69,7 +68,6 @@ class SyncHTTPProxy(SyncConnectionPool):
         max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
         http2: bool = False,
-        http2_prior_knowledge: bool = False,
         backend: str = "sync",
         # Deprecated argument style:
         max_keepalive: int = None,
@@ -85,7 +83,6 @@ class SyncHTTPProxy(SyncConnectionPool):
             max_keepalive_connections=max_keepalive_connections,
             keepalive_expiry=keepalive_expiry,
             http2=http2,
-            http2_prior_knowledge=http2_prior_knowledge,
             backend=backend,
             max_keepalive=max_keepalive,
         )
@@ -147,10 +144,7 @@ class SyncHTTPProxy(SyncConnectionPool):
 
         if connection is None:
             connection = SyncHTTPConnection(
-                origin=origin,
-                http2=self._http2,
-                http2_prior_knowledge=self._http2_prior_knowledge,
-                ssl_context=self._ssl_context,
+                origin=origin, http2=self._http2, ssl_context=self._ssl_context
             )
             self._add_to_pool(connection, timeout)
 
@@ -202,7 +196,6 @@ class SyncHTTPProxy(SyncConnectionPool):
             proxy_connection = SyncHTTPConnection(
                 origin=self.proxy_origin,
                 http2=self._http2,
-                http2_prior_knowledge=self._http2_prior_knowledge,
                 ssl_context=self._ssl_context,
             )
 
@@ -255,7 +248,6 @@ class SyncHTTPProxy(SyncConnectionPool):
             connection = SyncHTTPConnection(
                 origin=origin,
                 http2=self._http2,
-                http2_prior_knowledge=self._http2_prior_knowledge,
                 ssl_context=self._ssl_context,
                 socket=proxy_connection.socket,
             )
