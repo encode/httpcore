@@ -37,13 +37,16 @@ class SyncHTTPConnection(SyncHTTPTransport):
         self.http2_prior_knowledge = http2_prior_knowledge
         if http2_prior_knowledge:
             self.http2 = True
+
         self.uds = uds
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
         self.socket = socket
         self.local_address = local_address
         self.retries = retries
 
-        if self.http2:
+        if self.http2_prior_knowledge:
+            self.ssl_context.set_alpn_protocols(["h2"])
+        elif self.http2:
             self.ssl_context.set_alpn_protocols(["http/1.1", "h2"])
 
         self.connection: Optional[SyncBaseHTTPConnection] = None
