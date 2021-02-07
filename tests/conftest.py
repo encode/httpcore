@@ -9,7 +9,13 @@ import trustme
 
 from httpcore._types import URL
 
-from .utils import HypercornServer, LiveServer, Server, http_proxy_server
+from .utils import (
+    HypercornServer,
+    LiveServer,
+    NotListeningServer,
+    Server,
+    http_proxy_server,
+)
 
 try:
     import hypercorn
@@ -24,6 +30,8 @@ else:
     SERVER_HTTP_PORT = 8002
     SERVER_HTTPS_PORT = 8003
     HTTPS_SERVER_URL = f"https://localhost:{SERVER_HTTPS_PORT}"
+
+SERVER_BUSY_PORT = 8004
 
 
 @pytest.fixture(scope="session")
@@ -158,6 +166,13 @@ def https_server(
         keyfile=localhost_cert_private_key_file,
     )
     with server.serve_in_thread():
+        yield server
+
+
+@pytest.fixture
+def busy_server() -> typing.Iterator[Server]:
+    server = NotListeningServer(("localhost", SERVER_BUSY_PORT))
+    with server.serve():
         yield server
 
 

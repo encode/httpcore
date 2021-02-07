@@ -148,6 +148,27 @@ class HypercornServer(Server):  # pragma: no cover  # Python 3.7+ only
             thread.join()
 
 
+class NotListeningServer(Server):
+    """
+    A test server that binds to a TCP port but never listens for or accepts incoming
+    connections. For testing connection timeouts.
+    """
+
+    def __init__(self, address: Tuple[str, int]) -> None:
+        self._address = address
+
+    @property
+    def netloc(self) -> Tuple[bytes, int]:
+        host, port = self._address
+        return (host.encode("ascii"), port)
+
+    @contextlib.contextmanager
+    def serve(self) -> Iterator[None]:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.bind(self._address)
+            yield
+
+
 @contextlib.contextmanager
 def http_proxy_server(proxy_host: str, proxy_port: int):
     """
