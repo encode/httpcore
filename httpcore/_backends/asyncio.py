@@ -1,6 +1,6 @@
 import asyncio
 import socket
-from ssl import SSLContext
+from ssl import SSLContext, SSLError
 from typing import Optional
 
 from .. import _utils
@@ -195,7 +195,14 @@ class SocketStream(AsyncSocketStream):
                     self.stream_writer.transport.abort()  # type: ignore
                 if hasattr(self.stream_writer, "wait_closed"):
                     # Python 3.7+ only.
-                    await self.stream_writer.wait_closed()  # type: ignore
+                    try:
+                        await self.stream_writer.wait_closed()  # type: ignore
+                    except SSLError:
+                        # We've seen this occur when the server violates the TLS
+                        # protocol by sending more data after we sent `CLOSE_NOTIFY`.
+                        # See: https://github.com/encode/httpx/issues/1459
+                        # In that case there's not much we can do but bail out.
+                        pass
 
     def is_readable(self) -> bool:
         transport = self.stream_reader._transport  # type: ignore
