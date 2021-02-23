@@ -170,8 +170,8 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
                 await self.connection.aclose()
 
     async def aopen(
-            self,
-            ext: dict = None,
+        self,
+        ext: dict = None,
     ) -> None:
         ext = {} if ext is None else ext
         timeout = cast(TimeoutDict, ext.get("timeout", {}))

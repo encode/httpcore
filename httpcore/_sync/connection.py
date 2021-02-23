@@ -170,8 +170,8 @@ class SyncHTTPConnection(SyncHTTPTransport):
                 self.connection.close()
 
     def open(
-            self,
-            ext: dict = None,
+        self,
+        ext: dict = None,
     ) -> None:
         ext = {} if ext is None else ext
         timeout = cast(TimeoutDict, ext.get("timeout", {}))
