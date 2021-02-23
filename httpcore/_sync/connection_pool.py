@@ -12,12 +12,23 @@ from typing import (
     cast,
 )
 
-from .._backends.sync import SyncBackend, SyncLock, SyncSemaphore
+from .._backends.sync import SyncBackend, SyncLock, SyncSemaphore, SyncSocketStream
 from .._backends.base import lookup_sync_backend
-from .._exceptions import LocalProtocolError, PoolTimeout, UnsupportedProtocol
+from .._exceptions import (
+    ConnectError,
+    ConnectTimeout,
+    LocalProtocolError,
+    PoolTimeout,
+    UnsupportedProtocol,
+)
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
-from .._utils import get_logger, origin_to_url_string, url_to_origin
+from .._utils import (
+    exponential_backoff,
+    get_logger,
+    origin_to_url_string,
+    url_to_origin,
+)
 from .base import (
     SyncByteStream,
     SyncHTTPTransport,
@@ -27,6 +38,8 @@ from .base import (
 from .connection import SyncHTTPConnection
 
 logger = get_logger(__name__)
+
+RETRIES_BACKOFF_FACTOR = 0.5  # 0s, 0.5s, 1s, 2s, 4s, etc.
 
 
 class NullSemaphore(SyncSemaphore):
@@ -144,6 +157,8 @@ class SyncConnectionPool(SyncHTTPTransport):
                     "package is not installed. Use 'pip install httpcore[http2]'."
                 )
 
+            self._ssl_context.set_alpn_protocols(["http/1.1", "h2"])
+
     @property
     def _connection_semaphore(self) -> SyncSemaphore:
         # We do this lazily, to make sure backend autodetection always
@@ -167,16 +182,49 @@ class SyncConnectionPool(SyncHTTPTransport):
     def _create_connection(
         self,
         origin: Tuple[bytes, bytes, int],
+        socket: SyncSocketStream,
     ) -> SyncHTTPConnection:
         return SyncHTTPConnection(
             origin=origin,
-            http2=self._http2,
-            uds=self._uds,
+            socket=socket,
             ssl_context=self._ssl_context,
-            local_address=self._local_address,
-            retries=self._retries,
             backend=self._backend,
         )
+
+    def _open_socket(
+        self, origin: Origin, timeout: TimeoutDict = None
+    ) -> SyncSocketStream:
+        scheme, hostname, port = origin
+        timeout = {} if timeout is None else timeout
+        ssl_context = self._ssl_context if scheme == b"https" else None
+
+        logger.trace("open_socket origin=%r timeout=%r", origin, timeout)
+
+        retries_left = self._retries
+        delays = exponential_backoff(factor=RETRIES_BACKOFF_FACTOR)
+
+        while True:
+            try:
+                if self._uds is None:
+                    return self._backend.open_tcp_stream(
+                        hostname,
+                        port,
+                        ssl_context,
+                        timeout,
+                        local_address=self._local_address,
+                    )
+                else:
+                    return self._backend.open_uds_stream(
+                        self._uds, hostname, ssl_context, timeout
+                    )
+            except (ConnectError, ConnectTimeout):
+                if retries_left <= 0:
+                    raise
+                retries_left -= 1
+                delay = next(delays)
+                self._backend.sleep(delay)
+            except Exception:  # noqa: PIE786
+                raise
 
     def request(
         self,
@@ -208,7 +256,8 @@ class SyncConnectionPool(SyncHTTPTransport):
                 connection = self._get_connection_from_pool(origin)
 
                 if connection is None:
-                    connection = self._create_connection(origin=origin)
+                    socket = self._open_socket(origin, timeout=timeout)
+                    connection = self._create_connection(origin=origin, socket=socket)
                     logger.trace("created connection=%r", connection)
                     self._add_to_pool(connection, timeout=timeout)
                 else:

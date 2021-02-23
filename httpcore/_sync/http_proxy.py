@@ -143,8 +143,11 @@ class SyncHTTPProxy(SyncConnectionPool):
         connection = self._get_connection_from_pool(origin)
 
         if connection is None:
+            socket = self._open_socket(origin, timeout=timeout)
             connection = SyncHTTPConnection(
-                origin=origin, http2=self._http2, ssl_context=self._ssl_context
+                origin=origin,
+                socket=socket,
+                ssl_context=self._ssl_context,
             )
             self._add_to_pool(connection, timeout)
 
@@ -193,9 +196,10 @@ class SyncHTTPProxy(SyncConnectionPool):
             scheme, host, port = origin
 
             # First, create a connection to the proxy server
+            socket = self._open_socket(origin=self.proxy_origin, timeout=timeout)
             proxy_connection = SyncHTTPConnection(
                 origin=self.proxy_origin,
-                http2=self._http2,
+                socket=socket,
                 ssl_context=self._ssl_context,
             )
 
@@ -247,9 +251,8 @@ class SyncHTTPProxy(SyncConnectionPool):
             # retain the tunnel.
             connection = SyncHTTPConnection(
                 origin=origin,
-                http2=self._http2,
-                ssl_context=self._ssl_context,
                 socket=proxy_connection.socket,
+                ssl_context=self._ssl_context,
             )
             self._add_to_pool(connection, timeout)
 

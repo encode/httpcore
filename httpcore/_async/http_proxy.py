@@ -143,8 +143,11 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         connection = await self._get_connection_from_pool(origin)
 
         if connection is None:
+            socket = await self._open_socket(origin, timeout=timeout)
             connection = AsyncHTTPConnection(
-                origin=origin, http2=self._http2, ssl_context=self._ssl_context
+                origin=origin,
+                socket=socket,
+                ssl_context=self._ssl_context,
             )
             await self._add_to_pool(connection, timeout)
 
@@ -193,9 +196,10 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             scheme, host, port = origin
 
             # First, create a connection to the proxy server
+            socket = await self._open_socket(origin=self.proxy_origin, timeout=timeout)
             proxy_connection = AsyncHTTPConnection(
                 origin=self.proxy_origin,
-                http2=self._http2,
+                socket=socket,
                 ssl_context=self._ssl_context,
             )
 
@@ -247,9 +251,8 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             # retain the tunnel.
             connection = AsyncHTTPConnection(
                 origin=origin,
-                http2=self._http2,
-                ssl_context=self._ssl_context,
                 socket=proxy_connection.socket,
+                ssl_context=self._ssl_context,
             )
             await self._add_to_pool(connection, timeout)
 
