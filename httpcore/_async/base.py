@@ -100,7 +100,13 @@ class AsyncHTTPTransport:
         and any keep alive connections.
         """
 
+    async def aopen(self) -> None:
+        """
+        Opens the implementation connection to the target.
+        """
+
     async def __aenter__(self: T) -> T:
+        await self.aopen()
         return self
 
     async def __aexit__(

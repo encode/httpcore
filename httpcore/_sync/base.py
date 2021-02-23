@@ -100,7 +100,13 @@ class SyncHTTPTransport:
         and any keep alive connections.
         """
 
+    def open(self) -> None:
+        """
+        Opens the implementation connection to the target.
+        """
+
     def __enter__(self: T) -> T:
+        self.open()
         return self
 
     def __exit__(

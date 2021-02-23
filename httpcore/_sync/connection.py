@@ -82,23 +82,8 @@ class SyncHTTPConnection(SyncHTTPTransport):
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
         assert url_to_origin(url) == self.origin
         ext = {} if ext is None else ext
-        timeout = cast(TimeoutDict, ext.get("timeout", {}))
 
-        with self.request_lock:
-            if self.state == ConnectionState.PENDING:
-                if not self.socket:
-                    logger.trace(
-                        "open_socket origin=%r timeout=%r", self.origin, timeout
-                    )
-                    self.socket = self._open_socket(timeout)
-                self._create_connection(self.socket)
-            elif self.state in (ConnectionState.READY, ConnectionState.IDLE):
-                pass
-            elif self.state == ConnectionState.ACTIVE and self.is_http2:
-                pass
-            else:
-                raise NewConnectionRequired()
-
+        self.open(ext=ext)
         assert self.connection is not None
         logger.trace(
             "connection.request method=%r url=%r headers=%r", method, url, headers
@@ -156,6 +141,8 @@ class SyncHTTPConnection(SyncHTTPTransport):
                 socket=socket, ssl_context=self.ssl_context
             )
 
+        self.connection.state = ConnectionState.READY
+
     @property
     def state(self) -> ConnectionState:
         if self.connect_failed:
@@ -181,3 +168,25 @@ class SyncHTTPConnection(SyncHTTPTransport):
         with self.request_lock:
             if self.connection is not None:
                 self.connection.close()
+
+    def open(
+            self,
+            ext: dict = None,
+    ) -> None:
+        ext = {} if ext is None else ext
+        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+
+        with self.request_lock:
+            if self.state == ConnectionState.PENDING:
+                if not self.socket:
+                    logger.trace(
+                        "open_socket origin=%r timeout=%r", self.origin, timeout
+                    )
+                    self.socket = self._open_socket(timeout)
+                self._create_connection(self.socket)
+            elif self.state in (ConnectionState.READY, ConnectionState.IDLE):
+                pass
+            elif self.state == ConnectionState.ACTIVE and self.is_http2:
+                pass
+            else:
+                raise NewConnectionRequired()
