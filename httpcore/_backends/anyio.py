@@ -25,10 +25,11 @@ try:
     from anyio import maybe_async, maybe_async_cm
 except ImportError:
 
-    def maybe_async(x):
+    def maybe_async(x):  # type: ignore
         return x
 
-    maybe_async_cm = maybe_async
+    def maybe_async_cm(x):  # type: ignore
+        return x
 
 
 class SocketStream(AsyncSocketStream):
