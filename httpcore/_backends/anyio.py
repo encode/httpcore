@@ -21,6 +21,7 @@ from .._utils import is_socket_readable
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 # For compatibility with both AnyIO 2.x and 3.x
+# (some functions and context managers were converted from async to sync in 3.0)
 try:
     from anyio import maybe_async, maybe_async_cm
 except ImportError:
