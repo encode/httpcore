@@ -4,7 +4,13 @@ from typing import Optional
 import sniffio
 
 from .._types import TimeoutDict
-from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
+from .base import (
+    AsyncBackend,
+    AsyncDatagramSocket,
+    AsyncLock,
+    AsyncSemaphore,
+    AsyncSocketStream,
+)
 
 # The following line is imported from the _sync modules
 from .sync import SyncBackend, SyncLock, SyncSemaphore, SyncSocketStream  # noqa
@@ -31,6 +37,18 @@ class AutoBackend(AsyncBackend):
             else:  # pragma: nocover
                 raise RuntimeError(f"Unsupported concurrency backend {backend!r}")
         return self._backend_implementation
+
+    async def open_udp_socket(
+        self,
+        hostname: bytes,
+        port: int,
+        timeout: TimeoutDict,
+        *,
+        local_address: Optional[str],
+    ) -> AsyncDatagramSocket:
+        return await self.backend.open_udp_socket(
+            hostname, port, timeout, local_address=local_address
+        )
 
     async def open_tcp_stream(
         self,

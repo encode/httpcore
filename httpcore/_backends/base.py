@@ -1,8 +1,8 @@
 from ssl import SSLContext
 from types import TracebackType
-from typing import TYPE_CHECKING, Optional, Type
+from typing import TYPE_CHECKING, Optional, Tuple, Type
 
-from .._types import TimeoutDict
+from .._types import SocketAddr, TimeoutDict
 
 if TYPE_CHECKING:  # pragma: no cover
     from .sync import SyncBackend
@@ -37,6 +37,28 @@ def lookup_sync_backend(name: str) -> "SyncBackend":
     from .sync import SyncBackend
 
     return SyncBackend()
+
+
+class AsyncDatagramSocket:
+    """
+    A datagram socket with read/write operations. Abstracts away any asyncio-specific
+    interfaces into a more generic base class, that we can use with alternate
+    backends, or for stand-alone test cases.
+    """
+
+    remote_addr: SocketAddr
+
+    def get_http_version(self) -> str:
+        return "HTTP/3"
+
+    async def aclose(self) -> None:
+        raise NotImplementedError()  # pragma: no cover
+
+    async def receive(self) -> Tuple[bytes, SocketAddr]:
+        raise NotImplementedError()  # pragma: no cover
+
+    async def send(self, data: bytes, addr: SocketAddr) -> None:
+        raise NotImplementedError()  # pragma: no cover
 
 
 class AsyncSocketStream:
@@ -104,6 +126,16 @@ class AsyncSemaphore:
 
 
 class AsyncBackend:
+    async def open_udp_socket(
+        self,
+        hostname: bytes,
+        port: int,
+        timeout: TimeoutDict,
+        *,
+        local_address: Optional[str],
+    ) -> AsyncDatagramSocket:
+        raise NotImplementedError()  # pragma: no cover
+
     async def open_tcp_stream(
         self,
         hostname: bytes,

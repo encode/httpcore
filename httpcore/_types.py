@@ -9,4 +9,5 @@ StrOrBytes = Union[str, bytes]
 Origin = Tuple[bytes, bytes, int]
 URL = Tuple[bytes, bytes, Optional[int], bytes]
 Headers = List[Tuple[bytes, bytes]]
+SocketAddr = Tuple
 TimeoutDict = Mapping[str, Optional[float]]

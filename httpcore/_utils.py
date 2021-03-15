@@ -2,10 +2,11 @@ import itertools
 import logging
 import os
 import select
+import socket
 import sys
 import typing
 
-from ._types import URL, Origin
+from ._types import URL, Origin, SocketAddr
 
 _LOGGER_INITIALIZED = False
 TRACE_LOG_LEVEL = 5
@@ -94,3 +95,27 @@ def is_socket_readable(sock_fd: int) -> bool:
     p = select.poll()
     p.register(sock_fd, select.POLLIN)
     return bool(p.poll(0))
+
+
+def udp_socket_parameters(
+    remote_addr: SocketAddr,
+) -> typing.Tuple[int, SocketAddr, SocketAddr]:
+    """
+    Determine the family, local and remote address to use for
+    the given remote address.
+    """
+    family = socket.AF_INET6
+    local_host = "::"
+
+    if len(remote_addr) == 2:
+        # determine behaviour for IPv4
+        if sys.platform == "win32":
+            # on Windows, we must use an IPv4 socket to reach an IPv4 host
+            family = socket.AF_INET
+            local_host = "0.0.0.0"
+        else:
+            # other platforms support dual-stack sockets
+            remote_addr = ("::ffff:" + remote_addr[0], remote_addr[1], 0, 0)
+
+    local_addr = (local_host, 0)
+    return (family, local_addr, remote_addr)

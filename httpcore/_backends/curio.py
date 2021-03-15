@@ -1,5 +1,5 @@
 from ssl import SSLContext, SSLSocket
-from typing import Optional
+from typing import Optional, Tuple
 
 import curio
 import curio.io
@@ -13,9 +13,15 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
-from .._types import TimeoutDict
-from .._utils import get_logger, is_socket_readable
-from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
+from .._types import SocketAddr, TimeoutDict
+from .._utils import get_logger, is_socket_readable, udp_socket_parameters
+from .base import (
+    AsyncBackend,
+    AsyncDatagramSocket,
+    AsyncLock,
+    AsyncSemaphore,
+    AsyncSocketStream,
+)
 
 logger = get_logger(__name__)
 
@@ -58,6 +64,21 @@ class Semaphore(AsyncSemaphore):
 
     async def release(self) -> None:
         await self.semaphore.release()
+
+
+class DatagramSocket(AsyncDatagramSocket):
+    def __init__(self, socket: curio.io.Socket, remote_addr: SocketAddr) -> None:
+        self.socket = socket
+        self.remote_addr = remote_addr
+
+    async def aclose(self) -> None:
+        await self.socket.close()
+
+    async def receive(self) -> Tuple[bytes, SocketAddr]:
+        return await self.socket.recvfrom(10000)
+
+    async def send(self, data: bytes, addr: SocketAddr) -> None:
+        await self.socket.sendto(data, addr)
 
 
 class SocketStream(AsyncSocketStream):
@@ -136,6 +157,23 @@ class SocketStream(AsyncSocketStream):
 
 
 class CurioBackend(AsyncBackend):
+    async def open_udp_socket(
+        self,
+        hostname: bytes,
+        port: int,
+        timeout: TimeoutDict,
+        *,
+        local_address: Optional[str],
+    ) -> AsyncDatagramSocket:
+        infos = await curio.socket.getaddrinfo(
+            hostname, port, type=curio.socket.SOCK_DGRAM
+        )
+        family, local_addr, remote_addr = udp_socket_parameters(infos[0][4])
+
+        socket = curio.socket.socket(family, curio.socket.SOCK_DGRAM)
+        socket.bind(local_addr)
+        return DatagramSocket(socket, remote_addr=remote_addr)
+
     async def open_tcp_stream(
         self,
         hostname: bytes,

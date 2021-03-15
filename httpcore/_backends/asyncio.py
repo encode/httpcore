@@ -1,7 +1,8 @@
 import asyncio
 import socket
+from collections import deque
 from ssl import SSLContext
-from typing import Optional
+from typing import Deque, Optional, Tuple, cast
 
 from .. import _utils
 from .._exceptions import (
@@ -14,8 +15,14 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
-from .._types import TimeoutDict
-from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
+from .._types import SocketAddr, TimeoutDict
+from .base import (
+    AsyncBackend,
+    AsyncDatagramSocket,
+    AsyncLock,
+    AsyncSemaphore,
+    AsyncSocketStream,
+)
 
 SSL_MONKEY_PATCH_APPLIED = False
 
@@ -76,6 +83,50 @@ async def backport_start_tls(
 
     await waiter
     return ssl_protocol._app_transport
+
+
+class DatagramProtocol(asyncio.DatagramProtocol):
+    def connection_lost(self, exc: Optional[Exception]) -> None:
+        self.close_event.set()
+
+    def connection_made(self, transport: asyncio.BaseTransport) -> None:
+        self.close_event = asyncio.Event()
+        self.read_queue: Deque[Tuple[bytes, SocketAddr]] = deque()
+        self.read_event = asyncio.Event()
+
+    def datagram_received(self, data: bytes, addr: SocketAddr) -> None:
+        self.read_queue.append((data, addr))
+        self.read_event.set()
+
+
+class DatagramSocket(AsyncDatagramSocket):
+    def __init__(
+        self,
+        transport: asyncio.DatagramTransport,
+        protocol: DatagramProtocol,
+        remote_addr: SocketAddr,
+    ):
+        self._protocol = protocol
+        self._transport = transport
+        self.remote_addr = remote_addr
+
+    async def aclose(self) -> None:
+        self._transport.close()
+        await self._protocol.close_event.wait()
+
+    async def receive(self) -> Tuple[bytes, SocketAddr]:
+        if not self._protocol.read_queue and not self._transport.is_closing():
+            await self._protocol.read_event.wait()
+
+        data, addr = self._protocol.read_queue.popleft()
+
+        if not self._protocol.read_queue:
+            self._protocol.read_event.clear()
+
+        return data, addr
+
+    async def send(self, data: bytes, addr: SocketAddr) -> None:
+        self._transport.sendto(data, addr)
 
 
 class SocketStream(AsyncSocketStream):
@@ -245,6 +296,29 @@ class AsyncioBackend(AsyncBackend):
         if not SSL_MONKEY_PATCH_APPLIED:
             ssl_monkey_patch()
         SSL_MONKEY_PATCH_APPLIED = True
+
+    async def open_udp_socket(
+        self,
+        hostname: bytes,
+        port: int,
+        timeout: TimeoutDict,
+        *,
+        local_address: Optional[str],
+    ) -> AsyncDatagramSocket:
+        loop = asyncio.get_event_loop()
+
+        infos = await loop.getaddrinfo(hostname, port, type=socket.SOCK_DGRAM)
+        _, local_addr, remote_addr = _utils.udp_socket_parameters(infos[0][4])
+
+        transport, protocol = await loop.create_datagram_endpoint(
+            lambda: DatagramProtocol(),
+            local_addr=local_addr,
+        )
+        return DatagramSocket(
+            cast(asyncio.DatagramTransport, transport),
+            cast(DatagramProtocol, protocol),
+            remote_addr,
+        )
 
     async def open_tcp_stream(
         self,

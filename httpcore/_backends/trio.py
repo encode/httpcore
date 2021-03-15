@@ -1,5 +1,5 @@
 from ssl import SSLContext
-from typing import Optional
+from typing import Optional, Tuple
 
 import trio
 
@@ -13,12 +13,34 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
-from .._types import TimeoutDict
-from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
+from .._types import SocketAddr, TimeoutDict
+from .._utils import udp_socket_parameters
+from .base import (
+    AsyncBackend,
+    AsyncDatagramSocket,
+    AsyncLock,
+    AsyncSemaphore,
+    AsyncSocketStream,
+)
 
 
 def none_as_inf(value: Optional[float]) -> float:
     return value if value is not None else float("inf")
+
+
+class DatagramSocket(AsyncDatagramSocket):
+    def __init__(self, socket: trio.socket, remote_addr: SocketAddr) -> None:
+        self.socket = socket
+        self.remote_addr = remote_addr
+
+    async def aclose(self) -> None:
+        self.socket.close()
+
+    async def receive(self) -> Tuple[bytes, SocketAddr]:
+        return await self.socket.recvfrom(10000)
+
+    async def send(self, data: bytes, addr: SocketAddr) -> None:
+        await self.socket.sendto(data, addr)
 
 
 class SocketStream(AsyncSocketStream):
@@ -130,6 +152,23 @@ class Semaphore(AsyncSemaphore):
 
 
 class TrioBackend(AsyncBackend):
+    async def open_udp_socket(
+        self,
+        hostname: bytes,
+        port: int,
+        timeout: TimeoutDict,
+        *,
+        local_address: Optional[str],
+    ) -> AsyncDatagramSocket:
+        infos = await trio.socket.getaddrinfo(
+            hostname, port, type=trio.socket.SOCK_DGRAM
+        )
+        family, local_addr, remote_addr = udp_socket_parameters(infos[0][4])
+
+        socket = trio.socket.socket(family, trio.socket.SOCK_DGRAM)
+        await socket.bind(local_addr)
+        return DatagramSocket(socket, remote_addr=remote_addr)
+
     async def open_tcp_stream(
         self,
         hostname: bytes,
