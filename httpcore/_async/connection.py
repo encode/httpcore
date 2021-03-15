@@ -1,7 +1,13 @@
 from ssl import SSLContext
-from typing import Optional, Tuple, cast
+from typing import Optional, Tuple, Union, cast
 
-from .._backends.auto import AsyncBackend, AsyncLock, AsyncSocketStream, AutoBackend
+from .._backends.auto import (
+    AsyncBackend,
+    AsyncDatagramSocket,
+    AsyncLock,
+    AsyncSocketStream,
+    AutoBackend,
+)
 from .._exceptions import ConnectError, ConnectTimeout
 from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import exponential_backoff, get_logger, url_to_origin
@@ -24,15 +30,17 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         self,
         origin: Origin,
         http2: bool = False,
+        http3: bool = False,
         uds: str = None,
         ssl_context: SSLContext = None,
-        socket: AsyncSocketStream = None,
+        socket: Union[AsyncDatagramSocket, AsyncSocketStream] = None,
         local_address: str = None,
         retries: int = 0,
         backend: AsyncBackend = None,
     ):
         self.origin = origin
         self.http2 = http2
+        self.http3 = http3
         self.uds = uds
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
         self.socket = socket
@@ -45,6 +53,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         self.connection: Optional[AsyncBaseHTTPConnection] = None
         self.is_http11 = False
         self.is_http2 = False
+        self.is_http3 = False
         self.connect_failed = False
         self.expires_at: Optional[float] = None
         self.backend = AutoBackend() if backend is None else backend
@@ -55,6 +64,8 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
             http_version = "HTTP/1.1"
         elif self.is_http2:
             http_version = "HTTP/2"
+        elif self.is_http3:
+            http_version = "HTTP/3"
         return f"<AsyncHTTPConnection http_version={http_version} state={self.state}>"
 
     def info(self) -> str:
@@ -105,7 +116,9 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         )
         return await self.connection.arequest(method, url, headers, stream, ext)
 
-    async def _open_socket(self, timeout: TimeoutDict = None) -> AsyncSocketStream:
+    async def _open_socket(
+        self, timeout: TimeoutDict = None
+    ) -> Union[AsyncDatagramSocket, AsyncSocketStream]:
         scheme, hostname, port = self.origin
         timeout = {} if timeout is None else timeout
         ssl_context = self.ssl_context if scheme == b"https" else None
@@ -115,7 +128,14 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
 
         while True:
             try:
-                if self.uds is None:
+                if self.http3:
+                    return await self.backend.open_udp_socket(
+                        hostname,
+                        port,
+                        timeout,
+                        local_address=self.local_address,
+                    )
+                elif self.uds is None:
                     return await self.backend.open_tcp_stream(
                         hostname,
                         port,
@@ -138,22 +158,35 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
                 self.connect_failed = True
                 raise
 
-    def _create_connection(self, socket: AsyncSocketStream) -> None:
+    def _create_connection(
+        self, socket: Union[AsyncDatagramSocket, AsyncSocketStream]
+    ) -> None:
         http_version = socket.get_http_version()
         logger.trace(
             "create_connection socket=%r http_version=%r", socket, http_version
         )
-        if http_version == "HTTP/2":
+        if http_version == "HTTP/3":
+            from .http3 import AsyncHTTP3Connection
+
+            self.is_http3 = True
+            self.connection = AsyncHTTP3Connection(
+                socket=cast(AsyncDatagramSocket, socket),
+                backend=self.backend,
+                ssl_context=self.ssl_context,
+            )
+        elif http_version == "HTTP/2":
             from .http2 import AsyncHTTP2Connection
 
             self.is_http2 = True
             self.connection = AsyncHTTP2Connection(
-                socket=socket, backend=self.backend, ssl_context=self.ssl_context
+                socket=cast(AsyncSocketStream, socket),
+                backend=self.backend,
+                ssl_context=self.ssl_context,
             )
         else:
             self.is_http11 = True
             self.connection = AsyncHTTP11Connection(
-                socket=socket, ssl_context=self.ssl_context
+                socket=cast(AsyncSocketStream, socket), ssl_context=self.ssl_context
             )
 
     @property

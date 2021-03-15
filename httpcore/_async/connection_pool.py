@@ -88,6 +88,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
     * **keepalive_expiry** - `Optional[float]` - The maximum time to allow
     before closing a keep-alive connection.
     * **http2** - `bool` - Enable HTTP/2 support.
+    * **http3** - `bool` - Enable HTTP/3 support.
     * **uds** - `str` - Path to a Unix Domain Socket to use instead of TCP sockets.
     * **local_address** - `Optional[str]` - Local address to connect from. Can
     also be used to connect using a particular address family. Using
@@ -106,6 +107,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
         http2: bool = False,
+        http3: bool = False,
         uds: str = None,
         local_address: str = None,
         retries: int = 0,
@@ -127,6 +129,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         self._max_keepalive_connections = max_keepalive_connections
         self._keepalive_expiry = keepalive_expiry
         self._http2 = http2
+        self._http3 = http3
         self._uds = uds
         self._local_address = local_address
         self._retries = retries
@@ -142,6 +145,15 @@ class AsyncConnectionPool(AsyncHTTPTransport):
                 raise ImportError(
                     "Attempted to use http2=True, but the 'h2' "
                     "package is not installed. Use 'pip install httpcore[http2]'."
+                )
+
+        if http3:
+            try:
+                import aioquic  # noqa: F401
+            except ImportError:
+                raise ImportError(
+                    "Attempted to use http3=True, but the 'aioquic' "
+                    "package is not installed. Use 'pip install httpcore[http3]'."
                 )
 
     @property
@@ -171,6 +183,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         return AsyncHTTPConnection(
             origin=origin,
             http2=self._http2,
+            http3=self._http3,
             uds=self._uds,
             ssl_context=self._ssl_context,
             local_address=self._local_address,
