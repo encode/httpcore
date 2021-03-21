@@ -29,5 +29,5 @@ pproxy==2.7.6
 pytest==6.2.2
 pytest-trio==0.7.0
 pytest-asyncio==0.14.0
-trustme==0.6.0
+trustme==0.7.0
 uvicorn==0.12.1; python_version < '3.7'
