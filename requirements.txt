@@ -24,9 +24,9 @@ flake8-bugbear==20.11.1
 flake8-pie==0.6.1
 hypercorn==0.11.1; python_version >= '3.7'
 isort==5.6.4
-mypy==0.790
+mypy==0.812
 pproxy==2.7.6
-pytest==6.1.2
+pytest==6.2.2
 pytest-trio==0.7.0
 pytest-asyncio==0.14.0
 trustme==0.6.0
