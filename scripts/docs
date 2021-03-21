@@ -9,7 +9,6 @@ SOURCE_DIR="docs"
 OUT_DIR="build/html"
 
 COMMAND="$1"
-shift
 
 set -x
 
@@ -17,6 +16,7 @@ if [ "$COMMAND" = "build" ]; then
     ${PREFIX}sphinx-build $SOURCE_DIR $OUT_DIR
 elif [ "$COMMAND" = "gh-deploy" ]; then
     scripts/docs build
+    shift
     ${PREFIX}ghp-import $OUT_DIR -np -m "Deployed $(git rev-parse --short HEAD)" $@
 else
     ${PREFIX}sphinx-autobuild $SOURCE_DIR $OUT_DIR --watch httpcore/

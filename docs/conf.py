@@ -21,14 +21,17 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
-    "sphinx_autodoc_typehints",
 ]
 
 myst_enable_extensions = [
     "colon_fence",
 ]
 
-autodoc_member_order = "bysource"  # Preserve :members: order.
+# Preserve :members: order.
+autodoc_member_order = "bysource"
+
+# Show type hints in descriptions, rather than signatures.
+autodoc_typehints = "description"
 
 # -- HTML configuration --
 
