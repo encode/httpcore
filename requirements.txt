@@ -12,7 +12,7 @@ mkdocs-material==6.1.6
 
 # Packaging
 twine==3.4.1
-wheel==0.35.1
+wheel==0.36.2
 
 # Tests & Linting
 anyio==2.0.2
