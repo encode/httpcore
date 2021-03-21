@@ -7,11 +7,17 @@ from ._sync.base import SyncByteStream
 class PlainByteStream(AsyncByteStream, SyncByteStream):
     """
     A concrete implementation for either sync or async byte streams.
-    Just handles a plain byte string as the content of the stream.
 
-    ```
-    stream = httpcore.PlainByteStream(b"123")
-    ```
+    Parameters
+    ----------
+    content: bytes
+        A plain byte string used as the content of the stream.
+
+    Example
+    -------
+    ::
+
+        stream = httpcore.PlainByteStream(b"123")
     """
 
     def __init__(self, content: bytes) -> None:
@@ -27,14 +33,23 @@ class PlainByteStream(AsyncByteStream, SyncByteStream):
 class IteratorByteStream(SyncByteStream):
     """
     A concrete implementation for sync byte streams.
-    Handles a byte iterator as the content of the stream.
 
-    ```
-    def generate_content():
-        ...
+    Parameters
+    ----------
+    aiterator:
+        A sync byte iterator, used as the content of the stream.
+    aclose_func:
+        An optional function called when closing the stream.
 
-    stream = httpcore.IteratorByteStream(generate_content())
-    ```
+    Example
+    -------
+    ::
+
+        def generate_content():
+            yield b"Hello, world!"
+            ...
+
+        stream = httpcore.IteratorByteStream(generate_content())
     """
 
     def __init__(self, iterator: Iterator[bytes], close_func: Callable = None) -> None:
@@ -53,14 +68,24 @@ class IteratorByteStream(SyncByteStream):
 class AsyncIteratorByteStream(AsyncByteStream):
     """
     A concrete implementation for async byte streams.
-    Handles an async byte iterator as the content of the stream.
 
-    ```
-    async def generate_content():
-        ...
+    Parameters
+    ----------
+    aiterator:
+        An async byte iterator, used as the content of the stream.
+    aclose_func:
+        An optional async function called when closing the stream.
 
-    stream = httpcore.AsyncIteratorByteStream(generate_content())
-    ```
+    Example
+    -------
+
+    ::
+
+        async def generate_content():
+            yield b"Hello, world!"
+            ...
+
+        stream = httpcore.AsyncIteratorByteStream(generate_content())
     """
 
     def __init__(
