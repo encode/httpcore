@@ -46,7 +46,7 @@ with httpcore.SyncConnectionPool() as http:
     status_code, headers, stream, ext = http.request(
         method=b'GET',
         url=(b'https', b'example.org', 443, b'/'),
-        headers=[(b'host', b'example.org'), (b'user-agent', 'httpcore')]
+        headers=[(b'host', b'example.org'), (b'user-agent', b'httpcore')]
     )
 
     try:
@@ -64,7 +64,7 @@ async with httpcore.AsyncConnectionPool() as http:
     status_code, headers, stream, ext = await http.arequest(
         method=b'GET',
         url=(b'https', b'example.org', 443, b'/'),
-        headers=[(b'host', b'example.org'), (b'user-agent', 'httpcore')]
+        headers=[(b'host', b'example.org'), (b'user-agent', b'httpcore')]
     )
 
     try:
