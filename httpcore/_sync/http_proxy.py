@@ -54,7 +54,8 @@ class SyncHTTPProxy(SyncConnectionPool):
     max_connections:
         The maximum number of concurrent connections to allow.
     max_keepalive_connections:
-        The maximum number of connections to allow before closing keep-alive connections.
+        The maximum number of connections to allow before closing keep-alive
+        connections.
     http2:
         Enable HTTP/2 support.
     """
