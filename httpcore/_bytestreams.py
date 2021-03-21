@@ -8,16 +8,14 @@ class PlainByteStream(AsyncByteStream, SyncByteStream):
     """
     A concrete implementation for either sync or async byte streams.
 
-    Parameters
-    ----------
-    content: bytes
-        A plain byte string used as the content of the stream.
-
-    Example
-    -------
-    ::
+    Example::
 
         stream = httpcore.PlainByteStream(b"123")
+
+    Parameters
+    ----------
+    content:
+        A plain byte string used as the content of the stream.
     """
 
     def __init__(self, content: bytes) -> None:
@@ -34,22 +32,20 @@ class IteratorByteStream(SyncByteStream):
     """
     A concrete implementation for sync byte streams.
 
-    Parameters
-    ----------
-    aiterator:
-        A sync byte iterator, used as the content of the stream.
-    aclose_func:
-        An optional function called when closing the stream.
-
-    Example
-    -------
-    ::
+    Example::
 
         def generate_content():
             yield b"Hello, world!"
             ...
 
         stream = httpcore.IteratorByteStream(generate_content())
+
+    Parameters
+    ----------
+    iterator:
+        A sync byte iterator, used as the content of the stream.
+    close_func:
+        An optional function called when closing the stream.
     """
 
     def __init__(self, iterator: Iterator[bytes], close_func: Callable = None) -> None:
@@ -69,23 +65,20 @@ class AsyncIteratorByteStream(AsyncByteStream):
     """
     A concrete implementation for async byte streams.
 
-    Parameters
-    ----------
-    aiterator:
-        An async byte iterator, used as the content of the stream.
-    aclose_func:
-        An optional async function called when closing the stream.
-
-    Example
-    -------
-
-    ::
+    Example::
 
         async def generate_content():
             yield b"Hello, world!"
             ...
 
         stream = httpcore.AsyncIteratorByteStream(generate_content())
+
+    Parameters
+    ----------
+    aiterator:
+        An async byte iterator, used as the content of the stream.
+    aclose_func:
+        An optional async function called when closing the stream.
     """
 
     def __init__(

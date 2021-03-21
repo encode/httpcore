@@ -1,16 +1,16 @@
-```{include} ../README.md
-```
+:::{include} ../README.md
+:::
 
 <!-- Table of Content entries, shown in left sidebar. -->
 
-```{toctree}
+:::{toctree}
 :hidden:
 :caption: Usage
 
 api
-```
+:::
 
-```{toctree}
+:::{toctree}
 :hidden:
 :caption: Development
 
@@ -18,4 +18,4 @@ contributing
 Changelog <https://github.com/encode/httpcore/blob/master/CHANGELOG.md>
 License <https://github.com/encode/httpcore/blob/master/LICENSE.md>
 Source Code <https://github.com/encode/httpcore>
-```
+:::

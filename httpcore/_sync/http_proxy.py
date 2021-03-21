@@ -41,21 +41,22 @@ class SyncHTTPProxy(SyncConnectionPool):
     """
     A connection pool for making HTTP requests via an HTTP proxy.
 
-    **Parameters:**
-
-    * **proxy_url** - `Tuple[bytes, bytes, Optional[int], bytes]` - The URL of
-    the proxy service as a 4-tuple of (scheme, host, port, path).
-    * **proxy_headers** - `Optional[List[Tuple[bytes, bytes]]]` - A list of
-    proxy headers to include.
-    * **proxy_mode** - `str` - A proxy mode to operate in. May be "DEFAULT",
-    "FORWARD_ONLY", or "TUNNEL_ONLY".
-    * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for
-    verifying connections.
-    * **max_connections** - `Optional[int]` - The maximum number of concurrent
-    connections to allow.
-    * **max_keepalive_connections** - `Optional[int]` - The maximum number of
-    connections to allow before closing keep-alive connections.
-    * **http2** - `bool` - Enable HTTP/2 support.
+    Parameters
+    ----------
+    proxy_url:
+        The URL of the proxy service as a 4-tuple of (scheme, host, port, path).
+    proxy_headers:
+        A list of proxy headers to include.
+    proxy_mode:
+        A proxy mode to operate in. May be "DEFAULT", "FORWARD_ONLY", or "TUNNEL_ONLY".
+    ssl_context:
+        An SSL context to use for verifying connections.
+    max_connections:
+        The maximum number of concurrent connections to allow.
+    max_keepalive_connections:
+        The maximum number of connections to allow before closing keep-alive connections.
+    http2:
+        Enable HTTP/2 support.
     """
 
     def __init__(

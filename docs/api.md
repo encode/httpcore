@@ -2,68 +2,81 @@
 
 ## Async API Overview
 
-### Base interfaces
+### Base async interfaces
 
-The `AsyncHTTPTransport` and `AsyncByteStream` classes provide the base
-interface which transport classes need to implement.
+These classes provide the base interface which transport classes need to implement.
 
-<!-- See: https://myst-parser.readthedocs.io/en/latest/using/howto.html#use-sphinx-ext-autodoc-in-markdown-files -->
-
-```{eval-rst}
+:::{eval-rst}
 .. autoclass:: httpcore.AsyncHTTPTransport
     :members: arequest, aclose
 
 .. autoclass:: httpcore.AsyncByteStream
     :members: __aiter__, aclose
-```
+:::
 
-### Connection pool
+### Async connection pool
 
-The {class}`AsyncConnectionPool <httpcore.AsyncConnectionPool>` class is a concrete implementation of {class}`AsyncHTTPTransport <httpcore.AsyncHTTPTransport>`.
-
-```{eval-rst}
+:::{eval-rst}
 .. autoclass:: httpcore.AsyncConnectionPool
-```
+    :show-inheritance:
+:::
 
-### Byte streams
+### Async proxy
 
-The {class}`PlainByteStream <httpcore.PlainByteStream>` and {class}`AsyncIteratorByteStream <httpcore.AsyncIteratorByteStream>` classes are concrete implementations of `AsyncByteStream`.
+:::{eval-rst}
+.. autoclass:: httpcore.AsyncHTTPProxy
+    :show-inheritance:
+:::
 
-```{eval-rst}
+### Async byte streams
+
+These classes are concrete implementations of [`AsyncByteStream`](httpcore.AsyncByteStream).
+
+:::{eval-rst}
 .. autoclass:: httpcore.PlainByteStream
+    :show-inheritance:
 
 .. autoclass:: httpcore.AsyncIteratorByteStream
-```
+    :show-inheritance:
+:::
 
 ## Sync API Overview
 
-### Base interfaces
+### Base sync interfaces
 
-The {class}`SyncHTTPTransport <httpcore.SyncHTTPTransport>` and {class}`SyncByteStream <httpcore.SyncByteStream>` classes provide the base interface which transport classes need to implement.
+These classes provide the base interface which transport classes need to implement.
 
-```{eval-rst}
+:::{eval-rst}
 .. autoclass:: httpcore.SyncHTTPTransport
     :members: request, close
 
 .. autoclass:: httpcore.SyncByteStream
     :members: __iter__, close
-```
+:::
 
-### Connection pool
+### Sync connection pool
 
-The {class}`SyncConnectionPool <httpcore.SyncConnectionPool>` class is a concrete implementation of {class}`SyncHTTPTransport <httpcore.SyncHTTPTransport>`.
-
-```{eval-rst}
+:::{eval-rst}
 .. autoclass:: httpcore.SyncConnectionPool
-```
+    :show-inheritance:
+:::
 
-### Byte streams
+### Sync proxy
 
-The {class}`PlainByteStream <httpcore.PlainByteStream>` and {class}`IteratorByteStream <httpcore.IteratorByteStream>` classes are concrete implementations of `SyncByteStream`.
+:::{eval-rst}
+.. autoclass:: httpcore.SyncHTTPProxy
+    :show-inheritance:
+:::
 
-```{eval-rst}
+### Sync byte streams
+
+These classes are concrete implementations of [`SyncByteStream`](httpcore.SyncByteStream).
+
+:::{eval-rst}
 .. autoclass:: httpcore.PlainByteStream
+    :show-inheritance:
     :noindex:
 
 .. autoclass:: httpcore.IteratorByteStream
-```
+    :show-inheritance:
+:::

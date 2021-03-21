@@ -74,26 +74,26 @@ class AsyncHTTPTransport:
 
         Parameters
         ----------
-        method: bytes
-            The HTTP method, such as `b'GET'`.
-        url: Tuple[bytes, bytes, Optional[int], bytes]
+        method:
+            The HTTP method, such as ``b'GET'``.
+        url:
             The URL as a 4-tuple of (scheme, host, port, path).
-        headers: List[Tuple[bytes, bytes]]
+        headers:
             Any HTTP headers to send with the request.
-        stream: :class:`AsyncByteStream`
+        stream:
             The body of the HTTP request.
-        ext: dict
+        ext:
             A dictionary of optional extensions.
 
         Returns
         -------
-        status_code: int
-            The HTTP status code, such as `200`.
-        headers: List[Tuple[bytes, bytes]]
+        status_code:
+            The HTTP status code, such as ``200``.
+        headers:
             Any HTTP headers included on the response.
-        stream: :class:`AsyncByteStream`
+        stream:
             The body of the HTTP response.
-        ext: dict
+        ext:
             A dictionary of optional extensions.
         """
         raise NotImplementedError()  # pragma: nocover
