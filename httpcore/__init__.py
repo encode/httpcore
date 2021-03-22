@@ -57,4 +57,5 @@ __locals = locals()
 
 for _name in __all__:
     if not _name.startswith("__"):
+        __locals[_name].__full_module__ = __locals[_name].__module__  # Used by Shpinx.
         setattr(__locals[_name], "__module__", "httpcore")  # noqa

@@ -33,6 +33,31 @@ autodoc_member_order = "bysource"
 # Show type hints in descriptions, rather than signatures.
 autodoc_typehints = "description"
 
+# Enable 'viewcode-follow-imported' event.
+viewcode_follow_imported_members = True
+
 # -- HTML configuration --
 
 html_theme = "furo"
+
+# -- App setup --
+
+
+def _viewcode_follow_imported(app, modname, attribute):
+    # We set `__module__ = "httpcore"` on all public attributes for prettier
+    # repr(), so viewcode needs a little help to find the original source modules.
+
+    if modname != "httpcore":
+        return None
+
+    import httpcore
+
+    try:
+        # Set in httpcore/__init__.py
+        return getattr(httpcore, attribute).__full_module__
+    except AttributeError:
+        return None
+
+
+def setup(app):
+    app.connect("viewcode-follow-imported", _viewcode_follow_imported)
