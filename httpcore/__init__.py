@@ -57,5 +57,7 @@ __locals = locals()
 
 for _name in __all__:
     if not _name.startswith("__"):
-        __locals[_name].__full_module__ = __locals[_name].__module__  # Used by Shpinx.
+        # Save original source module, used by Sphinx.
+        __locals[_name].__source_module__ = __locals[_name].__module__
+        # Override module for prettier repr().
         setattr(__locals[_name], "__module__", "httpcore")  # noqa

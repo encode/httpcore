@@ -54,7 +54,7 @@ def _viewcode_follow_imported(app, modname, attribute):
 
     try:
         # Set in httpcore/__init__.py
-        return getattr(httpcore, attribute).__full_module__
+        return getattr(httpcore, attribute).__source_module__
     except AttributeError:
         return None
 
