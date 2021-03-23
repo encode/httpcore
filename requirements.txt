@@ -3,7 +3,8 @@
 # Optionals
 trio==0.18.0
 trio-typing==0.5.0
-curio==1.5
+curio==1.4; python_version < '3.7'
+curio==1.5; python_version >= '3.7'
 
 # Docs
 mkautodoc==0.1.0
