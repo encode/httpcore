@@ -33,9 +33,6 @@ autodoc_member_order = "bysource"
 # Show type hints in descriptions, rather than signatures.
 autodoc_typehints = "description"
 
-# Enable 'viewcode-follow-imported' event.
-viewcode_follow_imported_members = True
-
 # -- HTML configuration --
 
 html_theme = "furo"
