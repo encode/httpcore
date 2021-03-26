@@ -36,7 +36,7 @@ interface which transport classes need to implement.
 
 ::: httpcore.SyncHTTPTransport
     :docstring:
-    :members: request close
+    :members: handle_request close
 
 ::: httpcore.SyncByteStream
     :docstring:
