@@ -85,7 +85,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         if self.state == ConnectionState.IDLE:
             self.state = ConnectionState.READY
 
-    async def arequest(
+    async def handle_async_request(
         self,
         method: bytes,
         url: URL,
@@ -116,7 +116,9 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
             h2_stream = AsyncHTTP2Stream(stream_id=stream_id, connection=self)
             self.streams[stream_id] = h2_stream
             self.events[stream_id] = []
-            return await h2_stream.arequest(method, url, headers, stream, ext)
+            return await h2_stream.handle_async_request(
+                method, url, headers, stream, ext
+            )
         except Exception:  # noqa: PIE786
             await self.max_streams_semaphore.release()
             raise
@@ -270,7 +272,7 @@ class AsyncHTTP2Stream:
         self.stream_id = stream_id
         self.connection = connection
 
-    async def arequest(
+    async def handle_async_request(
         self,
         method: bytes,
         url: URL,

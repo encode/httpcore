@@ -29,7 +29,9 @@ def test_http_request(backend: str, server: Server) -> None:
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
         headers = [server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
+        status_code, headers, stream, ext = http.handle_request(
+            method, url, headers
+        )
         read_body(stream)
 
         assert status_code == 200
@@ -44,7 +46,9 @@ def test_https_request(backend: str, https_server: Server) -> None:
         method = b"GET"
         url = (b"https", *https_server.netloc, b"/")
         headers = [https_server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
+        status_code, headers, stream, ext = http.handle_request(
+            method, url, headers
+        )
         read_body(stream)
 
         assert status_code == 200
@@ -60,7 +64,7 @@ def test_request_unsupported_protocol(backend: str) -> None:
         url = (b"ftp", b"example.org", 443, b"/")
         headers = [(b"host", b"example.org")]
         with pytest.raises(httpcore.UnsupportedProtocol):
-            http.request(method, url, headers)
+            http.handle_request(method, url, headers)
 
 
 
@@ -69,7 +73,9 @@ def test_http2_request(backend: str, https_server: Server) -> None:
         method = b"GET"
         url = (b"https", *https_server.netloc, b"/")
         headers = [https_server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
+        status_code, headers, stream, ext = http.handle_request(
+            method, url, headers
+        )
         read_body(stream)
 
         assert status_code == 200
@@ -83,7 +89,9 @@ def test_closing_http_request(backend: str, server: Server) -> None:
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
         headers = [server.host_header, (b"connection", b"close")]
-        status_code, headers, stream, ext = http.request(method, url, headers)
+        status_code, headers, stream, ext = http.handle_request(
+            method, url, headers
+        )
         read_body(stream)
 
         assert status_code == 200
@@ -98,7 +106,9 @@ def test_http_request_reuse_connection(backend: str, server: Server) -> None:
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
         headers = [server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
+        status_code, headers, stream, ext = http.handle_request(
+            method, url, headers
+        )
         read_body(stream)
 
         assert status_code == 200
@@ -109,7 +119,9 @@ def test_http_request_reuse_connection(backend: str, server: Server) -> None:
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
         headers = [server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
+        status_code, headers, stream, ext = http.handle_request(
+            method, url, headers
+        )
         read_body(stream)
 
         assert status_code == 200
@@ -126,7 +138,9 @@ def test_https_request_reuse_connection(
         method = b"GET"
         url = (b"https", *https_server.netloc, b"/")
         headers = [https_server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
+        status_code, headers, stream, ext = http.handle_request(
+            method, url, headers
+        )
         read_body(stream)
 
         assert status_code == 200
@@ -137,7 +151,9 @@ def test_https_request_reuse_connection(
         method = b"GET"
         url = (b"https", *https_server.netloc, b"/")
         headers = [https_server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
+        status_code, headers, stream, ext = http.handle_request(
+            method, url, headers
+        )
         read_body(stream)
 
         assert status_code == 200
@@ -154,7 +170,9 @@ def test_http_request_cannot_reuse_dropped_connection(
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
         headers = [server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
+        status_code, headers, stream, ext = http.handle_request(
+            method, url, headers
+        )
         read_body(stream)
 
         assert status_code == 200
@@ -169,7 +187,9 @@ def test_http_request_cannot_reuse_dropped_connection(
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
         headers = [server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
+        status_code, headers, stream, ext = http.handle_request(
+            method, url, headers
+        )
         read_body(stream)
 
         assert status_code == 200
@@ -193,7 +213,9 @@ def test_http_proxy(
         max_connections=max_connections,
         backend=backend,
     ) as http:
-        status_code, headers, stream, ext = http.request(method, url, headers)
+        status_code, headers, stream, ext = http.handle_request(
+            method, url, headers
+        )
         read_body(stream)
 
         assert status_code == 200
@@ -219,7 +241,7 @@ def test_proxy_socket_does_not_leak_when_the_connection_hasnt_been_added_to_pool
         with httpcore.SyncHTTPProxy(proxy_server, proxy_mode=proxy_mode) as http:
             for _ in range(100):
                 try:
-                    _ = http.request(method, url, headers)
+                    _ = http.handle_request(method, url, headers)
                 except (httpcore.ProxyError, httpcore.RemoteProtocolError):
                     pass
 
@@ -242,7 +264,9 @@ def test_http_request_local_address(backend: str, server: Server) -> None:
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
         headers = [server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
+        status_code, headers, stream, ext = http.handle_request(
+            method, url, headers
+        )
         read_body(stream)
 
         assert status_code == 200
@@ -271,7 +295,9 @@ def test_proxy_https_requests(
         max_connections=max_connections,
         http2=http2,
     ) as http:
-        status_code, headers, stream, ext = http.request(method, url, headers)
+        status_code, headers, stream, ext = http.handle_request(
+            method, url, headers
+        )
         _ = read_body(stream)
 
         assert status_code == 200
@@ -324,8 +350,8 @@ def test_connection_pool_get_connection_info(
         url = (b"https", *https_server.netloc, b"/")
         headers = [https_server.host_header]
 
-        _, _, stream_1, _ = http.request(method, url, headers)
-        _, _, stream_2, _ = http.request(method, url, headers)
+        _, _, stream_1, _ = http.handle_request(method, url, headers)
+        _, _, stream_2, _ = http.handle_request(method, url, headers)
 
         try:
             stats = http.get_connection_info()
@@ -354,7 +380,9 @@ def test_http_request_unix_domain_socket(
         method = b"GET"
         url = (b"http", b"localhost", None, b"/")
         headers = [(b"host", b"localhost")]
-        status_code, headers, stream, ext = http.request(method, url, headers)
+        status_code, headers, stream, ext = http.handle_request(
+            method, url, headers
+        )
         assert status_code == 200
         reason = "OK" if uds_server.sends_reason else ""
         assert ext == {"http_version": "HTTP/1.1", "reason": reason}
@@ -377,7 +405,7 @@ def test_max_keepalive_connections_handled_correctly(
 
         connections_streams = []
         for _ in range(connections_number):
-            _, _, stream, _ = http.request(method, url, headers)
+            _, _, stream, _ = http.handle_request(method, url, headers)
             connections_streams.append(stream)
 
         try:
@@ -396,7 +424,9 @@ def test_explicit_backend_name(server: Server) -> None:
         method = b"GET"
         url = (b"http", *server.netloc, b"/")
         headers = [server.host_header]
-        status_code, headers, stream, ext = http.request(method, url, headers)
+        status_code, headers, stream, ext = http.handle_request(
+            method, url, headers
+        )
         read_body(stream)
 
         assert status_code == 200
@@ -424,9 +454,12 @@ def test_broken_socket_detection_many_open_files(
         # * Second attempt would have failed without a fix, due to a "filedescriptor
         # out of range in select()" exception.
         for _ in range(2):
-            status_code, response_headers, stream, ext = http.request(
-                method, url, headers
-            )
+            (
+                status_code,
+                response_headers,
+                stream,
+                ext,
+            ) = http.handle_request(method, url, headers)
             read_body(stream)
 
             assert status_code == 200
@@ -452,7 +485,7 @@ def test_cannot_connect_tcp(backend: str, url) -> None:
     with httpcore.SyncConnectionPool(backend=backend) as http:
         method = b"GET"
         with pytest.raises(httpcore.ConnectError):
-            http.request(method, url)
+            http.handle_request(method, url)
 
 
 
@@ -465,4 +498,4 @@ def test_cannot_connect_uds(backend: str) -> None:
     url = (b"http", b"localhost", None, b"/")
     with httpcore.SyncConnectionPool(backend=backend, uds=uds) as http:
         with pytest.raises(httpcore.ConnectError):
-            http.request(method, url)
+            http.handle_request(method, url)

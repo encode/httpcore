@@ -48,7 +48,8 @@ class ResponseByteStream(SyncByteStream):
         callback: Callable,
     ) -> None:
         """
-        A wrapper around the response stream that we return from `.request()`.
+        A wrapper around the response stream that we return from
+        `.handle_request()`.
 
         Ensures that when `stream.close()` is called, the connection pool
         is notified via a callback.
@@ -178,7 +179,7 @@ class SyncConnectionPool(SyncHTTPTransport):
             backend=self._backend,
         )
 
-    def request(
+    def handle_request(
         self,
         method: bytes,
         url: URL,
@@ -215,7 +216,7 @@ class SyncConnectionPool(SyncHTTPTransport):
                     logger.trace("reuse connection=%r", connection)
 
             try:
-                response = connection.request(
+                response = connection.handle_request(
                     method, url, headers=headers, stream=stream, ext=ext
                 )
             except NewConnectionRequired:

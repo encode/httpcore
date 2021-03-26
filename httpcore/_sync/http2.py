@@ -85,7 +85,7 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         if self.state == ConnectionState.IDLE:
             self.state = ConnectionState.READY
 
-    def request(
+    def handle_request(
         self,
         method: bytes,
         url: URL,
@@ -116,7 +116,9 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
             h2_stream = SyncHTTP2Stream(stream_id=stream_id, connection=self)
             self.streams[stream_id] = h2_stream
             self.events[stream_id] = []
-            return h2_stream.request(method, url, headers, stream, ext)
+            return h2_stream.handle_request(
+                method, url, headers, stream, ext
+            )
         except Exception:  # noqa: PIE786
             self.max_streams_semaphore.release()
             raise
@@ -270,7 +272,7 @@ class SyncHTTP2Stream:
         self.stream_id = stream_id
         self.connection = connection
 
-    def request(
+    def handle_request(
         self,
         method: bytes,
         url: URL,

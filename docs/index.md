@@ -61,7 +61,7 @@ Or, using async...
 
 ```python
 async with httpcore.AsyncConnectionPool() as http:
-    status_code, headers, stream, ext = await http.arequest(
+    status_code, headers, stream, ext = await http.handle_async_request(
         method=b'GET',
         url=(b'https', b'example.org', 443, b'/'),
         headers=[(b'host', b'example.org'), (b'user-agent', 'httpcore')]

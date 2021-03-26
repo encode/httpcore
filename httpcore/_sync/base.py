@@ -61,7 +61,7 @@ class SyncHTTPTransport:
     the `request` method, and optionally the `close` method.
     """
 
-    def request(
+    def handle_request(
         self,
         method: bytes,
         url: URL,

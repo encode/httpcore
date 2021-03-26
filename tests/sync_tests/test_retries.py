@@ -52,7 +52,7 @@ def test_no_retries(server: Server) -> None:
     with httpcore.SyncConnectionPool(
         max_keepalive_connections=0, backend=backend
     ) as http:
-        response = http.request(method, url, headers)
+        response = http.handle_request(method, url, headers)
         status_code, _, stream, _ = response
         assert status_code == 200
         read_body(stream)
@@ -60,10 +60,10 @@ def test_no_retries(server: Server) -> None:
         backend.push(httpcore.ConnectTimeout(), httpcore.ConnectError())
 
         with pytest.raises(httpcore.ConnectTimeout):
-            http.request(method, url, headers)
+            http.handle_request(method, url, headers)
 
         with pytest.raises(httpcore.ConnectError):
-            http.request(method, url, headers)
+            http.handle_request(method, url, headers)
 
 
 
@@ -82,7 +82,7 @@ def test_retries_enabled(server: Server) -> None:
         retries=retries, max_keepalive_connections=0, backend=backend
     ) as http:
         # Standard case, no failures.
-        response = http.request(method, url, headers)
+        response = http.handle_request(method, url, headers)
         assert backend.pop_open_tcp_stream_intervals() == []
         status_code, _, stream, _ = response
         assert status_code == 200
@@ -90,7 +90,7 @@ def test_retries_enabled(server: Server) -> None:
 
         # One failure, then success.
         backend.push(httpcore.ConnectError(), None)
-        response = http.request(method, url, headers)
+        response = http.handle_request(method, url, headers)
         assert backend.pop_open_tcp_stream_intervals() == [
             pytest.approx(0, abs=5e-3),  # Retry immediately.
         ]
@@ -105,7 +105,7 @@ def test_retries_enabled(server: Server) -> None:
             httpcore.ConnectTimeout(),
             None,
         )
-        response = http.request(method, url, headers)
+        response = http.handle_request(method, url, headers)
         assert backend.pop_open_tcp_stream_intervals() == [
             pytest.approx(0, abs=5e-3),  # Retry immediately.
             pytest.approx(0.5, rel=0.1),  # First backoff.
@@ -118,9 +118,9 @@ def test_retries_enabled(server: Server) -> None:
         # Non-connect exceptions are not retried on.
         backend.push(httpcore.ReadTimeout(), httpcore.NetworkError())
         with pytest.raises(httpcore.ReadTimeout):
-            http.request(method, url, headers)
+            http.handle_request(method, url, headers)
         with pytest.raises(httpcore.NetworkError):
-            http.request(method, url, headers)
+            http.handle_request(method, url, headers)
 
 
 
@@ -138,7 +138,7 @@ def test_retries_exceeded(server: Server) -> None:
     with httpcore.SyncConnectionPool(
         retries=retries, max_keepalive_connections=0, backend=backend
     ) as http:
-        response = http.request(method, url, headers)
+        response = http.handle_request(method, url, headers)
         status_code, _, stream, _ = response
         assert status_code == 200
         read_body(stream)
@@ -146,4 +146,4 @@ def test_retries_exceeded(server: Server) -> None:
         # First failure is retried on, second one isn't.
         backend.push(httpcore.ConnectError(), httpcore.ConnectTimeout())
         with pytest.raises(httpcore.ConnectTimeout):
-            http.request(method, url, headers)
+            http.handle_request(method, url, headers)

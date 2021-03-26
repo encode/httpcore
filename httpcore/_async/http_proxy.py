@@ -87,7 +87,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             max_keepalive=max_keepalive,
         )
 
-    async def arequest(
+    async def handle_async_request(
         self,
         method: bytes,
         url: URL,
@@ -162,7 +162,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         url = self.proxy_origin + (target,)
         headers = merge_headers(self.proxy_headers, headers)
 
-        (status_code, headers, stream, ext) = await connection.arequest(
+        (status_code, headers, stream, ext) = await connection.handle_async_request(
             method, url, headers=headers, stream=stream, ext=ext
         )
 
@@ -214,7 +214,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                     _,
                     proxy_stream,
                     _,
-                ) = await proxy_connection.arequest(
+                ) = await proxy_connection.handle_async_request(
                     b"CONNECT", connect_url, headers=connect_headers, ext=ext
                 )
 
@@ -255,7 +255,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
         # Once the connection has been established we can send requests on
         # it as normal.
-        (status_code, headers, stream, ext) = await connection.arequest(
+        (status_code, headers, stream, ext) = await connection.handle_async_request(
             method,
             url,
             headers=headers,

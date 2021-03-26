@@ -72,7 +72,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
             self._request_lock = self.backend.create_lock()
         return self._request_lock
 
-    async def arequest(
+    async def handle_async_request(
         self,
         method: bytes,
         url: URL,
@@ -101,9 +101,14 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
 
         assert self.connection is not None
         logger.trace(
-            "connection.arequest method=%r url=%r headers=%r", method, url, headers
+            "connection.handle_async_request method=%r url=%r headers=%r",
+            method,
+            url,
+            headers,
         )
-        return await self.connection.arequest(method, url, headers, stream, ext)
+        return await self.connection.handle_async_request(
+            method, url, headers, stream, ext
+        )
 
     async def _open_socket(self, timeout: TimeoutDict = None) -> AsyncSocketStream:
         scheme, hostname, port = self.origin

@@ -12,7 +12,7 @@ SUBS = [
     ('async with', 'with'),
     ('async for', 'for'),
     ('await ', ''),
-    ('arequest', 'request'),
+    ('handle_async_request', 'handle_request'),
     ('aclose', 'close'),
     ('aclose_func', 'close_func'),
     ('aiterator', 'iterator'),

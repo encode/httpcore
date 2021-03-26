@@ -87,7 +87,7 @@ class SyncHTTPProxy(SyncConnectionPool):
             max_keepalive=max_keepalive,
         )
 
-    def request(
+    def handle_request(
         self,
         method: bytes,
         url: URL,
@@ -162,7 +162,7 @@ class SyncHTTPProxy(SyncConnectionPool):
         url = self.proxy_origin + (target,)
         headers = merge_headers(self.proxy_headers, headers)
 
-        (status_code, headers, stream, ext) = connection.request(
+        (status_code, headers, stream, ext) = connection.handle_request(
             method, url, headers=headers, stream=stream, ext=ext
         )
 
@@ -214,7 +214,7 @@ class SyncHTTPProxy(SyncConnectionPool):
                     _,
                     proxy_stream,
                     _,
-                ) = proxy_connection.request(
+                ) = proxy_connection.handle_request(
                     b"CONNECT", connect_url, headers=connect_headers, ext=ext
                 )
 
@@ -255,7 +255,7 @@ class SyncHTTPProxy(SyncConnectionPool):
 
         # Once the connection has been established we can send requests on
         # it as normal.
-        (status_code, headers, stream, ext) = connection.request(
+        (status_code, headers, stream, ext) = connection.handle_request(
             method,
             url,
             headers=headers,

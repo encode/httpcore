@@ -30,7 +30,9 @@ def test_threadsafe_basic(server: Server, http2: bool) -> None:
             method = b"GET"
             url = (b"http", *server.netloc, b"/")
             headers = [server.host_header]
-            status_code, headers, stream, ext = http.request(method, url, headers)
+            status_code, headers, stream, ext = http.handle_request(
+                method, url, headers
+            )
             read_body(stream)
             return status_code
 
