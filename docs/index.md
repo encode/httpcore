@@ -43,7 +43,7 @@ Here's an example of making an HTTP GET request using `httpcore`...
 
 ```python
 with httpcore.SyncConnectionPool() as http:
-    status_code, headers, stream, ext = http.request(
+    status_code, headers, stream, extensions = http.request(
         method=b'GET',
         url=(b'https', b'example.org', 443, b'/'),
         headers=[(b'host', b'example.org'), (b'user-agent', 'httpcore')]
@@ -61,7 +61,7 @@ Or, using async...
 
 ```python
 async with httpcore.AsyncConnectionPool() as http:
-    status_code, headers, stream, ext = await http.handle_async_request(
+    status_code, headers, stream, extensions = await http.handle_async_request(
         method=b'GET',
         url=(b'https', b'example.org', 443, b'/'),
         headers=[(b'host', b'example.org'), (b'user-agent', 'httpcore')]
@@ -86,4 +86,4 @@ The motivation for `httpcore` is:
 
 * To provide a reusable low-level client library, that other packages can then build on top of.
 * To provide a *really clear interface split* between the networking code and client logic,
-  so that each is easier to understand and reason about in isolation.
+  so that each is easier to understand and reason_phrase about in isolation.
