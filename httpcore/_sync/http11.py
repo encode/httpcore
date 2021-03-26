@@ -51,11 +51,10 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
+        headers: Headers,
         stream: SyncByteStream = None,
         ext: dict = None,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
-        headers = [] if headers is None else headers
         stream = PlainByteStream(b"") if stream is None else stream
         ext = {} if ext is None else ext
         timeout = cast(TimeoutDict, ext.get("timeout", {}))

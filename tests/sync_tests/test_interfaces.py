@@ -26,108 +26,109 @@ def read_body(stream: httpcore.SyncByteStream) -> bytes:
 
 def test_http_request(backend: str, server: Server) -> None:
     with httpcore.SyncConnectionPool(backend=backend) as http:
-        method = b"GET"
-        url = (b"http", *server.netloc, b"/")
-        headers = [server.host_header]
         status_code, headers, stream, ext = http.handle_request(
-            method, url, headers
+            method=b"GET",
+            url=(b"http", *server.netloc, b"/"),
+            headers=[server.host_header],
         )
         read_body(stream)
 
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
         assert ext == {"http_version": "HTTP/1.1", "reason": reason}
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        origin = (b"http", *server.netloc)
+        assert len(http._connections[origin]) == 1  # type: ignore
 
 
 
 def test_https_request(backend: str, https_server: Server) -> None:
     with httpcore.SyncConnectionPool(backend=backend) as http:
-        method = b"GET"
-        url = (b"https", *https_server.netloc, b"/")
-        headers = [https_server.host_header]
         status_code, headers, stream, ext = http.handle_request(
-            method, url, headers
+            method=b"GET",
+            url=(b"https", *https_server.netloc, b"/"),
+            headers=[https_server.host_header],
         )
         read_body(stream)
 
         assert status_code == 200
         reason = "OK" if https_server.sends_reason else ""
         assert ext == {"http_version": "HTTP/1.1", "reason": reason}
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        origin = (b"https", *https_server.netloc)
+        assert len(http._connections[origin]) == 1  # type: ignore
 
 
 
 def test_request_unsupported_protocol(backend: str) -> None:
     with httpcore.SyncConnectionPool(backend=backend) as http:
-        method = b"GET"
-        url = (b"ftp", b"example.org", 443, b"/")
-        headers = [(b"host", b"example.org")]
         with pytest.raises(httpcore.UnsupportedProtocol):
-            http.handle_request(method, url, headers)
+            http.handle_request(
+                method=b"GET",
+                url=(b"ftp", b"example.org", 443, b"/"),
+                headers=[(b"host", b"example.org")],
+            )
 
 
 
 def test_http2_request(backend: str, https_server: Server) -> None:
     with httpcore.SyncConnectionPool(backend=backend, http2=True) as http:
-        method = b"GET"
-        url = (b"https", *https_server.netloc, b"/")
-        headers = [https_server.host_header]
         status_code, headers, stream, ext = http.handle_request(
-            method, url, headers
+            method=b"GET",
+            url=(b"https", *https_server.netloc, b"/"),
+            headers=[https_server.host_header],
         )
         read_body(stream)
 
         assert status_code == 200
         assert ext == {"http_version": "HTTP/2"}
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        origin = (b"https", *https_server.netloc)
+        assert len(http._connections[origin]) == 1  # type: ignore
 
 
 
 def test_closing_http_request(backend: str, server: Server) -> None:
     with httpcore.SyncConnectionPool(backend=backend) as http:
-        method = b"GET"
-        url = (b"http", *server.netloc, b"/")
-        headers = [server.host_header, (b"connection", b"close")]
         status_code, headers, stream, ext = http.handle_request(
-            method, url, headers
+            method=b"GET",
+            url=(b"http", *server.netloc, b"/"),
+            headers=[server.host_header, (b"connection", b"close")],
         )
         read_body(stream)
 
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
         assert ext == {"http_version": "HTTP/1.1", "reason": reason}
-        assert url[:3] not in http._connections  # type: ignore
+        origin = (b"http", *server.netloc)
+        assert origin not in http._connections  # type: ignore
 
 
 
 def test_http_request_reuse_connection(backend: str, server: Server) -> None:
     with httpcore.SyncConnectionPool(backend=backend) as http:
-        method = b"GET"
-        url = (b"http", *server.netloc, b"/")
-        headers = [server.host_header]
         status_code, headers, stream, ext = http.handle_request(
-            method, url, headers
+            method=b"GET",
+            url=(b"http", *server.netloc, b"/"),
+            headers=[server.host_header],
         )
         read_body(stream)
 
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
         assert ext == {"http_version": "HTTP/1.1", "reason": reason}
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        origin = (b"http", *server.netloc)
+        assert len(http._connections[origin]) == 1  # type: ignore
 
-        method = b"GET"
-        url = (b"http", *server.netloc, b"/")
-        headers = [server.host_header]
         status_code, headers, stream, ext = http.handle_request(
-            method, url, headers
+            method=b"GET",
+            url=(b"http", *server.netloc, b"/"),
+            headers=[server.host_header],
         )
         read_body(stream)
 
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
         assert ext == {"http_version": "HTTP/1.1", "reason": reason}
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        origin = (b"http", *server.netloc)
+        assert len(http._connections[origin]) == 1  # type: ignore
 
 
 
@@ -135,31 +136,31 @@ def test_https_request_reuse_connection(
     backend: str, https_server: Server
 ) -> None:
     with httpcore.SyncConnectionPool(backend=backend) as http:
-        method = b"GET"
-        url = (b"https", *https_server.netloc, b"/")
-        headers = [https_server.host_header]
         status_code, headers, stream, ext = http.handle_request(
-            method, url, headers
+            method=b"GET",
+            url=(b"https", *https_server.netloc, b"/"),
+            headers=[https_server.host_header],
         )
         read_body(stream)
 
         assert status_code == 200
         reason = "OK" if https_server.sends_reason else ""
         assert ext == {"http_version": "HTTP/1.1", "reason": reason}
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        origin = (b"https", *https_server.netloc)
+        assert len(http._connections[origin]) == 1  # type: ignore
 
-        method = b"GET"
-        url = (b"https", *https_server.netloc, b"/")
-        headers = [https_server.host_header]
         status_code, headers, stream, ext = http.handle_request(
-            method, url, headers
+            method=b"GET",
+            url=(b"https", *https_server.netloc, b"/"),
+            headers=[https_server.host_header],
         )
         read_body(stream)
 
         assert status_code == 200
         reason = "OK" if https_server.sends_reason else ""
         assert ext == {"http_version": "HTTP/1.1", "reason": reason}
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        origin = (b"https", *https_server.netloc)
+        assert len(http._connections[origin]) == 1  # type: ignore
 
 
 
@@ -167,35 +168,35 @@ def test_http_request_cannot_reuse_dropped_connection(
     backend: str, server: Server
 ) -> None:
     with httpcore.SyncConnectionPool(backend=backend) as http:
-        method = b"GET"
-        url = (b"http", *server.netloc, b"/")
-        headers = [server.host_header]
         status_code, headers, stream, ext = http.handle_request(
-            method, url, headers
+            method=b"GET",
+            url=(b"http", *server.netloc, b"/"),
+            headers=[server.host_header],
         )
         read_body(stream)
 
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
         assert ext == {"http_version": "HTTP/1.1", "reason": reason}
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        origin = (b"http", *server.netloc)
+        assert len(http._connections[origin]) == 1  # type: ignore
 
         # Mock the connection as having been dropped.
-        connection = list(http._connections[url[:3]])[0]  # type: ignore
+        connection = list(http._connections[origin])[0]  # type: ignore
         connection.is_socket_readable = lambda: True  # type: ignore
 
-        method = b"GET"
-        url = (b"http", *server.netloc, b"/")
-        headers = [server.host_header]
         status_code, headers, stream, ext = http.handle_request(
-            method, url, headers
+            method=b"GET",
+            url=(b"http", *server.netloc, b"/"),
+            headers=[server.host_header],
         )
         read_body(stream)
 
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
         assert ext == {"http_version": "HTTP/1.1", "reason": reason}
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        origin = (b"http", *server.netloc)
+        assert len(http._connections[origin]) == 1  # type: ignore
 
 
 @pytest.mark.parametrize("proxy_mode", ["DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY"])
@@ -203,9 +204,6 @@ def test_http_request_cannot_reuse_dropped_connection(
 def test_http_proxy(
     proxy_server: URL, proxy_mode: str, backend: str, server: Server
 ) -> None:
-    method = b"GET"
-    url = (b"http", *server.netloc, b"/")
-    headers = [server.host_header]
     max_connections = 1
     with httpcore.SyncHTTPProxy(
         proxy_server,
@@ -214,7 +212,9 @@ def test_http_proxy(
         backend=backend,
     ) as http:
         status_code, headers, stream, ext = http.handle_request(
-            method, url, headers
+            method=b"GET",
+            url=(b"http", *server.netloc, b"/"),
+            headers=[server.host_header],
         )
         read_body(stream)
 
@@ -233,15 +233,15 @@ def test_proxy_socket_does_not_leak_when_the_connection_hasnt_been_added_to_pool
     protocol: bytes,
     port: int,
 ):
-    method = b"GET"
-    url = (protocol, b"blockedhost.example.com", port, b"/")
-    headers = [(b"host", b"blockedhost.example.com")]
-
     with pytest.warns(None) as recorded_warnings:
         with httpcore.SyncHTTPProxy(proxy_server, proxy_mode=proxy_mode) as http:
             for _ in range(100):
                 try:
-                    _ = http.handle_request(method, url, headers)
+                    _ = http.handle_request(
+                        method=b"GET",
+                        url=(protocol, b"blockedhost.example.com", port, b"/"),
+                        headers=[(b"host", b"blockedhost.example.com")],
+                    )
                 except (httpcore.ProxyError, httpcore.RemoteProtocolError):
                     pass
 
@@ -261,18 +261,18 @@ def test_http_request_local_address(backend: str, server: Server) -> None:
     with httpcore.SyncConnectionPool(
         backend=backend, local_address="0.0.0.0"
     ) as http:
-        method = b"GET"
-        url = (b"http", *server.netloc, b"/")
-        headers = [server.host_header]
         status_code, headers, stream, ext = http.handle_request(
-            method, url, headers
+            method=b"GET",
+            url=(b"http", *server.netloc, b"/"),
+            headers=[server.host_header],
         )
         read_body(stream)
 
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
         assert ext == {"http_version": "HTTP/1.1", "reason": reason}
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        origin = (b"http", *server.netloc)
+        assert len(http._connections[origin]) == 1  # type: ignore
 
 
 # mitmproxy does not support forwarding HTTPS requests
@@ -285,9 +285,6 @@ def test_proxy_https_requests(
     http2: bool,
     https_server: Server,
 ) -> None:
-    method = b"GET"
-    url = (b"https", *https_server.netloc, b"/")
-    headers = [https_server.host_header]
     max_connections = 1
     with httpcore.SyncHTTPProxy(
         proxy_server,
@@ -296,7 +293,9 @@ def test_proxy_https_requests(
         http2=http2,
     ) as http:
         status_code, headers, stream, ext = http.handle_request(
-            method, url, headers
+            method=b"GET",
+            url=(b"https", *https_server.netloc, b"/"),
+            headers=[https_server.host_header],
         )
         _ = read_body(stream)
 
@@ -346,12 +345,16 @@ def test_connection_pool_get_connection_info(
     with httpcore.SyncConnectionPool(
         http2=http2, keepalive_expiry=keepalive_expiry, backend=backend
     ) as http:
-        method = b"GET"
-        url = (b"https", *https_server.netloc, b"/")
-        headers = [https_server.host_header]
-
-        _, _, stream_1, _ = http.handle_request(method, url, headers)
-        _, _, stream_2, _ = http.handle_request(method, url, headers)
+        _, _, stream_1, _ = http.handle_request(
+            method=b"GET",
+            url=(b"https", *https_server.netloc, b"/"),
+            headers=[https_server.host_header],
+        )
+        _, _, stream_2, _ = http.handle_request(
+            method=b"GET",
+            url=(b"https", *https_server.netloc, b"/"),
+            headers=[https_server.host_header],
+        )
 
         try:
             stats = http.get_connection_info()
@@ -377,11 +380,10 @@ def test_http_request_unix_domain_socket(
 ) -> None:
     uds = uds_server.uds
     with httpcore.SyncConnectionPool(uds=uds, backend=backend) as http:
-        method = b"GET"
-        url = (b"http", b"localhost", None, b"/")
-        headers = [(b"host", b"localhost")]
         status_code, headers, stream, ext = http.handle_request(
-            method, url, headers
+            method=b"GET",
+            url=(b"http", b"localhost", None, b"/"),
+            headers=[(b"host", b"localhost")],
         )
         assert status_code == 200
         reason = "OK" if uds_server.sends_reason else ""
@@ -399,13 +401,13 @@ def test_max_keepalive_connections_handled_correctly(
     with httpcore.SyncConnectionPool(
         max_keepalive_connections=max_keepalive, keepalive_expiry=60, backend=backend
     ) as http:
-        method = b"GET"
-        url = (b"http", *server.netloc, b"/")
-        headers = [server.host_header]
-
         connections_streams = []
         for _ in range(connections_number):
-            _, _, stream, _ = http.handle_request(method, url, headers)
+            _, _, stream, _ = http.handle_request(
+                method=b"GET",
+                url=(b"http", *server.netloc, b"/"),
+                headers=[server.host_header],
+            )
             connections_streams.append(stream)
 
         try:
@@ -421,18 +423,18 @@ def test_max_keepalive_connections_handled_correctly(
 
 def test_explicit_backend_name(server: Server) -> None:
     with httpcore.SyncConnectionPool(backend=lookup_sync_backend()) as http:
-        method = b"GET"
-        url = (b"http", *server.netloc, b"/")
-        headers = [server.host_header]
         status_code, headers, stream, ext = http.handle_request(
-            method, url, headers
+            method=b"GET",
+            url=(b"http", *server.netloc, b"/"),
+            headers=[server.host_header],
         )
         read_body(stream)
 
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
         assert ext == {"http_version": "HTTP/1.1", "reason": reason}
-        assert len(http._connections[url[:3]]) == 1  # type: ignore
+        origin = (b"http", *server.netloc)
+        assert len(http._connections[origin]) == 1  # type: ignore
 
 
 
@@ -445,10 +447,6 @@ def test_broken_socket_detection_many_open_files(
     Regression test for: https://github.com/encode/httpcore/issues/182
     """
     with httpcore.SyncConnectionPool(backend=backend) as http:
-        method = b"GET"
-        url = (b"http", *server.netloc, b"/")
-        headers = [server.host_header]
-
         # * First attempt will be successful because it will grab the last
         # available fd before what select() supports on the platform.
         # * Second attempt would have failed without a fix, due to a "filedescriptor
@@ -459,13 +457,18 @@ def test_broken_socket_detection_many_open_files(
                 response_headers,
                 stream,
                 ext,
-            ) = http.handle_request(method, url, headers)
+            ) = http.handle_request(
+                method=b"GET",
+                url=(b"http", *server.netloc, b"/"),
+                headers=[server.host_header],
+            )
             read_body(stream)
 
             assert status_code == 200
             reason = "OK" if server.sends_reason else ""
             assert ext == {"http_version": "HTTP/1.1", "reason": reason}
-            assert len(http._connections[url[:3]]) == 1  # type: ignore
+            origin = (b"http", *server.netloc)
+            assert len(http._connections[origin]) == 1  # type: ignore
 
 
 
@@ -483,9 +486,8 @@ def test_cannot_connect_tcp(backend: str, url) -> None:
     A properly wrapped error is raised when connecting to the server fails.
     """
     with httpcore.SyncConnectionPool(backend=backend) as http:
-        method = b"GET"
         with pytest.raises(httpcore.ConnectError):
-            http.handle_request(method, url)
+            http.handle_request(method=b"GET", url=url, headers=[])
 
 
 
@@ -494,8 +496,8 @@ def test_cannot_connect_uds(backend: str) -> None:
     A properly wrapped error is raised when connecting to the UDS server fails.
     """
     uds = "/tmp/doesnotexist.sock"
-    method = b"GET"
-    url = (b"http", b"localhost", None, b"/")
     with httpcore.SyncConnectionPool(backend=backend, uds=uds) as http:
         with pytest.raises(httpcore.ConnectError):
-            http.handle_request(method, url)
+            http.handle_request(
+                method=b"GET", url=(b"http", b"localhost", None, b"/"), headers=[]
+            )

@@ -183,7 +183,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
+        headers: Headers,
         stream: AsyncByteStream = None,
         ext: dict = None,
     ) -> Tuple[int, Headers, AsyncByteStream, dict]:

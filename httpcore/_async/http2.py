@@ -89,7 +89,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
+        headers: Headers,
         stream: AsyncByteStream = None,
         ext: dict = None,
     ) -> Tuple[int, Headers, AsyncByteStream, dict]:
@@ -276,11 +276,11 @@ class AsyncHTTP2Stream:
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
+        headers: Headers,
         stream: AsyncByteStream = None,
         ext: dict = None,
     ) -> Tuple[int, Headers, AsyncByteStream, dict]:
-        headers = [] if headers is None else [(k.lower(), v) for (k, v) in headers]
+        headers = [(k.lower(), v) for (k, v) in headers]
         stream = PlainByteStream(b"") if stream is None else stream
         ext = {} if ext is None else ext
         timeout = cast(TimeoutDict, ext.get("timeout", {}))

@@ -81,7 +81,9 @@ def test_sequential_requests(http_version) -> None:
         assert info == {}
 
         response = http.handle_request(
-            b"GET", (b"http", b"example.org", None, b"/")
+            method=b"GET",
+            url=(b"http", b"example.org", None, b"/"),
+            headers=[],
         )
         status_code, headers, stream, ext = response
         info = http.get_connection_info()
@@ -92,7 +94,9 @@ def test_sequential_requests(http_version) -> None:
         assert info == {"http://example.org": ["ConnectionState.IDLE"]}
 
         response = http.handle_request(
-            b"GET", (b"http", b"example.org", None, b"/")
+            method=b"GET",
+            url=(b"http", b"example.org", None, b"/"),
+            headers=[],
         )
         status_code, headers, stream, ext = response
         info = http.get_connection_info()
@@ -110,14 +114,16 @@ def test_concurrent_requests_h11() -> None:
         assert info == {}
 
         response_1 = http.handle_request(
-            b"GET", (b"http", b"example.org", None, b"/")
+            method=b"GET",
+            url=(b"http", b"example.org", None, b"/"),
+            headers=[],
         )
         status_code_1, headers_1, stream_1, ext_1 = response_1
         info = http.get_connection_info()
         assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
 
         response_2 = http.handle_request(
-            b"GET", (b"http", b"example.org", None, b"/")
+            method=b"GET", url=(b"http", b"example.org", None, b"/"), headers=[]
         )
         status_code_2, headers_2, stream_2, ext_2 = response_2
         info = http.get_connection_info()
@@ -145,14 +151,18 @@ def test_concurrent_requests_h2() -> None:
         assert info == {}
 
         response_1 = http.handle_request(
-            b"GET", (b"http", b"example.org", None, b"/")
+            method=b"GET",
+            url=(b"http", b"example.org", None, b"/"),
+            headers=[],
         )
         status_code_1, headers_1, stream_1, ext_1 = response_1
         info = http.get_connection_info()
         assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
 
         response_2 = http.handle_request(
-            b"GET", (b"http", b"example.org", None, b"/")
+            method=b"GET",
+            url=(b"http", b"example.org", None, b"/"),
+            headers=[],
         )
         status_code_2, headers_2, stream_2, ext_2 = response_2
         info = http.get_connection_info()

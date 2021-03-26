@@ -183,7 +183,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
+        headers: Headers,
         stream: SyncByteStream = None,
         ext: dict = None,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
