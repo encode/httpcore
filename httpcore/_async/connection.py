@@ -78,11 +78,11 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         url: URL,
         headers: Headers,
         stream: AsyncByteStream = None,
-        ext: dict = None,
+        extensions: dict = None,
     ) -> Tuple[int, Headers, AsyncByteStream, dict]:
         assert url_to_origin(url) == self.origin
-        ext = {} if ext is None else ext
-        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+        extensions = {} if extensions is None else extensions
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         async with self.request_lock:
             if self.state == ConnectionState.PENDING:
@@ -107,7 +107,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
             headers,
         )
         return await self.connection.handle_async_request(
-            method, url, headers, stream, ext
+            method, url, headers, stream, extensions
         )
 
     async def _open_socket(self, timeout: TimeoutDict = None) -> AsyncSocketStream:

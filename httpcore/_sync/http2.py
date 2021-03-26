@@ -91,10 +91,10 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         url: URL,
         headers: Headers,
         stream: SyncByteStream = None,
-        ext: dict = None,
+        extensions: dict = None,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
-        ext = {} if ext is None else ext
-        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+        extensions = {} if extensions is None else extensions
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         with self.init_lock:
             if not self.sent_connection_init:
@@ -117,7 +117,7 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
             self.streams[stream_id] = h2_stream
             self.events[stream_id] = []
             return h2_stream.handle_request(
-                method, url, headers, stream, ext
+                method, url, headers, stream, extensions
             )
         except Exception:  # noqa: PIE786
             self.max_streams_semaphore.release()
@@ -278,12 +278,12 @@ class SyncHTTP2Stream:
         url: URL,
         headers: Headers,
         stream: SyncByteStream = None,
-        ext: dict = None,
+        extensions: dict = None,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
         headers = [(k.lower(), v) for (k, v) in headers]
         stream = PlainByteStream(b"") if stream is None else stream
-        ext = {} if ext is None else ext
-        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+        extensions = {} if extensions is None else extensions
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         # Send the request.
         seen_headers = set(key for key, value in headers)
@@ -301,10 +301,10 @@ class SyncHTTP2Stream:
             iterator=self.body_iter(timeout), close_func=self._response_closed
         )
 
-        ext = {
+        extensions = {
             "http_version": "HTTP/2",
         }
-        return (status_code, headers, response_stream, ext)
+        return (status_code, headers, response_stream, extensions)
 
     def send_headers(
         self,

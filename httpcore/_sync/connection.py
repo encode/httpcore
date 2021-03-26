@@ -78,11 +78,11 @@ class SyncHTTPConnection(SyncHTTPTransport):
         url: URL,
         headers: Headers,
         stream: SyncByteStream = None,
-        ext: dict = None,
+        extensions: dict = None,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
         assert url_to_origin(url) == self.origin
-        ext = {} if ext is None else ext
-        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+        extensions = {} if extensions is None else extensions
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         with self.request_lock:
             if self.state == ConnectionState.PENDING:
@@ -107,7 +107,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
             headers,
         )
         return self.connection.handle_request(
-            method, url, headers, stream, ext
+            method, url, headers, stream, extensions
         )
 
     def _open_socket(self, timeout: TimeoutDict = None) -> SyncSocketStream:

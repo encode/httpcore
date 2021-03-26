@@ -185,7 +185,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         url: URL,
         headers: Headers,
         stream: SyncByteStream = None,
-        ext: dict = None,
+        extensions: dict = None,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
         if url[0] not in (b"http", b"https"):
             scheme = url[0].decode("latin-1")
@@ -194,8 +194,8 @@ class SyncConnectionPool(SyncHTTPTransport):
             raise LocalProtocolError("Missing hostname in URL.")
 
         origin = url_to_origin(url)
-        ext = {} if ext is None else ext
-        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+        extensions = {} if extensions is None else extensions
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         self._keepalive_sweep()
 
@@ -217,7 +217,7 @@ class SyncConnectionPool(SyncHTTPTransport):
 
             try:
                 response = connection.handle_request(
-                    method, url, headers=headers, stream=stream, ext=ext
+                    method, url, headers=headers, stream=stream, extensions=extensions
                 )
             except NewConnectionRequired:
                 connection = None
@@ -226,11 +226,11 @@ class SyncConnectionPool(SyncHTTPTransport):
                 self._remove_from_pool(connection)
                 raise
 
-        status_code, headers, stream, ext = response
+        status_code, headers, stream, extensions = response
         wrapped_stream = ResponseByteStream(
             stream, connection=connection, callback=self._response_closed
         )
-        return status_code, headers, wrapped_stream, ext
+        return status_code, headers, wrapped_stream, extensions
 
     def _get_connection_from_pool(
         self, origin: Origin

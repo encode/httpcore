@@ -67,7 +67,7 @@ class AsyncHTTPTransport:
         url: URL,
         headers: Headers,
         stream: AsyncByteStream = None,
-        ext: dict = None,
+        extensions: dict = None,
     ) -> Tuple[int, Headers, AsyncByteStream, dict]:
         """
         The interface for sending a single HTTP request, and returning a response.
@@ -80,7 +80,7 @@ class AsyncHTTPTransport:
         * **headers** - `Optional[List[Tuple[bytes, bytes]]]` - Any HTTP headers
         to send with the request.
         * **stream** - `Optional[AsyncByteStream]` - The body of the HTTP request.
-        * **ext** - `Optional[dict]` - A dictionary of optional extensions.
+        * **extensions** - `Optional[dict]` - A dictionary of optional extensions.
 
         ** Returns:**
 
@@ -90,7 +90,7 @@ class AsyncHTTPTransport:
         * **headers** - `List[Tuple[bytes, bytes]]` - Any HTTP headers included
         on the response.
         * **stream** - `AsyncByteStream` - The body of the HTTP response.
-        * **ext** - `dict` - A dictionary of optional extensions.
+        * **extensions** - `dict` - A dictionary of optional extensions.
         """
         raise NotImplementedError()  # pragma: nocover
 

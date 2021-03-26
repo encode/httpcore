@@ -26,7 +26,7 @@ async def read_body(stream: httpcore.AsyncByteStream) -> bytes:
 @pytest.mark.anyio
 async def test_http_request(backend: str, server: Server) -> None:
     async with httpcore.AsyncConnectionPool(backend=backend) as http:
-        status_code, headers, stream, ext = await http.handle_async_request(
+        status_code, headers, stream, extensions = await http.handle_async_request(
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
@@ -35,7 +35,7 @@ async def test_http_request(backend: str, server: Server) -> None:
 
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
-        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
+        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
         origin = (b"http", *server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -43,7 +43,7 @@ async def test_http_request(backend: str, server: Server) -> None:
 @pytest.mark.anyio
 async def test_https_request(backend: str, https_server: Server) -> None:
     async with httpcore.AsyncConnectionPool(backend=backend) as http:
-        status_code, headers, stream, ext = await http.handle_async_request(
+        status_code, headers, stream, extensions = await http.handle_async_request(
             method=b"GET",
             url=(b"https", *https_server.netloc, b"/"),
             headers=[https_server.host_header],
@@ -52,7 +52,7 @@ async def test_https_request(backend: str, https_server: Server) -> None:
 
         assert status_code == 200
         reason = "OK" if https_server.sends_reason else ""
-        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
+        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
         origin = (b"https", *https_server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -71,7 +71,7 @@ async def test_request_unsupported_protocol(backend: str) -> None:
 @pytest.mark.anyio
 async def test_http2_request(backend: str, https_server: Server) -> None:
     async with httpcore.AsyncConnectionPool(backend=backend, http2=True) as http:
-        status_code, headers, stream, ext = await http.handle_async_request(
+        status_code, headers, stream, extensions = await http.handle_async_request(
             method=b"GET",
             url=(b"https", *https_server.netloc, b"/"),
             headers=[https_server.host_header],
@@ -79,7 +79,7 @@ async def test_http2_request(backend: str, https_server: Server) -> None:
         await read_body(stream)
 
         assert status_code == 200
-        assert ext == {"http_version": "HTTP/2"}
+        assert extensions == {"http_version": "HTTP/2"}
         origin = (b"https", *https_server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -87,7 +87,7 @@ async def test_http2_request(backend: str, https_server: Server) -> None:
 @pytest.mark.anyio
 async def test_closing_http_request(backend: str, server: Server) -> None:
     async with httpcore.AsyncConnectionPool(backend=backend) as http:
-        status_code, headers, stream, ext = await http.handle_async_request(
+        status_code, headers, stream, extensions = await http.handle_async_request(
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header, (b"connection", b"close")],
@@ -96,7 +96,7 @@ async def test_closing_http_request(backend: str, server: Server) -> None:
 
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
-        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
+        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
         origin = (b"http", *server.netloc)
         assert origin not in http._connections  # type: ignore
 
@@ -104,7 +104,7 @@ async def test_closing_http_request(backend: str, server: Server) -> None:
 @pytest.mark.anyio
 async def test_http_request_reuse_connection(backend: str, server: Server) -> None:
     async with httpcore.AsyncConnectionPool(backend=backend) as http:
-        status_code, headers, stream, ext = await http.handle_async_request(
+        status_code, headers, stream, extensions = await http.handle_async_request(
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
@@ -113,11 +113,11 @@ async def test_http_request_reuse_connection(backend: str, server: Server) -> No
 
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
-        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
+        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
         origin = (b"http", *server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
-        status_code, headers, stream, ext = await http.handle_async_request(
+        status_code, headers, stream, extensions = await http.handle_async_request(
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
@@ -126,7 +126,7 @@ async def test_http_request_reuse_connection(backend: str, server: Server) -> No
 
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
-        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
+        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
         origin = (b"http", *server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -136,7 +136,7 @@ async def test_https_request_reuse_connection(
     backend: str, https_server: Server
 ) -> None:
     async with httpcore.AsyncConnectionPool(backend=backend) as http:
-        status_code, headers, stream, ext = await http.handle_async_request(
+        status_code, headers, stream, extensions = await http.handle_async_request(
             method=b"GET",
             url=(b"https", *https_server.netloc, b"/"),
             headers=[https_server.host_header],
@@ -145,11 +145,11 @@ async def test_https_request_reuse_connection(
 
         assert status_code == 200
         reason = "OK" if https_server.sends_reason else ""
-        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
+        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
         origin = (b"https", *https_server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
-        status_code, headers, stream, ext = await http.handle_async_request(
+        status_code, headers, stream, extensions = await http.handle_async_request(
             method=b"GET",
             url=(b"https", *https_server.netloc, b"/"),
             headers=[https_server.host_header],
@@ -158,7 +158,7 @@ async def test_https_request_reuse_connection(
 
         assert status_code == 200
         reason = "OK" if https_server.sends_reason else ""
-        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
+        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
         origin = (b"https", *https_server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -168,7 +168,7 @@ async def test_http_request_cannot_reuse_dropped_connection(
     backend: str, server: Server
 ) -> None:
     async with httpcore.AsyncConnectionPool(backend=backend) as http:
-        status_code, headers, stream, ext = await http.handle_async_request(
+        status_code, headers, stream, extensions = await http.handle_async_request(
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
@@ -177,7 +177,7 @@ async def test_http_request_cannot_reuse_dropped_connection(
 
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
-        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
+        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
         origin = (b"http", *server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -185,7 +185,7 @@ async def test_http_request_cannot_reuse_dropped_connection(
         connection = list(http._connections[origin])[0]  # type: ignore
         connection.is_socket_readable = lambda: True  # type: ignore
 
-        status_code, headers, stream, ext = await http.handle_async_request(
+        status_code, headers, stream, extensions = await http.handle_async_request(
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
@@ -194,7 +194,7 @@ async def test_http_request_cannot_reuse_dropped_connection(
 
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
-        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
+        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
         origin = (b"http", *server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -211,7 +211,7 @@ async def test_http_proxy(
         max_connections=max_connections,
         backend=backend,
     ) as http:
-        status_code, headers, stream, ext = await http.handle_async_request(
+        status_code, headers, stream, extensions = await http.handle_async_request(
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
@@ -220,7 +220,7 @@ async def test_http_proxy(
 
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
-        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
+        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
 
 
 @pytest.mark.parametrize("proxy_mode", ["DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY"])
@@ -261,7 +261,7 @@ async def test_http_request_local_address(backend: str, server: Server) -> None:
     async with httpcore.AsyncConnectionPool(
         backend=backend, local_address="0.0.0.0"
     ) as http:
-        status_code, headers, stream, ext = await http.handle_async_request(
+        status_code, headers, stream, extensions = await http.handle_async_request(
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
@@ -270,7 +270,7 @@ async def test_http_request_local_address(backend: str, server: Server) -> None:
 
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
-        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
+        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
         origin = (b"http", *server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -292,7 +292,7 @@ async def test_proxy_https_requests(
         max_connections=max_connections,
         http2=http2,
     ) as http:
-        status_code, headers, stream, ext = await http.handle_async_request(
+        status_code, headers, stream, extensions = await http.handle_async_request(
             method=b"GET",
             url=(b"https", *https_server.netloc, b"/"),
             headers=[https_server.host_header],
@@ -300,8 +300,8 @@ async def test_proxy_https_requests(
         _ = await read_body(stream)
 
         assert status_code == 200
-        assert ext["http_version"] == "HTTP/2" if http2 else "HTTP/1.1"
-        assert ext.get("reason", "") == "" if http2 else "OK"
+        assert extensions["http_version"] == "HTTP/2" if http2 else "HTTP/1.1"
+        assert extensions.get("reason", "") == "" if http2 else "OK"
 
 
 @pytest.mark.parametrize(
@@ -380,14 +380,14 @@ async def test_http_request_unix_domain_socket(
 ) -> None:
     uds = uds_server.uds
     async with httpcore.AsyncConnectionPool(uds=uds, backend=backend) as http:
-        status_code, headers, stream, ext = await http.handle_async_request(
+        status_code, headers, stream, extensions = await http.handle_async_request(
             method=b"GET",
             url=(b"http", b"localhost", None, b"/"),
             headers=[(b"host", b"localhost")],
         )
         assert status_code == 200
         reason = "OK" if uds_server.sends_reason else ""
-        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
+        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
         body = await read_body(stream)
         assert body == b"Hello, world!"
 
@@ -423,7 +423,7 @@ async def test_max_keepalive_connections_handled_correctly(
 @pytest.mark.anyio
 async def test_explicit_backend_name(server: Server) -> None:
     async with httpcore.AsyncConnectionPool(backend=lookup_async_backend()) as http:
-        status_code, headers, stream, ext = await http.handle_async_request(
+        status_code, headers, stream, extensions = await http.handle_async_request(
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
@@ -432,7 +432,7 @@ async def test_explicit_backend_name(server: Server) -> None:
 
         assert status_code == 200
         reason = "OK" if server.sends_reason else ""
-        assert ext == {"http_version": "HTTP/1.1", "reason": reason}
+        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
         origin = (b"http", *server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -456,7 +456,7 @@ async def test_broken_socket_detection_many_open_files(
                 status_code,
                 response_headers,
                 stream,
-                ext,
+                extensions,
             ) = await http.handle_async_request(
                 method=b"GET",
                 url=(b"http", *server.netloc, b"/"),
@@ -466,7 +466,7 @@ async def test_broken_socket_detection_many_open_files(
 
             assert status_code == 200
             reason = "OK" if server.sends_reason else ""
-            assert ext == {"http_version": "HTTP/1.1", "reason": reason}
+            assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
             origin = (b"http", *server.netloc)
             assert len(http._connections[origin]) == 1  # type: ignore
 

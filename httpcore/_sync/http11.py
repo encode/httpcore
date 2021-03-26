@@ -53,11 +53,11 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
         url: URL,
         headers: Headers,
         stream: SyncByteStream = None,
-        ext: dict = None,
+        extensions: dict = None,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
         stream = PlainByteStream(b"") if stream is None else stream
-        ext = {} if ext is None else ext
-        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+        extensions = {} if extensions is None else extensions
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         self.state = ConnectionState.ACTIVE
 
@@ -73,11 +73,11 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
             iterator=self._receive_response_data(timeout),
             close_func=self._response_closed,
         )
-        ext = {
+        extensions = {
             "http_version": http_version.decode("ascii", errors="ignore"),
             "reason": reason_phrase.decode("ascii", errors="ignore"),
         }
-        return (status_code, headers, response_stream, ext)
+        return (status_code, headers, response_stream, extensions)
 
     def start_tls(
         self, hostname: bytes, timeout: TimeoutDict = None

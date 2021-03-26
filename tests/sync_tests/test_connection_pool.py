@@ -21,7 +21,7 @@ class MockConnection(object):
         url: URL,
         headers: Headers = None,
         stream: httpcore.SyncByteStream = None,
-        ext: dict = None,
+        extensions: dict = None,
     ) -> Tuple[int, Headers, httpcore.SyncByteStream, dict]:
         self.state = ConnectionState.ACTIVE
         self.stream_count += 1
@@ -85,7 +85,7 @@ def test_sequential_requests(http_version) -> None:
             url=(b"http", b"example.org", None, b"/"),
             headers=[],
         )
-        status_code, headers, stream, ext = response
+        status_code, headers, stream, extensions = response
         info = http.get_connection_info()
         assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
 
@@ -98,7 +98,7 @@ def test_sequential_requests(http_version) -> None:
             url=(b"http", b"example.org", None, b"/"),
             headers=[],
         )
-        status_code, headers, stream, ext = response
+        status_code, headers, stream, extensions = response
         info = http.get_connection_info()
         assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
 

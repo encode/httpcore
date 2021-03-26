@@ -93,7 +93,7 @@ class SyncHTTPProxy(SyncConnectionPool):
         url: URL,
         headers: Headers,
         stream: SyncByteStream = None,
-        ext: dict = None,
+        extensions: dict = None,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
         if self._keepalive_expiry is not None:
             self._keepalive_sweep()
@@ -110,7 +110,7 @@ class SyncHTTPProxy(SyncConnectionPool):
                 url,
             )
             return self._forward_request(
-                method, url, headers=headers, stream=stream, ext=ext
+                method, url, headers=headers, stream=stream, extensions=extensions
             )
         else:
             # By default HTTPS should be tunnelled.
@@ -122,7 +122,7 @@ class SyncHTTPProxy(SyncConnectionPool):
                 url,
             )
             return self._tunnel_request(
-                method, url, headers=headers, stream=stream, ext=ext
+                method, url, headers=headers, stream=stream, extensions=extensions
             )
 
     def _forward_request(
@@ -131,14 +131,14 @@ class SyncHTTPProxy(SyncConnectionPool):
         url: URL,
         headers: Headers,
         stream: SyncByteStream = None,
-        ext: dict = None,
+        extensions: dict = None,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
         """
         Forwarded proxy requests include the entire URL as the HTTP target,
         rather than just the path.
         """
-        ext = {} if ext is None else ext
-        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+        extensions = {} if extensions is None else extensions
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
         origin = self.proxy_origin
         connection = self._get_connection_from_pool(origin)
 
@@ -162,15 +162,20 @@ class SyncHTTPProxy(SyncConnectionPool):
         url = self.proxy_origin + (target,)
         headers = merge_headers(self.proxy_headers, headers)
 
-        (status_code, headers, stream, ext) = connection.handle_request(
-            method, url, headers=headers, stream=stream, ext=ext
+        (
+            status_code,
+            headers,
+            stream,
+            extensions,
+        ) = connection.handle_request(
+            method, url, headers=headers, stream=stream, extensions=extensions
         )
 
         wrapped_stream = ResponseByteStream(
             stream, connection=connection, callback=self._response_closed
         )
 
-        return status_code, headers, wrapped_stream, ext
+        return status_code, headers, wrapped_stream, extensions
 
     def _tunnel_request(
         self,
@@ -178,14 +183,14 @@ class SyncHTTPProxy(SyncConnectionPool):
         url: URL,
         headers: Headers,
         stream: SyncByteStream = None,
-        ext: dict = None,
+        extensions: dict = None,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
         """
         Tunnelled proxy requests require an initial CONNECT request to
         establish the connection, and then send regular requests.
         """
-        ext = {} if ext is None else ext
-        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+        extensions = {} if extensions is None else extensions
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
         origin = url_to_origin(url)
         connection = self._get_connection_from_pool(origin)
 
@@ -215,7 +220,10 @@ class SyncHTTPProxy(SyncConnectionPool):
                     proxy_stream,
                     _,
                 ) = proxy_connection.handle_request(
-                    b"CONNECT", connect_url, headers=connect_headers, ext=ext
+                    b"CONNECT",
+                    connect_url,
+                    headers=connect_headers,
+                    extensions=extensions,
                 )
 
                 proxy_reason = get_reason_phrase(proxy_status_code)
@@ -255,16 +263,21 @@ class SyncHTTPProxy(SyncConnectionPool):
 
         # Once the connection has been established we can send requests on
         # it as normal.
-        (status_code, headers, stream, ext) = connection.handle_request(
+        (
+            status_code,
+            headers,
+            stream,
+            extensions,
+        ) = connection.handle_request(
             method,
             url,
             headers=headers,
             stream=stream,
-            ext=ext,
+            extensions=extensions,
         )
 
         wrapped_stream = ResponseByteStream(
             stream, connection=connection, callback=self._response_closed
         )
 
-        return status_code, headers, wrapped_stream, ext
+        return status_code, headers, wrapped_stream, extensions
