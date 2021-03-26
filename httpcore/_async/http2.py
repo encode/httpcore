@@ -8,7 +8,7 @@ from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
 from .._backends.auto import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
-from .._bytestreams import AsyncIteratorByteStream, PlainByteStream
+from .._bytestreams import AsyncIteratorByteStream
 from .._exceptions import PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
@@ -90,10 +90,9 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         method: bytes,
         url: URL,
         headers: Headers,
-        stream: AsyncByteStream = None,
-        extensions: dict = None,
+        stream: AsyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, AsyncByteStream, dict]:
-        extensions = {} if extensions is None else extensions
         timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         async with self.init_lock:
@@ -277,12 +276,10 @@ class AsyncHTTP2Stream:
         method: bytes,
         url: URL,
         headers: Headers,
-        stream: AsyncByteStream = None,
-        extensions: dict = None,
+        stream: AsyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, AsyncByteStream, dict]:
         headers = [(k.lower(), v) for (k, v) in headers]
-        stream = PlainByteStream(b"") if stream is None else stream
-        extensions = {} if extensions is None else extensions
         timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         # Send the request.

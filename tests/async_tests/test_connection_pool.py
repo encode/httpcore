@@ -84,6 +84,8 @@ async def test_sequential_requests(http_version) -> None:
             method=b"GET",
             url=(b"http", b"example.org", None, b"/"),
             headers=[],
+            stream=httpcore.PlainByteStream(b""),
+            extensions={},
         )
         status_code, headers, stream, extensions = response
         info = await http.get_connection_info()
@@ -97,6 +99,8 @@ async def test_sequential_requests(http_version) -> None:
             method=b"GET",
             url=(b"http", b"example.org", None, b"/"),
             headers=[],
+            stream=httpcore.PlainByteStream(b""),
+            extensions={},
         )
         status_code, headers, stream, extensions = response
         info = await http.get_connection_info()
@@ -117,13 +121,19 @@ async def test_concurrent_requests_h11() -> None:
             method=b"GET",
             url=(b"http", b"example.org", None, b"/"),
             headers=[],
+            stream=httpcore.PlainByteStream(b""),
+            extensions={},
         )
         status_code_1, headers_1, stream_1, ext_1 = response_1
         info = await http.get_connection_info()
         assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
 
         response_2 = await http.handle_async_request(
-            method=b"GET", url=(b"http", b"example.org", None, b"/"), headers=[]
+            method=b"GET",
+            url=(b"http", b"example.org", None, b"/"),
+            headers=[],
+            stream=httpcore.PlainByteStream(b""),
+            extensions={},
         )
         status_code_2, headers_2, stream_2, ext_2 = response_2
         info = await http.get_connection_info()
@@ -154,6 +164,8 @@ async def test_concurrent_requests_h2() -> None:
             method=b"GET",
             url=(b"http", b"example.org", None, b"/"),
             headers=[],
+            stream=httpcore.PlainByteStream(b""),
+            extensions={},
         )
         status_code_1, headers_1, stream_1, ext_1 = response_1
         info = await http.get_connection_info()
@@ -163,6 +175,8 @@ async def test_concurrent_requests_h2() -> None:
             method=b"GET",
             url=(b"http", b"example.org", None, b"/"),
             headers=[],
+            stream=httpcore.PlainByteStream(b""),
+            extensions={},
         )
         status_code_2, headers_2, stream_2, ext_2 = response_2
         info = await http.get_connection_info()

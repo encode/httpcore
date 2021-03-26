@@ -4,7 +4,7 @@ from typing import AsyncIterator, List, Tuple, Union, cast
 import h11
 
 from .._backends.auto import AsyncSocketStream
-from .._bytestreams import AsyncIteratorByteStream, PlainByteStream
+from .._bytestreams import AsyncIteratorByteStream
 from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
@@ -52,11 +52,9 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         method: bytes,
         url: URL,
         headers: Headers,
-        stream: AsyncByteStream = None,
-        extensions: dict = None,
+        stream: AsyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, AsyncByteStream, dict]:
-        stream = PlainByteStream(b"") if stream is None else stream
-        extensions = {} if extensions is None else extensions
         timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         self.state = ConnectionState.ACTIVE

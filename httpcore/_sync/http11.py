@@ -4,7 +4,7 @@ from typing import Iterator, List, Tuple, Union, cast
 import h11
 
 from .._backends.sync import SyncSocketStream
-from .._bytestreams import IteratorByteStream, PlainByteStream
+from .._bytestreams import IteratorByteStream
 from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
@@ -52,11 +52,9 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
         method: bytes,
         url: URL,
         headers: Headers,
-        stream: SyncByteStream = None,
-        extensions: dict = None,
+        stream: SyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
-        stream = PlainByteStream(b"") if stream is None else stream
-        extensions = {} if extensions is None else extensions
         timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         self.state = ConnectionState.ACTIVE

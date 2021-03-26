@@ -77,11 +77,10 @@ class SyncHTTPConnection(SyncHTTPTransport):
         method: bytes,
         url: URL,
         headers: Headers,
-        stream: SyncByteStream = None,
-        extensions: dict = None,
+        stream: SyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
         assert url_to_origin(url) == self.origin
-        extensions = {} if extensions is None else extensions
         timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         with self.request_lock:

@@ -2,6 +2,7 @@ from http import HTTPStatus
 from ssl import SSLContext
 from typing import Tuple, cast
 
+from .._bytestreams import PlainByteStream
 from .._exceptions import ProxyError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger, url_to_origin
@@ -92,8 +93,8 @@ class SyncHTTPProxy(SyncConnectionPool):
         method: bytes,
         url: URL,
         headers: Headers,
-        stream: SyncByteStream = None,
-        extensions: dict = None,
+        stream: SyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
         if self._keepalive_expiry is not None:
             self._keepalive_sweep()
@@ -130,14 +131,13 @@ class SyncHTTPProxy(SyncConnectionPool):
         method: bytes,
         url: URL,
         headers: Headers,
-        stream: SyncByteStream = None,
-        extensions: dict = None,
+        stream: SyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
         """
         Forwarded proxy requests include the entire URL as the HTTP target,
         rather than just the path.
         """
-        extensions = {} if extensions is None else extensions
         timeout = cast(TimeoutDict, extensions.get("timeout", {}))
         origin = self.proxy_origin
         connection = self._get_connection_from_pool(origin)
@@ -182,14 +182,13 @@ class SyncHTTPProxy(SyncConnectionPool):
         method: bytes,
         url: URL,
         headers: Headers,
-        stream: SyncByteStream = None,
-        extensions: dict = None,
+        stream: SyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
         """
         Tunnelled proxy requests require an initial CONNECT request to
         establish the connection, and then send regular requests.
         """
-        extensions = {} if extensions is None else extensions
         timeout = cast(TimeoutDict, extensions.get("timeout", {}))
         origin = url_to_origin(url)
         connection = self._get_connection_from_pool(origin)
@@ -223,6 +222,7 @@ class SyncHTTPProxy(SyncConnectionPool):
                     b"CONNECT",
                     connect_url,
                     headers=connect_headers,
+                    stream=PlainByteStream(b""),
                     extensions=extensions,
                 )
 

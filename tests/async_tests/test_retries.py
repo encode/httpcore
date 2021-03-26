@@ -53,6 +53,8 @@ async def test_no_retries(server: Server) -> None:
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
+            stream=httpcore.PlainByteStream(b""),
+            extensions={},
         )
         status_code, _, stream, _ = response
         assert status_code == 200
@@ -65,6 +67,8 @@ async def test_no_retries(server: Server) -> None:
                 method=b"GET",
                 url=(b"http", *server.netloc, b"/"),
                 headers=[server.host_header],
+                stream=httpcore.PlainByteStream(b""),
+                extensions={},
             )
 
         with pytest.raises(httpcore.ConnectError):
@@ -72,6 +76,8 @@ async def test_no_retries(server: Server) -> None:
                 method=b"GET",
                 url=(b"http", *server.netloc, b"/"),
                 headers=[server.host_header],
+                stream=httpcore.PlainByteStream(b""),
+                extensions={},
             )
 
 
@@ -92,6 +98,8 @@ async def test_retries_enabled(server: Server) -> None:
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
+            stream=httpcore.PlainByteStream(b""),
+            extensions={},
         )
         assert backend.pop_open_tcp_stream_intervals() == []
         status_code, _, stream, _ = response
@@ -104,6 +112,8 @@ async def test_retries_enabled(server: Server) -> None:
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
+            stream=httpcore.PlainByteStream(b""),
+            extensions={},
         )
         assert backend.pop_open_tcp_stream_intervals() == [
             pytest.approx(0, abs=5e-3),  # Retry immediately.
@@ -123,6 +133,8 @@ async def test_retries_enabled(server: Server) -> None:
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
+            stream=httpcore.PlainByteStream(b""),
+            extensions={},
         )
         assert backend.pop_open_tcp_stream_intervals() == [
             pytest.approx(0, abs=5e-3),  # Retry immediately.
@@ -140,12 +152,16 @@ async def test_retries_enabled(server: Server) -> None:
                 method=b"GET",
                 url=(b"http", *server.netloc, b"/"),
                 headers=[server.host_header],
+                stream=httpcore.PlainByteStream(b""),
+                extensions={},
             )
         with pytest.raises(httpcore.NetworkError):
             await http.handle_async_request(
                 method=b"GET",
                 url=(b"http", *server.netloc, b"/"),
                 headers=[server.host_header],
+                stream=httpcore.PlainByteStream(b""),
+                extensions={},
             )
 
 
@@ -165,6 +181,8 @@ async def test_retries_exceeded(server: Server) -> None:
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
+            stream=httpcore.PlainByteStream(b""),
+            extensions={},
         )
         status_code, _, stream, _ = response
         assert status_code == 200
@@ -177,4 +195,6 @@ async def test_retries_exceeded(server: Server) -> None:
                 method=b"GET",
                 url=(b"http", *server.netloc, b"/"),
                 headers=[server.host_header],
+                stream=httpcore.PlainByteStream(b""),
+                extensions={},
             )

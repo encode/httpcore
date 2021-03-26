@@ -184,8 +184,8 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         method: bytes,
         url: URL,
         headers: Headers,
-        stream: AsyncByteStream = None,
-        extensions: dict = None,
+        stream: AsyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, AsyncByteStream, dict]:
         if url[0] not in (b"http", b"https"):
             scheme = url[0].decode("latin-1")
@@ -194,7 +194,6 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             raise LocalProtocolError("Missing hostname in URL.")
 
         origin = url_to_origin(url)
-        extensions = {} if extensions is None else extensions
         timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         await self._keepalive_sweep()

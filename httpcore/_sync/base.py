@@ -66,8 +66,8 @@ class SyncHTTPTransport:
         method: bytes,
         url: URL,
         headers: Headers,
-        stream: SyncByteStream = None,
-        extensions: dict = None,
+        stream: SyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
         """
         The interface for sending a single HTTP request, and returning a response.

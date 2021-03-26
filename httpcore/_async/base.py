@@ -66,8 +66,8 @@ class AsyncHTTPTransport:
         method: bytes,
         url: URL,
         headers: Headers,
-        stream: AsyncByteStream = None,
-        extensions: dict = None,
+        stream: AsyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, AsyncByteStream, dict]:
         """
         The interface for sending a single HTTP request, and returning a response.

@@ -8,7 +8,7 @@ from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
 from .._backends.sync import SyncBackend, SyncLock, SyncSemaphore, SyncSocketStream
-from .._bytestreams import IteratorByteStream, PlainByteStream
+from .._bytestreams import IteratorByteStream
 from .._exceptions import PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
@@ -90,10 +90,9 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         method: bytes,
         url: URL,
         headers: Headers,
-        stream: SyncByteStream = None,
-        extensions: dict = None,
+        stream: SyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
-        extensions = {} if extensions is None else extensions
         timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         with self.init_lock:
@@ -277,12 +276,10 @@ class SyncHTTP2Stream:
         method: bytes,
         url: URL,
         headers: Headers,
-        stream: SyncByteStream = None,
-        extensions: dict = None,
+        stream: SyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
         headers = [(k.lower(), v) for (k, v) in headers]
-        stream = PlainByteStream(b"") if stream is None else stream
-        extensions = {} if extensions is None else extensions
         timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         # Send the request.

@@ -77,11 +77,10 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         method: bytes,
         url: URL,
         headers: Headers,
-        stream: AsyncByteStream = None,
-        extensions: dict = None,
+        stream: AsyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, AsyncByteStream, dict]:
         assert url_to_origin(url) == self.origin
-        extensions = {} if extensions is None else extensions
         timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         async with self.request_lock:
