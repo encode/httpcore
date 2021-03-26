@@ -24,7 +24,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         self,
         origin: Origin,
         http2: bool = False,
-        http2_prior_knowledge: bool = False,
+        http1: bool = True,
         uds: str = None,
         ssl_context: SSLContext = None,
         socket: AsyncSocketStream = None,
@@ -34,9 +34,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
     ):
         self.origin = origin
         self.http2 = http2
-        self.http2_prior_knowledge = http2_prior_knowledge
-        if http2_prior_knowledge:
-            self.http2 = True
+        self.http1 = http1
 
         self.uds = uds
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
@@ -44,10 +42,12 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         self.local_address = local_address
         self.retries = retries
 
-        if self.http2_prior_knowledge:
-            self.ssl_context.set_alpn_protocols(["h2"])
-        elif self.http2:
+        if self.http1 and self.http2:
             self.ssl_context.set_alpn_protocols(["http/1.1", "h2"])
+        elif self.http1:
+            self.ssl_context.set_alpn_protocols(["http/1.1"])
+        elif self.http2:
+            self.ssl_context.set_alpn_protocols(["h2"])
 
         self.connection: Optional[AsyncBaseHTTPConnection] = None
         self.is_http11 = False
@@ -147,12 +147,10 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
 
     def _create_connection(self, socket: AsyncSocketStream) -> None:
         http_version = socket.get_http_version()
-        if self.http2_prior_knowledge:
-            http_version = "HTTP/2"
         logger.trace(
             "create_connection socket=%r http_version=%r", socket, http_version
         )
-        if http_version == "HTTP/2":
+        if http_version == "HTTP/2" or (self.http2 and not self.http1):
             from .http2 import AsyncHTTP2Connection
 
             self.is_http2 = True
