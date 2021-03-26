@@ -302,7 +302,7 @@ class SyncHTTP2Stream:
         )
 
         extensions = {
-            "http_version": "HTTP/2",
+            "http_version": b"HTTP/2",
         }
         return (status_code, headers, response_stream, extensions)
 

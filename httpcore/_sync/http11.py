@@ -74,8 +74,8 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
             close_func=self._response_closed,
         )
         extensions = {
-            "http_version": http_version.decode("ascii", errors="ignore"),
-            "reason_phrase": reason_phrase.decode("ascii", errors="ignore"),
+            "http_version": http_version,
+            "reason_phrase": reason_phrase,
         }
         return (status_code, headers, response_stream, extensions)
 
