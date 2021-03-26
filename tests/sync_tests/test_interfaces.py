@@ -34,8 +34,8 @@ def test_http_request(backend: str, server: Server) -> None:
         read_body(stream)
 
         assert status_code == 200
-        reason = "OK" if server.sends_reason else ""
-        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
+        reason_phrase = "OK" if server.sends_reason else ""
+        assert extensions == {"http_version": "HTTP/1.1", "reason_phrase": reason_phrase}
         origin = (b"http", *server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -51,8 +51,8 @@ def test_https_request(backend: str, https_server: Server) -> None:
         read_body(stream)
 
         assert status_code == 200
-        reason = "OK" if https_server.sends_reason else ""
-        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
+        reason_phrase = "OK" if https_server.sends_reason else ""
+        assert extensions == {"http_version": "HTTP/1.1", "reason_phrase": reason_phrase}
         origin = (b"https", *https_server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -95,8 +95,8 @@ def test_closing_http_request(backend: str, server: Server) -> None:
         read_body(stream)
 
         assert status_code == 200
-        reason = "OK" if server.sends_reason else ""
-        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
+        reason_phrase = "OK" if server.sends_reason else ""
+        assert extensions == {"http_version": "HTTP/1.1", "reason_phrase": reason_phrase}
         origin = (b"http", *server.netloc)
         assert origin not in http._connections  # type: ignore
 
@@ -112,8 +112,8 @@ def test_http_request_reuse_connection(backend: str, server: Server) -> None:
         read_body(stream)
 
         assert status_code == 200
-        reason = "OK" if server.sends_reason else ""
-        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
+        reason_phrase = "OK" if server.sends_reason else ""
+        assert extensions == {"http_version": "HTTP/1.1", "reason_phrase": reason_phrase}
         origin = (b"http", *server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -125,8 +125,8 @@ def test_http_request_reuse_connection(backend: str, server: Server) -> None:
         read_body(stream)
 
         assert status_code == 200
-        reason = "OK" if server.sends_reason else ""
-        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
+        reason_phrase = "OK" if server.sends_reason else ""
+        assert extensions == {"http_version": "HTTP/1.1", "reason_phrase": reason_phrase}
         origin = (b"http", *server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -144,8 +144,8 @@ def test_https_request_reuse_connection(
         read_body(stream)
 
         assert status_code == 200
-        reason = "OK" if https_server.sends_reason else ""
-        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
+        reason_phrase = "OK" if https_server.sends_reason else ""
+        assert extensions == {"http_version": "HTTP/1.1", "reason_phrase": reason_phrase}
         origin = (b"https", *https_server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -157,8 +157,8 @@ def test_https_request_reuse_connection(
         read_body(stream)
 
         assert status_code == 200
-        reason = "OK" if https_server.sends_reason else ""
-        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
+        reason_phrase = "OK" if https_server.sends_reason else ""
+        assert extensions == {"http_version": "HTTP/1.1", "reason_phrase": reason_phrase}
         origin = (b"https", *https_server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -176,8 +176,8 @@ def test_http_request_cannot_reuse_dropped_connection(
         read_body(stream)
 
         assert status_code == 200
-        reason = "OK" if server.sends_reason else ""
-        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
+        reason_phrase = "OK" if server.sends_reason else ""
+        assert extensions == {"http_version": "HTTP/1.1", "reason_phrase": reason_phrase}
         origin = (b"http", *server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -193,8 +193,8 @@ def test_http_request_cannot_reuse_dropped_connection(
         read_body(stream)
 
         assert status_code == 200
-        reason = "OK" if server.sends_reason else ""
-        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
+        reason_phrase = "OK" if server.sends_reason else ""
+        assert extensions == {"http_version": "HTTP/1.1", "reason_phrase": reason_phrase}
         origin = (b"http", *server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -219,8 +219,8 @@ def test_http_proxy(
         read_body(stream)
 
         assert status_code == 200
-        reason = "OK" if server.sends_reason else ""
-        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
+        reason_phrase = "OK" if server.sends_reason else ""
+        assert extensions == {"http_version": "HTTP/1.1", "reason_phrase": reason_phrase}
 
 
 @pytest.mark.parametrize("proxy_mode", ["DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY"])
@@ -269,8 +269,8 @@ def test_http_request_local_address(backend: str, server: Server) -> None:
         read_body(stream)
 
         assert status_code == 200
-        reason = "OK" if server.sends_reason else ""
-        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
+        reason_phrase = "OK" if server.sends_reason else ""
+        assert extensions == {"http_version": "HTTP/1.1", "reason_phrase": reason_phrase}
         origin = (b"http", *server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
@@ -301,7 +301,7 @@ def test_proxy_https_requests(
 
         assert status_code == 200
         assert extensions["http_version"] == "HTTP/2" if http2 else "HTTP/1.1"
-        assert extensions.get("reason", "") == "" if http2 else "OK"
+        assert extensions.get("reason_phrase", "") == "" if http2 else "OK"
 
 
 @pytest.mark.parametrize(
@@ -372,7 +372,7 @@ def test_connection_pool_get_connection_info(
 
 @pytest.mark.skipif(
     platform.system() not in ("Linux", "Darwin"),
-    reason="Unix Domain Sockets only exist on Unix",
+    reason_phrase="Unix Domain Sockets only exist on Unix",
 )
 
 def test_http_request_unix_domain_socket(
@@ -386,8 +386,8 @@ def test_http_request_unix_domain_socket(
             headers=[(b"host", b"localhost")],
         )
         assert status_code == 200
-        reason = "OK" if uds_server.sends_reason else ""
-        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
+        reason_phrase = "OK" if uds_server.sends_reason else ""
+        assert extensions == {"http_version": "HTTP/1.1", "reason_phrase": reason_phrase}
         body = read_body(stream)
         assert body == b"Hello, world!"
 
@@ -431,15 +431,15 @@ def test_explicit_backend_name(server: Server) -> None:
         read_body(stream)
 
         assert status_code == 200
-        reason = "OK" if server.sends_reason else ""
-        assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
+        reason_phrase = "OK" if server.sends_reason else ""
+        assert extensions == {"http_version": "HTTP/1.1", "reason_phrase": reason_phrase}
         origin = (b"http", *server.netloc)
         assert len(http._connections[origin]) == 1  # type: ignore
 
 
 
 @pytest.mark.usefixtures("too_many_open_files_minus_one")
-@pytest.mark.skipif(platform.system() != "Linux", reason="Only a problem on Linux")
+@pytest.mark.skipif(platform.system() != "Linux", reason_phrase="Only a problem on Linux")
 def test_broken_socket_detection_many_open_files(
     backend: str, server: Server
 ) -> None:
@@ -465,8 +465,8 @@ def test_broken_socket_detection_many_open_files(
             read_body(stream)
 
             assert status_code == 200
-            reason = "OK" if server.sends_reason else ""
-            assert extensions == {"http_version": "HTTP/1.1", "reason": reason}
+            reason_phrase = "OK" if server.sends_reason else ""
+            assert extensions == {"http_version": "HTTP/1.1", "reason_phrase": reason_phrase}
             origin = (b"http", *server.netloc)
             assert len(http._connections[origin]) == 1  # type: ignore
 

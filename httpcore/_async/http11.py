@@ -75,7 +75,7 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         )
         extensions = {
             "http_version": http_version.decode("ascii", errors="ignore"),
-            "reason": reason_phrase.decode("ascii", errors="ignore"),
+            "reason_phrase": reason_phrase.decode("ascii", errors="ignore"),
         }
         return (status_code, headers, response_stream, extensions)
 
