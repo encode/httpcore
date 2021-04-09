@@ -77,26 +77,30 @@ class SyncConnectionPool(SyncHTTPTransport):
     """
     A connection pool for making HTTP requests.
 
-    **Parameters:**
-
-    * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for
-    verifying connections.
-    * **max_connections** - `Optional[int]` - The maximum number of concurrent
-    connections to allow.
-    * **max_keepalive_connections** - `Optional[int]` - The maximum number of
-    connections to allow before closing keep-alive connections.
-    * **keepalive_expiry** - `Optional[float]` - The maximum time to allow
-    before closing a keep-alive connection.
-    * **http2** - `bool` - Enable HTTP/2 support.
-    * **uds** - `str` - Path to a Unix Domain Socket to use instead of TCP sockets.
-    * **local_address** - `Optional[str]` - Local address to connect from. Can
-    also be used to connect using a particular address family. Using
-    `local_address="0.0.0.0"` will connect using an `AF_INET` address (IPv4),
-    while using `local_address="::"` will connect using an `AF_INET6` address
-    (IPv6).
-    * **retries** - `int` - The maximum number of retries when trying to establish a
-    connection.
-    * **backend** - `str` - A name indicating which concurrency backend to use.
+    Parameters
+    ----------
+    ssl_context:
+        An SSL context to use for verifying connections.
+    max_connections:
+        The maximum number of concurrent connections to allow.
+    max_keepalive_connections:
+        The maximum number of connections to allow before closing keep-alive
+        connections.
+    keepalive_expiry:
+        The maximum time to allow before closing a keep-alive connection.
+    http2:
+        Enable HTTP/2 support.
+    uds:
+        Path to a Unix Domain Socket to use instead of TCP sockets.
+    local_address:
+        Local address to connect from. Can also be used to connect using a particular
+        address family. Using ``local_address="0.0.0.0"`` will connect using an
+        ``AF_INET`` address (IPv4), while using ``local_address="::"`` will connect
+        using an ``AF_INET6`` address (IPv6).
+    retries:
+        The maximum number of retries when trying to establish a connection.
+    backend:
+        A name indicating which concurrency backend to use.
     """
 
     def __init__(
