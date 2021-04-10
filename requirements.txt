@@ -9,6 +9,7 @@ curio==1.5; python_version >= '3.7'
 # Docs
 sphinx==3.5.3
 sphinx-autobuild==2021.3.14
+sphinx-intl==2.0.1
 myst-parser==0.13.5
 furo==2021.3.20b30
 ghp-import==1.1.0

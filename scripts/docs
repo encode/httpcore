@@ -7,6 +7,8 @@ fi
 
 SOURCE_DIR="docs"
 OUT_DIR="build/html"
+SPHINX_CONFIG="docs/conf.py"
+SPHINX_LANGUAGE="${SPHINX_LANGUAGE:-en}"
 
 COMMAND="$1"
 ARGS="${@:2}"
@@ -14,10 +16,13 @@ ARGS="${@:2}"
 set -x
 
 if [ "$COMMAND" = "build" ]; then
-    ${PREFIX}sphinx-build $SOURCE_DIR $OUT_DIR
+    ${PREFIX}sphinx-build $SOURCE_DIR $OUT_DIR -D language=$SPHINX_LANGUAGE
+elif [ "$COMMAND" = "maketranslations" ]; then
+    ${PREFIX}sphinx-build -M gettext $SOURCE_DIR $OUT_DIR
+    ${PREFIX}sphinx-intl -c $SPHINX_CONFIG update -p "$OUT_DIR/gettext" --language fr
 elif [ "$COMMAND" = "gh-deploy" ]; then
     scripts/docs build
     ${PREFIX}ghp-import $OUT_DIR -np -m "Deployed $(git rev-parse --short HEAD)" $ARGS
 else
-    ${PREFIX}sphinx-autobuild $SOURCE_DIR $OUT_DIR --watch httpcore/ $ARGS
+    ${PREFIX}sphinx-autobuild $SOURCE_DIR $OUT_DIR --watch httpcore/ -D language=$SPHINX_LANGUAGE $ARGS
 fi

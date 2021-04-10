@@ -1,0 +1,346 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Encode
+# This file is distributed under the same license as the HTTPCore package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: HTTPCore \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-04-10 21:37+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../../docs/api.md:1
+msgid "Developer Interface"
+msgstr ""
+
+#: ../../../docs/api.md:3
+msgid "Async API Overview"
+msgstr ""
+
+#: ../../../docs/api.md:5
+msgid "Base async interfaces"
+msgstr ""
+
+#: ../../../docs/api.md:7 ../../../docs/api.md:47
+msgid ""
+"These classes provide the base interface which transport classes need to "
+"implement."
+msgstr ""
+
+#: httpcore.AsyncHTTPTransport:1 httpcore.SyncHTTPTransport:1 of
+msgid "The base interface for sending HTTP requests."
+msgstr ""
+
+#: httpcore.AsyncHTTPTransport:3 of
+msgid ""
+"Concrete implementations should subclass this class, and implement the "
+":meth:`arequest` method, and optionally the :meth:`aclose` method."
+msgstr ""
+
+#: httpcore._async.base.AsyncHTTPTransport.arequest:1
+#: httpcore._sync.base.SyncHTTPTransport.request:1 of
+msgid "The interface for sending a single HTTP request, and returning a response."
+msgstr ""
+
+#: httpcore.AsyncConnectionPool httpcore.AsyncHTTPProxy
+#: httpcore.AsyncIteratorByteStream httpcore.IteratorByteStream
+#: httpcore.PlainByteStream httpcore.SyncConnectionPool httpcore.SyncHTTPProxy
+#: httpcore._async.base.AsyncHTTPTransport.arequest
+#: httpcore._sync.base.SyncHTTPTransport.request of
+msgid "Parameters"
+msgstr ""
+
+#: httpcore._async.base.AsyncHTTPTransport.arequest:3
+#: httpcore._sync.base.SyncHTTPTransport.request:3 of
+msgid "The HTTP method, such as ``b'GET'``."
+msgstr ""
+
+#: httpcore._async.base.AsyncHTTPTransport.arequest:4
+#: httpcore._sync.base.SyncHTTPTransport.request:4 of
+msgid "The URL as a 4-tuple of (scheme, host, port, path)."
+msgstr ""
+
+#: httpcore._async.base.AsyncHTTPTransport.arequest:5
+#: httpcore._sync.base.SyncHTTPTransport.request:5 of
+msgid "Any HTTP headers to send with the request."
+msgstr ""
+
+#: httpcore._async.base.AsyncHTTPTransport.arequest:6
+#: httpcore._sync.base.SyncHTTPTransport.request:6 of
+msgid "The body of the HTTP request."
+msgstr ""
+
+#: httpcore._async.base.AsyncHTTPTransport.arequest:7
+#: httpcore._sync.base.SyncHTTPTransport.request:7 of
+msgid "A dictionary of optional extensions."
+msgstr ""
+
+#: httpcore._async.base.AsyncHTTPTransport.arequest
+#: httpcore._sync.base.SyncHTTPTransport.request of
+msgid "Returns"
+msgstr ""
+
+#: httpcore._async.base.AsyncHTTPTransport.arequest:9
+#: httpcore._sync.base.SyncHTTPTransport.request:9 of
+msgid ""
+"* *status_code* -- The HTTP status code, such as ``200``. * *headers* -- "
+"Any HTTP headers included on the response. * *stream* -- The body of the "
+"HTTP response. * *ext* -- A dictionary of optional extensions."
+msgstr ""
+
+#: httpcore._async.base.AsyncHTTPTransport.arequest:9
+#: httpcore._sync.base.SyncHTTPTransport.request:9 of
+msgid "*status_code* -- The HTTP status code, such as ``200``."
+msgstr ""
+
+#: httpcore._async.base.AsyncHTTPTransport.arequest:10
+#: httpcore._sync.base.SyncHTTPTransport.request:10 of
+msgid "*headers* -- Any HTTP headers included on the response."
+msgstr ""
+
+#: httpcore._async.base.AsyncHTTPTransport.arequest:11
+#: httpcore._sync.base.SyncHTTPTransport.request:11 of
+msgid "*stream* -- The body of the HTTP response."
+msgstr ""
+
+#: httpcore._async.base.AsyncHTTPTransport.arequest:12
+#: httpcore._sync.base.SyncHTTPTransport.request:12 of
+msgid "*ext* -- A dictionary of optional extensions."
+msgstr ""
+
+#: httpcore._async.base.AsyncByteStream.__aiter__
+#: httpcore._async.base.AsyncByteStream.aclose
+#: httpcore._async.base.AsyncHTTPTransport.aclose
+#: httpcore._async.base.AsyncHTTPTransport.arequest
+#: httpcore._sync.base.SyncByteStream.__iter__
+#: httpcore._sync.base.SyncByteStream.close
+#: httpcore._sync.base.SyncHTTPTransport.close
+#: httpcore._sync.base.SyncHTTPTransport.request of
+msgid "Return type"
+msgstr ""
+
+#: httpcore._async.base.AsyncHTTPTransport.aclose:1
+#: httpcore._sync.base.SyncHTTPTransport.close:1 of
+msgid ""
+"Close the implementation, which should close any outstanding response "
+"streams, and any keep alive connections."
+msgstr ""
+
+#: httpcore.AsyncByteStream:1 httpcore.SyncByteStream:1 of
+msgid "The base interface for request and response bodies."
+msgstr ""
+
+#: httpcore.AsyncByteStream:3 of
+msgid ""
+"Concrete implementations should subclass this class, and implement the "
+":meth:`__aiter__` method, and optionally the :meth:`aclose` method."
+msgstr ""
+
+#: httpcore._async.base.AsyncByteStream.__aiter__:1
+#: httpcore._sync.base.SyncByteStream.__iter__:1 of
+msgid "Yield bytes representing the request or response body."
+msgstr ""
+
+#: httpcore._async.base.AsyncByteStream.aclose:1
+#: httpcore._sync.base.SyncByteStream.close:1 of
+msgid "Must be called by the client to indicate that the stream has been closed."
+msgstr ""
+
+#: ../../../docs/api.md:17
+msgid "Async connection pool"
+msgstr ""
+
+#: httpcore.AsyncConnectionPool:1 of
+msgid "Bases: :class:`httpcore.AsyncHTTPTransport`"
+msgstr ""
+
+#: httpcore.AsyncConnectionPool:1 httpcore.SyncConnectionPool:1 of
+msgid "A connection pool for making HTTP requests."
+msgstr ""
+
+#: httpcore.AsyncConnectionPool:3 httpcore.AsyncHTTPProxy:6
+#: httpcore.SyncConnectionPool:3 httpcore.SyncHTTPProxy:6 of
+msgid "An SSL context to use for verifying connections."
+msgstr ""
+
+#: httpcore.AsyncConnectionPool:4 httpcore.AsyncHTTPProxy:7
+#: httpcore.SyncConnectionPool:4 httpcore.SyncHTTPProxy:7 of
+msgid "The maximum number of concurrent connections to allow."
+msgstr ""
+
+#: httpcore.AsyncConnectionPool:5 httpcore.AsyncHTTPProxy:8
+#: httpcore.SyncConnectionPool:5 httpcore.SyncHTTPProxy:8 of
+msgid ""
+"The maximum number of connections to allow before closing keep-alive "
+"connections."
+msgstr ""
+
+#: httpcore.AsyncConnectionPool:7 httpcore.SyncConnectionPool:7 of
+msgid "The maximum time to allow before closing a keep-alive connection."
+msgstr ""
+
+#: httpcore.AsyncConnectionPool:8 httpcore.AsyncHTTPProxy:10
+#: httpcore.SyncConnectionPool:8 httpcore.SyncHTTPProxy:10 of
+msgid "Enable HTTP/2 support."
+msgstr ""
+
+#: httpcore.AsyncConnectionPool:9 httpcore.SyncConnectionPool:9 of
+msgid "Path to a Unix Domain Socket to use instead of TCP sockets."
+msgstr ""
+
+#: httpcore.AsyncConnectionPool:10 httpcore.SyncConnectionPool:10 of
+msgid ""
+"Local address to connect from. Can also be used to connect using a "
+"particular address family. Using ``local_address=\"0.0.0.0\"`` will "
+"connect using an ``AF_INET`` address (IPv4), while using "
+"``local_address=\"::\"`` will connect using an ``AF_INET6`` address "
+"(IPv6)."
+msgstr ""
+
+#: httpcore.AsyncConnectionPool:14 httpcore.SyncConnectionPool:14 of
+msgid "The maximum number of retries when trying to establish a connection."
+msgstr ""
+
+#: httpcore.AsyncConnectionPool:15 httpcore.SyncConnectionPool:15 of
+msgid "A name indicating which concurrency backend to use."
+msgstr ""
+
+#: ../../../docs/api.md:24
+msgid "Async proxy"
+msgstr ""
+
+#: httpcore.AsyncHTTPProxy:1 of
+msgid "Bases: :class:`httpcore.AsyncConnectionPool`"
+msgstr ""
+
+#: httpcore.AsyncHTTPProxy:1 httpcore.SyncHTTPProxy:1 of
+msgid "A connection pool for making HTTP requests via an HTTP proxy."
+msgstr ""
+
+#: httpcore.AsyncHTTPProxy:3 httpcore.SyncHTTPProxy:3 of
+msgid "The URL of the proxy service as a 4-tuple of (scheme, host, port, path)."
+msgstr ""
+
+#: httpcore.AsyncHTTPProxy:4 httpcore.SyncHTTPProxy:4 of
+msgid "A list of proxy headers to include."
+msgstr ""
+
+#: httpcore.AsyncHTTPProxy:5 httpcore.SyncHTTPProxy:5 of
+msgid ""
+"A proxy mode to operate in. May be \"DEFAULT\", \"FORWARD_ONLY\", or "
+"\"TUNNEL_ONLY\"."
+msgstr ""
+
+#: ../../../docs/api.md:31
+msgid "Async byte streams"
+msgstr ""
+
+#: ../../../docs/api.md:33
+msgid ""
+"These classes are concrete implementations of "
+"[`AsyncByteStream`](httpcore.AsyncByteStream)."
+msgstr ""
+
+#: httpcore.PlainByteStream:1 of
+msgid "Bases: :class:`httpcore.AsyncByteStream`, :class:`httpcore.SyncByteStream`"
+msgstr ""
+
+#: httpcore.PlainByteStream:1 of
+msgid "A concrete implementation for either sync or async byte streams."
+msgstr ""
+
+#: httpcore.AsyncIteratorByteStream:3 httpcore.IteratorByteStream:3
+#: httpcore.PlainByteStream:3 of
+msgid "Example::"
+msgstr ""
+
+#: httpcore.PlainByteStream:7 of
+msgid "A plain byte string used as the content of the stream."
+msgstr ""
+
+#: httpcore.AsyncIteratorByteStream:1 of
+msgid "Bases: :class:`httpcore.AsyncByteStream`"
+msgstr ""
+
+#: httpcore.AsyncIteratorByteStream:1 of
+msgid "A concrete implementation for async byte streams."
+msgstr ""
+
+#: httpcore.AsyncIteratorByteStream:11 of
+msgid "An async byte iterator, used as the content of the stream."
+msgstr ""
+
+#: httpcore.AsyncIteratorByteStream:12 of
+msgid "An optional async function called when closing the stream."
+msgstr ""
+
+#: ../../../docs/api.md:43
+msgid "Sync API Overview"
+msgstr ""
+
+#: ../../../docs/api.md:45
+msgid "Base sync interfaces"
+msgstr ""
+
+#: httpcore.SyncHTTPTransport:3 of
+msgid ""
+"Concrete implementations should subclass this class, and implement the "
+":meth:`request` method, and optionally the :meth:`close` method."
+msgstr ""
+
+#: httpcore.SyncByteStream:3 of
+msgid ""
+"Concrete implementations should subclass this class, and implement the "
+":meth:`__iter__` method, and optionally the :meth:`close` method."
+msgstr ""
+
+#: ../../../docs/api.md:57
+msgid "Sync connection pool"
+msgstr ""
+
+#: httpcore.SyncConnectionPool:1 of
+msgid "Bases: :class:`httpcore.SyncHTTPTransport`"
+msgstr ""
+
+#: ../../../docs/api.md:64
+msgid "Sync proxy"
+msgstr ""
+
+#: httpcore.SyncHTTPProxy:1 of
+msgid "Bases: :class:`httpcore.SyncConnectionPool`"
+msgstr ""
+
+#: ../../../docs/api.md:71
+msgid "Sync byte streams"
+msgstr ""
+
+#: ../../../docs/api.md:73
+msgid ""
+"These classes are concrete implementations of "
+"[`SyncByteStream`](httpcore.SyncByteStream)."
+msgstr ""
+
+#: httpcore.IteratorByteStream:1 of
+msgid "Bases: :class:`httpcore.SyncByteStream`"
+msgstr ""
+
+#: httpcore.IteratorByteStream:1 of
+msgid "A concrete implementation for sync byte streams."
+msgstr ""
+
+#: httpcore.IteratorByteStream:11 of
+msgid "A sync byte iterator, used as the content of the stream."
+msgstr ""
+
+#: httpcore.IteratorByteStream:12 of
+msgid "An optional function called when closing the stream."
+msgstr ""
+

@@ -1,0 +1,174 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Encode
+# This file is distributed under the same license as the HTTPCore package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: HTTPCore \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-04-10 22:21+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../../docs/index.md:6
+msgid "Usage"
+msgstr "Utilisation"
+
+#: ../../../docs/index.md:13
+msgid "Contributing"
+msgstr "Contribuer"
+
+#: ../../../docs/index.md:13
+msgid "Changelog"
+msgstr ""
+
+#: ../../../docs/index.md:13
+msgid "License"
+msgstr "Licence"
+
+#: ../../../docs/index.md:13
+msgid "Source Code"
+msgstr "Code source"
+
+#: ../../../docs/index.md:13
+msgid "Development"
+msgstr "Développement"
+
+#: ../../../README.md:1
+msgid "HTTP Core"
+msgstr ""
+
+#: ../../../README.md:3
+msgid ""
+"[![Test "
+"Suite](https://github.com/encode/httpcore/workflows/Test%20Suite/badge.svg)](https://github.com/encode/httpcore/actions)"
+" [![Package "
+"version](https://badge.fury.io/py/httpcore.svg)](https://pypi.org/project/httpcore/)"
+msgstr ""
+
+#: ../../../README.md:6
+msgid "*Do one thing, and do it well.*"
+msgstr ""
+
+#: ../../../README.md:8
+msgid ""
+"The HTTP Core package provides a minimal low-level HTTP client, which "
+"does one thing only. Sending HTTP requests."
+msgstr ""
+"HTTP Core est un client HTTP bas niveau minimaliste. Il ne fait qu'une "
+"seule chose : envoyer des requêtes HTTP."
+
+#: ../../../README.md:11
+msgid ""
+"It does not provide any high level model abstractions over the API, does "
+"not handle redirects, multipart uploads, building authentication headers,"
+" transparent HTTP caching, URL parsing, session cookie handling, content "
+"or charset decoding, handling JSON, environment based configuration "
+"defaults, or any of that Jazz."
+msgstr ""
+"Pas de modeèles ou d'abstractions haut-niveau, pas de gestion des "
+"redirections, des _multipart uploads_, d'entêtes d'authentification, de "
+"mise en cache, d'analyse d'URL, de déchiffrage de contenu ou de "
+"_charset_, de JSON, de valeurs par défaut via des variables "
+"d'environnement, ou tout autre gadget de ce genre."
+
+#: ../../../README.md:17
+msgid "Some things HTTP Core does do:"
+msgstr "Par contre, voici ce que HTTP Core _peut_ faire :"
+
+#: ../../../README.md:19
+msgid "Sending HTTP requests."
+msgstr "Envoyer des requêtes HTTP."
+
+#: ../../../README.md:20
+msgid "Provides both sync and async interfaces."
+msgstr "Gérer sync et async grâce à des interfaces dédiées."
+
+#: ../../../README.md:21
+msgid "Supports HTTP/1.1 and HTTP/2."
+msgstr "Gérer HTTP/1.1 et HTTP/2."
+
+#: ../../../README.md:22
+msgid "Async backend support for `asyncio`, `trio` and `curio`."
+msgstr "Fonctionner avec `asyncio`, `trio` et `curio`."
+
+#: ../../../README.md:23
+msgid "Automatic connection pooling."
+msgstr "Mutualiser automatiquement les connexions (*connection pooling*)."
+
+#: ../../../README.md:24
+msgid "HTTP(S) proxy support."
+msgstr "Fonctionner avec un proxy HTTP(S)."
+
+#: ../../../README.md:26
+msgid "Installation"
+msgstr "Installation"
+
+#: ../../../README.md:28
+msgid "For HTTP/1.1 only support, install with..."
+msgstr "Si HTTP/1.1 suffit, utilisez cette commande :"
+
+#: ../../../README.md:34
+msgid "For HTTP/1.1 and HTTP/2 support, install with..."
+msgstr "Pour HTTP/1.1 et HTTP/2, utilisez cette commande :"
+
+#: ../../../README.md:40
+msgid "Quickstart"
+msgstr "Démarrage rapide"
+
+#: ../../../README.md:42
+msgid "Here's an example of making an HTTP GET request using `httpcore`..."
+msgstr ""
+"Dans cet exemple, on utilise `httpcore` pour envoyer une requête HTTP GET"
+" :"
+
+#: ../../../README.md:60
+msgid "Or, using async..."
+msgstr "En async, voici à quoi cela ressemble :"
+
+#: ../../../README.md:78
+msgid "Motivation"
+msgstr "Motivation"
+
+#: ../../../README.md:80
+msgid ""
+"You probably don't want to be using HTTP Core directly. It might make "
+"sense if you're writing something like a proxy service in Python, and you"
+" just want something at the lowest possible level, but more typically "
+"you'll want to use a higher level client library, such as `httpx`."
+msgstr ""
+"Dans la pratique, il est probable que presque personne ne doive utiliser "
+"HTTP Core directement. À la limite si vous écrivez quelque chose comme un"
+" service de proxying en Python, et qu'il vous faut une interface aussi "
+"bas-niveau que possible. Mais en général, on vous recommande plutôt "
+"d'utiliser un client HTTP haut-niveau, comme `httpx`."
+
+#: ../../../README.md:85
+msgid "The motivation for `httpcore` is:"
+msgstr "`httpcore` répond à plusieurs objectifs:"
+
+#: ../../../README.md:87
+msgid ""
+"To provide a reusable low-level client library, that other packages can "
+"then build on top of."
+msgstr ""
+"Fournir une librarie client bas-niveau, utilisable comme base par "
+"d'autres libraries."
+
+#: ../../../README.md:88
+msgid ""
+"To provide a *really clear interface split* between the networking code "
+"and client logic, so that each is easier to understand and reason about "
+"in isolation."
+msgstr ""
+"Séparer *très clairement* le code réseau de la logique client, afin qu'il"
+" soit plus facile de comprendre et de travailler avec l'un ou l'autre de "
+"façon isolée."
+

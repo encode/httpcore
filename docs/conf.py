@@ -37,6 +37,12 @@ autodoc_typehints = "description"
 
 html_theme = "furo"
 
+# -- Internationalization --
+# https://www.sphinx-doc.org/en/master/usage/advanced/intl.html
+
+locale_dirs = ['locale/']
+gettext_compact = False
+
 # -- App setup --
 
 

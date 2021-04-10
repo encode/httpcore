@@ -130,6 +130,28 @@ To run the documentation site locally (useful for previewing changes), use:
 $ scripts/docs
 ```
 
+### Working with translations
+
+The documentation has multi-language (internationalization, aka i18n) support. The workflow is built on top of [Sphinx internationalization](https://www.sphinx-doc.org/en/master/usage/advanced/intl.html), which relies on the `gettext` standard.
+
+After editing documentation, sync translation files (i.e. `.po` files under `docs/locale`) using:
+
+```shell
+$ scripts/docs maketranslations
+```
+
+Documentation for a specific language can then be built using:
+
+```shell
+$ SPHINX_LANGUAGE=fr scripts/docs build
+```
+
+Run the documentation site locally for a specific language built using:
+
+```shell
+$ SPHINX_LANGUAGE=fr scripts/docs
+```
+
 ## Resolving Build / CI Failures
 
 Once you've submitted your pull request, the test suite will automatically run, and the results will show up in GitHub.

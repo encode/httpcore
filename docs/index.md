@@ -14,7 +14,7 @@ api
 :hidden:
 :caption: Development
 
-contributing
+Contributing <contributing>
 Changelog <https://github.com/encode/httpcore/blob/master/CHANGELOG.md>
 License <https://github.com/encode/httpcore/blob/master/LICENSE.md>
 Source Code <https://github.com/encode/httpcore>

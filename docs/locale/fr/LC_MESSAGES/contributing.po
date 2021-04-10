@@ -1,0 +1,417 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Encode
+# This file is distributed under the same license as the HTTPCore package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: HTTPCore \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-04-10 22:21+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../../docs/contributing.md:1
+msgid "Contributing"
+msgstr ""
+
+#: ../../../docs/contributing.md:3
+msgid "Thanks for considering contributing to HTTP Core!"
+msgstr ""
+
+#: ../../../docs/contributing.md:5
+msgid "We welcome contributors to:"
+msgstr ""
+
+#: ../../../docs/contributing.md:7
+msgid ""
+"Try [HTTPX](https://www.python-httpx.org), as it is HTTP Core's main "
+"entry point, and [report bugs/issues you "
+"find](https://github.com/encode/httpx/issues/new)"
+msgstr ""
+
+#: ../../../docs/contributing.md:9
+msgid ""
+"Help triage [issues](https://github.com/encode/httpcore/issues) and "
+"investigate root causes of bugs"
+msgstr ""
+
+#: ../../../docs/contributing.md:11
+msgid "[Review Pull Requests of others](https://github.com/encode/httpcore/pulls)"
+msgstr ""
+
+#: ../../../docs/contributing.md:12
+msgid "Review, clarify and write documentation"
+msgstr ""
+
+#: ../../../docs/contributing.md:13
+msgid "Participate in discussions"
+msgstr ""
+
+#: ../../../docs/contributing.md:15
+msgid "Reporting Bugs or Other Issues"
+msgstr ""
+
+#: ../../../docs/contributing.md:17
+msgid ""
+"HTTP Core is a fairly specialized library and its main purpose is to "
+"provide a solid base for [HTTPX](https://www.python-httpx.org). HTTPX "
+"should be considered the main entry point to HTTP Core and as such we "
+"encourage users to test and raise issues in [HTTPX's issue "
+"tracker](https://github.com/encode/httpx/issues/new) where maintainers "
+"and contributors can triage and move to HTTP Core if appropriate."
+msgstr ""
+
+#: ../../../docs/contributing.md:23
+msgid ""
+"If you are convinced that the cause of the issue is on HTTP Core you're "
+"more than welcome to [open an "
+"issue](https://github.com/encode/httpcore/issues/new)."
+msgstr ""
+
+#: ../../../docs/contributing.md:26
+msgid ""
+"Please attach as much detail as possible and, in case of a bug report, "
+"provide information like:"
+msgstr ""
+
+#: ../../../docs/contributing.md:29
+msgid "OS platform or Docker image"
+msgstr ""
+
+#: ../../../docs/contributing.md:30
+msgid "Python version"
+msgstr ""
+
+#: ../../../docs/contributing.md:31
+msgid "Installed dependencies and versions (`python -m pip freeze`)"
+msgstr ""
+
+#: ../../../docs/contributing.md:32
+msgid "Code snippet to reproduce the issue"
+msgstr ""
+
+#: ../../../docs/contributing.md:33
+msgid "Error traceback and output"
+msgstr ""
+
+#: ../../../docs/contributing.md:35
+msgid ""
+"It is quite helpful to increase the logging level of HTTP Core and "
+"include the output of your program. To do so set the `HTTPCORE_LOG_LEVEL`"
+" or `HTTPX_LOG_LEVEL` environment variables to `TRACE`, for example:"
+msgstr ""
+
+#: ../../../docs/contributing.md:46
+msgid ""
+"The output will be quite long but it will help dramatically in diagnosing"
+" the problem."
+msgstr ""
+
+#: ../../../docs/contributing.md:48
+msgid ""
+"For more examples please refer to the [environment variables "
+"documentation in HTTPX](https://www.python-"
+"httpx.org/environment_variables/#httpx_log_level)."
+msgstr ""
+
+#: ../../../docs/contributing.md:51
+msgid "Development"
+msgstr ""
+
+#: ../../../docs/contributing.md:53
+msgid ""
+"To start developing HTTP Core create a **fork** of the "
+"[repository](https://github.com/encode/httpcore) on GitHub."
+msgstr ""
+
+#: ../../../docs/contributing.md:56
+msgid ""
+"Then clone your fork with the following command replacing `YOUR-USERNAME`"
+" with your GitHub username:"
+msgstr ""
+
+#: ../../../docs/contributing.md:63
+msgid "You can now install the project and its dependencies using:"
+msgstr ""
+
+#: ../../../docs/contributing.md:70
+msgid "Unasync"
+msgstr ""
+
+#: ../../../docs/contributing.md:72
+msgid ""
+"HTTP Core provides synchronous and asynchronous interfaces. As you can "
+"imagine, keeping two almost identical versions of code in sync can be "
+"quite time consuming. To work around this problem HTTP Core uses a "
+"technique called _unasync_, where the development is focused on the "
+"asynchronous version of the code and a script generates the synchronous "
+"version from it."
+msgstr ""
+
+#: ../../../docs/contributing.md:78
+msgid "As such developers should:"
+msgstr ""
+
+#: ../../../docs/contributing.md:80
+msgid ""
+"Only make modifications in the asynchronous and shared portions of the "
+"code. In practice this roughly means avoiding the `httpcore/_sync` "
+"directory."
+msgstr ""
+
+#: ../../../docs/contributing.md:82
+msgid ""
+"Write tests _only under `async_tests`_, synchronous tests are also "
+"generated as part of the unasync process."
+msgstr ""
+
+#: ../../../docs/contributing.md:84
+msgid ""
+"Run `scripts/unasync` to generate the synchronous versions. Note the "
+"script is ran as part of other scripts as well, so you don't usually need"
+" to run this yourself."
+msgstr ""
+
+#: ../../../docs/contributing.md:87
+msgid "Run the entire test suite as decribed below."
+msgstr ""
+
+#: ../../../docs/contributing.md:89
+msgid "Testing and Linting"
+msgstr ""
+
+#: ../../../docs/contributing.md:91
+msgid ""
+"We use custom shell scripts to automate testing, linting, and "
+"documentation building workflow."
+msgstr ""
+
+#: ../../../docs/contributing.md:94
+msgid "To run the tests, use:"
+msgstr ""
+
+#: ../../../docs/contributing.md:100
+msgid ""
+"The test suite spawns testing servers on ports **8000** and **8001**. "
+"Make sure these are not in use, so the tests can run properly."
+msgstr ""
+
+#: ../../../docs/contributing.md:105
+msgid "You can run a single test script like this:"
+msgstr ""
+
+#: ../../../docs/contributing.md:111
+msgid "To run the code auto-formatting:"
+msgstr ""
+
+#: ../../../docs/contributing.md:117
+msgid ""
+"Lastly, to run code checks separately (they are also run as part of "
+"`scripts/test`), run:"
+msgstr ""
+
+#: ../../../docs/contributing.md:123
+msgid "Documenting"
+msgstr ""
+
+#: ../../../docs/contributing.md:125
+msgid "Documentation pages are located under the `docs/` folder."
+msgstr ""
+
+#: ../../../docs/contributing.md:127
+msgid ""
+"To run the documentation site locally (useful for previewing changes), "
+"use:"
+msgstr ""
+
+#: ../../../docs/contributing.md:133
+msgid "Working with translations"
+msgstr ""
+
+#: ../../../docs/contributing.md:135
+msgid ""
+"The documentation has multi-language (internationalization, aka i18n) "
+"support. The workflow is built on top of [Sphinx "
+"internationalization](https://www.sphinx-"
+"doc.org/en/master/usage/advanced/intl.html), which relies on the "
+"`gettext` standard."
+msgstr ""
+
+#: ../../../docs/contributing.md:137
+msgid ""
+"After editing documentation, sync translation files (i.e. `.po` files "
+"under `docs/locale`) using:"
+msgstr ""
+
+#: ../../../docs/contributing.md:143
+msgid "Documentation for a specific language can then be built using:"
+msgstr ""
+
+#: ../../../docs/contributing.md:149
+msgid "Run the documentation site locally for a specific language built using:"
+msgstr ""
+
+#: ../../../docs/contributing.md:155
+msgid "Resolving Build / CI Failures"
+msgstr ""
+
+#: ../../../docs/contributing.md:157
+msgid ""
+"Once you've submitted your pull request, the test suite will "
+"automatically run, and the results will show up in GitHub. If the test "
+"suite fails, you'll want to click through to the \"Details\" link, and "
+"try to identify why the test suite failed."
+msgstr ""
+
+#: ../../../docs/contributing.md:164
+msgid "Here are some common ways the test suite can fail:"
+msgstr ""
+
+#: ../../../docs/contributing.md:166
+msgid "Check Job Failed"
+msgstr ""
+
+#: ../../../docs/contributing.md:172
+msgid ""
+"This job failing means there is either a code formatting issue or type-"
+"annotation issue. You can look at the job output to figure out why it's "
+"failed or within a shell run:"
+msgstr ""
+
+#: ../../../docs/contributing.md:179
+msgid ""
+"It may be worth it to run `$ scripts/lint` to attempt auto-formatting the"
+" code and if that job succeeds commit the changes."
+msgstr ""
+
+#: ../../../docs/contributing.md:182
+msgid "Docs Job Failed"
+msgstr ""
+
+#: ../../../docs/contributing.md:184
+msgid ""
+"This job failing means the documentation failed to build. This can happen"
+" for a variety of reasons like invalid markdown or missing configuration "
+"within `mkdocs.yml`."
+msgstr ""
+
+#: ../../../docs/contributing.md:187
+msgid "Python 3.X Job Failed"
+msgstr ""
+
+#: ../../../docs/contributing.md:193
+msgid ""
+"This job failing means the unit tests failed or not all code paths are "
+"covered by unit tests."
+msgstr ""
+
+#: ../../../docs/contributing.md:195
+msgid "If tests are failing you will see this message under the coverage report:"
+msgstr ""
+
+#: ../../../docs/contributing.md:197
+msgid "`=== 1 failed, 435 passed, 1 skipped, 1 xfailed in 11.09s ===`"
+msgstr ""
+
+#: ../../../docs/contributing.md:199
+msgid ""
+"If tests succeed but coverage is lower than our current threshold, you "
+"will see this message under the coverage report:"
+msgstr ""
+
+#: ../../../docs/contributing.md:201
+msgid "`FAIL Required test coverage of 100% not reached. Total coverage: 99.00%`"
+msgstr ""
+
+#: ../../../docs/contributing.md:203
+msgid "Releasing"
+msgstr ""
+
+#: ../../../docs/contributing.md:205
+msgid "*This section is targeted at HTTPX maintainers.*"
+msgstr ""
+
+#: ../../../docs/contributing.md:207
+msgid "Before releasing a new version, create a pull request that includes:"
+msgstr ""
+
+#: ../../../docs/contributing.md:209
+msgid "**An update to the changelog**:"
+msgstr ""
+
+#: ../../../docs/contributing.md:210
+msgid ""
+"We follow the format from "
+"[keepachangelog](https://keepachangelog.com/en/1.0.0/)."
+msgstr ""
+
+#: ../../../docs/contributing.md:211
+msgid ""
+"[Compare](https://github.com/encode/httpcore/compare/) `master` with the "
+"tag of the latest release, and list all entries that are of interest to "
+"our users:"
+msgstr ""
+
+#: ../../../docs/contributing.md:212
+msgid ""
+"Things that **must** go in the changelog: added, changed, deprecated or "
+"removed features, and bug fixes."
+msgstr ""
+
+#: ../../../docs/contributing.md:213
+msgid ""
+"Things that **should not** go in the changelog: changes to documentation,"
+" tests or tooling."
+msgstr ""
+
+#: ../../../docs/contributing.md:214
+msgid "Try sorting entries in descending order of impact / importance."
+msgstr ""
+
+#: ../../../docs/contributing.md:215
+msgid "Keep it concise and to-the-point. 🎯"
+msgstr ""
+
+#: ../../../docs/contributing.md:216
+msgid "**A version bump**: see `__version__.py`."
+msgstr ""
+
+#: ../../../docs/contributing.md:218
+msgid "For an example, see [#99](https://github.com/encode/httpcore/pull/99)."
+msgstr ""
+
+#: ../../../docs/contributing.md:220
+msgid ""
+"Once the release PR is merged, create a [new "
+"release](https://github.com/encode/httpcore/releases/new) including:"
+msgstr ""
+
+#: ../../../docs/contributing.md:223
+msgid "Tag version like `0.9.3`."
+msgstr ""
+
+#: ../../../docs/contributing.md:224
+msgid "Release title `Version 0.9.3`"
+msgstr ""
+
+#: ../../../docs/contributing.md:225
+msgid "Description copied from the changelog."
+msgstr ""
+
+#: ../../../docs/contributing.md:227
+msgid "Once created this release will be automatically uploaded to PyPI."
+msgstr ""
+
+#: ../../../docs/contributing.md:229
+msgid ""
+"If something goes wrong with the PyPI job the release can be published "
+"using the `scripts/publish` script."
+msgstr ""
+
