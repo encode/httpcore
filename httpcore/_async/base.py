@@ -58,7 +58,7 @@ class AsyncHTTPTransport:
     The base interface for sending HTTP requests.
 
     Concrete implementations should subclass this class, and implement
-    the :meth:`arequest` method, and optionally the :meth:`aclose` method.
+    the :meth:`handle_async_request` method, and optionally the :meth:`aclose` method.
     """
 
     async def handle_async_request(

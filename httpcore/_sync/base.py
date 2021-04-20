@@ -58,7 +58,7 @@ class SyncHTTPTransport:
     The base interface for sending HTTP requests.
 
     Concrete implementations should subclass this class, and implement
-    the :meth:`request` method, and optionally the :meth:`close` method.
+    the :meth:`handle_request` method, and optionally the :meth:`close` method.
     """
 
     def handle_request(
