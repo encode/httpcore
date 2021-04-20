@@ -52,6 +52,12 @@ class SyncByteStream:
         """
         pass  # pragma: nocover
 
+    def read(self) -> bytes:
+        try:
+            return b"".join([part for part in self])
+        finally:
+            self.close()
+
 
 class SyncHTTPTransport:
     """

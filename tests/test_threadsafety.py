@@ -31,7 +31,7 @@ def test_threadsafe_basic(server: Server, http2: bool) -> None:
                 method=b"GET",
                 url=(b"http", *server.netloc, b"/"),
                 headers=[server.host_header],
-                stream=httpcore.PlainByteStream(b""),
+                stream=httpcore.ByteStream(b""),
                 extensions={},
             )
             read_body(stream)

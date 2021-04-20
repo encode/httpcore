@@ -2,7 +2,7 @@ from http import HTTPStatus
 from ssl import SSLContext
 from typing import Tuple, cast
 
-from .._bytestreams import PlainByteStream
+from .._bytestreams import ByteStream
 from .._exceptions import ProxyError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger, url_to_origin
@@ -224,7 +224,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                     b"CONNECT",
                     connect_url,
                     headers=connect_headers,
-                    stream=PlainByteStream(b""),
+                    stream=ByteStream(b""),
                     extensions=extensions,
                 )
 

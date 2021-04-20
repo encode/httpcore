@@ -52,6 +52,12 @@ class AsyncByteStream:
         """
         pass  # pragma: nocover
 
+    async def aread(self) -> bytes:
+        try:
+            return b"".join([part async for part in self])
+        finally:
+            await self.aclose()
+
 
 class AsyncHTTPTransport:
     """

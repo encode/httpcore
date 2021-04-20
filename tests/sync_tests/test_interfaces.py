@@ -30,7 +30,7 @@ def test_http_request(backend: str, server: Server) -> None:
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         read_body(stream)
@@ -52,7 +52,7 @@ def test_https_request(backend: str, https_server: Server) -> None:
             method=b"GET",
             url=(b"https", *https_server.netloc, b"/"),
             headers=[https_server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         read_body(stream)
@@ -75,7 +75,7 @@ def test_request_unsupported_protocol(backend: str) -> None:
                 method=b"GET",
                 url=(b"ftp", b"example.org", 443, b"/"),
                 headers=[(b"host", b"example.org")],
-                stream=httpcore.PlainByteStream(b""),
+                stream=httpcore.ByteStream(b""),
                 extensions={},
             )
 
@@ -87,7 +87,7 @@ def test_http2_request(backend: str, https_server: Server) -> None:
             method=b"GET",
             url=(b"https", *https_server.netloc, b"/"),
             headers=[https_server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         read_body(stream)
@@ -105,7 +105,7 @@ def test_closing_http_request(backend: str, server: Server) -> None:
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header, (b"connection", b"close")],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         read_body(stream)
@@ -127,7 +127,7 @@ def test_http_request_reuse_connection(backend: str, server: Server) -> None:
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         read_body(stream)
@@ -145,7 +145,7 @@ def test_http_request_reuse_connection(backend: str, server: Server) -> None:
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         read_body(stream)
@@ -169,7 +169,7 @@ def test_https_request_reuse_connection(
             method=b"GET",
             url=(b"https", *https_server.netloc, b"/"),
             headers=[https_server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         read_body(stream)
@@ -187,7 +187,7 @@ def test_https_request_reuse_connection(
             method=b"GET",
             url=(b"https", *https_server.netloc, b"/"),
             headers=[https_server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         read_body(stream)
@@ -211,7 +211,7 @@ def test_http_request_cannot_reuse_dropped_connection(
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         read_body(stream)
@@ -233,7 +233,7 @@ def test_http_request_cannot_reuse_dropped_connection(
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         read_body(stream)
@@ -264,7 +264,7 @@ def test_http_proxy(
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         read_body(stream)
@@ -295,7 +295,7 @@ def test_proxy_socket_does_not_leak_when_the_connection_hasnt_been_added_to_pool
                         method=b"GET",
                         url=(protocol, b"blockedhost.example.com", port, b"/"),
                         headers=[(b"host", b"blockedhost.example.com")],
-                        stream=httpcore.PlainByteStream(b""),
+                        stream=httpcore.ByteStream(b""),
                         extensions={},
                     )
                 except (httpcore.ProxyError, httpcore.RemoteProtocolError):
@@ -321,7 +321,7 @@ def test_http_request_local_address(backend: str, server: Server) -> None:
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         read_body(stream)
@@ -357,7 +357,7 @@ def test_proxy_https_requests(
             method=b"GET",
             url=(b"https", *https_server.netloc, b"/"),
             headers=[https_server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         _ = read_body(stream)
@@ -412,14 +412,14 @@ def test_connection_pool_get_connection_info(
             method=b"GET",
             url=(b"https", *https_server.netloc, b"/"),
             headers=[https_server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         _, _, stream_2, _ = http.handle_request(
             method=b"GET",
             url=(b"https", *https_server.netloc, b"/"),
             headers=[https_server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
 
@@ -451,7 +451,7 @@ def test_http_request_unix_domain_socket(
             method=b"GET",
             url=(b"http", b"localhost", None, b"/"),
             headers=[(b"host", b"localhost")],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         assert status_code == 200
@@ -479,7 +479,7 @@ def test_max_keepalive_connections_handled_correctly(
                 method=b"GET",
                 url=(b"http", *server.netloc, b"/"),
                 headers=[server.host_header],
-                stream=httpcore.PlainByteStream(b""),
+                stream=httpcore.ByteStream(b""),
                 extensions={},
             )
             connections_streams.append(stream)
@@ -501,7 +501,7 @@ def test_explicit_backend_name(server: Server) -> None:
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         read_body(stream)
@@ -540,7 +540,7 @@ def test_broken_socket_detection_many_open_files(
                 method=b"GET",
                 url=(b"http", *server.netloc, b"/"),
                 headers=[server.host_header],
-                stream=httpcore.PlainByteStream(b""),
+                stream=httpcore.ByteStream(b""),
                 extensions={},
             )
             read_body(stream)
@@ -575,7 +575,7 @@ def test_cannot_connect_tcp(backend: str, url) -> None:
                 method=b"GET",
                 url=url,
                 headers=[],
-                stream=httpcore.PlainByteStream(b""),
+                stream=httpcore.ByteStream(b""),
                 extensions={},
             )
 
@@ -592,6 +592,6 @@ def test_cannot_connect_uds(backend: str) -> None:
                 method=b"GET",
                 url=(b"http", b"localhost", None, b"/"),
                 headers=[],
-                stream=httpcore.PlainByteStream(b""),
+                stream=httpcore.ByteStream(b""),
                 extensions={},
             )

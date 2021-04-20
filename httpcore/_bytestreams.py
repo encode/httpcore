@@ -4,13 +4,13 @@ from ._async.base import AsyncByteStream
 from ._sync.base import SyncByteStream
 
 
-class PlainByteStream(AsyncByteStream, SyncByteStream):
+class ByteStream(AsyncByteStream, SyncByteStream):
     """
     A concrete implementation for either sync or async byte streams.
 
     Example::
 
-        stream = httpcore.PlainByteStream(b"123")
+        stream = httpcore.ByteStream(b"123")
 
     Parameters
     ----------

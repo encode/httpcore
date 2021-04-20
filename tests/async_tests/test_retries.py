@@ -53,7 +53,7 @@ async def test_no_retries(server: Server) -> None:
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         status_code, _, stream, _ = response
@@ -67,7 +67,7 @@ async def test_no_retries(server: Server) -> None:
                 method=b"GET",
                 url=(b"http", *server.netloc, b"/"),
                 headers=[server.host_header],
-                stream=httpcore.PlainByteStream(b""),
+                stream=httpcore.ByteStream(b""),
                 extensions={},
             )
 
@@ -76,7 +76,7 @@ async def test_no_retries(server: Server) -> None:
                 method=b"GET",
                 url=(b"http", *server.netloc, b"/"),
                 headers=[server.host_header],
-                stream=httpcore.PlainByteStream(b""),
+                stream=httpcore.ByteStream(b""),
                 extensions={},
             )
 
@@ -98,7 +98,7 @@ async def test_retries_enabled(server: Server) -> None:
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         assert backend.pop_open_tcp_stream_intervals() == []
@@ -112,7 +112,7 @@ async def test_retries_enabled(server: Server) -> None:
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         assert backend.pop_open_tcp_stream_intervals() == [
@@ -133,7 +133,7 @@ async def test_retries_enabled(server: Server) -> None:
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         assert backend.pop_open_tcp_stream_intervals() == [
@@ -152,7 +152,7 @@ async def test_retries_enabled(server: Server) -> None:
                 method=b"GET",
                 url=(b"http", *server.netloc, b"/"),
                 headers=[server.host_header],
-                stream=httpcore.PlainByteStream(b""),
+                stream=httpcore.ByteStream(b""),
                 extensions={},
             )
         with pytest.raises(httpcore.NetworkError):
@@ -160,7 +160,7 @@ async def test_retries_enabled(server: Server) -> None:
                 method=b"GET",
                 url=(b"http", *server.netloc, b"/"),
                 headers=[server.host_header],
-                stream=httpcore.PlainByteStream(b""),
+                stream=httpcore.ByteStream(b""),
                 extensions={},
             )
 
@@ -181,7 +181,7 @@ async def test_retries_exceeded(server: Server) -> None:
             method=b"GET",
             url=(b"http", *server.netloc, b"/"),
             headers=[server.host_header],
-            stream=httpcore.PlainByteStream(b""),
+            stream=httpcore.ByteStream(b""),
             extensions={},
         )
         status_code, _, stream, _ = response
@@ -195,6 +195,6 @@ async def test_retries_exceeded(server: Server) -> None:
                 method=b"GET",
                 url=(b"http", *server.netloc, b"/"),
                 headers=[server.host_header],
-                stream=httpcore.PlainByteStream(b""),
+                stream=httpcore.ByteStream(b""),
                 extensions={},
             )
