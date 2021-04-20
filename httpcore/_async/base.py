@@ -37,7 +37,7 @@ class AsyncByteStream:
     The base interface for request and response bodies.
 
     Concrete implementations should subclass this class, and implement
-    the `\\__aiter__` method, and optionally the `aclose` method.
+    the :meth:`__aiter__` method, and optionally the :meth:`aclose` method.
     """
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
@@ -57,8 +57,8 @@ class AsyncHTTPTransport:
     """
     The base interface for sending HTTP requests.
 
-    Concete implementations should subclass this class, and implement
-    the `request` method, and optionally the `close` method.
+    Concrete implementations should subclass this class, and implement
+    the :meth:`arequest` method, and optionally the :meth:`aclose` method.
     """
 
     async def handle_async_request(
@@ -72,25 +72,29 @@ class AsyncHTTPTransport:
         """
         The interface for sending a single HTTP request, and returning a response.
 
-        **Parameters:**
+        Parameters
+        ----------
+        method:
+            The HTTP method, such as ``b'GET'``.
+        url:
+            The URL as a 4-tuple of (scheme, host, port, path).
+        headers:
+            Any HTTP headers to send with the request.
+        stream:
+            The body of the HTTP request.
+        extensions:
+            A dictionary of optional extensions.
 
-        * **method** - `bytes` - The HTTP method, such as `b'GET'`.
-        * **url** - `Tuple[bytes, bytes, Optional[int], bytes]` - The URL as a 4-tuple
-        of (scheme, host, port, path).
-        * **headers** - `Optional[List[Tuple[bytes, bytes]]]` - Any HTTP headers
-        to send with the request.
-        * **stream** - `Optional[AsyncByteStream]` - The body of the HTTP request.
-        * **extensions** - `Optional[dict]` - A dictionary of optional extensions.
-
-        ** Returns:**
-
-        A four-tuple of:
-
-        * **status_code** - `int` - The HTTP status code, such as `200`.
-        * **headers** - `List[Tuple[bytes, bytes]]` - Any HTTP headers included
-        on the response.
-        * **stream** - `AsyncByteStream` - The body of the HTTP response.
-        * **extensions** - `dict` - A dictionary of optional extensions.
+        Returns
+        -------
+        status_code:
+            The HTTP status code, such as ``200``.
+        headers:
+            Any HTTP headers included on the response.
+        stream:
+            The body of the HTTP response.
+        extensions:
+            A dictionary of optional extensions.
         """
         raise NotImplementedError()  # pragma: nocover
 
