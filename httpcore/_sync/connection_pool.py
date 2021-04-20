@@ -1,5 +1,4 @@
 import warnings
-from asyncio import CancelledError
 from ssl import SSLContext
 from typing import (
     Iterator,
@@ -225,7 +224,7 @@ class SyncConnectionPool(SyncHTTPTransport):
                 )
             except NewConnectionRequired:
                 connection = None
-            except (Exception, CancelledError):  # noqa: PIE786
+            except BaseException:  # noqa: PIE786
                 logger.trace("remove from pool connection=%r", connection)
                 self._remove_from_pool(connection)
                 raise
