@@ -27,10 +27,13 @@ def test_threadsafe_basic(server: Server, http2: bool) -> None:
     with httpcore.SyncConnectionPool(http2=http2) as http:
 
         def request(http: httpcore.SyncHTTPTransport) -> int:
-            method = b"GET"
-            url = (b"http", *server.netloc, b"/")
-            headers = [server.host_header]
-            status_code, headers, stream, ext = http.request(method, url, headers)
+            status_code, headers, stream, extensions = http.handle_request(
+                method=b"GET",
+                url=(b"http", *server.netloc, b"/"),
+                headers=[server.host_header],
+                stream=httpcore.ByteStream(b""),
+                extensions={},
+            )
             read_body(stream)
             return status_code
 

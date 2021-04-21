@@ -52,22 +52,28 @@ class SyncByteStream:
         """
         pass  # pragma: nocover
 
+    def read(self) -> bytes:
+        try:
+            return b"".join([part for part in self])
+        finally:
+            self.close()
+
 
 class SyncHTTPTransport:
     """
     The base interface for sending HTTP requests.
 
     Concrete implementations should subclass this class, and implement
-    the :meth:`request` method, and optionally the :meth:`close` method.
+    the :meth:`handle_request` method, and optionally the :meth:`close` method.
     """
 
-    def request(
+    def handle_request(
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: SyncByteStream = None,
-        ext: dict = None,
+        headers: Headers,
+        stream: SyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
         """
         The interface for sending a single HTTP request, and returning a response.
@@ -82,7 +88,7 @@ class SyncHTTPTransport:
             Any HTTP headers to send with the request.
         stream:
             The body of the HTTP request.
-        ext:
+        extensions:
             A dictionary of optional extensions.
 
         Returns
@@ -93,7 +99,7 @@ class SyncHTTPTransport:
             Any HTTP headers included on the response.
         stream:
             The body of the HTTP response.
-        ext:
+        extensions:
             A dictionary of optional extensions.
         """
         raise NotImplementedError()  # pragma: nocover

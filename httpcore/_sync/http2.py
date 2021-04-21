@@ -8,7 +8,7 @@ from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
 from .._backends.sync import SyncBackend, SyncLock, SyncSemaphore, SyncSocketStream
-from .._bytestreams import IteratorByteStream, PlainByteStream
+from .._bytestreams import IteratorByteStream
 from .._exceptions import PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
@@ -85,16 +85,15 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         if self.state == ConnectionState.IDLE:
             self.state = ConnectionState.READY
 
-    def request(
+    def handle_request(
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: SyncByteStream = None,
-        ext: dict = None,
+        headers: Headers,
+        stream: SyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
-        ext = {} if ext is None else ext
-        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         with self.init_lock:
             if not self.sent_connection_init:
@@ -116,7 +115,9 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
             h2_stream = SyncHTTP2Stream(stream_id=stream_id, connection=self)
             self.streams[stream_id] = h2_stream
             self.events[stream_id] = []
-            return h2_stream.request(method, url, headers, stream, ext)
+            return h2_stream.handle_request(
+                method, url, headers, stream, extensions
+            )
         except Exception:  # noqa: PIE786
             self.max_streams_semaphore.release()
             raise
@@ -270,18 +271,16 @@ class SyncHTTP2Stream:
         self.stream_id = stream_id
         self.connection = connection
 
-    def request(
+    def handle_request(
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: SyncByteStream = None,
-        ext: dict = None,
+        headers: Headers,
+        stream: SyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
-        headers = [] if headers is None else [(k.lower(), v) for (k, v) in headers]
-        stream = PlainByteStream(b"") if stream is None else stream
-        ext = {} if ext is None else ext
-        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+        headers = [(k.lower(), v) for (k, v) in headers]
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         # Send the request.
         seen_headers = set(key for key, value in headers)
@@ -299,10 +298,10 @@ class SyncHTTP2Stream:
             iterator=self.body_iter(timeout), close_func=self._response_closed
         )
 
-        ext = {
-            "http_version": "HTTP/2",
+        extensions = {
+            "http_version": b"HTTP/2",
         }
-        return (status_code, headers, response_stream, ext)
+        return (status_code, headers, response_stream, extensions)
 
     def send_headers(
         self,

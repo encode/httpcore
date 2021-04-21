@@ -72,17 +72,16 @@ class SyncHTTPConnection(SyncHTTPTransport):
             self._request_lock = self.backend.create_lock()
         return self._request_lock
 
-    def request(
+    def handle_request(
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: SyncByteStream = None,
-        ext: dict = None,
+        headers: Headers,
+        stream: SyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
         assert url_to_origin(url) == self.origin
-        ext = {} if ext is None else ext
-        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         with self.request_lock:
             if self.state == ConnectionState.PENDING:
@@ -101,9 +100,14 @@ class SyncHTTPConnection(SyncHTTPTransport):
 
         assert self.connection is not None
         logger.trace(
-            "connection.request method=%r url=%r headers=%r", method, url, headers
+            "connection.handle_request method=%r url=%r headers=%r",
+            method,
+            url,
+            headers,
         )
-        return self.connection.request(method, url, headers, stream, ext)
+        return self.connection.handle_request(
+            method, url, headers, stream, extensions
+        )
 
     def _open_socket(self, timeout: TimeoutDict = None) -> SyncSocketStream:
         scheme, hostname, port = self.origin
