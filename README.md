@@ -80,4 +80,4 @@ The motivation for `httpcore` is:
 
 * To provide a reusable low-level client library, that other packages can then build on top of.
 * To provide a *really clear interface split* between the networking code and client logic,
-  so that each is easier to understand and reason_phrase about in isolation.
+  so that each is easier to understand and reason about in isolation.
