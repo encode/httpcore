@@ -43,7 +43,7 @@ Here's an example of making an HTTP GET request using `httpcore`...
 
 ```python
 with httpcore.SyncConnectionPool() as http:
-    status_code, headers, stream, extensions = http.request(
+    status_code, headers, stream, extensions = http.handle_request(
         method=b'GET',
         url=(b'https', b'example.org', 443, b'/'),
         headers=[(b'host', b'example.org'), (b'user-agent', b'httpcore')]
