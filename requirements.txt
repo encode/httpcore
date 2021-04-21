@@ -7,9 +7,13 @@ curio==1.4; python_version < '3.7'
 curio==1.5; python_version >= '3.7'
 
 # Docs
-mkautodoc==0.1.0
-mkdocs==1.1.2
-mkdocs-material==7.0.6
+sphinx==3.5.3
+sphinx-autobuild==2021.3.14
+myst-parser==0.13.5
+furo==2021.3.20b30
+ghp-import==1.1.0
+# myst-parser + docutils==0.17 has a bug: https://github.com/executablebooks/MyST-Parser/issues/343
+docutils==0.16
 
 # Packaging
 twine==3.4.1
@@ -26,7 +30,7 @@ flake8-pie==0.6.1
 hypercorn==0.11.2; python_version >= '3.7'
 isort==5.8.0
 mypy==0.812
-pproxy==2.7.6
+pproxy==2.7.7
 pytest==6.2.2
 pytest-trio==0.7.0
 pytest-asyncio==0.14.0

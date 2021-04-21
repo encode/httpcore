@@ -37,7 +37,7 @@ class SyncByteStream:
     The base interface for request and response bodies.
 
     Concrete implementations should subclass this class, and implement
-    the `\\__iter__` method, and optionally the `close` method.
+    the :meth:`__iter__` method, and optionally the :meth:`close` method.
     """
 
     def __iter__(self) -> Iterator[bytes]:
@@ -57,8 +57,8 @@ class SyncHTTPTransport:
     """
     The base interface for sending HTTP requests.
 
-    Concete implementations should subclass this class, and implement
-    the `request` method, and optionally the `close` method.
+    Concrete implementations should subclass this class, and implement
+    the :meth:`request` method, and optionally the :meth:`close` method.
     """
 
     def request(
@@ -72,25 +72,29 @@ class SyncHTTPTransport:
         """
         The interface for sending a single HTTP request, and returning a response.
 
-        **Parameters:**
+        Parameters
+        ----------
+        method:
+            The HTTP method, such as ``b'GET'``.
+        url:
+            The URL as a 4-tuple of (scheme, host, port, path).
+        headers:
+            Any HTTP headers to send with the request.
+        stream:
+            The body of the HTTP request.
+        ext:
+            A dictionary of optional extensions.
 
-        * **method** - `bytes` - The HTTP method, such as `b'GET'`.
-        * **url** - `Tuple[bytes, bytes, Optional[int], bytes]` - The URL as a 4-tuple
-        of (scheme, host, port, path).
-        * **headers** - `Optional[List[Tuple[bytes, bytes]]]` - Any HTTP headers
-        to send with the request.
-        * **stream** - `Optional[SyncByteStream]` - The body of the HTTP request.
-        * **ext** - `Optional[dict]` - A dictionary of optional extensions.
-
-        ** Returns:**
-
-        A four-tuple of:
-
-        * **status_code** - `int` - The HTTP status code, such as `200`.
-        * **headers** - `List[Tuple[bytes, bytes]]` - Any HTTP headers included
-        on the response.
-        * **stream** - `SyncByteStream` - The body of the HTTP response.
-        * **ext** - `dict` - A dictionary of optional extensions.
+        Returns
+        -------
+        status_code:
+            The HTTP status code, such as ``200``.
+        headers:
+            Any HTTP headers included on the response.
+        stream:
+            The body of the HTTP response.
+        ext:
+            A dictionary of optional extensions.
         """
         raise NotImplementedError()  # pragma: nocover
 
