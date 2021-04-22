@@ -52,22 +52,28 @@ class AsyncByteStream:
         """
         pass  # pragma: nocover
 
+    async def aread(self) -> bytes:
+        try:
+            return b"".join([part async for part in self])
+        finally:
+            await self.aclose()
+
 
 class AsyncHTTPTransport:
     """
     The base interface for sending HTTP requests.
 
     Concrete implementations should subclass this class, and implement
-    the :meth:`arequest` method, and optionally the :meth:`aclose` method.
+    the :meth:`handle_async_request` method, and optionally the :meth:`aclose` method.
     """
 
-    async def arequest(
+    async def handle_async_request(
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: AsyncByteStream = None,
-        ext: dict = None,
+        headers: Headers,
+        stream: AsyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, AsyncByteStream, dict]:
         """
         The interface for sending a single HTTP request, and returning a response.
@@ -82,7 +88,7 @@ class AsyncHTTPTransport:
             Any HTTP headers to send with the request.
         stream:
             The body of the HTTP request.
-        ext:
+        extensions:
             A dictionary of optional extensions.
 
         Returns
@@ -93,7 +99,7 @@ class AsyncHTTPTransport:
             Any HTTP headers included on the response.
         stream:
             The body of the HTTP response.
-        ext:
+        extensions:
             A dictionary of optional extensions.
         """
         raise NotImplementedError()  # pragma: nocover

@@ -4,7 +4,7 @@ from typing import Iterator, List, Tuple, Union, cast
 import h11
 
 from .._backends.sync import SyncSocketStream
-from .._bytestreams import IteratorByteStream, PlainByteStream
+from .._bytestreams import IteratorByteStream
 from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
@@ -47,18 +47,15 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
         if self.state == ConnectionState.IDLE:
             self.state = ConnectionState.READY
 
-    def request(
+    def handle_request(
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: SyncByteStream = None,
-        ext: dict = None,
+        headers: Headers,
+        stream: SyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
-        headers = [] if headers is None else headers
-        stream = PlainByteStream(b"") if stream is None else stream
-        ext = {} if ext is None else ext
-        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         self.state = ConnectionState.ACTIVE
 
@@ -74,11 +71,11 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
             iterator=self._receive_response_data(timeout),
             close_func=self._response_closed,
         )
-        ext = {
-            "http_version": http_version.decode("ascii", errors="ignore"),
-            "reason": reason_phrase.decode("ascii", errors="ignore"),
+        extensions = {
+            "http_version": http_version,
+            "reason_phrase": reason_phrase,
         }
-        return (status_code, headers, response_stream, ext)
+        return (status_code, headers, response_stream, extensions)
 
     def start_tls(
         self, hostname: bytes, timeout: TimeoutDict = None

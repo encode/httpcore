@@ -1,7 +1,7 @@
 from ._async.base import AsyncByteStream, AsyncHTTPTransport
 from ._async.connection_pool import AsyncConnectionPool
 from ._async.http_proxy import AsyncHTTPProxy
-from ._bytestreams import AsyncIteratorByteStream, IteratorByteStream, PlainByteStream
+from ._bytestreams import AsyncIteratorByteStream, ByteStream, IteratorByteStream
 from ._exceptions import (
     CloseError,
     ConnectError,
@@ -29,13 +29,13 @@ __all__ = [
     "AsyncHTTPProxy",
     "AsyncHTTPTransport",
     "AsyncIteratorByteStream",
+    "ByteStream",
     "CloseError",
     "ConnectError",
     "ConnectTimeout",
     "IteratorByteStream",
     "LocalProtocolError",
     "NetworkError",
-    "PlainByteStream",
     "PoolTimeout",
     "ProtocolError",
     "ProxyError",
@@ -51,7 +51,7 @@ __all__ = [
     "WriteError",
     "WriteTimeout",
 ]
-__version__ = "0.12.3"
+__version__ = "0.13.0"
 
 __locals = locals()
 

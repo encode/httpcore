@@ -2,6 +2,7 @@ from http import HTTPStatus
 from ssl import SSLContext
 from typing import Tuple, cast
 
+from .._bytestreams import ByteStream
 from .._exceptions import ProxyError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger, url_to_origin
@@ -89,13 +90,13 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             max_keepalive=max_keepalive,
         )
 
-    async def arequest(
+    async def handle_async_request(
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: AsyncByteStream = None,
-        ext: dict = None,
+        headers: Headers,
+        stream: AsyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, AsyncByteStream, dict]:
         if self._keepalive_expiry is not None:
             await self._keepalive_sweep()
@@ -112,7 +113,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 url,
             )
             return await self._forward_request(
-                method, url, headers=headers, stream=stream, ext=ext
+                method, url, headers=headers, stream=stream, extensions=extensions
             )
         else:
             # By default HTTPS should be tunnelled.
@@ -124,23 +125,22 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 url,
             )
             return await self._tunnel_request(
-                method, url, headers=headers, stream=stream, ext=ext
+                method, url, headers=headers, stream=stream, extensions=extensions
             )
 
     async def _forward_request(
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: AsyncByteStream = None,
-        ext: dict = None,
+        headers: Headers,
+        stream: AsyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, AsyncByteStream, dict]:
         """
         Forwarded proxy requests include the entire URL as the HTTP target,
         rather than just the path.
         """
-        ext = {} if ext is None else ext
-        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
         origin = self.proxy_origin
         connection = await self._get_connection_from_pool(origin)
 
@@ -164,30 +164,34 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         url = self.proxy_origin + (target,)
         headers = merge_headers(self.proxy_headers, headers)
 
-        (status_code, headers, stream, ext) = await connection.arequest(
-            method, url, headers=headers, stream=stream, ext=ext
+        (
+            status_code,
+            headers,
+            stream,
+            extensions,
+        ) = await connection.handle_async_request(
+            method, url, headers=headers, stream=stream, extensions=extensions
         )
 
         wrapped_stream = ResponseByteStream(
             stream, connection=connection, callback=self._response_closed
         )
 
-        return status_code, headers, wrapped_stream, ext
+        return status_code, headers, wrapped_stream, extensions
 
     async def _tunnel_request(
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: AsyncByteStream = None,
-        ext: dict = None,
+        headers: Headers,
+        stream: AsyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, AsyncByteStream, dict]:
         """
         Tunnelled proxy requests require an initial CONNECT request to
         establish the connection, and then send regular requests.
         """
-        ext = {} if ext is None else ext
-        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
         origin = url_to_origin(url)
         connection = await self._get_connection_from_pool(origin)
 
@@ -216,8 +220,12 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                     _,
                     proxy_stream,
                     _,
-                ) = await proxy_connection.arequest(
-                    b"CONNECT", connect_url, headers=connect_headers, ext=ext
+                ) = await proxy_connection.handle_async_request(
+                    b"CONNECT",
+                    connect_url,
+                    headers=connect_headers,
+                    stream=ByteStream(b""),
+                    extensions=extensions,
                 )
 
                 proxy_reason = get_reason_phrase(proxy_status_code)
@@ -257,16 +265,21 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
         # Once the connection has been established we can send requests on
         # it as normal.
-        (status_code, headers, stream, ext) = await connection.arequest(
+        (
+            status_code,
+            headers,
+            stream,
+            extensions,
+        ) = await connection.handle_async_request(
             method,
             url,
             headers=headers,
             stream=stream,
-            ext=ext,
+            extensions=extensions,
         )
 
         wrapped_stream = ResponseByteStream(
             stream, connection=connection, callback=self._response_closed
         )
 
-        return status_code, headers, wrapped_stream, ext
+        return status_code, headers, wrapped_stream, extensions

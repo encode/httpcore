@@ -33,7 +33,7 @@ These classes provide the base interface which transport classes need to impleme
 These classes are concrete implementations of [`AsyncByteStream`](httpcore.AsyncByteStream).
 
 :::{eval-rst}
-.. autoclass:: httpcore.PlainByteStream
+.. autoclass:: httpcore.ByteStream
     :show-inheritance:
 
 .. autoclass:: httpcore.AsyncIteratorByteStream
@@ -73,7 +73,7 @@ These classes provide the base interface which transport classes need to impleme
 These classes are concrete implementations of [`SyncByteStream`](httpcore.SyncByteStream).
 
 :::{eval-rst}
-.. autoclass:: httpcore.PlainByteStream
+.. autoclass:: httpcore.ByteStream
     :show-inheritance:
     :noindex:
 
