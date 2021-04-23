@@ -20,12 +20,30 @@ from .._types import TimeoutDict
 from .._utils import is_socket_readable
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
+# For compatibility with both AnyIO 2.x and 3.x
+# (some functions and context managers were converted from async to sync in 3.0)
+try:
+    from anyio import maybe_async, maybe_async_cm
+except ImportError:
+
+    def maybe_async(x):  # type: ignore
+        return x
+
+    def maybe_async_cm(x):  # type: ignore
+        return x
+
+
+try:
+    from anyio import Lock as create_lock, Semaphore as create_semaphore
+except ImportError:
+    from anyio import create_lock, create_semaphore  # type: ignore
+
 
 class SocketStream(AsyncSocketStream):
     def __init__(self, stream: ByteStream) -> None:
         self.stream = stream
-        self.read_lock = anyio.create_lock()
-        self.write_lock = anyio.create_lock()
+        self.read_lock = create_lock()
+        self.write_lock = create_lock()
 
     def get_http_version(self) -> str:
         alpn_protocol = self.stream.extra(TLSAttribute.alpn_protocol, None)
@@ -39,7 +57,7 @@ class SocketStream(AsyncSocketStream):
     ) -> "SocketStream":
         connect_timeout = timeout.get("connect")
         try:
-            async with anyio.fail_after(connect_timeout):
+            async with maybe_async_cm(anyio.fail_after(connect_timeout)):
                 ssl_stream = await TLSStream.wrap(
                     self.stream,
                     ssl_context=ssl_context,
@@ -56,7 +74,7 @@ class SocketStream(AsyncSocketStream):
         read_timeout = timeout.get("read")
         async with self.read_lock:
             try:
-                async with anyio.fail_after(read_timeout):
+                async with maybe_async_cm(anyio.fail_after(read_timeout)):
                     return await self.stream.receive(n)
             except TimeoutError:
                 raise ReadTimeout from None
@@ -72,7 +90,7 @@ class SocketStream(AsyncSocketStream):
         write_timeout = timeout.get("write")
         async with self.write_lock:
             try:
-                async with anyio.fail_after(write_timeout):
+                async with maybe_async_cm(anyio.fail_after(write_timeout)):
                     return await self.stream.send(data)
             except TimeoutError:
                 raise WriteTimeout from None
@@ -93,10 +111,10 @@ class SocketStream(AsyncSocketStream):
 
 class Lock(AsyncLock):
     def __init__(self) -> None:
-        self._lock = anyio.create_lock()
+        self._lock = create_lock()
 
     async def release(self) -> None:
-        await self._lock.release()
+        await maybe_async(self._lock.release())
 
     async def acquire(self) -> None:
         await self._lock.acquire()
@@ -110,18 +128,18 @@ class Semaphore(AsyncSemaphore):
     @property
     def semaphore(self) -> anyio.abc.Semaphore:
         if not hasattr(self, "_semaphore"):
-            self._semaphore = anyio.create_semaphore(self.max_value)
+            self._semaphore = create_semaphore(self.max_value)
         return self._semaphore
 
     async def acquire(self, timeout: float = None) -> None:
-        async with anyio.move_on_after(timeout):
+        async with maybe_async_cm(anyio.move_on_after(timeout)):
             await self.semaphore.acquire()
             return
 
         raise self.exc_class()
 
     async def release(self) -> None:
-        await self.semaphore.release()
+        await maybe_async(self.semaphore.release())
 
 
 class AnyIOBackend(AsyncBackend):
@@ -143,7 +161,7 @@ class AnyIOBackend(AsyncBackend):
         }
 
         with map_exceptions(exc_map):
-            async with anyio.fail_after(connect_timeout):
+            async with maybe_async_cm(anyio.fail_after(connect_timeout)):
                 stream: anyio.abc.ByteStream
                 stream = await anyio.connect_tcp(
                     unicode_host, port, local_host=local_address
@@ -174,7 +192,7 @@ class AnyIOBackend(AsyncBackend):
         }
 
         with map_exceptions(exc_map):
-            async with anyio.fail_after(connect_timeout):
+            async with maybe_async_cm(anyio.fail_after(connect_timeout)):
                 stream: anyio.abc.ByteStream = await anyio.connect_unix(path)
                 if ssl_context:
                     stream = await TLSStream.wrap(
@@ -193,7 +211,7 @@ class AnyIOBackend(AsyncBackend):
         return Semaphore(max_value, exc_class=exc_class)
 
     async def time(self) -> float:
-        return await anyio.current_time()
+        return await maybe_async(anyio.current_time())
 
     async def sleep(self, seconds: float) -> None:
         await anyio.sleep(seconds)
