@@ -33,11 +33,17 @@ except ImportError:
         return x
 
 
+try:
+    from anyio import Lock as create_lock, Semaphore as create_semaphore
+except ImportError:
+    from anyio import create_lock, create_semaphore
+
+
 class SocketStream(AsyncSocketStream):
     def __init__(self, stream: ByteStream) -> None:
         self.stream = stream
-        self.read_lock = anyio.create_lock()
-        self.write_lock = anyio.create_lock()
+        self.read_lock = create_lock()
+        self.write_lock = create_lock()
 
     def get_http_version(self) -> str:
         alpn_protocol = self.stream.extra(TLSAttribute.alpn_protocol, None)
@@ -105,7 +111,7 @@ class SocketStream(AsyncSocketStream):
 
 class Lock(AsyncLock):
     def __init__(self) -> None:
-        self._lock = anyio.create_lock()
+        self._lock = create_lock()
 
     async def release(self) -> None:
         await maybe_async(self._lock.release())
@@ -122,7 +128,7 @@ class Semaphore(AsyncSemaphore):
     @property
     def semaphore(self) -> anyio.abc.Semaphore:
         if not hasattr(self, "_semaphore"):
-            self._semaphore = anyio.create_semaphore(self.max_value)
+            self._semaphore = create_semaphore(self.max_value)
         return self._semaphore
 
     async def acquire(self, timeout: float = None) -> None:
