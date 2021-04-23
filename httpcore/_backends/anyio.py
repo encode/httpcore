@@ -36,7 +36,7 @@ except ImportError:
 try:
     from anyio import Lock as create_lock, Semaphore as create_semaphore
 except ImportError:
-    from anyio import create_lock, create_semaphore
+    from anyio import create_lock, create_semaphore  # type: ignore
 
 
 class SocketStream(AsyncSocketStream):
