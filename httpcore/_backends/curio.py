@@ -132,7 +132,7 @@ class SocketStream(AsyncSocketStream):
         await self.socket.close()
 
     def is_readable(self) -> bool:
-        return is_socket_readable(self.socket.fileno())
+        return is_socket_readable(self.socket)
 
 
 class CurioBackend(AsyncBackend):

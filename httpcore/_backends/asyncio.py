@@ -3,7 +3,6 @@ import socket
 from ssl import SSLContext
 from typing import Optional
 
-from .. import _utils
 from .._exceptions import (
     CloseError,
     ConnectError,
@@ -15,6 +14,7 @@ from .._exceptions import (
     map_exceptions,
 )
 from .._types import TimeoutDict
+from .._utils import is_socket_readable
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 SSL_MONKEY_PATCH_APPLIED = False
@@ -200,10 +200,7 @@ class SocketStream(AsyncSocketStream):
     def is_readable(self) -> bool:
         transport = self.stream_reader._transport  # type: ignore
         sock: Optional[socket.socket] = transport.get_extra_info("socket")
-        # If socket was detached from the transport, most likely connection was reset.
-        # Hence make it readable to notify users to poll the socket.
-        # We'd expect the read operation to return `b""` indicating the socket closure.
-        return sock is None or _utils.is_socket_readable(sock.fileno())
+        return is_socket_readable(sock)
 
 
 class Lock(AsyncLock):
