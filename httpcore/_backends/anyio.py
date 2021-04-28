@@ -105,7 +105,7 @@ class SocketStream(AsyncSocketStream):
 
     def is_readable(self) -> bool:
         sock = self.stream.extra(SocketAttribute.raw_socket)
-        return is_socket_readable(sock.fileno())
+        return is_socket_readable(sock)
 
 
 class Lock(AsyncLock):

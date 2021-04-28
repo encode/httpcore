@@ -79,7 +79,7 @@ class SyncSocketStream:
                 pass
 
     def is_readable(self) -> bool:
-        return is_socket_readable(self.sock.fileno())
+        return is_socket_readable(self.sock)
 
 
 class SyncLock:
