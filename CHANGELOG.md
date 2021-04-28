@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.13.1 (April 28th, 2021)
+
+### Fixed
+
+- More resiliant testing for closed connections. (Pull #311)
+- Don't raise exceptions on ungraceful connection closes. (Pull #310)
+
 ## 0.13.0 (April 21st, 2021)
 
 The 0.13 release updates the core API in order to match the HTTPX Transport API,
