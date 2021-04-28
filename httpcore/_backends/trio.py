@@ -4,7 +4,6 @@ from typing import Optional
 import trio
 
 from .._exceptions import (
-    CloseError,
     ConnectError,
     ConnectTimeout,
     ReadError,
@@ -79,8 +78,10 @@ class SocketStream(AsyncSocketStream):
 
     async def aclose(self) -> None:
         async with self.write_lock:
-            with map_exceptions({trio.BrokenResourceError: CloseError}):
+            try:
                 await self.stream.aclose()
+            except trio.BrokenResourceError:
+                pass
 
     def is_readable(self) -> bool:
         # Adapted from: https://github.com/encode/httpx/pull/143#issuecomment-515202982

@@ -7,7 +7,6 @@ from anyio.abc import ByteStream, SocketAttribute
 from anyio.streams.tls import TLSAttribute, TLSStream
 
 from .._exceptions import (
-    CloseError,
     ConnectError,
     ConnectTimeout,
     ReadError,
@@ -101,8 +100,8 @@ class SocketStream(AsyncSocketStream):
         async with self.write_lock:
             try:
                 await self.stream.aclose()
-            except BrokenResourceError as exc:
-                raise CloseError from exc
+            except BrokenResourceError:
+                pass
 
     def is_readable(self) -> bool:
         sock = self.stream.extra(SocketAttribute.raw_socket)

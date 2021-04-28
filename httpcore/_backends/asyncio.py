@@ -4,7 +4,6 @@ from ssl import SSLContext
 from typing import Optional
 
 from .._exceptions import (
-    CloseError,
     ConnectError,
     ConnectTimeout,
     ReadError,
@@ -186,7 +185,7 @@ class SocketStream(AsyncSocketStream):
         is_ssl = self.stream_writer.get_extra_info("ssl_object") is not None
 
         async with self.write_lock:
-            with map_exceptions({OSError: CloseError}):
+            try:
                 self.stream_writer.close()
                 if is_ssl:
                     # Give the connection a chance to write any data in the buffer,
@@ -196,6 +195,8 @@ class SocketStream(AsyncSocketStream):
                 if hasattr(self.stream_writer, "wait_closed"):
                     # Python 3.7+ only.
                     await self.stream_writer.wait_closed()  # type: ignore
+            except OSError:
+                pass
 
     def is_readable(self) -> bool:
         transport = self.stream_reader._transport  # type: ignore
