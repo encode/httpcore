@@ -5,7 +5,7 @@ import h11
 
 from .._backends.auto import AsyncSocketStream
 from .._bytestreams import AsyncIteratorByteStream
-from .._exceptions import ConnectError, LocalProtocolError, RemoteProtocolError, map_exceptions
+from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
 from .base import AsyncByteStream, ConnectionState
@@ -177,7 +177,8 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
                 # perspective. Instead we handle this case distinctly and treat
                 # it as a ConnectError.
                 if data == b"" and self.h11_state.their_state == h11.SEND_RESPONSE:
-                    raise ConnectError("Server disconnected without sending response.")
+                    msg = "Server disconnected without sending a response."
+                    raise RemoteProtocolError(msg)
 
                 self.h11_state.receive_data(data)
             else:
