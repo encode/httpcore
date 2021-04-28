@@ -5,7 +5,7 @@ import h11
 
 from .._backends.auto import AsyncSocketStream
 from .._bytestreams import AsyncIteratorByteStream
-from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
+from .._exceptions import ConnectError, LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
 from .base import AsyncByteStream, ConnectionState
@@ -167,6 +167,18 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
 
             if event is h11.NEED_DATA:
                 data = await self.socket.read(self.READ_NUM_BYTES, timeout)
+
+                # If we feed this case through h11 we'll raise an exception like:
+                #
+                #     httpcore.RemoteProtocolError: can't handle event type
+                #     ConnectionClosed when role=SERVER and state=SEND_RESPONSE
+                #
+                # Which is accurate, but not very informative from an end-user
+                # perspective. Instead we handle this case distinctly and treat
+                # it as a ConnectError.
+                if data == b"" and self.h11_state.their_state == h11.SEND_RESPONSE:
+                    raise ConnectError("Server disconnected without sending response.")
+
                 self.h11_state.receive_data(data)
             else:
                 assert event is not h11.NEED_DATA
