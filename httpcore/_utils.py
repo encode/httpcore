@@ -88,7 +88,7 @@ def is_socket_readable(sock: typing.Optional[socket.socket]) -> bool:
     # descriptor, we treat it as being readable, as if it the next read operation
     # on it is ready to return the terminating `b""`.
     sock_fd = None if sock is None else sock.fileno()
-    if sock_fd is None or sock_fd < -1:
+    if sock_fd is None or sock_fd < 0:
         return True
 
     # The implementation below was stolen from:
