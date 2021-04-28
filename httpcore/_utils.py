@@ -2,6 +2,7 @@ import itertools
 import logging
 import os
 import select
+import socket
 import sys
 import typing
 
@@ -73,7 +74,7 @@ def exponential_backoff(factor: float) -> typing.Iterator[float]:
         yield factor * (2 ** (n - 2))
 
 
-def is_socket_readable(sock: Optional[socket.socket]) -> bool:
+def is_socket_readable(sock: typing.Optional[socket.socket]) -> bool:
     """
     Return whether a socket, as identifed by its file descriptor, is readable.
 
