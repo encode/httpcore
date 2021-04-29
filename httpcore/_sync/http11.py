@@ -167,6 +167,19 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
 
             if event is h11.NEED_DATA:
                 data = self.socket.read(self.READ_NUM_BYTES, timeout)
+
+                # If we feed this case through h11 we'll raise an exception like:
+                #
+                #     httpcore.RemoteProtocolError: can't handle event type
+                #     ConnectionClosed when role=SERVER and state=SEND_RESPONSE
+                #
+                # Which is accurate, but not very informative from an end-user
+                # perspective. Instead we handle this case distinctly and treat
+                # it as a ConnectError.
+                if data == b"" and self.h11_state.their_state == h11.SEND_RESPONSE:
+                    msg = "Server disconnected without sending a response."
+                    raise RemoteProtocolError(msg)
+
                 self.h11_state.receive_data(data)
             else:
                 assert event is not h11.NEED_DATA
