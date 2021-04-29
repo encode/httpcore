@@ -24,4 +24,4 @@ fi
 set -x
 
 ${PREFIX}twine upload dist/*
-scripts/docs gh-deploy --push
+scripts/docs gh-deploy --push --force
