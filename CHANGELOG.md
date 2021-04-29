@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.13.2 (April 29th, 2021)
+
+### Added
+
+- Improve error message for specific case of `RemoteProtocolError` where server disconnects without sending a response. (Pull #313)
+
 ## 0.13.1 (April 28th, 2021)
 
 ### Fixed
