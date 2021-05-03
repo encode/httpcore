@@ -9,7 +9,7 @@ from h2.settings import SettingCodes, Settings
 
 from .._backends.auto import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 from .._bytestreams import AsyncIteratorByteStream
-from .._exceptions import PoolTimeout, RemoteProtocolError
+from .._exceptions import LocalProtocolError, PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
 from .base import AsyncByteStream, ConnectionState, NewConnectionRequired
@@ -154,10 +154,6 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         self.h2_state.increment_flow_control_window(2 ** 24)
         data_to_send = self.h2_state.data_to_send()
         await self.socket.write(data_to_send, timeout)
-
-    @property
-    def is_closed(self) -> bool:
-        return False
 
     def is_socket_readable(self) -> bool:
         return self.socket.is_readable()
@@ -318,17 +314,18 @@ class AsyncHTTP2Stream:
         # HTTP/1.1 style headers, and map them appropriately if we end up on
         # an HTTP/2 connection.
         authority = None
+
         for k, v in headers:
             if k == b"host":
                 authority = v
                 break
 
         if authority is None:
-            default_port = {b"http": 80, b"https": 443}.get(scheme)
-            if port is not None and port != default_port:
-                authority = b"%s:%d" % (authority, port)
-            else:
-                authority = hostname
+            # Mirror the same error we'd see with `h11`, so that the behaviour
+            # is consistent. Although we're dealing with an `:authority`
+            # pseudo-header by this point, from an end-user perspective the issue
+            # is that the outgoing request needed to include a `host` header.
+            raise LocalProtocolError("Missing mandatory Host: header")
 
         headers = [
             (b":method", method),
