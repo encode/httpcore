@@ -331,7 +331,6 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             return
 
         self._next_keepalive_check = now + min(1.0, self._keepalive_expiry)
-
         connections_to_close = set()
 
         for connection in self._get_all_connections():

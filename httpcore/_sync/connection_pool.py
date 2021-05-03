@@ -338,9 +338,6 @@ class SyncConnectionPool(SyncHTTPTransport):
                 connection.state == ConnectionState.IDLE
                 and connection.expires_at is not None
                 and now >= connection.expires_at
-            ) or (
-                connection.state == ConnectionState.IDLE
-                and connection.is_socket_readable
             ):
                 connections_to_close.add(connection)
                 self._remove_from_pool(connection)
