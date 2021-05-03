@@ -133,12 +133,9 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
 
         http_version = b"HTTP/" + event.http_version
 
-        if hasattr(event.headers, "raw_items"):
-            # h11 version 0.11+ supports a `raw_items` interface to get the
-            # raw header casing, rather than the enforced lowercase headers.
-            headers = event.headers.raw_items()
-        else:
-            headers = event.headers
+        # h11 version 0.11+ supports a `raw_items` interface to get the
+        # raw header casing, rather than the enforced lowercase headers.
+        headers = event.headers.raw_items()
 
         return http_version, event.status_code, event.reason, headers
 
