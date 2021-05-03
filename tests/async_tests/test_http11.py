@@ -246,4 +246,4 @@ async def test_get_request_with_unclean_close_after_first_request() -> None:
                 stream=httpcore.ByteStream(b""),
                 extensions={},
             )
-        assert excinfo.value == "Server disconnected without sending a response."
+        assert str(excinfo.value) == "Server disconnected without sending a response."
