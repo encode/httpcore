@@ -254,7 +254,8 @@ class AsyncConnectionPool(AsyncHTTPTransport):
                 if connection.is_socket_readable():
                     # If the socket is readable while the connection is idle (meaning
                     # we don't expect the server to send any data), then the only valid
-                    # reason_phrase is that the other end has disconnected, which
+                    # reason is that the other end has disconnected, and is readable
+                    # because it is ready to return the b"" disconnect indicator, which
                     # means we should drop the connection too.
                     # (For a detailed run-through of what a "readable" socket is, and
                     # why this is the best thing for us to do here, see:
