@@ -97,7 +97,7 @@ def is_socket_readable(sock: typing.Optional[socket.socket]) -> bool:
 
     # Use select.select on Windows, and when poll is unavailable and select.poll
     # everywhere else. (E.g. When eventlet is in use. See #327)
-    if sys.platform == "win32" or getattr(socket, "poll", None) is None:
+    if sys.platform == "win32" or getattr(select, "poll", None) is None:
         rready, _, _ = select.select([sock_fd], [], [], 0)
         return bool(rready)
     p = select.poll()
