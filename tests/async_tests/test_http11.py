@@ -247,3 +247,19 @@ async def test_get_request_with_unclean_close_after_first_request() -> None:
                 extensions={},
             )
         assert str(excinfo.value) == "Server disconnected without sending a response."
+
+
+@pytest.mark.trio
+async def test_request_with_missing_host_header() -> None:
+    backend = MockBackend(http_buffer=[])
+
+    async with httpcore.AsyncConnectionPool(backend=backend) as http:
+        with pytest.raises(httpcore.LocalProtocolError) as excinfo:
+            await http.handle_async_request(
+                method=b"GET",
+                url=(b"http", b"example.org", None, b"/"),
+                headers=[],
+                stream=httpcore.ByteStream(b""),
+                extensions={},
+            )
+        assert str(excinfo.value) == "Missing mandatory Host: header"
