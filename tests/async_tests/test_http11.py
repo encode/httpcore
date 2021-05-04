@@ -263,3 +263,55 @@ async def test_request_with_missing_host_header() -> None:
                 extensions={},
             )
         assert str(excinfo.value) == "Missing mandatory Host: header"
+
+
+@pytest.mark.trio
+async def test_concurrent_get_requests() -> None:
+    backend = MockBackend(
+        http_buffer=[
+            b"HTTP/1.1 200 OK\r\n",
+            b"Date: Sat, 06 Oct 2049 12:34:56 GMT\r\n",
+            b"Server: Apache\r\n",
+            b"Content-Length: 13\r\n",
+            b"Content-Type: text/plain\r\n",
+            b"\r\n",
+            b"Hello, world.",
+        ]
+    )
+
+    async with httpcore.AsyncConnectionPool(backend=backend) as http:
+        # We're sending a request with a standard keep-alive connection, so
+        # it will remain in the pool once we've sent the request.
+        response_1 = await http.handle_async_request(
+            method=b"GET",
+            url=(b"http", b"example.org", None, b"/"),
+            headers=[(b"Host", b"example.org")],
+            stream=httpcore.ByteStream(b""),
+            extensions={},
+        )
+        status_code, headers, stream_1, extensions = response_1
+        assert await http.get_connection_info() == {
+            "http://example.org": ["HTTP/1.1, ACTIVE"]
+        }
+
+        response_2 = await http.handle_async_request(
+            method=b"GET",
+            url=(b"http", b"example.org", None, b"/"),
+            headers=[(b"Host", b"example.org")],
+            stream=httpcore.ByteStream(b""),
+            extensions={},
+        )
+        status_code, headers, stream_2, extensions = response_2
+        assert await http.get_connection_info() == {
+            "http://example.org": ["HTTP/1.1, ACTIVE", "HTTP/1.1, ACTIVE"]
+        }
+
+        await stream_1.aread()
+        assert await http.get_connection_info() == {
+            "http://example.org": ["HTTP/1.1, ACTIVE", "HTTP/1.1, IDLE"]
+        }
+
+        await stream_2.aread()
+        assert await http.get_connection_info() == {
+            "http://example.org": ["HTTP/1.1, IDLE", "HTTP/1.1, IDLE"]
+        }
