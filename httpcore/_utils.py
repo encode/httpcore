@@ -95,8 +95,9 @@ def is_socket_readable(sock: typing.Optional[socket.socket]) -> bool:
     # https://github.com/python-trio/trio/blob/20ee2b1b7376db637435d80e266212a35837ddcc/trio/_socket.py#L471-L478
     # See also: https://github.com/encode/httpcore/pull/193#issuecomment-703129316
 
-    # Use select.select on Windows, and select.poll everywhere else
-    if sys.platform == "win32":
+    # Use select.select on Windows, and when poll is unavailable and select.poll
+    # everywhere else. (E.g. When eventlet is in use. See #327)
+    if sys.platform == "win32" or getattr(select, "poll", None) is None:
         rready, _, _ = select.select([sock_fd], [], [], 0)
         return bool(rready)
     p = select.poll()
