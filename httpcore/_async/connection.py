@@ -35,7 +35,6 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         self.origin = origin
         self.http1 = http1
         self.http2 = http2
-
         self.uds = uds
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
         self.socket = socket
