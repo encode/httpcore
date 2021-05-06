@@ -205,10 +205,6 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         data = self.socket.read(self.READ_NUM_BYTES, timeout)
         if data == b"":
             raise RemoteProtocolError("Server disconnected")
-        elif data.find(b"HTTP/1.1") != -1:
-            raise RemoteProtocolError("HTTP/1.1 received")
-        elif data.find(b"HTTP/1.0") != -1:
-            raise RemoteProtocolError("HTTP/1.0 received")
 
         events = self.h2_state.receive_data(data)
         for event in events:
