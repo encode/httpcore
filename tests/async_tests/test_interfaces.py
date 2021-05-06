@@ -23,6 +23,11 @@ async def read_body(stream: httpcore.AsyncByteStream) -> bytes:
         await stream.aclose()
 
 
+def test_must_configure_either_http1_or_http2() -> None:
+    with pytest.raises(ValueError):
+        httpcore.AsyncConnectionPool(http1=False, http2=False)
+
+
 @pytest.mark.anyio
 async def test_http_request(backend: str, server: Server) -> None:
     async with httpcore.AsyncConnectionPool(backend=backend) as http:

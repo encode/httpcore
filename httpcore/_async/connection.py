@@ -1,5 +1,5 @@
 from ssl import SSLContext
-from typing import Optional, Tuple, cast
+from typing import List, Optional, Tuple, cast
 
 from .._backends.auto import AsyncBackend, AsyncLock, AsyncSocketStream, AutoBackend
 from .._exceptions import ConnectError, ConnectTimeout
@@ -23,8 +23,8 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
     def __init__(
         self,
         origin: Origin,
-        http2: bool = False,
         http1: bool = True,
+        http2: bool = False,
         uds: str = None,
         ssl_context: SSLContext = None,
         socket: AsyncSocketStream = None,
@@ -33,8 +33,8 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         backend: AsyncBackend = None,
     ):
         self.origin = origin
-        self.http2 = http2
         self.http1 = http1
+        self.http2 = http2
 
         self.uds = uds
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
@@ -42,12 +42,13 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         self.local_address = local_address
         self.retries = retries
 
-        if self.http1 and self.http2:
-            self.ssl_context.set_alpn_protocols(["http/1.1", "h2"])
-        elif self.http1:
-            self.ssl_context.set_alpn_protocols(["http/1.1"])
-        elif self.http2:
-            self.ssl_context.set_alpn_protocols(["h2"])
+        alpn_protocols: List[str] = []
+        if http1:
+            alpn_protocols.append("http/1.1")
+        if http2:
+            alpn_protocols.append("h2")
+
+        self.ssl_context.set_alpn_protocols(alpn_protocols)
 
         self.connection: Optional[AsyncBaseHTTPConnection] = None
         self.is_http11 = False

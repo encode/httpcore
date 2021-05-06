@@ -112,8 +112,8 @@ class SyncConnectionPool(SyncHTTPTransport):
         max_connections: int = None,
         max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
-        http2: bool = False,
         http1: bool = True,
+        http2: bool = False,
         uds: str = None,
         local_address: str = None,
         retries: int = 0,
@@ -134,8 +134,8 @@ class SyncConnectionPool(SyncHTTPTransport):
         self._max_connections = max_connections
         self._max_keepalive_connections = max_keepalive_connections
         self._keepalive_expiry = keepalive_expiry
-        self._http2 = http2
         self._http1 = http1
+        self._http2 = http2
         self._uds = uds
         self._local_address = local_address
         self._retries = retries
@@ -143,6 +143,9 @@ class SyncConnectionPool(SyncHTTPTransport):
         self._thread_lock = ThreadLock()
         self._backend = backend
         self._next_keepalive_check = 0.0
+
+        if not (http1 or http2):
+            raise ValueError("Either http1 or http2 must be True.")
 
         if http2:
             try:
@@ -179,8 +182,8 @@ class SyncConnectionPool(SyncHTTPTransport):
     ) -> SyncHTTPConnection:
         return SyncHTTPConnection(
             origin=origin,
-            http2=self._http2,
             http1=self._http1,
+            http2=self._http2,
             uds=self._uds,
             ssl_context=self._ssl_context,
             local_address=self._local_address,
