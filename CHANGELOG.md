@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.13.3 (May 6th, 2021)
+
+### Added
+
+- Support HTTP/2 prior knowledge, using `httpcore.SyncConnectionPool(http1=False)`. (Pull #333)
+
+### Fixed
+
+- Handle cases where environment does not provide `select.poll` support. (Pull #331)
+
 ## 0.13.2 (April 29th, 2021)
 
 ### Added
