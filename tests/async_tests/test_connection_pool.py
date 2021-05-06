@@ -15,13 +15,13 @@ class MockConnection(object):
         self.is_http2 = http_version == "HTTP/2"
         self.stream_count = 0
 
-    async def arequest(
+    async def handle_async_request(
         self,
         method: bytes,
         url: URL,
         headers: Headers = None,
         stream: httpcore.AsyncByteStream = None,
-        ext: dict = None,
+        extensions: dict = None,
     ) -> Tuple[int, Headers, httpcore.AsyncByteStream, dict]:
         self.state = ConnectionState.ACTIVE
         self.stream_count += 1
@@ -80,8 +80,14 @@ async def test_sequential_requests(http_version) -> None:
         info = await http.get_connection_info()
         assert info == {}
 
-        response = await http.arequest(b"GET", (b"http", b"example.org", None, b"/"))
-        status_code, headers, stream, ext = response
+        response = await http.handle_async_request(
+            method=b"GET",
+            url=(b"http", b"example.org", None, b"/"),
+            headers=[],
+            stream=httpcore.ByteStream(b""),
+            extensions={},
+        )
+        status_code, headers, stream, extensions = response
         info = await http.get_connection_info()
         assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
 
@@ -89,8 +95,14 @@ async def test_sequential_requests(http_version) -> None:
         info = await http.get_connection_info()
         assert info == {"http://example.org": ["ConnectionState.IDLE"]}
 
-        response = await http.arequest(b"GET", (b"http", b"example.org", None, b"/"))
-        status_code, headers, stream, ext = response
+        response = await http.handle_async_request(
+            method=b"GET",
+            url=(b"http", b"example.org", None, b"/"),
+            headers=[],
+            stream=httpcore.ByteStream(b""),
+            extensions={},
+        )
+        status_code, headers, stream, extensions = response
         info = await http.get_connection_info()
         assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
 
@@ -105,12 +117,24 @@ async def test_concurrent_requests_h11() -> None:
         info = await http.get_connection_info()
         assert info == {}
 
-        response_1 = await http.arequest(b"GET", (b"http", b"example.org", None, b"/"))
+        response_1 = await http.handle_async_request(
+            method=b"GET",
+            url=(b"http", b"example.org", None, b"/"),
+            headers=[],
+            stream=httpcore.ByteStream(b""),
+            extensions={},
+        )
         status_code_1, headers_1, stream_1, ext_1 = response_1
         info = await http.get_connection_info()
         assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
 
-        response_2 = await http.arequest(b"GET", (b"http", b"example.org", None, b"/"))
+        response_2 = await http.handle_async_request(
+            method=b"GET",
+            url=(b"http", b"example.org", None, b"/"),
+            headers=[],
+            stream=httpcore.ByteStream(b""),
+            extensions={},
+        )
         status_code_2, headers_2, stream_2, ext_2 = response_2
         info = await http.get_connection_info()
         assert info == {
@@ -136,12 +160,24 @@ async def test_concurrent_requests_h2() -> None:
         info = await http.get_connection_info()
         assert info == {}
 
-        response_1 = await http.arequest(b"GET", (b"http", b"example.org", None, b"/"))
+        response_1 = await http.handle_async_request(
+            method=b"GET",
+            url=(b"http", b"example.org", None, b"/"),
+            headers=[],
+            stream=httpcore.ByteStream(b""),
+            extensions={},
+        )
         status_code_1, headers_1, stream_1, ext_1 = response_1
         info = await http.get_connection_info()
         assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
 
-        response_2 = await http.arequest(b"GET", (b"http", b"example.org", None, b"/"))
+        response_2 = await http.handle_async_request(
+            method=b"GET",
+            url=(b"http", b"example.org", None, b"/"),
+            headers=[],
+            stream=httpcore.ByteStream(b""),
+            extensions={},
+        )
         status_code_2, headers_2, stream_2, ext_2 = response_2
         info = await http.get_connection_info()
         assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}

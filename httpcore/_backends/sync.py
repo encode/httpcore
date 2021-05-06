@@ -6,7 +6,6 @@ from types import TracebackType
 from typing import Optional, Type
 
 from .._exceptions import (
-    CloseError,
     ConnectError,
     ConnectTimeout,
     ReadError,
@@ -74,11 +73,13 @@ class SyncSocketStream:
 
     def close(self) -> None:
         with self.write_lock:
-            with map_exceptions({socket.error: CloseError}):
+            try:
                 self.sock.close()
+            except socket.error:
+                pass
 
     def is_readable(self) -> bool:
-        return is_socket_readable(self.sock.fileno())
+        return is_socket_readable(self.sock)
 
 
 class SyncLock:

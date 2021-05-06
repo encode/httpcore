@@ -4,14 +4,18 @@ from ._async.base import AsyncByteStream
 from ._sync.base import SyncByteStream
 
 
-class PlainByteStream(AsyncByteStream, SyncByteStream):
+class ByteStream(AsyncByteStream, SyncByteStream):
     """
     A concrete implementation for either sync or async byte streams.
-    Just handles a plain byte string as the content of the stream.
 
-    ```
-    stream = httpcore.PlainByteStream(b"123")
-    ```
+    Example::
+
+        stream = httpcore.ByteStream(b"123")
+
+    Parameters
+    ----------
+    content:
+        A plain byte string used as the content of the stream.
     """
 
     def __init__(self, content: bytes) -> None:
@@ -27,14 +31,21 @@ class PlainByteStream(AsyncByteStream, SyncByteStream):
 class IteratorByteStream(SyncByteStream):
     """
     A concrete implementation for sync byte streams.
-    Handles a byte iterator as the content of the stream.
 
-    ```
-    def generate_content():
-        ...
+    Example::
 
-    stream = httpcore.IteratorByteStream(generate_content())
-    ```
+        def generate_content():
+            yield b"Hello, world!"
+            ...
+
+        stream = httpcore.IteratorByteStream(generate_content())
+
+    Parameters
+    ----------
+    iterator:
+        A sync byte iterator, used as the content of the stream.
+    close_func:
+        An optional function called when closing the stream.
     """
 
     def __init__(self, iterator: Iterator[bytes], close_func: Callable = None) -> None:
@@ -53,14 +64,21 @@ class IteratorByteStream(SyncByteStream):
 class AsyncIteratorByteStream(AsyncByteStream):
     """
     A concrete implementation for async byte streams.
-    Handles an async byte iterator as the content of the stream.
 
-    ```
-    async def generate_content():
-        ...
+    Example::
 
-    stream = httpcore.AsyncIteratorByteStream(generate_content())
-    ```
+        async def generate_content():
+            yield b"Hello, world!"
+            ...
+
+        stream = httpcore.AsyncIteratorByteStream(generate_content())
+
+    Parameters
+    ----------
+    aiterator:
+        An async byte iterator, used as the content of the stream.
+    aclose_func:
+        An optional async function called when closing the stream.
     """
 
     def __init__(

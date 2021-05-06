@@ -4,6 +4,58 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.13.2 (April 29th, 2021)
+
+### Added
+
+- Improve error message for specific case of `RemoteProtocolError` where server disconnects without sending a response. (Pull #313)
+
+## 0.13.1 (April 28th, 2021)
+
+### Fixed
+
+- More resiliant testing for closed connections. (Pull #311)
+- Don't raise exceptions on ungraceful connection closes. (Pull #310)
+
+## 0.13.0 (April 21st, 2021)
+
+The 0.13 release updates the core API in order to match the HTTPX Transport API,
+introduced in HTTPX 0.18 onwards.
+
+An example of making requests with the new interface is:
+
+```python
+with httpcore.SyncConnectionPool() as http:
+    status_code, headers, stream, extensions = http.handle_request(
+        method=b'GET',
+        url=(b'https', b'example.org', 443, b'/'),
+        headers=[(b'host', b'example.org'), (b'user-agent', b'httpcore')]
+        stream=httpcore.ByteStream(b''),
+        extensions={}
+    )
+    body = stream.read()
+    print(status_code, body)
+```
+
+### Changed
+
+- The `.request()` method is now `handle_request()`. (Pull #296)
+- The `.arequest()` method is now `.handle_async_request()`. (Pull #296)
+- The `headers` argument is no longer optional. (Pull #296)
+- The `stream` argument is no longer optional. (Pull #296)
+- The `ext` argument is now named `extensions`, and is no longer optional. (Pull #296)
+- The `"reason"` extension keyword is now named `"reason_phrase"`. (Pull #296)
+- The `"reason_phrase"` and `"http_version"` extensions now use byte strings for their values. (Pull #296)
+- The `httpcore.PlainByteStream()` class becomes `httpcore.ByteStream()`. (Pull #296)
+
+### Added
+
+- Streams now support a `.read()` interface. (Pull #296)
+
+### Fixed
+
+- Task cancelation no longer leaks connections from the connection pool. (Pull #305)
+
 ## 0.12.3 (December 7th, 2020)
 
 ### Fixed

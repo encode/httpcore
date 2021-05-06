@@ -48,7 +48,8 @@ class ResponseByteStream(SyncByteStream):
         callback: Callable,
     ) -> None:
         """
-        A wrapper around the response stream that we return from `.request()`.
+        A wrapper around the response stream that we return from
+        `.handle_request()`.
 
         Ensures that when `stream.close()` is called, the connection pool
         is notified via a callback.
@@ -77,27 +78,32 @@ class SyncConnectionPool(SyncHTTPTransport):
     """
     A connection pool for making HTTP requests.
 
-    **Parameters:**
-
-    * **ssl_context** - `Optional[SSLContext]` - An SSL context to use for
-    verifying connections.
-    * **max_connections** - `Optional[int]` - The maximum number of concurrent
-    connections to allow.
-    * **max_keepalive_connections** - `Optional[int]` - The maximum number of
-    connections to allow before closing keep-alive connections.
-    * **keepalive_expiry** - `Optional[float]` - The maximum time to allow
-    before closing a keep-alive connection.
-    * **http2** - `bool` - Enable HTTP/2 support.
-    * **http1** - `bool` - Enable HTTP/1 support, default to True.
-    * **uds** - `str` - Path to a Unix Domain Socket to use instead of TCP sockets.
-    * **local_address** - `Optional[str]` - Local address to connect from. Can
-    also be used to connect using a particular address family. Using
-    `local_address="0.0.0.0"` will connect using an `AF_INET` address (IPv4),
-    while using `local_address="::"` will connect using an `AF_INET6` address
-    (IPv6).
-    * **retries** - `int` - The maximum number of retries when trying to establish a
-    connection.
-    * **backend** - `str` - A name indicating which concurrency backend to use.
+    Parameters
+    ----------
+    ssl_context:
+        An SSL context to use for verifying connections.
+    max_connections:
+        The maximum number of concurrent connections to allow.
+    max_keepalive_connections:
+        The maximum number of connections to allow before closing keep-alive
+        connections.
+    keepalive_expiry:
+        The maximum time to allow before closing a keep-alive connection.
+    http1:
+        Enable/Disable HTTP/1.1 support. Defaults to True.
+    http2:
+        Enable/Disable HTTP/2 support. Defaults to False.
+    uds:
+        Path to a Unix Domain Socket to use instead of TCP sockets.
+    local_address:
+        Local address to connect from. Can also be used to connect using a particular
+        address family. Using ``local_address="0.0.0.0"`` will connect using an
+        ``AF_INET`` address (IPv4), while using ``local_address="::"`` will connect
+        using an ``AF_INET6`` address (IPv6).
+    retries:
+        The maximum number of retries when trying to establish a connection.
+    backend:
+        A name indicating which concurrency backend to use.
     """
 
     def __init__(
@@ -182,13 +188,13 @@ class SyncConnectionPool(SyncHTTPTransport):
             backend=self._backend,
         )
 
-    def request(
+    def handle_request(
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: SyncByteStream = None,
-        ext: dict = None,
+        headers: Headers,
+        stream: SyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
         if url[0] not in (b"http", b"https"):
             scheme = url[0].decode("latin-1")
@@ -197,8 +203,7 @@ class SyncConnectionPool(SyncHTTPTransport):
             raise LocalProtocolError("Missing hostname in URL.")
 
         origin = url_to_origin(url)
-        ext = {} if ext is None else ext
-        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         self._keepalive_sweep()
 
@@ -219,21 +224,23 @@ class SyncConnectionPool(SyncHTTPTransport):
                     logger.trace("reuse connection=%r", connection)
 
             try:
-                response = connection.request(
-                    method, url, headers=headers, stream=stream, ext=ext
+                response = connection.handle_request(
+                    method, url, headers=headers, stream=stream, extensions=extensions
                 )
             except NewConnectionRequired:
                 connection = None
-            except Exception:  # noqa: PIE786
+            except BaseException:  # noqa: PIE786
+                # See https://github.com/encode/httpcore/pull/305 for motivation
+                # behind catching 'BaseException' rather than 'Exception' here.
                 logger.trace("remove from pool connection=%r", connection)
                 self._remove_from_pool(connection)
                 raise
 
-        status_code, headers, stream, ext = response
+        status_code, headers, stream, extensions = response
         wrapped_stream = ResponseByteStream(
             stream, connection=connection, callback=self._response_closed
         )
-        return status_code, headers, wrapped_stream, ext
+        return status_code, headers, wrapped_stream, extensions
 
     def _get_connection_from_pool(
         self, origin: Origin
@@ -252,8 +259,9 @@ class SyncConnectionPool(SyncHTTPTransport):
                 if connection.is_socket_readable():
                     # If the socket is readable while the connection is idle (meaning
                     # we don't expect the server to send any data), then the only valid
-                    # reason is that the other end has disconnected, which means we
-                    # should drop the connection too.
+                    # reason is that the other end has disconnected, and is readable
+                    # because it is ready to return the b"" disconnect indicator, which
+                    # means we should drop the connection too.
                     # (For a detailed run-through of what a "readable" socket is, and
                     # why this is the best thing for us to do here, see:
                     # https://github.com/encode/httpx/pull/143#issuecomment-515181778)

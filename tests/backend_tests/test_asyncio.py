@@ -5,6 +5,11 @@ import pytest
 from httpcore._backends.asyncio import SocketStream
 
 
+class MockSocket:
+    def fileno(self):
+        return 1
+
+
 class TestSocketStream:
     class TestIsReadable:
         @pytest.mark.asyncio
@@ -18,7 +23,7 @@ class TestSocketStream:
         @pytest.mark.asyncio
         async def test_returns_true_when_socket_is_readable(self):
             stream_reader = MagicMock()
-            stream_reader._transport.get_extra_info.return_value = MagicMock()
+            stream_reader._transport.get_extra_info.return_value = MockSocket()
             sock_stream = SocketStream(stream_reader, MagicMock())
 
             with patch(

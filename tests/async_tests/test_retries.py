@@ -44,15 +44,18 @@ async def test_no_retries(server: Server) -> None:
     """
     By default, connection failures are not retried on.
     """
-    method = b"GET"
-    url = (b"http", *server.netloc, b"/")
-    headers = [server.host_header]
     backend = AsyncMockBackend()
 
     async with httpcore.AsyncConnectionPool(
         max_keepalive_connections=0, backend=backend
     ) as http:
-        response = await http.arequest(method, url, headers)
+        response = await http.handle_async_request(
+            method=b"GET",
+            url=(b"http", *server.netloc, b"/"),
+            headers=[server.host_header],
+            stream=httpcore.ByteStream(b""),
+            extensions={},
+        )
         status_code, _, stream, _ = response
         assert status_code == 200
         await read_body(stream)
@@ -60,10 +63,22 @@ async def test_no_retries(server: Server) -> None:
         backend.push(httpcore.ConnectTimeout(), httpcore.ConnectError())
 
         with pytest.raises(httpcore.ConnectTimeout):
-            await http.arequest(method, url, headers)
+            await http.handle_async_request(
+                method=b"GET",
+                url=(b"http", *server.netloc, b"/"),
+                headers=[server.host_header],
+                stream=httpcore.ByteStream(b""),
+                extensions={},
+            )
 
         with pytest.raises(httpcore.ConnectError):
-            await http.arequest(method, url, headers)
+            await http.handle_async_request(
+                method=b"GET",
+                url=(b"http", *server.netloc, b"/"),
+                headers=[server.host_header],
+                stream=httpcore.ByteStream(b""),
+                extensions={},
+            )
 
 
 @pytest.mark.anyio
@@ -72,9 +87,6 @@ async def test_retries_enabled(server: Server) -> None:
     When retries are enabled, connection failures are retried on with
     a fixed exponential backoff.
     """
-    method = b"GET"
-    url = (b"http", *server.netloc, b"/")
-    headers = [server.host_header]
     backend = AsyncMockBackend()
     retries = 10  # Large enough to not run out of retries within this test.
 
@@ -82,7 +94,13 @@ async def test_retries_enabled(server: Server) -> None:
         retries=retries, max_keepalive_connections=0, backend=backend
     ) as http:
         # Standard case, no failures.
-        response = await http.arequest(method, url, headers)
+        response = await http.handle_async_request(
+            method=b"GET",
+            url=(b"http", *server.netloc, b"/"),
+            headers=[server.host_header],
+            stream=httpcore.ByteStream(b""),
+            extensions={},
+        )
         assert backend.pop_open_tcp_stream_intervals() == []
         status_code, _, stream, _ = response
         assert status_code == 200
@@ -90,7 +108,13 @@ async def test_retries_enabled(server: Server) -> None:
 
         # One failure, then success.
         backend.push(httpcore.ConnectError(), None)
-        response = await http.arequest(method, url, headers)
+        response = await http.handle_async_request(
+            method=b"GET",
+            url=(b"http", *server.netloc, b"/"),
+            headers=[server.host_header],
+            stream=httpcore.ByteStream(b""),
+            extensions={},
+        )
         assert backend.pop_open_tcp_stream_intervals() == [
             pytest.approx(0, abs=5e-3),  # Retry immediately.
         ]
@@ -105,7 +129,13 @@ async def test_retries_enabled(server: Server) -> None:
             httpcore.ConnectTimeout(),
             None,
         )
-        response = await http.arequest(method, url, headers)
+        response = await http.handle_async_request(
+            method=b"GET",
+            url=(b"http", *server.netloc, b"/"),
+            headers=[server.host_header],
+            stream=httpcore.ByteStream(b""),
+            extensions={},
+        )
         assert backend.pop_open_tcp_stream_intervals() == [
             pytest.approx(0, abs=5e-3),  # Retry immediately.
             pytest.approx(0.5, rel=0.1),  # First backoff.
@@ -118,9 +148,21 @@ async def test_retries_enabled(server: Server) -> None:
         # Non-connect exceptions are not retried on.
         backend.push(httpcore.ReadTimeout(), httpcore.NetworkError())
         with pytest.raises(httpcore.ReadTimeout):
-            await http.arequest(method, url, headers)
+            await http.handle_async_request(
+                method=b"GET",
+                url=(b"http", *server.netloc, b"/"),
+                headers=[server.host_header],
+                stream=httpcore.ByteStream(b""),
+                extensions={},
+            )
         with pytest.raises(httpcore.NetworkError):
-            await http.arequest(method, url, headers)
+            await http.handle_async_request(
+                method=b"GET",
+                url=(b"http", *server.netloc, b"/"),
+                headers=[server.host_header],
+                stream=httpcore.ByteStream(b""),
+                extensions={},
+            )
 
 
 @pytest.mark.anyio
@@ -129,16 +171,19 @@ async def test_retries_exceeded(server: Server) -> None:
     When retries are enabled and connecting failures more than the configured number
     of retries, connect exceptions are raised.
     """
-    method = b"GET"
-    url = (b"http", *server.netloc, b"/")
-    headers = [server.host_header]
     backend = AsyncMockBackend()
     retries = 1
 
     async with httpcore.AsyncConnectionPool(
         retries=retries, max_keepalive_connections=0, backend=backend
     ) as http:
-        response = await http.arequest(method, url, headers)
+        response = await http.handle_async_request(
+            method=b"GET",
+            url=(b"http", *server.netloc, b"/"),
+            headers=[server.host_header],
+            stream=httpcore.ByteStream(b""),
+            extensions={},
+        )
         status_code, _, stream, _ = response
         assert status_code == 200
         await read_body(stream)
@@ -146,4 +191,10 @@ async def test_retries_exceeded(server: Server) -> None:
         # First failure is retried on, second one isn't.
         backend.push(httpcore.ConnectError(), httpcore.ConnectTimeout())
         with pytest.raises(httpcore.ConnectTimeout):
-            await http.arequest(method, url, headers)
+            await http.handle_async_request(
+                method=b"GET",
+                url=(b"http", *server.netloc, b"/"),
+                headers=[server.host_header],
+                stream=httpcore.ByteStream(b""),
+                extensions={},
+            )

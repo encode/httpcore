@@ -4,7 +4,7 @@ from typing import Iterator, List, Tuple, Union, cast
 import h11
 
 from .._backends.sync import SyncSocketStream
-from .._bytestreams import IteratorByteStream, PlainByteStream
+from .._bytestreams import IteratorByteStream
 from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
@@ -47,18 +47,15 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
         if self.state == ConnectionState.IDLE:
             self.state = ConnectionState.READY
 
-    def request(
+    def handle_request(
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: SyncByteStream = None,
-        ext: dict = None,
+        headers: Headers,
+        stream: SyncByteStream,
+        extensions: dict,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
-        headers = [] if headers is None else headers
-        stream = PlainByteStream(b"") if stream is None else stream
-        ext = {} if ext is None else ext
-        timeout = cast(TimeoutDict, ext.get("timeout", {}))
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         self.state = ConnectionState.ACTIVE
 
@@ -74,11 +71,11 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
             iterator=self._receive_response_data(timeout),
             close_func=self._response_closed,
         )
-        ext = {
-            "http_version": http_version.decode("ascii", errors="ignore"),
-            "reason": reason_phrase.decode("ascii", errors="ignore"),
+        extensions = {
+            "http_version": http_version,
+            "reason_phrase": reason_phrase,
         }
-        return (status_code, headers, response_stream, ext)
+        return (status_code, headers, response_stream, extensions)
 
     def start_tls(
         self, hostname: bytes, timeout: TimeoutDict = None
@@ -136,12 +133,9 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
 
         http_version = b"HTTP/" + event.http_version
 
-        if hasattr(event.headers, "raw_items"):
-            # h11 version 0.11+ supports a `raw_items` interface to get the
-            # raw header casing, rather than the enforced lowercase headers.
-            headers = event.headers.raw_items()
-        else:
-            headers = event.headers
+        # h11 version 0.11+ supports a `raw_items` interface to get the
+        # raw header casing, rather than the enforced lowercase headers.
+        headers = event.headers.raw_items()
 
         return http_version, event.status_code, event.reason, headers
 
@@ -170,6 +164,19 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
 
             if event is h11.NEED_DATA:
                 data = self.socket.read(self.READ_NUM_BYTES, timeout)
+
+                # If we feed this case through h11 we'll raise an exception like:
+                #
+                #     httpcore.RemoteProtocolError: can't handle event type
+                #     ConnectionClosed when role=SERVER and state=SEND_RESPONSE
+                #
+                # Which is accurate, but not very informative from an end-user
+                # perspective. Instead we handle this case distinctly and treat
+                # it as a ConnectError.
+                if data == b"" and self.h11_state.their_state == h11.SEND_RESPONSE:
+                    msg = "Server disconnected without sending a response."
+                    raise RemoteProtocolError(msg)
+
                 self.h11_state.receive_data(data)
             else:
                 assert event is not h11.NEED_DATA
