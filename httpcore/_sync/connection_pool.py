@@ -89,8 +89,10 @@ class SyncConnectionPool(SyncHTTPTransport):
         connections.
     keepalive_expiry:
         The maximum time to allow before closing a keep-alive connection.
+    http1:
+        Enable/Disable HTTP/1.1 support. Defaults to True.
     http2:
-        Enable HTTP/2 support.
+        Enable/Disable HTTP/2 support. Defaults to False.
     uds:
         Path to a Unix Domain Socket to use instead of TCP sockets.
     local_address:
@@ -110,6 +112,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         max_connections: int = None,
         max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
+        http1: bool = True,
         http2: bool = False,
         uds: str = None,
         local_address: str = None,
@@ -131,6 +134,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         self._max_connections = max_connections
         self._max_keepalive_connections = max_keepalive_connections
         self._keepalive_expiry = keepalive_expiry
+        self._http1 = http1
         self._http2 = http2
         self._uds = uds
         self._local_address = local_address
@@ -139,6 +143,9 @@ class SyncConnectionPool(SyncHTTPTransport):
         self._thread_lock = ThreadLock()
         self._backend = backend
         self._next_keepalive_check = 0.0
+
+        if not (http1 or http2):
+            raise ValueError("Either http1 or http2 must be True.")
 
         if http2:
             try:
@@ -175,6 +182,7 @@ class SyncConnectionPool(SyncHTTPTransport):
     ) -> SyncHTTPConnection:
         return SyncHTTPConnection(
             origin=origin,
+            http1=self._http1,
             http2=self._http2,
             uds=self._uds,
             ssl_context=self._ssl_context,

@@ -23,6 +23,11 @@ def read_body(stream: httpcore.SyncByteStream) -> bytes:
         stream.close()
 
 
+def test_must_configure_either_http1_or_http2() -> None:
+    with pytest.raises(ValueError):
+        httpcore.SyncConnectionPool(http1=False, http2=False)
+
+
 
 def test_http_request(backend: str, server: Server) -> None:
     with httpcore.SyncConnectionPool(backend=backend) as http:

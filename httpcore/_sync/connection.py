@@ -1,5 +1,5 @@
 from ssl import SSLContext
-from typing import Optional, Tuple, cast
+from typing import List, Optional, Tuple, cast
 
 from .._backends.sync import SyncBackend, SyncLock, SyncSocketStream, SyncBackend
 from .._exceptions import ConnectError, ConnectTimeout
@@ -23,6 +23,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
     def __init__(
         self,
         origin: Origin,
+        http1: bool = True,
         http2: bool = False,
         uds: str = None,
         ssl_context: SSLContext = None,
@@ -32,6 +33,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         backend: SyncBackend = None,
     ):
         self.origin = origin
+        self.http1 = http1
         self.http2 = http2
         self.uds = uds
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
@@ -39,8 +41,13 @@ class SyncHTTPConnection(SyncHTTPTransport):
         self.local_address = local_address
         self.retries = retries
 
-        if self.http2:
-            self.ssl_context.set_alpn_protocols(["http/1.1", "h2"])
+        alpn_protocols: List[str] = []
+        if http1:
+            alpn_protocols.append("http/1.1")
+        if http2:
+            alpn_protocols.append("h2")
+
+        self.ssl_context.set_alpn_protocols(alpn_protocols)
 
         self.connection: Optional[SyncBaseHTTPConnection] = None
         self.is_http11 = False
@@ -147,7 +154,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         logger.trace(
             "create_connection socket=%r http_version=%r", socket, http_version
         )
-        if http_version == "HTTP/2":
+        if http_version == "HTTP/2" or (self.http2 and not self.http1):
             from .http2 import SyncHTTP2Connection
 
             self.is_http2 = True
