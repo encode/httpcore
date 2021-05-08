@@ -1,4 +1,3 @@
-import select
 import socket
 import threading
 import time
@@ -7,7 +6,6 @@ from types import TracebackType
 from typing import Optional, Type
 
 from .._exceptions import (
-    CloseError,
     ConnectError,
     ConnectTimeout,
     ReadError,
@@ -17,6 +15,7 @@ from .._exceptions import (
     map_exceptions,
 )
 from .._types import TimeoutDict
+from .._utils import is_socket_readable
 
 
 class SyncSocketStream:
@@ -39,7 +38,7 @@ class SyncSocketStream:
         return "HTTP/1.1"
 
     def start_tls(
-        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict,
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict
     ) -> "SyncSocketStream":
         connect_timeout = timeout.get("connect")
         exc_map = {socket.timeout: ConnectTimeout, socket.error: ConnectError}
@@ -59,10 +58,7 @@ class SyncSocketStream:
         with self.read_lock:
             with map_exceptions(exc_map):
                 self.sock.settimeout(read_timeout)
-                data = self.sock.recv(n)
-                if data == b"":
-                    raise ReadError("Server disconnected while attempting read")
-                return data
+                return self.sock.recv(n)
 
     def write(self, data: bytes, timeout: TimeoutDict) -> None:
         write_timeout = timeout.get("write")
@@ -77,12 +73,13 @@ class SyncSocketStream:
 
     def close(self) -> None:
         with self.write_lock:
-            with map_exceptions({socket.error: CloseError}):
+            try:
                 self.sock.close()
+            except socket.error:
+                pass
 
-    def is_connection_dropped(self) -> bool:
-        rready, _wready, _xready = select.select([self.sock], [], [], 0)
-        return bool(rready)
+    def is_readable(self) -> bool:
+        return is_socket_readable(self.sock)
 
 
 class SyncLock:
@@ -128,17 +125,44 @@ class SyncBackend:
         port: int,
         ssl_context: Optional[SSLContext],
         timeout: TimeoutDict,
+        *,
+        local_address: Optional[str],
     ) -> SyncSocketStream:
         address = (hostname.decode("ascii"), port)
         connect_timeout = timeout.get("connect")
+        source_address = None if local_address is None else (local_address, 0)
         exc_map = {socket.timeout: ConnectTimeout, socket.error: ConnectError}
 
         with map_exceptions(exc_map):
-            sock = socket.create_connection(address, connect_timeout)
+            sock = socket.create_connection(
+                address, connect_timeout, source_address=source_address  # type: ignore
+            )
             if ssl_context is not None:
                 sock = ssl_context.wrap_socket(
                     sock, server_hostname=hostname.decode("ascii")
                 )
+            return SyncSocketStream(sock=sock)
+
+    def open_uds_stream(
+        self,
+        path: str,
+        hostname: bytes,
+        ssl_context: Optional[SSLContext],
+        timeout: TimeoutDict,
+    ) -> SyncSocketStream:
+        connect_timeout = timeout.get("connect")
+        exc_map = {socket.timeout: ConnectTimeout, socket.error: ConnectError}
+
+        with map_exceptions(exc_map):
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.settimeout(connect_timeout)
+            sock.connect(path)
+
+            if ssl_context is not None:
+                sock = ssl_context.wrap_socket(
+                    sock, server_hostname=hostname.decode("ascii")
+                )
+
             return SyncSocketStream(sock=sock)
 
     def create_lock(self) -> SyncLock:
@@ -149,3 +173,6 @@ class SyncBackend:
 
     def time(self) -> float:
         return time.monotonic()
+
+    def sleep(self, seconds: float) -> None:
+        time.sleep(seconds)

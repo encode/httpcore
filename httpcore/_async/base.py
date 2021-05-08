@@ -1,12 +1,8 @@
 import enum
 from types import TracebackType
-from typing import AsyncIterator, Callable, List, Tuple, Type
+from typing import AsyncIterator, Tuple, Type
 
-from .._types import URL, Headers, TimeoutDict
-
-
-async def empty() -> AsyncIterator:
-    yield b""
+from .._types import URL, Headers, T
 
 
 class NewConnectionRequired(Exception):
@@ -41,71 +37,70 @@ class AsyncByteStream:
     The base interface for request and response bodies.
 
     Concrete implementations should subclass this class, and implement
-    the `\\__aiter__` method, and optionally the `close` method.
+    the :meth:`__aiter__` method, and optionally the :meth:`aclose` method.
     """
-
-    def __init__(
-        self, aiterator: AsyncIterator[bytes] = None, aclose_func: Callable = None,
-    ) -> None:
-        self.aiterator = empty() if aiterator is None else aiterator
-        self.aclose_func = aclose_func
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
         """
         Yield bytes representing the request or response body.
         """
-        async for chunk in self.aiterator:
-            yield chunk
+        yield b""  # pragma: nocover
 
     async def aclose(self) -> None:
         """
         Must be called by the client to indicate that the stream has been closed.
         """
-        if self.aclose_func is not None:
-            await self.aclose_func()
+        pass  # pragma: nocover
+
+    async def aread(self) -> bytes:
+        try:
+            return b"".join([part async for part in self])
+        finally:
+            await self.aclose()
 
 
 class AsyncHTTPTransport:
     """
     The base interface for sending HTTP requests.
 
-    Concete implementations should subclass this class, and implement
-    the `request` method, and optionally the `close` method.
+    Concrete implementations should subclass this class, and implement
+    the :meth:`handle_async_request` method, and optionally the :meth:`aclose` method.
     """
 
-    async def request(
+    async def handle_async_request(
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: AsyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], AsyncByteStream]:
+        headers: Headers,
+        stream: AsyncByteStream,
+        extensions: dict,
+    ) -> Tuple[int, Headers, AsyncByteStream, dict]:
         """
         The interface for sending a single HTTP request, and returning a response.
 
-        **Parameters:**
+        Parameters
+        ----------
+        method:
+            The HTTP method, such as ``b'GET'``.
+        url:
+            The URL as a 4-tuple of (scheme, host, port, path).
+        headers:
+            Any HTTP headers to send with the request.
+        stream:
+            The body of the HTTP request.
+        extensions:
+            A dictionary of optional extensions.
 
-        * **method** - `bytes` - The HTTP method, such as `b'GET'`.
-        * **url** - `Tuple[bytes, bytes, Optional[int], bytes]` - The URL as a 4-tuple of
-        (scheme, host, port, path).
-        * **headers** - `Optional[List[Tuple[bytes, bytes]]]` - Any HTTP headers
-        to send with the request.
-        * **stream** - `Optional[AsyncByteStream]` - The body of the HTTP request.
-        * **timeout** - `Optional[Dict[str, Optional[float]]]` - A dictionary of
-        timeout values for I/O operations.
-
-        ** Returns:**
-
-        A five-tuple of:
-
-        * **http_version** - `bytes` - The HTTP version used by the server,
-        such as `b'HTTP/1.1'`.
-        * **status_code** - `int` - The HTTP status code, such as `200`.
-        * **reason_phrase** - `bytes` - Any HTTP reason phrase, such as `b'OK'`.
-        * **headers** - `List[Tuple[bytes, bytes]]` - Any HTTP headers included
-        on the response.
-        * **stream** - `AsyncByteStream` - The body of the HTTP response.
+        Returns
+        -------
+        status_code:
+            The HTTP status code, such as ``200``.
+        headers:
+            Any HTTP headers included on the response.
+        stream:
+            The body of the HTTP response.
+        extensions:
+            A dictionary of optional extensions.
         """
         raise NotImplementedError()  # pragma: nocover
 
@@ -115,7 +110,7 @@ class AsyncHTTPTransport:
         and any keep alive connections.
         """
 
-    async def __aenter__(self) -> "AsyncHTTPTransport":
+    async def __aenter__(self: T) -> T:
         return self
 
     async def __aexit__(

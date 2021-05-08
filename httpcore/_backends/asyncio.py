@@ -1,9 +1,9 @@
 import asyncio
+import socket
 from ssl import SSLContext
 from typing import Optional
 
 from .._exceptions import (
-    CloseError,
     ConnectError,
     ConnectTimeout,
     ReadError,
@@ -13,6 +13,7 @@ from .._exceptions import (
     map_exceptions,
 )
 from .._types import TimeoutDict
+from .._utils import is_socket_readable
 from .base import AsyncBackend, AsyncLock, AsyncSemaphore, AsyncSocketStream
 
 SSL_MONKEY_PATCH_APPLIED = False
@@ -78,7 +79,7 @@ async def backport_start_tls(
 
 class SocketStream(AsyncSocketStream):
     def __init__(
-        self, stream_reader: asyncio.StreamReader, stream_writer: asyncio.StreamWriter,
+        self, stream_reader: asyncio.StreamReader, stream_writer: asyncio.StreamWriter
     ):
         self.stream_reader = stream_reader
         self.stream_writer = stream_writer
@@ -105,17 +106,24 @@ class SocketStream(AsyncSocketStream):
 
         loop_start_tls = getattr(loop, "start_tls", backport_start_tls)
 
-        transport = await asyncio.wait_for(
-            loop_start_tls(
-                transport,
-                protocol,
-                ssl_context,
-                server_hostname=hostname.decode("ascii"),
-            ),
-            timeout=timeout.get("connect"),
-        )
+        exc_map = {asyncio.TimeoutError: ConnectTimeout, OSError: ConnectError}
 
-        stream_reader.set_transport(transport)
+        with map_exceptions(exc_map):
+            transport = await asyncio.wait_for(
+                loop_start_tls(
+                    transport,
+                    protocol,
+                    ssl_context,
+                    server_hostname=hostname.decode("ascii"),
+                ),
+                timeout=timeout.get("connect"),
+            )
+
+        # Initialize the protocol, so it is made aware of being tied to
+        # a TLS connection.
+        # See: https://github.com/encode/httpx/issues/859
+        protocol.connection_made(transport)
+
         stream_writer = asyncio.StreamWriter(
             transport=transport, protocol=protocol, reader=stream_reader, loop=loop
         )
@@ -131,12 +139,21 @@ class SocketStream(AsyncSocketStream):
         exc_map = {asyncio.TimeoutError: ReadTimeout, OSError: ReadError}
         async with self.read_lock:
             with map_exceptions(exc_map):
-                data = await asyncio.wait_for(
-                    self.stream_reader.read(n), timeout.get("read")
-                )
-                if data == b"":
-                    raise ReadError("Server disconnected while attempting read")
-                return data
+                try:
+                    return await asyncio.wait_for(
+                        self.stream_reader.read(n), timeout.get("read")
+                    )
+                except AttributeError as exc:  # pragma: nocover
+                    if "resume_reading" in str(exc):
+                        # Python's asyncio has a bug that can occur when a
+                        # connection has been closed, while it is paused.
+                        # See: https://github.com/encode/httpx/issues/1213
+                        #
+                        # Returning an empty byte-string to indicate connection
+                        # close will eventually raise an httpcore.RemoteProtocolError
+                        # to the user when this goes through our HTTP parsing layer.
+                        return b""
+                    raise
 
     async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         if not data:
@@ -151,39 +168,47 @@ class SocketStream(AsyncSocketStream):
                 )
 
     async def aclose(self) -> None:
-        # NOTE: StreamWriter instances expose a '.wait_closed()' coroutine function,
-        # but using it has caused compatibility issues with certain sites in
-        # the past (see https://github.com/encode/httpx/issues/634), which is
-        # why we don't call it here.
-        # This is fine, though, because '.aclose()' schedules the actual closing of the
-        # stream, meaning that at best it will happen during the next event loop
-        # iteration, and at worst asyncio will take care of it on program exit.
-        async with self.write_lock:
-            with map_exceptions({OSError: CloseError}):
-                self.stream_writer.close()
+        # SSL connections should issue the close and then abort, rather than
+        # waiting for the remote end of the connection to signal the EOF.
+        #
+        # See:
+        #
+        # * https://bugs.python.org/issue39758
+        # * https://github.com/python-trio/trio/blob/
+        #             31e2ae866ad549f1927d45ce073d4f0ea9f12419/trio/_ssl.py#L779-L829
+        #
+        # And related issues caused if we simply omit the 'wait_closed' call,
+        # without first using `.abort()`
+        #
+        # * https://github.com/encode/httpx/issues/825
+        # * https://github.com/encode/httpx/issues/914
+        is_ssl = self.stream_writer.get_extra_info("ssl_object") is not None
 
-    def is_connection_dropped(self) -> bool:
-        # Counter-intuitively, what we really want to know here is whether the socket is
-        # *readable*, i.e. whether it would return immediately with empty bytes if we
-        # called `.recv()` on it, indicating that the other end has closed the socket.
-        # See: https://github.com/encode/httpx/pull/143#issuecomment-515181778
-        #
-        # As it turns out, asyncio checks for readability in the background
-        # (see: https://github.com/encode/httpx/pull/276#discussion_r322000402),
-        # so checking for EOF or readability here would yield the same result.
-        #
-        # At the cost of rigour, we check for EOF instead of readability because asyncio
-        # does not expose any public API to check for readability.
-        # (For a solution that uses private asyncio APIs, see:
-        # https://github.com/encode/httpx/pull/143#issuecomment-515202982)
-        return self.stream_reader.at_eof()
+        async with self.write_lock:
+            try:
+                self.stream_writer.close()
+                if is_ssl:
+                    # Give the connection a chance to write any data in the buffer,
+                    # and then forcibly tear down the SSL connection.
+                    await asyncio.sleep(0)
+                    self.stream_writer.transport.abort()  # type: ignore
+                if hasattr(self.stream_writer, "wait_closed"):
+                    # Python 3.7+ only.
+                    await self.stream_writer.wait_closed()  # type: ignore
+            except OSError:
+                pass
+
+    def is_readable(self) -> bool:
+        transport = self.stream_reader._transport  # type: ignore
+        sock: Optional[socket.socket] = transport.get_extra_info("socket")
+        return is_socket_readable(sock)
 
 
 class Lock(AsyncLock):
     def __init__(self) -> None:
         self._lock = asyncio.Lock()
 
-    def release(self) -> None:
+    async def release(self) -> None:
         self._lock.release()
 
     async def acquire(self) -> None:
@@ -207,7 +232,7 @@ class Semaphore(AsyncSemaphore):
         except asyncio.TimeoutError:
             raise self.exc_class()
 
-    def release(self) -> None:
+    async def release(self) -> None:
         self.semaphore.release()
 
 
@@ -225,13 +250,40 @@ class AsyncioBackend(AsyncBackend):
         port: int,
         ssl_context: Optional[SSLContext],
         timeout: TimeoutDict,
+        *,
+        local_address: Optional[str],
     ) -> SocketStream:
         host = hostname.decode("ascii")
         connect_timeout = timeout.get("connect")
+        local_addr = None if local_address is None else (local_address, 0)
+
         exc_map = {asyncio.TimeoutError: ConnectTimeout, OSError: ConnectError}
         with map_exceptions(exc_map):
             stream_reader, stream_writer = await asyncio.wait_for(
-                asyncio.open_connection(host, port, ssl=ssl_context), connect_timeout,
+                asyncio.open_connection(
+                    host, port, ssl=ssl_context, local_addr=local_addr
+                ),
+                connect_timeout,
+            )
+            return SocketStream(
+                stream_reader=stream_reader, stream_writer=stream_writer
+            )
+
+    async def open_uds_stream(
+        self,
+        path: str,
+        hostname: bytes,
+        ssl_context: Optional[SSLContext],
+        timeout: TimeoutDict,
+    ) -> AsyncSocketStream:
+        host = hostname.decode("ascii")
+        connect_timeout = timeout.get("connect")
+        kwargs: dict = {"server_hostname": host} if ssl_context is not None else {}
+        exc_map = {asyncio.TimeoutError: ConnectTimeout, OSError: ConnectError}
+        with map_exceptions(exc_map):
+            stream_reader, stream_writer = await asyncio.wait_for(
+                asyncio.open_unix_connection(path, ssl=ssl_context, **kwargs),
+                connect_timeout,
             )
             return SocketStream(
                 stream_reader=stream_reader, stream_writer=stream_writer
@@ -243,6 +295,9 @@ class AsyncioBackend(AsyncBackend):
     def create_semaphore(self, max_value: int, exc_class: type) -> AsyncSemaphore:
         return Semaphore(max_value, exc_class=exc_class)
 
-    def time(self) -> float:
+    async def time(self) -> float:
         loop = asyncio.get_event_loop()
         return loop.time()
+
+    async def sleep(self, seconds: float) -> None:
+        await asyncio.sleep(seconds)

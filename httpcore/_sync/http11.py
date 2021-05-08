@@ -1,13 +1,15 @@
 from ssl import SSLContext
-from typing import Iterator, List, Tuple, Union
+from typing import Iterator, List, Tuple, Union, cast
 
 import h11
 
-from .._backends.auto import SyncSocketStream
-from .._exceptions import ProtocolError, map_exceptions
+from .._backends.sync import SyncSocketStream
+from .._bytestreams import IteratorByteStream
+from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
-from .base import SyncByteStream, SyncHTTPTransport, ConnectionState
+from .base import SyncByteStream, ConnectionState
+from .http import SyncBaseHTTPConnection
 
 H11Event = Union[
     h11.Request,
@@ -21,12 +23,10 @@ H11Event = Union[
 logger = get_logger(__name__)
 
 
-class SyncHTTP11Connection(SyncHTTPTransport):
-    READ_NUM_BYTES = 4096
+class SyncHTTP11Connection(SyncBaseHTTPConnection):
+    READ_NUM_BYTES = 64 * 1024
 
-    def __init__(
-        self, socket: SyncSocketStream, ssl_context: SSLContext = None,
-    ):
+    def __init__(self, socket: SyncSocketStream, ssl_context: SSLContext = None):
         self.socket = socket
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
 
@@ -40,21 +40,22 @@ class SyncHTTP11Connection(SyncHTTPTransport):
     def info(self) -> str:
         return f"HTTP/1.1, {self.state.name}"
 
+    def get_state(self) -> ConnectionState:
+        return self.state
+
     def mark_as_ready(self) -> None:
         if self.state == ConnectionState.IDLE:
             self.state = ConnectionState.READY
 
-    def request(
+    def handle_request(
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: SyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
-        headers = [] if headers is None else headers
-        stream = SyncByteStream() if stream is None else stream
-        timeout = {} if timeout is None else timeout
+        headers: Headers,
+        stream: SyncByteStream,
+        extensions: dict,
+    ) -> Tuple[int, Headers, SyncByteStream, dict]:
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         self.state = ConnectionState.ACTIVE
 
@@ -66,25 +67,33 @@ class SyncHTTP11Connection(SyncHTTPTransport):
             reason_phrase,
             headers,
         ) = self._receive_response(timeout)
-        stream = SyncByteStream(
+        response_stream = IteratorByteStream(
             iterator=self._receive_response_data(timeout),
             close_func=self._response_closed,
         )
-        return (http_version, status_code, reason_phrase, headers, stream)
+        extensions = {
+            "http_version": http_version,
+            "reason_phrase": reason_phrase,
+        }
+        return (status_code, headers, response_stream, extensions)
 
-    def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
+    def start_tls(
+        self, hostname: bytes, timeout: TimeoutDict = None
+    ) -> SyncSocketStream:
         timeout = {} if timeout is None else timeout
         self.socket = self.socket.start_tls(hostname, self.ssl_context, timeout)
+        return self.socket
 
     def _send_request(
-        self, method: bytes, url: URL, headers: Headers, timeout: TimeoutDict,
+        self, method: bytes, url: URL, headers: Headers, timeout: TimeoutDict
     ) -> None:
         """
         Send the request line and headers.
         """
         logger.trace("send_request method=%r url=%r headers=%s", method, url, headers)
         _scheme, _host, _port, target = url
-        event = h11.Request(method=method, target=target, headers=headers)
+        with map_exceptions({h11.LocalProtocolError: LocalProtocolError}):
+            event = h11.Request(method=method, target=target, headers=headers)
         self._send_event(event, timeout)
 
     def _send_request_body(
@@ -121,8 +130,14 @@ class SyncHTTP11Connection(SyncHTTPTransport):
             event = self._receive_event(timeout)
             if isinstance(event, h11.Response):
                 break
+
         http_version = b"HTTP/" + event.http_version
-        return http_version, event.status_code, event.reason, event.headers
+
+        # h11 version 0.11+ supports a `raw_items` interface to get the
+        # raw header casing, rather than the enforced lowercase headers.
+        headers = event.headers.raw_items()
+
+        return http_version, event.status_code, event.reason, headers
 
     def _receive_response_data(
         self, timeout: TimeoutDict
@@ -144,11 +159,24 @@ class SyncHTTP11Connection(SyncHTTPTransport):
         Read a single `h11` event, reading more data from the network if needed.
         """
         while True:
-            with map_exceptions({h11.RemoteProtocolError: ProtocolError}):
+            with map_exceptions({h11.RemoteProtocolError: RemoteProtocolError}):
                 event = self.h11_state.next_event()
 
             if event is h11.NEED_DATA:
                 data = self.socket.read(self.READ_NUM_BYTES, timeout)
+
+                # If we feed this case through h11 we'll raise an exception like:
+                #
+                #     httpcore.RemoteProtocolError: can't handle event type
+                #     ConnectionClosed when role=SERVER and state=SEND_RESPONSE
+                #
+                # Which is accurate, but not very informative from an end-user
+                # perspective. Instead we handle this case distinctly and treat
+                # it as a ConnectError.
+                if data == b"" and self.h11_state.their_state == h11.SEND_RESPONSE:
+                    msg = "Server disconnected without sending a response."
+                    raise RemoteProtocolError(msg)
+
                 self.h11_state.receive_data(data)
             else:
                 assert event is not h11.NEED_DATA
@@ -180,5 +208,5 @@ class SyncHTTP11Connection(SyncHTTPTransport):
 
             self.socket.close()
 
-    def is_connection_dropped(self) -> bool:
-        return self.socket.is_connection_dropped()
+    def is_socket_readable(self) -> bool:
+        return self.socket.is_readable()

@@ -4,7 +4,6 @@ from typing import Optional
 import trio
 
 from .._exceptions import (
-    CloseError,
     ConnectError,
     ConnectTimeout,
     ReadError,
@@ -35,7 +34,7 @@ class SocketStream(AsyncSocketStream):
         return "HTTP/2" if ident == "h2" else "HTTP/1.1"
 
     async def start_tls(
-        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict,
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict
     ) -> "SocketStream":
         connect_timeout = none_as_inf(timeout.get("connect"))
         exc_map = {
@@ -60,10 +59,7 @@ class SocketStream(AsyncSocketStream):
         async with self.read_lock:
             with map_exceptions(exc_map):
                 with trio.fail_after(read_timeout):
-                    data = await self.stream.receive_some(max_bytes=n)
-                    if data == b"":
-                        raise ReadError("Server disconnected while attempting read")
-                    return data
+                    return await self.stream.receive_some(max_bytes=n)
 
     async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         if not data:
@@ -82,10 +78,12 @@ class SocketStream(AsyncSocketStream):
 
     async def aclose(self) -> None:
         async with self.write_lock:
-            with map_exceptions({trio.BrokenResourceError: CloseError}):
+            try:
                 await self.stream.aclose()
+            except trio.BrokenResourceError:
+                pass
 
-    def is_connection_dropped(self) -> bool:
+    def is_readable(self) -> bool:
         # Adapted from: https://github.com/encode/httpx/pull/143#issuecomment-515202982
         stream = self.stream
 
@@ -94,10 +92,6 @@ class SocketStream(AsyncSocketStream):
             stream = stream.transport_stream
         assert isinstance(stream, trio.SocketStream)
 
-        # Counter-intuitively, what we really want to know here is whether the socket is
-        # *readable*, i.e. whether it would return immediately with empty bytes if we
-        # called `.recv()` on it, indicating that the other end has closed the socket.
-        # See: https://github.com/encode/httpx/pull/143#issuecomment-515181778
         return stream.socket.is_readable()
 
 
@@ -105,7 +99,7 @@ class Lock(AsyncLock):
     def __init__(self) -> None:
         self._lock = trio.Lock()
 
-    def release(self) -> None:
+    async def release(self) -> None:
         self._lock.release()
 
     async def acquire(self) -> None:
@@ -132,7 +126,7 @@ class Semaphore(AsyncSemaphore):
 
         raise self.exc_class()
 
-    def release(self) -> None:
+    async def release(self) -> None:
         self.semaphore.release()
 
 
@@ -143,16 +137,51 @@ class TrioBackend(AsyncBackend):
         port: int,
         ssl_context: Optional[SSLContext],
         timeout: TimeoutDict,
+        *,
+        local_address: Optional[str],
     ) -> AsyncSocketStream:
         connect_timeout = none_as_inf(timeout.get("connect"))
+        # Trio will support local_address from 0.16.1 onwards.
+        # We only include the keyword argument if a local_address
+        #  argument has been passed.
+        kwargs: dict = {} if local_address is None else {"local_address": local_address}
         exc_map = {
+            OSError: ConnectError,
             trio.TooSlowError: ConnectTimeout,
             trio.BrokenResourceError: ConnectError,
         }
 
         with map_exceptions(exc_map):
             with trio.fail_after(connect_timeout):
-                stream: trio.abc.Stream = await trio.open_tcp_stream(hostname, port)
+                stream: trio.abc.Stream = await trio.open_tcp_stream(
+                    hostname, port, **kwargs
+                )
+
+                if ssl_context is not None:
+                    stream = trio.SSLStream(
+                        stream, ssl_context, server_hostname=hostname.decode("ascii")
+                    )
+                    await stream.do_handshake()
+
+                return SocketStream(stream=stream)
+
+    async def open_uds_stream(
+        self,
+        path: str,
+        hostname: bytes,
+        ssl_context: Optional[SSLContext],
+        timeout: TimeoutDict,
+    ) -> AsyncSocketStream:
+        connect_timeout = none_as_inf(timeout.get("connect"))
+        exc_map = {
+            OSError: ConnectError,
+            trio.TooSlowError: ConnectTimeout,
+            trio.BrokenResourceError: ConnectError,
+        }
+
+        with map_exceptions(exc_map):
+            with trio.fail_after(connect_timeout):
+                stream: trio.abc.Stream = await trio.open_unix_socket(path)
 
                 if ssl_context is not None:
                     stream = trio.SSLStream(
@@ -168,5 +197,8 @@ class TrioBackend(AsyncBackend):
     def create_semaphore(self, max_value: int, exc_class: type) -> AsyncSemaphore:
         return Semaphore(max_value, exc_class=exc_class)
 
-    def time(self) -> float:
+    async def time(self) -> float:
         return trio.current_time()
+
+    async def sleep(self, seconds: float) -> None:
+        await trio.sleep(seconds)

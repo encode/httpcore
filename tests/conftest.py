@@ -1,79 +1,113 @@
-import asyncio
-import ssl
+import contextlib
+import os
 import threading
+import time
 import typing
 
 import pytest
 import trustme
-from mitmproxy import options, proxy
-from mitmproxy.tools.dump import DumpMaster
 
-PROXY_HOST = "127.0.0.1"
-PROXY_PORT = 8080
+from httpcore._types import URL
 
+from .utils import HypercornServer, LiveServer, Server, http_proxy_server
 
-@pytest.fixture(
-    params=[
-        pytest.param("asyncio", marks=pytest.mark.asyncio),
-        pytest.param("trio", marks=pytest.mark.trio),
-    ]
-)
-def async_environment(request: typing.Any) -> str:
-    """
-    Mark a test function to be run on both asyncio and trio.
-
-    Equivalent to having a pair of tests, each respectively marked with
-    '@pytest.mark.asyncio' and '@pytest.mark.trio'.
-
-    Intended usage:
-
-    ```
-    @pytest.mark.usefixtures("async_environment")
-    async def my_async_test():
-        ...
-    ```
-    """
-    return request.param
+try:
+    import hypercorn
+except ImportError:  # pragma: no cover  # Python 3.6
+    hypercorn = None  # type: ignore
+    SERVER_HOST = "example.org"
+    SERVER_HTTP_PORT = 80
+    SERVER_HTTPS_PORT = 443
+    HTTPS_SERVER_URL = "https://example.org"
+else:
+    SERVER_HOST = "localhost"
+    SERVER_HTTP_PORT = 8002
+    SERVER_HTTPS_PORT = 8003
+    HTTPS_SERVER_URL = f"https://localhost:{SERVER_HTTPS_PORT}"
 
 
-class RunNotify:
-    """A mitmproxy addon wrapping an event to notify us when the server is running."""
+@pytest.fixture(scope="session")
+def proxy_server() -> typing.Iterator[URL]:
+    proxy_host = "127.0.0.1"
+    proxy_port = 8080
 
-    def __init__(self) -> None:
-        self.started = threading.Event()
-
-    def running(self) -> None:
-        self.started.set()
+    with http_proxy_server(proxy_host, proxy_port) as proxy_url:
+        yield proxy_url
 
 
-class ProxyWrapper(threading.Thread):
-    """Runs an mitmproxy in a separate thread."""
+async def app(scope: dict, receive: typing.Callable, send: typing.Callable) -> None:
+    assert scope["type"] == "http"
+    await send(
+        {
+            "type": "http.response.start",
+            "status": 200,
+            "headers": [[b"content-type", b"text/plain"]],
+        }
+    )
+    await send({"type": "http.response.body", "body": b"Hello, world!"})
 
-    def __init__(self, host: str, port: int, **kwargs: typing.Any) -> None:
-        self.host = host
-        self.port = port
-        self.options = kwargs
-        super().__init__()
-        self.notify = RunNotify()
 
-    def run(self) -> None:
-        # mitmproxy uses asyncio internally but the default loop policy
-        # will only create event loops for the main thread, create one
-        # as part of the thread startup
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        opts = options.Options(
-            listen_host=self.host, listen_port=self.port, **self.options
-        )
-        pconf = proxy.config.ProxyConfig(opts)
+@pytest.fixture(scope="session")
+def uds() -> typing.Iterator[str]:
+    uds = "test_server.sock"
+    try:
+        yield uds
+    finally:
+        os.remove(uds)
 
-        self.master = DumpMaster(opts)
-        self.master.server = proxy.server.ProxyServer(pconf)
-        self.master.addons.add(self.notify)
-        self.master.run()
 
-    def join(self, timeout: float = None) -> None:
-        self.master.shutdown()
-        super().join()
+@pytest.fixture(scope="session")
+def uds_server(uds: str) -> typing.Iterator[Server]:
+    if hypercorn is not None:
+        server = HypercornServer(app=app, bind=f"unix:{uds}")
+        with server.serve_in_thread():
+            yield server
+    else:
+        # On Python 3.6, use Uvicorn as a fallback.
+        import uvicorn
+
+        class UvicornServer(Server, uvicorn.Server):
+            sends_reason = True
+
+            @property
+            def uds(self) -> str:
+                uds = self.config.uds
+                assert uds is not None
+                return uds
+
+            def install_signal_handlers(self) -> None:
+                pass
+
+            @contextlib.contextmanager
+            def serve_in_thread(self) -> typing.Iterator[None]:
+                thread = threading.Thread(target=self.run)
+                thread.start()
+                try:
+                    while not self.started:
+                        time.sleep(1e-3)
+                    yield
+                finally:
+                    self.should_exit = True
+                    thread.join()
+
+        config = uvicorn.Config(app=app, lifespan="off", loop="asyncio", uds=uds)
+        server = UvicornServer(config=config)
+        with server.serve_in_thread():
+            yield server
+
+
+@pytest.fixture(scope="session")
+def server() -> typing.Iterator[Server]:  # pragma: no cover
+    server: Server  # Please mypy.
+
+    if hypercorn is None:
+        server = LiveServer(host=SERVER_HOST, port=SERVER_HTTP_PORT)
+        yield server
+        return
+
+    server = HypercornServer(app=app, bind=f"{SERVER_HOST}:{SERVER_HTTP_PORT}")
+    with server.serve_in_thread():
+        yield server
 
 
 @pytest.fixture(scope="session")
@@ -81,42 +115,73 @@ def cert_authority() -> trustme.CA:
     return trustme.CA()
 
 
-@pytest.fixture()
-def ca_ssl_context(cert_authority: trustme.CA) -> ssl.SSLContext:
-    ctx = ssl.create_default_context()
-    cert_authority.configure_trust(ctx)
-    return ctx
+@pytest.fixture(scope="session")
+def localhost_cert(cert_authority: trustme.CA) -> trustme.LeafCert:
+    return cert_authority.issue_cert("localhost")
 
 
 @pytest.fixture(scope="session")
-def example_org_cert(cert_authority: trustme.CA) -> trustme.LeafCert:
-    return cert_authority.issue_cert("example.org")
-
-
-@pytest.fixture(scope="session")
-def example_org_cert_path(example_org_cert: trustme.LeafCert) -> typing.Iterator[str]:
-    with example_org_cert.private_key_and_cert_chain_pem.tempfile() as tmp:
+def localhost_cert_path(localhost_cert: trustme.LeafCert) -> typing.Iterator[str]:
+    with localhost_cert.private_key_and_cert_chain_pem.tempfile() as tmp:
         yield tmp
 
 
-@pytest.fixture()
-def proxy_server(
-    example_org_cert_path: str,
-) -> typing.Iterator[typing.Tuple[bytes, bytes, int]]:
-    """Starts a proxy server on a different thread and yields its origin tuple.
+@pytest.fixture(scope="session")
+def localhost_cert_pem_file(localhost_cert: trustme.LeafCert) -> typing.Iterator[str]:
+    with localhost_cert.cert_chain_pems[0].tempfile() as tmp:
+        yield tmp
 
-    The server is configured to use a trustme CA and key, this will allow our
-    test client to make HTTPS requests when using the ca_ssl_context fixture
-    above.
 
-    Note this is only required because mitmproxy's main purpose is to analyse
-    traffic. Other proxy servers do not need this but mitmproxy is easier to
-    integrate in our tests.
-    """
+@pytest.fixture(scope="session")
+def localhost_cert_private_key_file(
+    localhost_cert: trustme.LeafCert,
+) -> typing.Iterator[str]:
+    with localhost_cert.private_key_pem.tempfile() as tmp:
+        yield tmp
+
+
+@pytest.fixture(scope="session")
+def https_server(
+    localhost_cert_pem_file: str, localhost_cert_private_key_file: str
+) -> typing.Iterator[Server]:  # pragma: no cover
+    server: Server  # Please mypy.
+
+    if hypercorn is None:
+        server = LiveServer(host=SERVER_HOST, port=SERVER_HTTPS_PORT)
+        yield server
+        return
+
+    server = HypercornServer(
+        app=app,
+        bind=f"{SERVER_HOST}:{SERVER_HTTPS_PORT}",
+        certfile=localhost_cert_pem_file,
+        keyfile=localhost_cert_private_key_file,
+    )
+    with server.serve_in_thread():
+        yield server
+
+
+@pytest.fixture(scope="function")
+def too_many_open_files_minus_one() -> typing.Iterator[None]:
+    # Fixture for test regression on https://github.com/encode/httpcore/issues/182
+    # Max number of descriptors chosen according to:
+    # See: https://man7.org/linux/man-pages/man2/select.2.html#top_of_page
+    # "To monitor file descriptors greater than 1023, use poll or epoll instead."
+    max_num_descriptors = 1023
+
+    files = []
+
+    while True:
+        f = open("/dev/null")
+        # Leave one file descriptor available for a transport to perform
+        # a successful request.
+        if f.fileno() > max_num_descriptors - 1:
+            f.close()
+            break
+        files.append(f)
+
     try:
-        thread = ProxyWrapper(PROXY_HOST, PROXY_PORT, certs=[example_org_cert_path])
-        thread.start()
-        thread.notify.started.wait()
-        yield (b"http", PROXY_HOST.encode(), PROXY_PORT)
+        yield
     finally:
-        thread.join()
+        for f in files:
+            f.close()

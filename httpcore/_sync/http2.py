@@ -1,6 +1,5 @@
-from http import HTTPStatus
 from ssl import SSLContext
-from typing import Iterator, Dict, List, Tuple
+from typing import Iterator, Dict, List, Tuple, cast
 
 import h2.connection
 import h2.events
@@ -8,29 +7,19 @@ from h2.config import H2Configuration
 from h2.exceptions import NoAvailableStreamIDError
 from h2.settings import SettingCodes, Settings
 
-from .._backends.auto import SyncLock, SyncSemaphore, SyncSocketStream, SyncBackend
-from .._exceptions import PoolTimeout, ProtocolError
+from .._backends.sync import SyncBackend, SyncLock, SyncSemaphore, SyncSocketStream
+from .._bytestreams import IteratorByteStream
+from .._exceptions import LocalProtocolError, PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
-from .base import (
-    SyncByteStream,
-    SyncHTTPTransport,
-    ConnectionState,
-    NewConnectionRequired,
-)
+from .base import SyncByteStream, ConnectionState, NewConnectionRequired
+from .http import SyncBaseHTTPConnection
 
 logger = get_logger(__name__)
 
 
-def get_reason_phrase(status_code: int) -> bytes:
-    try:
-        return HTTPStatus(status_code).phrase.encode("ascii")
-    except ValueError:
-        return b""
-
-
-class SyncHTTP2Connection(SyncHTTPTransport):
-    READ_NUM_BYTES = 4096
+class SyncHTTP2Connection(SyncBaseHTTPConnection):
+    READ_NUM_BYTES = 64 * 1024
     CONFIG = H2Configuration(validate_inbound_headers=False)
 
     def __init__(
@@ -84,22 +73,27 @@ class SyncHTTP2Connection(SyncHTTPTransport):
             )
         return self._max_streams_semaphore
 
-    def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
-        pass
+    def start_tls(
+        self, hostname: bytes, timeout: TimeoutDict = None
+    ) -> SyncSocketStream:
+        raise NotImplementedError("TLS upgrade not supported on HTTP/2 connections.")
+
+    def get_state(self) -> ConnectionState:
+        return self.state
 
     def mark_as_ready(self) -> None:
         if self.state == ConnectionState.IDLE:
             self.state = ConnectionState.READY
 
-    def request(
+    def handle_request(
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: SyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
-        timeout = {} if timeout is None else timeout
+        headers: Headers,
+        stream: SyncByteStream,
+        extensions: dict,
+    ) -> Tuple[int, Headers, SyncByteStream, dict]:
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         with self.init_lock:
             if not self.sent_connection_init:
@@ -121,8 +115,10 @@ class SyncHTTP2Connection(SyncHTTPTransport):
             h2_stream = SyncHTTP2Stream(stream_id=stream_id, connection=self)
             self.streams[stream_id] = h2_stream
             self.events[stream_id] = []
-            return h2_stream.request(method, url, headers, stream, timeout)
-        except Exception:
+            return h2_stream.handle_request(
+                method, url, headers, stream, extensions
+            )
+        except Exception:  # noqa: PIE786
             self.max_streams_semaphore.release()
             raise
 
@@ -159,12 +155,8 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         data_to_send = self.h2_state.data_to_send()
         self.socket.write(data_to_send, timeout)
 
-    @property
-    def is_closed(self) -> bool:
-        return False
-
-    def is_connection_dropped(self) -> bool:
-        return self.socket.is_connection_dropped()
+    def is_socket_readable(self) -> bool:
+        return self.socket.is_readable()
 
     def close(self) -> None:
         logger.trace("close_connection=%r", self)
@@ -208,13 +200,16 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         Read some data from the network, and update the H2 state.
         """
         data = self.socket.read(self.READ_NUM_BYTES, timeout)
+        if data == b"":
+            raise RemoteProtocolError("Server disconnected")
+
         events = self.h2_state.receive_data(data)
         for event in events:
             event_stream_id = getattr(event, "stream_id", 0)
             logger.trace("receive_event stream_id=%r event=%s", event_stream_id, event)
 
             if hasattr(event, "error_code"):
-                raise ProtocolError(event)
+                raise RemoteProtocolError(event)
 
             if event_stream_id in self.events:
                 self.events[event_stream_id].append(event)
@@ -223,7 +218,7 @@ class SyncHTTP2Connection(SyncHTTPTransport):
         self.socket.write(data_to_send, timeout)
 
     def send_headers(
-        self, stream_id: int, headers: Headers, end_stream: bool, timeout: TimeoutDict,
+        self, stream_id: int, headers: Headers, end_stream: bool, timeout: TimeoutDict
     ) -> None:
         logger.trace("send_headers stream_id=%r headers=%r", stream_id, headers)
         self.h2_state.send_headers(stream_id, headers, end_stream=end_stream)
@@ -272,17 +267,16 @@ class SyncHTTP2Stream:
         self.stream_id = stream_id
         self.connection = connection
 
-    def request(
+    def handle_request(
         self,
         method: bytes,
         url: URL,
-        headers: Headers = None,
-        stream: SyncByteStream = None,
-        timeout: TimeoutDict = None,
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], SyncByteStream]:
-        headers = [] if headers is None else [(k.lower(), v) for (k, v) in headers]
-        stream = SyncByteStream() if stream is None else stream
-        timeout = {} if timeout is None else timeout
+        headers: Headers,
+        stream: SyncByteStream,
+        extensions: dict,
+    ) -> Tuple[int, Headers, SyncByteStream, dict]:
+        headers = [(k.lower(), v) for (k, v) in headers]
+        timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         # Send the request.
         seen_headers = set(key for key, value in headers)
@@ -296,12 +290,14 @@ class SyncHTTP2Stream:
 
         # Receive the response.
         status_code, headers = self.receive_response(timeout)
-        reason_phrase = get_reason_phrase(status_code)
-        stream = SyncByteStream(
+        response_stream = IteratorByteStream(
             iterator=self.body_iter(timeout), close_func=self._response_closed
         )
 
-        return (b"HTTP/2", status_code, reason_phrase, headers, stream)
+        extensions = {
+            "http_version": b"HTTP/2",
+        }
+        return (status_code, headers, response_stream, extensions)
 
     def send_headers(
         self,
@@ -312,18 +308,39 @@ class SyncHTTP2Stream:
         timeout: TimeoutDict,
     ) -> None:
         scheme, hostname, port, path = url
-        default_port = {b"http": 80, b"https": 443}.get(scheme)
-        if port is None or port == default_port:
-            authority = hostname
-        else:
-            authority = b"%s:%d" % (hostname, port)
+
+        # In HTTP/2 the ':authority' pseudo-header is used instead of 'Host'.
+        # In order to gracefully handle HTTP/1.1 and HTTP/2 we always require
+        # HTTP/1.1 style headers, and map them appropriately if we end up on
+        # an HTTP/2 connection.
+        authority = None
+
+        for k, v in headers:
+            if k == b"host":
+                authority = v
+                break
+
+        if authority is None:
+            # Mirror the same error we'd see with `h11`, so that the behaviour
+            # is consistent. Although we're dealing with an `:authority`
+            # pseudo-header by this point, from an end-user perspective the issue
+            # is that the outgoing request needed to include a `host` header.
+            raise LocalProtocolError("Missing mandatory Host: header")
 
         headers = [
             (b":method", method),
             (b":authority", authority),
             (b":scheme", scheme),
             (b":path", path),
-        ] + [(k, v) for k, v in headers if k not in (b"host", b"transfer-encoding")]
+        ] + [
+            (k, v)
+            for k, v in headers
+            if k
+            not in (
+                b"host",
+                b"transfer-encoding",
+            )
+        ]
         end_stream = not has_body
 
         self.connection.send_headers(self.stream_id, headers, end_stream, timeout)

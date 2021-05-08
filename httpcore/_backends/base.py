@@ -1,8 +1,42 @@
 from ssl import SSLContext
 from types import TracebackType
-from typing import Optional, Type
+from typing import TYPE_CHECKING, Optional, Type
 
 from .._types import TimeoutDict
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .sync import SyncBackend
+
+
+def lookup_async_backend(name: str) -> "AsyncBackend":
+    if name == "auto":
+        from .auto import AutoBackend
+
+        return AutoBackend()
+    elif name == "asyncio":
+        from .asyncio import AsyncioBackend
+
+        return AsyncioBackend()
+    elif name == "trio":
+        from .trio import TrioBackend
+
+        return TrioBackend()
+    elif name == "curio":
+        from .curio import CurioBackend
+
+        return CurioBackend()
+    elif name == "anyio":
+        from .anyio import AnyIOBackend
+
+        return AnyIOBackend()
+
+    raise ValueError("Invalid backend name {name!r}")
+
+
+def lookup_sync_backend(name: str) -> "SyncBackend":
+    from .sync import SyncBackend
+
+    return SyncBackend()
 
 
 class AsyncSocketStream:
@@ -29,7 +63,7 @@ class AsyncSocketStream:
     async def aclose(self) -> None:
         raise NotImplementedError()  # pragma: no cover
 
-    def is_connection_dropped(self) -> bool:
+    def is_readable(self) -> bool:
         raise NotImplementedError()  # pragma: no cover
 
 
@@ -47,9 +81,9 @@ class AsyncLock:
         exc_value: BaseException = None,
         traceback: TracebackType = None,
     ) -> None:
-        self.release()
+        await self.release()
 
-    def release(self) -> None:
+    async def release(self) -> None:
         raise NotImplementedError()  # pragma: no cover
 
     async def acquire(self) -> None:
@@ -65,7 +99,7 @@ class AsyncSemaphore:
     async def acquire(self, timeout: float = None) -> None:
         raise NotImplementedError()  # pragma: no cover
 
-    def release(self) -> None:
+    async def release(self) -> None:
         raise NotImplementedError()  # pragma: no cover
 
 
@@ -74,6 +108,17 @@ class AsyncBackend:
         self,
         hostname: bytes,
         port: int,
+        ssl_context: Optional[SSLContext],
+        timeout: TimeoutDict,
+        *,
+        local_address: Optional[str],
+    ) -> AsyncSocketStream:
+        raise NotImplementedError()  # pragma: no cover
+
+    async def open_uds_stream(
+        self,
+        path: str,
+        hostname: bytes,
         ssl_context: Optional[SSLContext],
         timeout: TimeoutDict,
     ) -> AsyncSocketStream:
@@ -85,5 +130,8 @@ class AsyncBackend:
     def create_semaphore(self, max_value: int, exc_class: type) -> AsyncSemaphore:
         raise NotImplementedError()  # pragma: no cover
 
-    def time(self) -> float:
+    async def time(self) -> float:
+        raise NotImplementedError()  # pragma: no cover
+
+    async def sleep(self, seconds: float) -> None:
         raise NotImplementedError()  # pragma: no cover
