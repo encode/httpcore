@@ -57,6 +57,8 @@ class AsyncHTTPProxy(AsyncConnectionPool):
     max_keepalive_connections:
         The maximum number of connections to allow before closing keep-alive
         connections.
+    http1:
+        Enable HTTP/1 support.
     http2:
         Enable HTTP/2 support.
     """
@@ -70,6 +72,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         max_connections: int = None,
         max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
+        http1: bool = True,
         http2: bool = False,
         backend: str = "auto",
         # Deprecated argument style:
@@ -85,6 +88,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             max_connections=max_connections,
             max_keepalive_connections=max_keepalive_connections,
             keepalive_expiry=keepalive_expiry,
+            http1=http1,
             http2=http2,
             backend=backend,
             max_keepalive=max_keepalive,
@@ -146,7 +150,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
         if connection is None:
             connection = AsyncHTTPConnection(
-                origin=origin, http2=self._http2, ssl_context=self._ssl_context
+                origin=origin, http1=self._http1, http2=self._http2, ssl_context=self._ssl_context
             )
             await self._add_to_pool(connection, timeout)
 
@@ -201,6 +205,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             # First, create a connection to the proxy server
             proxy_connection = AsyncHTTPConnection(
                 origin=self.proxy_origin,
+                http1=self._http1,
                 http2=self._http2,
                 ssl_context=self._ssl_context,
             )
@@ -257,6 +262,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             # retain the tunnel.
             connection = AsyncHTTPConnection(
                 origin=origin,
+                http1=self._http1,
                 http2=self._http2,
                 ssl_context=self._ssl_context,
                 socket=proxy_connection.socket,
