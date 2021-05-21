@@ -321,6 +321,9 @@ class SyncHTTP2Stream:
                 break
 
         if authority is None:
+            for k, v in headers:
+                if k == b":authority":
+                    raise LocalProtocolError("HTTP/2 :authority header is forbidden, please use HTTP/1.1 style headers and replace it with Host: header")
             # Mirror the same error we'd see with `h11`, so that the behaviour
             # is consistent. Although we're dealing with an `:authority`
             # pseudo-header by this point, from an end-user perspective the issue
