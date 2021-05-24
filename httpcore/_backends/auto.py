@@ -17,9 +17,9 @@ class AutoBackend(AsyncBackend):
             backend = sniffio.current_async_library()
 
             if backend == "asyncio":
-                from .asyncio import AsyncioBackend
+                from .anyio import AnyIOBackend
 
-                self._backend_implementation: AsyncBackend = AsyncioBackend()
+                self._backend_implementation: AsyncBackend = AnyIOBackend()
             elif backend == "trio":
                 from .trio import TrioBackend
 
