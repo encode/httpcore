@@ -45,11 +45,11 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         self.streams = {}  # type: Dict[int, SyncHTTP2Stream]
         self.events = {}  # type: Dict[int, List[h2.events.Event]]
 
-        self._state = ConnectionState.IDLE
+        self._state = ConnectionState.ACTIVE
         self._exhausted_available_stream_ids = False
 
     def __repr__(self) -> str:
-        return f"<SyncHTTP2Connection [{self.state}]"
+        return f"<SyncHTTP2Connection [{self.state}]>"
 
     def info(self) -> str:
         return f"HTTP/2, {self.state.name}, {len(self.streams)} streams"

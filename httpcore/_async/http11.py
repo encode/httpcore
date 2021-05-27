@@ -9,7 +9,7 @@ from .._bytestreams import AsyncIteratorByteStream
 from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
-from .base import AsyncByteStream
+from .base import AsyncByteStream, NewConnectionRequired
 from .http import AsyncBaseHTTPConnection
 
 H11Event = Union[
@@ -23,9 +23,10 @@ H11Event = Union[
 
 
 class ConnectionState(enum.IntEnum):
-    IDLE = 0
-    ACTIVE = 1
-    CLOSED = 2
+    NEW = 0
+    IDLE = 1
+    ACTIVE = 2
+    CLOSED = 3
 
 
 logger = get_logger(__name__)
@@ -39,10 +40,10 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
 
         self._h11_state = h11.Connection(our_role=h11.CLIENT)
-        self._state = ConnectionState.IDLE
+        self._state = ConnectionState.NEW
 
     def __repr__(self) -> str:
-        return f"<AsyncHTTP11Connection [{self._state}]>"
+        return f"<AsyncHTTP11Connection [{self._state.name}]>"
 
     def info(self) -> str:
         return f"HTTP/1.1, {self._state.name}"
@@ -90,7 +91,10 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         """
         timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
-        self.state = ConnectionState.ACTIVE
+        if self._state in (ConnectionState.NEW, ConnectionState.IDLE):
+            self._state = ConnectionState.ACTIVE
+        else:
+            raise NewConnectionRequired()
 
         await self._send_request(method, url, headers, timeout)
         await self._send_request_body(stream, timeout)
@@ -226,7 +230,7 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
             and self._h11_state.their_state is h11.DONE
         ):
             self._h11_state.start_next_cycle()
-            self.state = ConnectionState.IDLE
+            self._state = ConnectionState.IDLE
         else:
             await self.aclose()
 
