@@ -1,3 +1,4 @@
+import enum
 from ssl import SSLContext
 from typing import AsyncIterator, Dict, List, Tuple, cast
 
@@ -12,10 +13,16 @@ from .._bytestreams import AsyncIteratorByteStream
 from .._exceptions import LocalProtocolError, PoolTimeout, RemoteProtocolError
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
-from .base import AsyncByteStream, ConnectionState, NewConnectionRequired
+from .base import AsyncByteStream, NewConnectionRequired
 from .http import AsyncBaseHTTPConnection
 
 logger = get_logger(__name__)
+
+
+class ConnectionState(enum.IntEnum):
+    IDLE = 0
+    ACTIVE = 1
+    CLOSED = 2
 
 
 class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
@@ -38,13 +45,59 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         self.streams = {}  # type: Dict[int, AsyncHTTP2Stream]
         self.events = {}  # type: Dict[int, List[h2.events.Event]]
 
-        self.state = ConnectionState.ACTIVE
+        self._state = ConnectionState.IDLE
+        self._exhausted_available_stream_ids = False
 
     def __repr__(self) -> str:
-        return f"<AsyncHTTP2Connection state={self.state}>"
+        return f"<AsyncHTTP2Connection [{self.state}]"
 
     def info(self) -> str:
         return f"HTTP/2, {self.state.name}, {len(self.streams)} streams"
+
+    def should_close(self) -> bool:
+        """
+        Return `True` if the connection is in a state where it should be closed.
+        This occurs when any of the following occur:
+
+        * The connection is an idle HTTP/1.1 connection, and the underlying
+          socket is readable. The only valid state the socket can be readable in
+          if this occurs is when the b"" EOF marker is about to be returned,
+          indicating a server disconnect.
+        * The connection is currently idle, and the keepalive timeout has passed.
+        """
+        return False
+
+    def may_close(self) -> bool:
+        """
+        Return `True` if the connection is in a state where it can be closed.
+        This occurs when:
+
+        * The connection is open, but is currently idle.
+        """
+        return self._state == ConnectionState.IDLE
+
+    def is_closed(self) -> bool:
+        """
+        Return `True` if the connection has been closed.
+        """
+        return self._state == ConnectionState.CLOSED
+
+    def is_available(self) -> bool:
+        """
+        Return `True` if the connection is currently able to accept an outgoing request.
+        This occurs when any of the following occur:
+
+        * The connection has not yet been opened, and HTTP/2 support is enabled.
+          We don't *know* at this point if we'll end up on an HTTP/2 connection or
+          not, but we *might* do, so we indicate availability.
+        * The connection has been opened, and is currently idle.
+        * The connection is open, and is an HTTP/2 connection. The connection must
+          also not have exhausted the maximum total number of stream IDs.
+        """
+        return (
+            self._state != ConnectionState.CLOSED
+            and not self._exhausted_available_stream_ids
+        )
 
     @property
     def init_lock(self) -> AsyncLock:
@@ -78,13 +131,6 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
     ) -> AsyncSocketStream:
         raise NotImplementedError("TLS upgrade not supported on HTTP/2 connections.")
 
-    def get_state(self) -> ConnectionState:
-        return self.state
-
-    def mark_as_ready(self) -> None:
-        if self.state == ConnectionState.IDLE:
-            self.state = ConnectionState.READY
-
     async def handle_async_request(
         self,
         method: bytes,
@@ -107,7 +153,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
             try:
                 stream_id = self.h2_state.get_next_available_stream_id()
             except NoAvailableStreamIDError:
-                self.state = ConnectionState.FULL
+                self._exhausted_available_stream_ids = True
                 raise NewConnectionRequired()
             else:
                 self.state = ConnectionState.ACTIVE
@@ -255,9 +301,10 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
 
             if not self.streams:
                 if self.state == ConnectionState.ACTIVE:
-                    self.state = ConnectionState.IDLE
-                elif self.state == ConnectionState.FULL:
-                    await self.aclose()
+                    if self._exhausted_available_stream_ids:
+                        await self.aclose()
+                    else:
+                        self.state = ConnectionState.IDLE
         finally:
             await self.max_streams_semaphore.release()
 

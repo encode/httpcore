@@ -1,3 +1,4 @@
+import enum
 from ssl import SSLContext
 from typing import AsyncIterator, List, Tuple, Union, cast
 
@@ -8,7 +9,7 @@ from .._bytestreams import AsyncIteratorByteStream
 from .._exceptions import LocalProtocolError, RemoteProtocolError, map_exceptions
 from .._types import URL, Headers, TimeoutDict
 from .._utils import get_logger
-from .base import AsyncByteStream, ConnectionState
+from .base import AsyncByteStream
 from .http import AsyncBaseHTTPConnection
 
 H11Event = Union[
@@ -20,6 +21,13 @@ H11Event = Union[
     h11.ConnectionClosed,
 ]
 
+
+class ConnectionState(enum.IntEnum):
+    IDLE = 0
+    ACTIVE = 1
+    CLOSED = 2
+
+
 logger = get_logger(__name__)
 
 
@@ -30,22 +38,41 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         self.socket = socket
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
 
-        self.h11_state = h11.Connection(our_role=h11.CLIENT)
-
-        self.state = ConnectionState.ACTIVE
+        self._h11_state = h11.Connection(our_role=h11.CLIENT)
+        self._state = ConnectionState.IDLE
 
     def __repr__(self) -> str:
-        return f"<AsyncHTTP11Connection state={self.state}>"
+        return f"<AsyncHTTP11Connection [{self._state}]>"
 
     def info(self) -> str:
-        return f"HTTP/1.1, {self.state.name}"
+        return f"HTTP/1.1, {self._state.name}"
 
-    def get_state(self) -> ConnectionState:
-        return self.state
+    def should_close(self) -> bool:
+        """
+        Return `True` if the connection is in a state where it should be closed.
+        """
+        # The connection is idle, and the underlying socket is readable.
+        # The only valid state the socket can be readable here is when the b""
+        # EOF marker is about to be returned, indicating a server disconnect.
+        return self._state == ConnectionState.IDLE and self.socket.is_readable()
 
-    def mark_as_ready(self) -> None:
-        if self.state == ConnectionState.IDLE:
-            self.state = ConnectionState.READY
+    def may_close(self) -> bool:
+        """
+        Return `True` if the connection is in a state where it can be closed.
+        """
+        return self._state == ConnectionState.IDLE
+
+    def is_closed(self) -> bool:
+        """
+        Return `True` if the connection has been closed.
+        """
+        return self._state == ConnectionState.CLOSED
+
+    def is_available(self) -> bool:
+        """
+        Return `True` if the connection is currently able to accept an outgoing request.
+        """
+        return self._state == ConnectionState.IDLE
 
     async def handle_async_request(
         self,
@@ -55,6 +82,12 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         stream: AsyncByteStream,
         extensions: dict,
     ) -> Tuple[int, Headers, AsyncByteStream, dict]:
+        """
+        Send a single HTTP/1.1 request.
+
+        Note that there is no kind of task/thread locking at this layer of interface.
+        Dealing with locking for concurrency is handled by the `AsyncHTTPConnection`.
+        """
         timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         self.state = ConnectionState.ACTIVE
@@ -117,7 +150,7 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         Send a single `h11` event to the network, waiting for the data to
         drain before returning.
         """
-        bytes_to_send = self.h11_state.send(event)
+        bytes_to_send = self._h11_state.send(event)
         await self.socket.write(bytes_to_send, timeout)
 
     async def _receive_response(
@@ -160,7 +193,7 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         """
         while True:
             with map_exceptions({h11.RemoteProtocolError: RemoteProtocolError}):
-                event = self.h11_state.next_event()
+                event = self._h11_state.next_event()
 
             if event is h11.NEED_DATA:
                 data = await self.socket.read(self.READ_NUM_BYTES, timeout)
@@ -171,13 +204,12 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
                 #     ConnectionClosed when role=SERVER and state=SEND_RESPONSE
                 #
                 # Which is accurate, but not very informative from an end-user
-                # perspective. Instead we handle this case distinctly and treat
-                # it as a ConnectError.
-                if data == b"" and self.h11_state.their_state == h11.SEND_RESPONSE:
+                # perspective. Instead we handle messaging for this case distinctly.
+                if data == b"" and self._h11_state.their_state == h11.SEND_RESPONSE:
                     msg = "Server disconnected without sending a response."
                     raise RemoteProtocolError(msg)
 
-                self.h11_state.receive_data(data)
+                self._h11_state.receive_data(data)
             else:
                 assert event is not h11.NEED_DATA
                 break
@@ -186,27 +218,24 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
     async def _response_closed(self) -> None:
         logger.trace(
             "response_closed our_state=%r their_state=%r",
-            self.h11_state.our_state,
-            self.h11_state.their_state,
+            self._h11_state.our_state,
+            self._h11_state.their_state,
         )
         if (
-            self.h11_state.our_state is h11.DONE
-            and self.h11_state.their_state is h11.DONE
+            self._h11_state.our_state is h11.DONE
+            and self._h11_state.their_state is h11.DONE
         ):
-            self.h11_state.start_next_cycle()
+            self._h11_state.start_next_cycle()
             self.state = ConnectionState.IDLE
         else:
             await self.aclose()
 
     async def aclose(self) -> None:
-        if self.state != ConnectionState.CLOSED:
-            self.state = ConnectionState.CLOSED
+        if self._state != ConnectionState.CLOSED:
+            self._state = ConnectionState.CLOSED
 
-            if self.h11_state.our_state is h11.MUST_CLOSE:
+            if self._h11_state.our_state is h11.MUST_CLOSE:
                 event = h11.ConnectionClosed()
-                self.h11_state.send(event)
+                self._h11_state.send(event)
 
             await self.socket.aclose()
-
-    def is_socket_readable(self) -> bool:
-        return self.socket.is_readable()

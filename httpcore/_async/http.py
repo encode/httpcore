@@ -1,28 +1,30 @@
 from .._backends.auto import AsyncSocketStream
 from .._types import TimeoutDict
-from .base import AsyncHTTPTransport, ConnectionState
+from .base import AsyncHTTPTransport
 
 
 class AsyncBaseHTTPConnection(AsyncHTTPTransport):
     def info(self) -> str:
         raise NotImplementedError()  # pragma: nocover
 
-    def get_state(self) -> ConnectionState:
+    def should_close(self) -> bool:
         """
-        Return the current state.
-        """
-        raise NotImplementedError()  # pragma: nocover
-
-    def mark_as_ready(self) -> None:
-        """
-        The connection has been acquired from the pool, and the state
-        should reflect that.
+        Return `True` if the connection is in a state where it should be closed.
         """
         raise NotImplementedError()  # pragma: nocover
 
-    def is_socket_readable(self) -> bool:
+    def may_close(self) -> bool:
         """
-        Return 'True' if the underlying network socket is readable.
+        Return `True` if the connection is in a state where it can be closed.
+        """
+        raise NotImplementedError()  # pragma: nocover
+
+    def is_closed(self) -> bool:
+        raise NotImplementedError()  # pragma: nocover
+
+    def is_available(self) -> bool:
+        """
+        Return `True` if the connection is currently able to accept an outgoing request.
         """
         raise NotImplementedError()  # pragma: nocover
 
