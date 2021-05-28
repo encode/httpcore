@@ -179,6 +179,7 @@ class SyncConnectionPool(SyncHTTPTransport):
             origin=origin,
             http1=self._http1,
             http2=self._http2,
+            keepalive_expiry=self._keepalive_expiry,
             uds=self._uds,
             ssl_context=self._ssl_context,
             local_address=self._local_address,

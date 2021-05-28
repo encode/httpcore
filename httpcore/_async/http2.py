@@ -33,6 +33,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         self,
         socket: AsyncSocketStream,
         backend: AsyncBackend,
+        keepalive_expiry: float = None,
     ):
         self.socket = socket
 
@@ -43,6 +44,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         self.streams = {}  # type: Dict[int, AsyncHTTP2Stream]
         self.events = {}  # type: Dict[int, List[h2.events.Event]]
 
+        self._keepalive_expiry = keepalive_expiry
         self._state = ConnectionState.ACTIVE
         self._exhausted_available_stream_ids = False
 

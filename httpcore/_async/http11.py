@@ -35,10 +35,10 @@ logger = get_logger(__name__)
 class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
     READ_NUM_BYTES = 64 * 1024
 
-    def __init__(self, socket: AsyncSocketStream, ssl_context: SSLContext = None):
+    def __init__(self, socket: AsyncSocketStream, keepalive_expiry: float = None):
         self.socket = socket
-        self.ssl_context = SSLContext() if ssl_context is None else ssl_context
 
+        self._keepalive_expiry = keepalive_expiry
         self._h11_state = h11.Connection(our_role=h11.CLIENT)
         self._state = ConnectionState.NEW
 

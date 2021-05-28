@@ -33,6 +33,7 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         self,
         socket: SyncSocketStream,
         backend: SyncBackend,
+        keepalive_expiry: float = None,
     ):
         self.socket = socket
 
@@ -43,6 +44,7 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         self.streams = {}  # type: Dict[int, SyncHTTP2Stream]
         self.events = {}  # type: Dict[int, List[h2.events.Event]]
 
+        self._keepalive_expiry = keepalive_expiry
         self._state = ConnectionState.ACTIVE
         self._exhausted_available_stream_ids = False
 

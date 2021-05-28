@@ -20,6 +20,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         origin: Origin,
         http1: bool = True,
         http2: bool = False,
+        keepalive_expiry: float = None,
         uds: str = None,
         ssl_context: SSLContext = None,
         socket: AsyncSocketStream = None,
@@ -30,6 +31,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         self.origin = origin
         self.http1 = http1
         self.http2 = http2
+        self.keepalive_expiry = keepalive_expiry
         self.uds = uds
         self.ssl_context = SSLContext() if ssl_context is None else ssl_context
         self.socket = socket
@@ -192,10 +194,16 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
             from .http2 import AsyncHTTP2Connection
 
             self.is_http2 = True
-            self.connection = AsyncHTTP2Connection(socket=socket, backend=self.backend)
+            self.connection = AsyncHTTP2Connection(
+                socket=socket,
+                keepalive_expiry=self.keepalive_expiry,
+                backend=self.backend,
+            )
         else:
             self.is_http11 = True
-            self.connection = AsyncHTTP11Connection(socket=socket)
+            self.connection = AsyncHTTP11Connection(
+                socket=socket, keepalive_expiry=self.keepalive_expiry
+            )
 
     async def start_tls(
         self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict = None
