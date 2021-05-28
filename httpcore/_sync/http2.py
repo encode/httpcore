@@ -33,10 +33,8 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         self,
         socket: SyncSocketStream,
         backend: SyncBackend,
-        ssl_context: SSLContext = None,
     ):
         self.socket = socket
-        self.ssl_context = SSLContext() if ssl_context is None else ssl_context
 
         self.backend = backend
         self.h2_state = h2.connection.H2Connection(config=self.CONFIG)
@@ -127,7 +125,7 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         return self._max_streams_semaphore
 
     def start_tls(
-        self, hostname: bytes, timeout: TimeoutDict = None
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict = None
     ) -> SyncSocketStream:
         raise NotImplementedError("TLS upgrade not supported on HTTP/2 connections.")
 

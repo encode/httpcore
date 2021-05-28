@@ -246,7 +246,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 # Upgrade to TLS if required
                 # We assume the target speaks TLS on the specified port
                 if scheme == b"https":
-                    await proxy_connection.start_tls(host, timeout)
+                    await proxy_connection.start_tls(host, self._ssl_context, timeout)
             except Exception as exc:
                 await proxy_connection.aclose()
                 raise ProxyError(exc)

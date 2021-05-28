@@ -1,3 +1,5 @@
+from ssl import SSLContext
+
 from .._backends.auto import AsyncSocketStream
 from .._types import TimeoutDict
 from .base import AsyncHTTPTransport
@@ -29,7 +31,7 @@ class AsyncBaseHTTPConnection(AsyncHTTPTransport):
         raise NotImplementedError()  # pragma: nocover
 
     async def start_tls(
-        self, hostname: bytes, timeout: TimeoutDict = None
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict = None
     ) -> AsyncSocketStream:
         """
         Upgrade the underlying socket to TLS.

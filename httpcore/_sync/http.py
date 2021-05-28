@@ -1,3 +1,5 @@
+from ssl import SSLContext
+
 from .._backends.sync import SyncSocketStream
 from .._types import TimeoutDict
 from .base import SyncHTTPTransport
@@ -29,7 +31,7 @@ class SyncBaseHTTPConnection(SyncHTTPTransport):
         raise NotImplementedError()  # pragma: nocover
 
     def start_tls(
-        self, hostname: bytes, timeout: TimeoutDict = None
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict = None
     ) -> SyncSocketStream:
         """
         Upgrade the underlying socket to TLS.

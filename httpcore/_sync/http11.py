@@ -24,8 +24,8 @@ H11Event = Union[
 
 class ConnectionState(enum.IntEnum):
     NEW = 0
-    IDLE = 1
-    ACTIVE = 2
+    ACTIVE = 1
+    IDLE = 2
     CLOSED = 3
 
 
@@ -115,10 +115,10 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
         return (status_code, headers, response_stream, extensions)
 
     def start_tls(
-        self, hostname: bytes, timeout: TimeoutDict = None
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict = None
     ) -> SyncSocketStream:
         timeout = {} if timeout is None else timeout
-        self.socket = self.socket.start_tls(hostname, self.ssl_context, timeout)
+        self.socket = self.socket.start_tls(hostname, ssl_context, timeout)
         return self.socket
 
     def _send_request(

@@ -192,19 +192,19 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
             from .http2 import AsyncHTTP2Connection
 
             self.is_http2 = True
-            self.connection = AsyncHTTP2Connection(
-                socket=socket, backend=self.backend, ssl_context=self.ssl_context
-            )
+            self.connection = AsyncHTTP2Connection(socket=socket, backend=self.backend)
         else:
             self.is_http11 = True
-            self.connection = AsyncHTTP11Connection(
-                socket=socket, ssl_context=self.ssl_context
-            )
+            self.connection = AsyncHTTP11Connection(socket=socket)
 
-    async def start_tls(self, hostname: bytes, timeout: TimeoutDict = None) -> None:
+    async def start_tls(
+        self, hostname: bytes, ssl_context: SSLContext, timeout: TimeoutDict = None
+    ) -> None:
         if self.connection is not None:
             logger.trace("start_tls hostname=%r timeout=%r", hostname, timeout)
-            self.socket = await self.connection.start_tls(hostname, timeout)
+            self.socket = await self.connection.start_tls(
+                hostname, ssl_context, timeout
+            )
             logger.trace("start_tls complete hostname=%r timeout=%r", hostname, timeout)
 
     async def aclose(self) -> None:

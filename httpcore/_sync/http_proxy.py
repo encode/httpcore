@@ -246,7 +246,7 @@ class SyncHTTPProxy(SyncConnectionPool):
                 # Upgrade to TLS if required
                 # We assume the target speaks TLS on the specified port
                 if scheme == b"https":
-                    proxy_connection.start_tls(host, timeout)
+                    proxy_connection.start_tls(host, self._ssl_context, timeout)
             except Exception as exc:
                 proxy_connection.close()
                 raise ProxyError(exc)
