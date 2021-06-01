@@ -9,7 +9,7 @@ curio==1.5; python_version >= '3.7'
 # Docs
 sphinx==3.5.3
 sphinx-autobuild==2021.3.14
-myst-parser==0.13.7
+myst-parser==0.14.0
 furo==2021.4.11b34
 ghp-import==2.0.1
 # myst-parser + docutils==0.17 has a bug: https://github.com/executablebooks/MyST-Parser/issues/343
