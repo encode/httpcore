@@ -51,10 +51,10 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         self._exhausted_available_stream_ids = False
 
     def __repr__(self) -> str:
-        return f"<SyncHTTP2Connection [{self.state}]>"
+        return f"<SyncHTTP2Connection [{self._state}]>"
 
     def info(self) -> str:
-        return f"HTTP/2, {self.state.name}, {len(self.streams)} streams"
+        return f"HTTP/2, {self._state.name}, {len(self.streams)} streams"
 
     def _now(self) -> float:
         return time.monotonic()
@@ -147,7 +147,7 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         with self.init_lock:
             if not self.sent_connection_init:
                 # The very first stream is responsible for initiating the connection.
-                self.state = ConnectionState.ACTIVE
+                self._state = ConnectionState.ACTIVE
                 self.send_connection_init(timeout)
                 self.sent_connection_init = True
 
@@ -159,7 +159,7 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
                 self._exhausted_available_stream_ids = True
                 raise NewConnectionRequired()
             else:
-                self.state = ConnectionState.ACTIVE
+                self._state = ConnectionState.ACTIVE
                 self._should_expire_at = None
 
             h2_stream = SyncHTTP2Stream(stream_id=stream_id, connection=self)
@@ -210,8 +210,8 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
 
     def close(self) -> None:
         logger.trace("close_connection=%r", self)
-        if self.state != ConnectionState.CLOSED:
-            self.state = ConnectionState.CLOSED
+        if self._state != ConnectionState.CLOSED:
+            self._state = ConnectionState.CLOSED
 
             self.socket.close()
 
@@ -304,11 +304,11 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
             del self.events[stream_id]
 
             if not self.streams:
-                if self.state == ConnectionState.ACTIVE:
+                if self._state == ConnectionState.ACTIVE:
                     if self._exhausted_available_stream_ids:
                         self.close()
                     else:
-                        self.state = ConnectionState.IDLE
+                        self._state = ConnectionState.IDLE
                         if self._keepalive_expiry is not None:
                             self._should_expire_at = (
                                 self._now() + self._keepalive_expiry
