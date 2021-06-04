@@ -1,6 +1,7 @@
 import enum
+import time
 from ssl import SSLContext
-from typing import Iterator, Dict, List, Tuple, cast
+from typing import Iterator, Dict, List, Optional, Tuple, cast
 
 import h2.connection
 import h2.events
@@ -41,10 +42,11 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         self.h2_state = h2.connection.H2Connection(config=self.CONFIG)
 
         self.sent_connection_init = False
-        self.streams = {}  # type: Dict[int, SyncHTTP2Stream]
-        self.events = {}  # type: Dict[int, List[h2.events.Event]]
+        self.streams: Dict[int, SyncHTTP2Stream] = {}
+        self.events: Dict[int, List[h2.events.Event]] = {}
 
-        self._keepalive_expiry = keepalive_expiry
+        self._keepalive_expiry: Optional[float] = keepalive_expiry
+        self._should_expire_at: Optional[float] = None
         self._state = ConnectionState.ACTIVE
         self._exhausted_available_stream_ids = False
 
@@ -54,18 +56,19 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
     def info(self) -> str:
         return f"HTTP/2, {self.state.name}, {len(self.streams)} streams"
 
+    def _now(self) -> float:
+        return time.monotonic()
+
     def should_close(self) -> bool:
         """
-        Return `True` if the connection is in a state where it should be closed.
-        This occurs when any of the following occur:
-
-        * The connection is an idle HTTP/1.1 connection, and the underlying
-          socket is readable. The only valid state the socket can be readable in
-          if this occurs is when the b"" EOF marker is about to be returned,
-          indicating a server disconnect.
-        * The connection is currently idle, and the keepalive timeout has passed.
+        Return `True` if the connection is currently idle, and the keepalive
+        timeout has passed.
         """
-        return False
+        return (
+            self._state == ConnectionState.IDLE
+            and self._should_expire_at is not None
+            and self._now() >= self._should_expire_at
+        )
 
     def may_close(self) -> bool:
         """
@@ -157,6 +160,7 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
                 raise NewConnectionRequired()
             else:
                 self.state = ConnectionState.ACTIVE
+                self._should_expire_at = None
 
             h2_stream = SyncHTTP2Stream(stream_id=stream_id, connection=self)
             self.streams[stream_id] = h2_stream
@@ -305,6 +309,10 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
                         self.close()
                     else:
                         self.state = ConnectionState.IDLE
+                        if self._keepalive_expiry is not None:
+                            self._should_expire_at = (
+                                self._now() + self._keepalive_expiry
+                            )
         finally:
             self.max_streams_semaphore.release()
 

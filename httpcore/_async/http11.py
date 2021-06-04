@@ -1,6 +1,7 @@
 import enum
+import time
 from ssl import SSLContext
-from typing import AsyncIterator, List, Tuple, Union, cast
+from typing import AsyncIterator, List, Optional, Tuple, Union, cast
 
 import h11
 
@@ -38,12 +39,35 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
     def __init__(self, socket: AsyncSocketStream, keepalive_expiry: float = None):
         self.socket = socket
 
-        self._keepalive_expiry = keepalive_expiry
+        self._keepalive_expiry: Optional[float] = keepalive_expiry
+        self._should_expire_at: Optional[float] = None
         self._h11_state = h11.Connection(our_role=h11.CLIENT)
         self._state = ConnectionState.NEW
 
     def __repr__(self) -> str:
         return f"<AsyncHTTP11Connection [{self._state.name}]>"
+
+    def _now(self) -> float:
+        return time.monotonic()
+
+    def _server_disconnected(self) -> bool:
+        """
+        Return True if the connection is idle, and the underlying socket is readable.
+        The only valid state the socket can be readable here is when the b""
+        EOF marker is about to be returned, indicating a server disconnect.
+        """
+        return self._state == ConnectionState.IDLE and self.socket.is_readable()
+
+    def _keepalive_expired(self) -> bool:
+        """
+        Return True if the connection is idle, and has passed it's keepalive
+        expiry time.
+        """
+        return (
+            self._state == ConnectionState.IDLE
+            and self._should_expire_at is not None
+            and self._now() >= self._should_expire_at
+        )
 
     def info(self) -> str:
         return f"HTTP/1.1, {self._state.name}"
@@ -52,10 +76,7 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         """
         Return `True` if the connection is in a state where it should be closed.
         """
-        # The connection is idle, and the underlying socket is readable.
-        # The only valid state the socket can be readable here is when the b""
-        # EOF marker is about to be returned, indicating a server disconnect.
-        return self._state == ConnectionState.IDLE and self.socket.is_readable()
+        return self._server_disconnected() or self._keepalive_expired()
 
     def may_close(self) -> bool:
         """
@@ -93,6 +114,7 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
 
         if self._state in (ConnectionState.NEW, ConnectionState.IDLE):
             self._state = ConnectionState.ACTIVE
+            self._should_expire_at = None
         else:
             raise NewConnectionRequired()
 
@@ -231,6 +253,8 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         ):
             self._h11_state.start_next_cycle()
             self._state = ConnectionState.IDLE
+            if self._keepalive_expiry is not None:
+                self._should_expire_at = self._now() + self._keepalive_expiry
         else:
             await self.aclose()
 
