@@ -70,12 +70,9 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
             and self._now() >= self._should_expire_at
         )
 
-    def may_close(self) -> bool:
+    def is_idle(self) -> bool:
         """
-        Return `True` if the connection is in a state where it can be closed.
-        This occurs when:
-
-        * The connection is open, but is currently idle.
+        Return `True` if the connection is currently idle.
         """
         return self._state == ConnectionState.IDLE
 

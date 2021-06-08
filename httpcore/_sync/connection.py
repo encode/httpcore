@@ -76,16 +76,13 @@ class SyncHTTPConnection(SyncHTTPTransport):
             return False
         return self.connection.should_close()
 
-    def may_close(self) -> bool:
+    def is_idle(self) -> bool:
         """
-        Return `True` if the connection is in a state where it can be closed.
-        This occurs when:
-
-        * The connection is open, but is currently idle.
+        Return `True` if the connection is currently idle.
         """
         if self.connection is None:
             return False
-        return self.connection.may_close()
+        return self.connection.is_idle()
 
     def is_closed(self) -> bool:
         if self.connection is None:

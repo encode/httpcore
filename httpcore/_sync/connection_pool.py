@@ -267,7 +267,7 @@ class SyncConnectionPool(SyncHTTPTransport):
 
         if connection.is_closed():
             remove_from_pool = True
-        elif connection.may_close():
+        elif connection.is_idle():
             num_connections = len(self._get_all_connections())
             if (
                 self._max_keepalive_connections is not None

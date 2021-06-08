@@ -15,9 +15,9 @@ class SyncBaseHTTPConnection(SyncHTTPTransport):
         """
         raise NotImplementedError()  # pragma: nocover
 
-    def may_close(self) -> bool:
+    def is_idle(self) -> bool:
         """
-        Return `True` if the connection is in a state where it can be closed.
+        Return `True` if the connection is currently idle.
         """
         raise NotImplementedError()  # pragma: nocover
 

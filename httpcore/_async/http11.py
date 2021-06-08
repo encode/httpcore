@@ -78,9 +78,9 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
         """
         return self._server_disconnected() or self._keepalive_expired()
 
-    def may_close(self) -> bool:
+    def is_idle(self) -> bool:
         """
-        Return `True` if the connection is in a state where it can be closed.
+        Return `True` if the connection is currently idle.
         """
         return self._state == ConnectionState.IDLE
 
