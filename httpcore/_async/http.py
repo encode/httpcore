@@ -22,6 +22,9 @@ class AsyncBaseHTTPConnection(AsyncHTTPTransport):
         raise NotImplementedError()  # pragma: nocover
 
     def is_closed(self) -> bool:
+        """
+        Return `True` if the connection has been closed.
+        """
         raise NotImplementedError()  # pragma: nocover
 
     def is_available(self) -> bool:
