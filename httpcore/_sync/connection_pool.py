@@ -18,12 +18,7 @@ from .._exceptions import LocalProtocolError, PoolTimeout, UnsupportedProtocol
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, origin_to_url_string, url_to_origin
-from .base import (
-    SyncByteStream,
-    SyncHTTPTransport,
-    ConnectionState,
-    NewConnectionRequired,
-)
+from .base import SyncByteStream, SyncHTTPTransport, NewConnectionRequired
 from .connection import SyncHTTPConnection
 
 logger = get_logger(__name__)
@@ -184,6 +179,7 @@ class SyncConnectionPool(SyncHTTPTransport):
             origin=origin,
             http1=self._http1,
             http2=self._http2,
+            keepalive_expiry=self._keepalive_expiry,
             uds=self._uds,
             ssl_context=self._ssl_context,
             local_address=self._local_address,
@@ -260,53 +256,15 @@ class SyncConnectionPool(SyncHTTPTransport):
         self, origin: Origin
     ) -> Optional[SyncHTTPConnection]:
         # Determine expired keep alive connections on this origin.
-        seen_http11 = False
-        pending_connection = None
         reuse_connection = None
         connections_to_close = set()
 
         for connection in self._connections_for_origin(origin):
-            if connection.is_http11:
-                seen_http11 = True
-
-            if connection.state == ConnectionState.IDLE:
-                if connection.is_socket_readable():
-                    # If the socket is readable while the connection is idle (meaning
-                    # we don't expect the server to send any data), then the only valid
-                    # reason is that the other end has disconnected, and is readable
-                    # because it is ready to return the b"" disconnect indicator, which
-                    # means we should drop the connection too.
-                    # (For a detailed run-through of what a "readable" socket is, and
-                    # why this is the best thing for us to do here, see:
-                    # https://github.com/encode/httpx/pull/143#issuecomment-515181778)
-                    logger.trace("removing dropped idle connection=%r", connection)
-                    # IDLE connections that have been dropped should be
-                    # removed from the pool.
-                    connections_to_close.add(connection)
-                    self._remove_from_pool(connection)
-                else:
-                    # IDLE connections that are still maintained may
-                    # be reused.
-                    logger.trace("reusing idle http11 connection=%r", connection)
-                    reuse_connection = connection
-            elif connection.state == ConnectionState.ACTIVE and connection.is_http2:
-                # HTTP/2 connections may be reused.
-                logger.trace("reusing active http2 connection=%r", connection)
+            if connection.should_close():
+                connections_to_close.add(connection)
+                self._remove_from_pool(connection)
+            elif connection.is_available():
                 reuse_connection = connection
-            elif connection.state == ConnectionState.PENDING:
-                # Pending connections may potentially be reused.
-                pending_connection = connection
-
-        if reuse_connection is not None:
-            # Mark the connection as READY before we return it, to indicate
-            # that if it is HTTP/1.1 then it should not be re-acquired.
-            reuse_connection.mark_as_ready()
-            reuse_connection.expires_at = None
-        elif self._http2 and pending_connection is not None and not seen_http11:
-            # If we have a PENDING connection, and no HTTP/1.1 connections
-            # on this origin, then we can attempt to share the connection.
-            logger.trace("reusing pending connection=%r", connection)
-            reuse_connection = pending_connection
 
         # Close any dropped connections.
         for connection in connections_to_close:
@@ -318,9 +276,9 @@ class SyncConnectionPool(SyncHTTPTransport):
         remove_from_pool = False
         close_connection = False
 
-        if connection.state == ConnectionState.CLOSED:
+        if connection.is_closed():
             remove_from_pool = True
-        elif connection.state == ConnectionState.IDLE:
+        elif connection.is_idle():
             num_connections = len(self._get_all_connections())
             if (
                 self._max_keepalive_connections is not None
@@ -328,9 +286,6 @@ class SyncConnectionPool(SyncHTTPTransport):
             ):
                 remove_from_pool = True
                 close_connection = True
-            elif self._keepalive_expiry is not None:
-                now = self._backend.time()
-                connection.expires_at = now + self._keepalive_expiry
 
         if remove_from_pool:
             self._remove_from_pool(connection)
@@ -353,11 +308,7 @@ class SyncConnectionPool(SyncHTTPTransport):
         connections_to_close = set()
 
         for connection in self._get_all_connections():
-            if (
-                connection.state == ConnectionState.IDLE
-                and connection.expires_at is not None
-                and now >= connection.expires_at
-            ):
+            if connection.should_close():
                 connections_to_close.add(connection)
                 self._remove_from_pool(connection)
 

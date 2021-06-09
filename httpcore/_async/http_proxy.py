@@ -146,7 +146,10 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
         if connection is None:
             connection = AsyncHTTPConnection(
-                origin=origin, http2=self._http2, ssl_context=self._ssl_context
+                origin=origin,
+                http2=self._http2,
+                keepalive_expiry=self._keepalive_expiry,
+                ssl_context=self._ssl_context,
             )
             await self._add_to_pool(connection, timeout)
 
@@ -202,6 +205,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             proxy_connection = AsyncHTTPConnection(
                 origin=self.proxy_origin,
                 http2=self._http2,
+                keepalive_expiry=self._keepalive_expiry,
                 ssl_context=self._ssl_context,
             )
 
@@ -246,7 +250,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 # Upgrade to TLS if required
                 # We assume the target speaks TLS on the specified port
                 if scheme == b"https":
-                    await proxy_connection.start_tls(host, timeout)
+                    await proxy_connection.start_tls(host, self._ssl_context, timeout)
             except Exception as exc:
                 await proxy_connection.aclose()
                 raise ProxyError(exc)
@@ -258,6 +262,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             connection = AsyncHTTPConnection(
                 origin=origin,
                 http2=self._http2,
+                keepalive_expiry=self._keepalive_expiry,
                 ssl_context=self._ssl_context,
                 socket=proxy_connection.socket,
             )

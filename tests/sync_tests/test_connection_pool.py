@@ -46,10 +46,19 @@ class MockConnection(object):
     def info(self) -> str:
         return str(self.state)
 
-    def mark_as_ready(self) -> None:
-        self.state = ConnectionState.READY
+    def is_available(self):
+        if self.is_http11:
+            return self.state == ConnectionState.IDLE
+        else:
+            return self.state != ConnectionState.CLOSED
 
-    def is_socket_readable(self) -> bool:
+    def should_close(self):
+        return False
+
+    def is_idle(self):
+        return self.state == ConnectionState.IDLE
+
+    def is_closed(self):
         return False
 
 

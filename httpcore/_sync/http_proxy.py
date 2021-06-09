@@ -146,7 +146,10 @@ class SyncHTTPProxy(SyncConnectionPool):
 
         if connection is None:
             connection = SyncHTTPConnection(
-                origin=origin, http2=self._http2, ssl_context=self._ssl_context
+                origin=origin,
+                http2=self._http2,
+                keepalive_expiry=self._keepalive_expiry,
+                ssl_context=self._ssl_context,
             )
             self._add_to_pool(connection, timeout)
 
@@ -202,6 +205,7 @@ class SyncHTTPProxy(SyncConnectionPool):
             proxy_connection = SyncHTTPConnection(
                 origin=self.proxy_origin,
                 http2=self._http2,
+                keepalive_expiry=self._keepalive_expiry,
                 ssl_context=self._ssl_context,
             )
 
@@ -246,7 +250,7 @@ class SyncHTTPProxy(SyncConnectionPool):
                 # Upgrade to TLS if required
                 # We assume the target speaks TLS on the specified port
                 if scheme == b"https":
-                    proxy_connection.start_tls(host, timeout)
+                    proxy_connection.start_tls(host, self._ssl_context, timeout)
             except Exception as exc:
                 proxy_connection.close()
                 raise ProxyError(exc)
@@ -258,6 +262,7 @@ class SyncHTTPProxy(SyncConnectionPool):
             connection = SyncHTTPConnection(
                 origin=origin,
                 http2=self._http2,
+                keepalive_expiry=self._keepalive_expiry,
                 ssl_context=self._ssl_context,
                 socket=proxy_connection.socket,
             )
