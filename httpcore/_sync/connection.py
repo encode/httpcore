@@ -29,14 +29,14 @@ class SyncHTTPConnection(SyncHTTPTransport):
         backend: SyncBackend = None,
     ):
         self.origin = origin
-        self.http1 = http1
-        self.http2 = http2
-        self.keepalive_expiry = keepalive_expiry
-        self.uds = uds
-        self.ssl_context = SSLContext() if ssl_context is None else ssl_context
+        self._http1_enabled = http1
+        self._http2_enabled = http2
+        self._keepalive_expiry = keepalive_expiry
+        self._uds = uds
+        self._ssl_context = SSLContext() if ssl_context is None else ssl_context
         self.socket = socket
-        self.local_address = local_address
-        self.retries = retries
+        self._local_address = local_address
+        self._retries = retries
 
         alpn_protocols: List[str] = []
         if http1:
@@ -44,21 +44,21 @@ class SyncHTTPConnection(SyncHTTPTransport):
         if http2:
             alpn_protocols.append("h2")
 
-        self.ssl_context.set_alpn_protocols(alpn_protocols)
+        self._ssl_context.set_alpn_protocols(alpn_protocols)
 
         self.connection: Optional[SyncBaseHTTPConnection] = None
-        self.is_http11 = False
-        self.is_http2 = False
-        self.connect_failed = False
-        self.expires_at: Optional[float] = None
-        self.backend = SyncBackend() if backend is None else backend
+        self._is_http11 = False
+        self._is_http2 = False
+        self._connect_failed = False
+        self._expires_at: Optional[float] = None
+        self._backend = SyncBackend() if backend is None else backend
 
     def __repr__(self) -> str:
         return f"<SyncHTTPConnection [{self.info()}]>"
 
     def info(self) -> str:
         if self.connection is None:
-            return "Connection failed" if self.connect_failed else "Connecting"
+            return "Connection failed" if self._connect_failed else "Connecting"
         return self.connection.info()
 
     def should_close(self) -> bool:
@@ -86,7 +86,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
 
     def is_closed(self) -> bool:
         if self.connection is None:
-            return self.connect_failed
+            return self._connect_failed
         return self.connection.is_closed()
 
     def is_available(self) -> bool:
@@ -103,7 +103,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
           streams and must not have exhausted the maximum total number of stream IDs.
         """
         if self.connection is None:
-            return self.http2 and not self.is_closed
+            return self._http2_enabled and not self.is_closed
         return self.connection.is_available()
 
     @property
@@ -111,7 +111,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         # We do this lazily, to make sure backend autodetection always
         # runs within an async context.
         if not hasattr(self, "_request_lock"):
-            self._request_lock = self.backend.create_lock()
+            self._request_lock = self._backend.create_lock()
         return self._request_lock
 
     def handle_request(
@@ -127,7 +127,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
 
         with self.request_lock:
             if self.connection is None:
-                if self.connect_failed:
+                if self._connect_failed:
                     raise NewConnectionRequired()
                 if not self.socket:
                     logger.trace(
@@ -152,34 +152,34 @@ class SyncHTTPConnection(SyncHTTPTransport):
     def _open_socket(self, timeout: TimeoutDict = None) -> SyncSocketStream:
         scheme, hostname, port = self.origin
         timeout = {} if timeout is None else timeout
-        ssl_context = self.ssl_context if scheme == b"https" else None
+        ssl_context = self._ssl_context if scheme == b"https" else None
 
-        retries_left = self.retries
+        retries_left = self._retries
         delays = exponential_backoff(factor=RETRIES_BACKOFF_FACTOR)
 
         while True:
             try:
-                if self.uds is None:
-                    return self.backend.open_tcp_stream(
+                if self._uds is None:
+                    return self._backend.open_tcp_stream(
                         hostname,
                         port,
                         ssl_context,
                         timeout,
-                        local_address=self.local_address,
+                        local_address=self._local_address,
                     )
                 else:
-                    return self.backend.open_uds_stream(
-                        self.uds, hostname, ssl_context, timeout
+                    return self._backend.open_uds_stream(
+                        self._uds, hostname, ssl_context, timeout
                     )
             except (ConnectError, ConnectTimeout):
                 if retries_left <= 0:
-                    self.connect_failed = True
+                    self._connect_failed = True
                     raise
                 retries_left -= 1
                 delay = next(delays)
-                self.backend.sleep(delay)
+                self._backend.sleep(delay)
             except Exception:  # noqa: PIE786
-                self.connect_failed = True
+                self._connect_failed = True
                 raise
 
     def _create_connection(self, socket: SyncSocketStream) -> None:
@@ -187,19 +187,21 @@ class SyncHTTPConnection(SyncHTTPTransport):
         logger.trace(
             "create_connection socket=%r http_version=%r", socket, http_version
         )
-        if http_version == "HTTP/2" or (self.http2 and not self.http1):
+        if http_version == "HTTP/2" or (
+            self._http2_enabled and not self._http1_enabled
+        ):
             from .http2 import SyncHTTP2Connection
 
-            self.is_http2 = True
+            self._is_http2 = True
             self.connection = SyncHTTP2Connection(
                 socket=socket,
-                keepalive_expiry=self.keepalive_expiry,
-                backend=self.backend,
+                keepalive_expiry=self._keepalive_expiry,
+                backend=self._backend,
             )
         else:
-            self.is_http11 = True
+            self._is_http11 = True
             self.connection = SyncHTTP11Connection(
-                socket=socket, keepalive_expiry=self.keepalive_expiry
+                socket=socket, keepalive_expiry=self._keepalive_expiry
             )
 
     def start_tls(
