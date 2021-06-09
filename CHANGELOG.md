@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.13.4 (June 9th, 2021)
+
+### Added
+
+- Improved error messaging when URL scheme is missing, or a non HTTP(S) scheme is used. (Pull ##354)
+
+### Fixed
+
+- Switched to `anyio` as the default backend implementation when running with `asyncio`. Resolves some awkward [TLS timeout issues](https://github.com/encode/httpx/discussions/1511).
+
 ## 0.13.3 (May 6th, 2021)
 
 ### Added
