@@ -1,4 +1,5 @@
 import platform
+from typing import Tuple
 
 import pytest
 
@@ -73,12 +74,17 @@ def test_https_request(backend: str, https_server: Server) -> None:
 
 
 
-def test_request_unsupported_protocol(backend: str) -> None:
+@pytest.mark.parametrize(
+    "url", [(b"ftp", b"example.org", 443, b"/"), (b"", b"coolsite.org", 443, b"/")]
+)
+def test_request_unsupported_protocol(
+    backend: str, url: Tuple[bytes, bytes, int, bytes]
+) -> None:
     with httpcore.SyncConnectionPool(backend=backend) as http:
         with pytest.raises(httpcore.UnsupportedProtocol):
             http.handle_request(
                 method=b"GET",
-                url=(b"ftp", b"example.org", 443, b"/"),
+                url=url,
                 headers=[(b"host", b"example.org")],
                 stream=httpcore.ByteStream(b""),
                 extensions={},

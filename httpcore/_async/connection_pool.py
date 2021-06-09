@@ -197,7 +197,18 @@ class AsyncConnectionPool(AsyncHTTPTransport):
     ) -> Tuple[int, Headers, AsyncByteStream, dict]:
         if url[0] not in (b"http", b"https"):
             scheme = url[0].decode("latin-1")
-            raise UnsupportedProtocol(f"Unsupported URL protocol {scheme!r}")
+            host = url[1].decode("latin-1")
+            if scheme == "":
+                raise UnsupportedProtocol(
+                    f"The request to '://{host}/' is missing either an 'http://' \
+                        or 'https://' protocol."
+                )
+            else:
+                raise UnsupportedProtocol(
+                    f"The request to '{scheme}://{host}' has \
+                        an unsupported protocol {scheme!r}"
+                )
+
         if not url[1]:
             raise LocalProtocolError("Missing hostname in URL.")
 
