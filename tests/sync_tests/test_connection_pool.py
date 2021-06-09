@@ -55,7 +55,7 @@ class MockConnection(object):
     def should_close(self):
         return False
 
-    def may_close(self):
+    def is_idle(self):
         return self.state == ConnectionState.IDLE
 
     def is_closed(self):
