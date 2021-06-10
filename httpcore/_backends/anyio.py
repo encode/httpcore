@@ -62,7 +62,7 @@ class SocketStream(AsyncSocketStream):
             except BrokenResourceError as exc:
                 raise ReadError from exc
             except EndOfStream:
-                raise ReadError("Server disconnected while attempting read") from None
+                return ""
 
     async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         if not data:
