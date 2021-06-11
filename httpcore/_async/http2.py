@@ -38,12 +38,12 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
     ):
         self.socket = socket
 
-        self.backend = backend
-        self.h2_state = h2.connection.H2Connection(config=self.CONFIG)
+        self._backend = backend
+        self._h2_state = h2.connection.H2Connection(config=self.CONFIG)
 
-        self.sent_connection_init = False
-        self.streams: Dict[int, AsyncHTTP2Stream] = {}
-        self.events: Dict[int, List[h2.events.Event]] = {}
+        self._sent_connection_init = False
+        self._streams: Dict[int, AsyncHTTP2Stream] = {}
+        self._events: Dict[int, List[h2.events.Event]] = {}
 
         self._keepalive_expiry: Optional[float] = keepalive_expiry
         self._should_expire_at: Optional[float] = None
@@ -54,7 +54,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         return f"<AsyncHTTP2Connection [{self._state}]>"
 
     def info(self) -> str:
-        return f"HTTP/2, {self._state.name}, {len(self.streams)} streams"
+        return f"HTTP/2, {self._state.name}, {len(self._streams)} streams"
 
     def _now(self) -> float:
         return time.monotonic()
@@ -104,7 +104,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         # We do this lazily, to make sure backend autodetection always
         # runs within an async context.
         if not hasattr(self, "_initialization_lock"):
-            self._initialization_lock = self.backend.create_lock()
+            self._initialization_lock = self._backend.create_lock()
         return self._initialization_lock
 
     @property
@@ -112,7 +112,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         # We do this lazily, to make sure backend autodetection always
         # runs within an async context.
         if not hasattr(self, "_read_lock"):
-            self._read_lock = self.backend.create_lock()
+            self._read_lock = self._backend.create_lock()
         return self._read_lock
 
     @property
@@ -120,8 +120,8 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         # We do this lazily, to make sure backend autodetection always
         # runs within an async context.
         if not hasattr(self, "_max_streams_semaphore"):
-            max_streams = self.h2_state.local_settings.max_concurrent_streams
-            self._max_streams_semaphore = self.backend.create_semaphore(
+            max_streams = self._h2_state.local_settings.max_concurrent_streams
+            self._max_streams_semaphore = self._backend.create_semaphore(
                 max_streams, exc_class=PoolTimeout
             )
         return self._max_streams_semaphore
@@ -142,16 +142,16 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         timeout = cast(TimeoutDict, extensions.get("timeout", {}))
 
         async with self.init_lock:
-            if not self.sent_connection_init:
+            if not self._sent_connection_init:
                 # The very first stream is responsible for initiating the connection.
                 self._state = ConnectionState.ACTIVE
                 await self.send_connection_init(timeout)
-                self.sent_connection_init = True
+                self._sent_connection_init = True
 
         await self.max_streams_semaphore.acquire()
         try:
             try:
-                stream_id = self.h2_state.get_next_available_stream_id()
+                stream_id = self._h2_state.get_next_available_stream_id()
             except NoAvailableStreamIDError:
                 self._exhausted_available_stream_ids = True
                 raise NewConnectionRequired()
@@ -160,8 +160,8 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
                 self._should_expire_at = None
 
             h2_stream = AsyncHTTP2Stream(stream_id=stream_id, connection=self)
-            self.streams[stream_id] = h2_stream
-            self.events[stream_id] = []
+            self._streams[stream_id] = h2_stream
+            self._events[stream_id] = []
             return await h2_stream.handle_async_request(
                 method, url, headers, stream, extensions
             )
@@ -177,7 +177,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         # Need to set these manually here instead of manipulating via
         # __setitem__() otherwise the H2Connection will emit SettingsUpdate
         # frames in addition to sending the undesired defaults.
-        self.h2_state.local_settings = Settings(
+        self._h2_state.local_settings = Settings(
             client=True,
             initial_values={
                 # Disable PUSH_PROMISE frames from the server since we don't do anything
@@ -192,14 +192,14 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         # Some websites (*cough* Yahoo *cough*) balk at this setting being
         # present in the initial handshake since it's not defined in the original
         # RFC despite the RFC mandating ignoring settings you don't know about.
-        del self.h2_state.local_settings[
+        del self._h2_state.local_settings[
             h2.settings.SettingCodes.ENABLE_CONNECT_PROTOCOL
         ]
 
         logger.trace("initiate_connection=%r", self)
-        self.h2_state.initiate_connection()
-        self.h2_state.increment_flow_control_window(2 ** 24)
-        data_to_send = self.h2_state.data_to_send()
+        self._h2_state.initiate_connection()
+        self._h2_state.increment_flow_control_window(2 ** 24)
+        data_to_send = self._h2_state.data_to_send()
         await self.socket.write(data_to_send, timeout)
 
     def is_socket_readable(self) -> bool:
@@ -219,13 +219,13 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         WindowUpdated frames have increased the flow rate.
         https://tools.ietf.org/html/rfc7540#section-6.9
         """
-        local_flow = self.h2_state.local_flow_control_window(stream_id)
-        connection_flow = self.h2_state.max_outbound_frame_size
+        local_flow = self._h2_state.local_flow_control_window(stream_id)
+        connection_flow = self._h2_state.max_outbound_frame_size
         flow = min(local_flow, connection_flow)
         while flow == 0:
             await self.receive_events(timeout)
-            local_flow = self.h2_state.local_flow_control_window(stream_id)
-            connection_flow = self.h2_state.max_outbound_frame_size
+            local_flow = self._h2_state.local_flow_control_window(stream_id)
+            connection_flow = self._h2_state.max_outbound_frame_size
             flow = min(local_flow, connection_flow)
         return flow
 
@@ -238,9 +238,9 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         an event is available.
         """
         async with self.read_lock:
-            while not self.events[stream_id]:
+            while not self._events[stream_id]:
                 await self.receive_events(timeout)
-        return self.events[stream_id].pop(0)
+        return self._events[stream_id].pop(0)
 
     async def receive_events(self, timeout: TimeoutDict) -> None:
         """
@@ -250,7 +250,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         if data == b"":
             raise RemoteProtocolError("Server disconnected")
 
-        events = self.h2_state.receive_data(data)
+        events = self._h2_state.receive_data(data)
         for event in events:
             event_stream_id = getattr(event, "stream_id", 0)
             logger.trace("receive_event stream_id=%r event=%s", event_stream_id, event)
@@ -258,49 +258,49 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
             if hasattr(event, "error_code"):
                 raise RemoteProtocolError(event)
 
-            if event_stream_id in self.events:
-                self.events[event_stream_id].append(event)
+            if event_stream_id in self._events:
+                self._events[event_stream_id].append(event)
 
-        data_to_send = self.h2_state.data_to_send()
+        data_to_send = self._h2_state.data_to_send()
         await self.socket.write(data_to_send, timeout)
 
     async def send_headers(
         self, stream_id: int, headers: Headers, end_stream: bool, timeout: TimeoutDict
     ) -> None:
         logger.trace("send_headers stream_id=%r headers=%r", stream_id, headers)
-        self.h2_state.send_headers(stream_id, headers, end_stream=end_stream)
-        self.h2_state.increment_flow_control_window(2 ** 24, stream_id=stream_id)
-        data_to_send = self.h2_state.data_to_send()
+        self._h2_state.send_headers(stream_id, headers, end_stream=end_stream)
+        self._h2_state.increment_flow_control_window(2 ** 24, stream_id=stream_id)
+        data_to_send = self._h2_state.data_to_send()
         await self.socket.write(data_to_send, timeout)
 
     async def send_data(
         self, stream_id: int, chunk: bytes, timeout: TimeoutDict
     ) -> None:
         logger.trace("send_data stream_id=%r chunk=%r", stream_id, chunk)
-        self.h2_state.send_data(stream_id, chunk)
-        data_to_send = self.h2_state.data_to_send()
+        self._h2_state.send_data(stream_id, chunk)
+        data_to_send = self._h2_state.data_to_send()
         await self.socket.write(data_to_send, timeout)
 
     async def end_stream(self, stream_id: int, timeout: TimeoutDict) -> None:
         logger.trace("end_stream stream_id=%r", stream_id)
-        self.h2_state.end_stream(stream_id)
-        data_to_send = self.h2_state.data_to_send()
+        self._h2_state.end_stream(stream_id)
+        data_to_send = self._h2_state.data_to_send()
         await self.socket.write(data_to_send, timeout)
 
     async def acknowledge_received_data(
         self, stream_id: int, amount: int, timeout: TimeoutDict
     ) -> None:
-        self.h2_state.acknowledge_received_data(amount, stream_id)
-        data_to_send = self.h2_state.data_to_send()
+        self._h2_state.acknowledge_received_data(amount, stream_id)
+        data_to_send = self._h2_state.data_to_send()
         await self.socket.write(data_to_send, timeout)
 
     async def close_stream(self, stream_id: int) -> None:
         try:
             logger.trace("close_stream stream_id=%r", stream_id)
-            del self.streams[stream_id]
-            del self.events[stream_id]
+            del self._streams[stream_id]
+            del self._events[stream_id]
 
-            if not self.streams:
+            if not self._streams:
                 if self._state == ConnectionState.ACTIVE:
                     if self._exhausted_available_stream_ids:
                         await self.aclose()
