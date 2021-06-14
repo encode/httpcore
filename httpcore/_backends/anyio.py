@@ -43,6 +43,7 @@ class SocketStream(AsyncSocketStream):
                     self.stream,
                     ssl_context=ssl_context,
                     hostname=hostname.decode("ascii"),
+                    standard_compatible=False,
                 )
         except TimeoutError:
             raise ConnectTimeout from None
