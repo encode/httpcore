@@ -4,11 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.13.5 (June 14th, 2021)
+
+### Fixed
+
+- Resolved niggles with AnyIO EOF behaviours. (Pull #358, #362)
+
 ## 0.13.4 (June 9th, 2021)
 
 ### Added
 
-- Improved error messaging when URL scheme is missing, or a non HTTP(S) scheme is used. (Pull ##354)
+- Improved error messaging when URL scheme is missing, or a non HTTP(S) scheme is used. (Pull #354)
 
 ### Fixed
 
