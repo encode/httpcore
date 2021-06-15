@@ -244,6 +244,7 @@ class AsyncConnectionPool(AsyncHTTPTransport):
                 # behind catching 'BaseException' rather than 'Exception' here.
                 logger.trace("remove from pool connection=%r", connection)
                 await self._remove_from_pool(connection)
+                await connection.aclose()
                 raise
 
         status_code, headers, stream, extensions = response

@@ -244,6 +244,7 @@ class SyncConnectionPool(SyncHTTPTransport):
                 # behind catching 'BaseException' rather than 'Exception' here.
                 logger.trace("remove from pool connection=%r", connection)
                 self._remove_from_pool(connection)
+                connection.close()
                 raise
 
         status_code, headers, stream, extensions = response
