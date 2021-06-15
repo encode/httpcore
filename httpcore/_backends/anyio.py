@@ -59,6 +59,7 @@ class SocketStream(AsyncSocketStream):
                 with anyio.fail_after(read_timeout):
                     return await self.stream.receive(n)
             except TimeoutError:
+                await self.stream.aclose()
                 raise ReadTimeout from None
             except BrokenResourceError as exc:
                 raise ReadError from exc
@@ -75,6 +76,7 @@ class SocketStream(AsyncSocketStream):
                 with anyio.fail_after(write_timeout):
                     return await self.stream.send(data)
             except TimeoutError:
+                await self.stream.aclose()
                 raise WriteTimeout from None
             except BrokenResourceError as exc:
                 raise WriteError from exc
