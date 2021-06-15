@@ -58,8 +58,12 @@ class SocketStream(AsyncSocketStream):
 
         async with self.read_lock:
             with map_exceptions(exc_map):
-                with trio.fail_after(read_timeout):
-                    return await self.stream.receive_some(max_bytes=n)
+                try:
+                    with trio.fail_after(read_timeout):
+                        return await self.stream.receive_some(max_bytes=n)
+                except trio.TooSlowError as exc:
+                    await self.stream.aclose()
+                    raise exc
 
     async def write(self, data: bytes, timeout: TimeoutDict) -> None:
         if not data:
@@ -73,8 +77,12 @@ class SocketStream(AsyncSocketStream):
 
         async with self.write_lock:
             with map_exceptions(exc_map):
-                with trio.fail_after(write_timeout):
-                    return await self.stream.send_all(data)
+                try:
+                    with trio.fail_after(write_timeout):
+                        return await self.stream.send_all(data)
+                except trio.TooSlowError as exc:
+                    await self.stream.aclose()
+                    raise exc
 
     async def aclose(self) -> None:
         async with self.write_lock:
