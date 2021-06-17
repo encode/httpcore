@@ -21,7 +21,7 @@ wheel==0.36.2
 
 # Tests & Linting
 https://github.com/agronholm/anyio/pull/309
-anyio @ https://github.com/agronholm/anyio/archive/refs/heads/9ae936079d407223a899c635b6cc859a64bc0124.tar.gz
+anyio @ https://github.com/agronholm/anyio/archive/9ae936079d407223a899c635b6cc859a64bc0124.tar.gz
 autoflake==1.4
 black==21.5b2
 coverage==5.5
