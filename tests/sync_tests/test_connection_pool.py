@@ -44,7 +44,7 @@ class MockConnection(object):
         pass
 
     def info(self) -> str:
-        return str(self.state)
+        return self.state.name
 
     def is_available(self):
         if self.is_http11:
@@ -98,11 +98,11 @@ def test_sequential_requests(http_version) -> None:
         )
         status_code, headers, stream, extensions = response
         info = http.get_connection_info()
-        assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
+        assert info == {"http://example.org": ["ACTIVE"]}
 
         read_body(stream)
         info = http.get_connection_info()
-        assert info == {"http://example.org": ["ConnectionState.IDLE"]}
+        assert info == {"http://example.org": ["IDLE"]}
 
         response = http.handle_request(
             method=b"GET",
@@ -113,11 +113,11 @@ def test_sequential_requests(http_version) -> None:
         )
         status_code, headers, stream, extensions = response
         info = http.get_connection_info()
-        assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
+        assert info == {"http://example.org": ["ACTIVE"]}
 
         read_body(stream)
         info = http.get_connection_info()
-        assert info == {"http://example.org": ["ConnectionState.IDLE"]}
+        assert info == {"http://example.org": ["IDLE"]}
 
 
 
@@ -135,7 +135,7 @@ def test_concurrent_requests_h11() -> None:
         )
         status_code_1, headers_1, stream_1, ext_1 = response_1
         info = http.get_connection_info()
-        assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
+        assert info == {"http://example.org": ["ACTIVE"]}
 
         response_2 = http.handle_request(
             method=b"GET",
@@ -146,21 +146,15 @@ def test_concurrent_requests_h11() -> None:
         )
         status_code_2, headers_2, stream_2, ext_2 = response_2
         info = http.get_connection_info()
-        assert info == {
-            "http://example.org": ["ConnectionState.ACTIVE", "ConnectionState.ACTIVE"]
-        }
+        assert info == {"http://example.org": ["ACTIVE", "ACTIVE"]}
 
         read_body(stream_1)
         info = http.get_connection_info()
-        assert info == {
-            "http://example.org": ["ConnectionState.ACTIVE", "ConnectionState.IDLE"]
-        }
+        assert info == {"http://example.org": ["ACTIVE", "IDLE"]}
 
         read_body(stream_2)
         info = http.get_connection_info()
-        assert info == {
-            "http://example.org": ["ConnectionState.IDLE", "ConnectionState.IDLE"]
-        }
+        assert info == {"http://example.org": ["IDLE", "IDLE"]}
 
 
 
@@ -178,7 +172,7 @@ def test_concurrent_requests_h2() -> None:
         )
         status_code_1, headers_1, stream_1, ext_1 = response_1
         info = http.get_connection_info()
-        assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
+        assert info == {"http://example.org": ["ACTIVE"]}
 
         response_2 = http.handle_request(
             method=b"GET",
@@ -189,12 +183,12 @@ def test_concurrent_requests_h2() -> None:
         )
         status_code_2, headers_2, stream_2, ext_2 = response_2
         info = http.get_connection_info()
-        assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
+        assert info == {"http://example.org": ["ACTIVE"]}
 
         read_body(stream_1)
         info = http.get_connection_info()
-        assert info == {"http://example.org": ["ConnectionState.ACTIVE"]}
+        assert info == {"http://example.org": ["ACTIVE"]}
 
         read_body(stream_2)
         info = http.get_connection_info()
-        assert info == {"http://example.org": ["ConnectionState.IDLE"]}
+        assert info == {"http://example.org": ["IDLE"]}
