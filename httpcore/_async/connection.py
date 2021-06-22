@@ -1,4 +1,4 @@
-from ssl import SSLContext
+from ssl import SSLContext, PROTOCOL_TLS_CLIENT
 from typing import List, Optional, Tuple, cast
 
 from .._backends.auto import AsyncBackend, AsyncLock, AsyncSocketStream, AutoBackend
@@ -33,7 +33,7 @@ class AsyncHTTPConnection(AsyncHTTPTransport):
         self._http2_enabled = http2
         self._keepalive_expiry = keepalive_expiry
         self._uds = uds
-        self._ssl_context = SSLContext() if ssl_context is None else ssl_context
+        self._ssl_context = SSLContext(PROTOCOL_TLS_CLIENT) if ssl_context is None else ssl_context
         self.socket = socket
         self._local_address = local_address
         self._retries = retries
