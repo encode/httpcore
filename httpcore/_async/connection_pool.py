@@ -1,5 +1,5 @@
 import warnings
-from ssl import SSLContext, PROTOCOL_TLS_CLIENT
+from ssl import PROTOCOL_TLS_CLIENT, SSLContext
 from typing import (
     AsyncIterator,
     Callable,
@@ -125,7 +125,9 @@ class AsyncConnectionPool(AsyncHTTPTransport):
         if isinstance(backend, str):
             backend = lookup_async_backend(backend)
 
-        self._ssl_context = SSLContext(PROTOCOL_TLS_CLIENT) if ssl_context is None else ssl_context
+        self._ssl_context = (
+            SSLContext(PROTOCOL_TLS_CLIENT) if ssl_context is None else ssl_context
+        )
         self._max_connections = max_connections
         self._max_keepalive_connections = max_keepalive_connections
         self._keepalive_expiry = keepalive_expiry
