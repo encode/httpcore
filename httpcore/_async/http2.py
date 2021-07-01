@@ -51,7 +51,7 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         self._exhausted_available_stream_ids = False
 
     def __repr__(self) -> str:
-        return f"<AsyncHTTP2Connection [{self._state}]>"
+        return f"<AsyncHTTP2Connection [{self._state.name}]>"
 
     def info(self) -> str:
         return f"HTTP/2, {self._state.name}, {len(self._streams)} streams"
