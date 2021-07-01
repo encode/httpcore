@@ -291,6 +291,11 @@ def test_http_proxy(
 @pytest.mark.parametrize("proxy_mode", ["DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY"])
 @pytest.mark.parametrize("protocol,port", [(b"http", 80), (b"https", 443)])
 
+# Filter out ssl module deprecation warnings and asyncio module resource warning,
+# convert other warnings to errors.
+@pytest.mark.filterwarnings("ignore:.*(SSLContext|PROTOCOL_TLS):DeprecationWarning")
+@pytest.mark.filterwarnings("ignore::ResourceWarning:asyncio")
+@pytest.mark.filterwarnings("error")
 def test_proxy_socket_does_not_leak_when_the_connection_hasnt_been_added_to_pool(
     proxy_server: URL,
     server: Server,
@@ -298,26 +303,18 @@ def test_proxy_socket_does_not_leak_when_the_connection_hasnt_been_added_to_pool
     protocol: bytes,
     port: int,
 ):
-    with pytest.warns(None) as recorded_warnings:
-        with httpcore.SyncHTTPProxy(proxy_server, proxy_mode=proxy_mode) as http:
-            for _ in range(100):
-                try:
-                    _ = http.handle_request(
-                        method=b"GET",
-                        url=(protocol, b"blockedhost.example.com", port, b"/"),
-                        headers=[(b"host", b"blockedhost.example.com")],
-                        stream=httpcore.ByteStream(b""),
-                        extensions={},
-                    )
-                except (httpcore.ProxyError, httpcore.RemoteProtocolError):
-                    pass
-
-    # have to filter out https://github.com/encode/httpx/issues/825 from other tests
-    warnings = [
-        *filter(lambda warn: "asyncio" not in warn.filename, recorded_warnings.list)
-    ]
-
-    assert len(warnings) == 0
+    with httpcore.SyncHTTPProxy(proxy_server, proxy_mode=proxy_mode) as http:
+        for _ in range(100):
+            try:
+                _ = http.handle_request(
+                    method=b"GET",
+                    url=(protocol, b"blockedhost.example.com", port, b"/"),
+                    headers=[(b"host", b"blockedhost.example.com")],
+                    stream=httpcore.ByteStream(b""),
+                    extensions={},
+                )
+            except (httpcore.ProxyError, httpcore.RemoteProtocolError):
+                pass
 
 
 
