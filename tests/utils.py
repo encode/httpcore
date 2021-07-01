@@ -179,6 +179,7 @@ def http_proxy_server(proxy_host: str, proxy_port: int):
         finally:
             if proc is not None:
                 proc.kill()
+                proc.wait()
 
 
 @contextlib.contextmanager
