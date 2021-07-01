@@ -54,10 +54,10 @@ def test_http_request(backend: str, server: Server) -> None:
 
 
 def test_https_request(
-    backend: str, https_server: Server, localhost_ssl_context: ssl.SSLContext
+    backend: str, https_server: Server, ssl_context: ssl.SSLContext
 ) -> None:
     with httpcore.SyncConnectionPool(
-        backend=backend, ssl_context=localhost_ssl_context
+        backend=backend, ssl_context=ssl_context
     ) as http:
         status_code, headers, stream, extensions = http.handle_request(
             method=b"GET",
@@ -98,10 +98,10 @@ def test_request_unsupported_protocol(
 
 
 def test_http2_request(
-    backend: str, https_server: Server, localhost_ssl_context: ssl.SSLContext
+    backend: str, https_server: Server, ssl_context: ssl.SSLContext
 ) -> None:
     with httpcore.SyncConnectionPool(
-        backend=backend, http2=True, ssl_context=localhost_ssl_context
+        backend=backend, http2=True, ssl_context=ssl_context
     ) as http:
         status_code, headers, stream, extensions = http.handle_request(
             method=b"GET",
@@ -182,10 +182,10 @@ def test_http_request_reuse_connection(backend: str, server: Server) -> None:
 
 
 def test_https_request_reuse_connection(
-    backend: str, https_server: Server, localhost_ssl_context: ssl.SSLContext
+    backend: str, https_server: Server, ssl_context: ssl.SSLContext
 ) -> None:
     with httpcore.SyncConnectionPool(
-        backend=backend, ssl_context=localhost_ssl_context
+        backend=backend, ssl_context=ssl_context
     ) as http:
         status_code, headers, stream, extensions = http.handle_request(
             method=b"GET",
@@ -364,7 +364,7 @@ def test_proxy_https_requests(
     proxy_mode: str,
     http2: bool,
     https_server: Server,
-    localhost_ssl_context: ssl.SSLContext,
+    ssl_context: ssl.SSLContext,
 ) -> None:
     max_connections = 1
     with httpcore.SyncHTTPProxy(
@@ -372,7 +372,7 @@ def test_proxy_https_requests(
         proxy_mode=proxy_mode,
         max_connections=max_connections,
         http2=http2,
-        ssl_context=localhost_ssl_context,
+        ssl_context=ssl_context,
     ) as http:
         status_code, headers, stream, extensions = http.handle_request(
             method=b"GET",
@@ -425,13 +425,13 @@ def test_connection_pool_get_connection_info(
     expected_during_idle: dict,
     backend: str,
     https_server: Server,
-    localhost_ssl_context: ssl.SSLContext,
+    ssl_context: ssl.SSLContext,
 ) -> None:
     with httpcore.SyncConnectionPool(
         http2=http2,
         keepalive_expiry=keepalive_expiry,
         backend=backend,
-        ssl_context=localhost_ssl_context,
+        ssl_context=ssl_context,
     ) as http:
         _, _, stream_1, _ = http.handle_request(
             method=b"GET",

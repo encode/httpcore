@@ -5,6 +5,7 @@ import threading
 import time
 import typing
 
+import certifi
 import pytest
 import trustme
 
@@ -128,16 +129,6 @@ def localhost_cert_path(localhost_cert: trustme.LeafCert) -> typing.Iterator[str
 
 
 @pytest.fixture(scope="session")
-def localhost_ssl_context(
-    cert_authority: trustme.CA, localhost_cert: trustme.LeafCert
-) -> ssl.SSLContext:
-    ssl_context = ssl.create_default_context()
-    cert_authority.configure_trust(ssl_context)
-    localhost_cert.configure_cert(ssl_context)
-    return ssl_context
-
-
-@pytest.fixture(scope="session")
 def localhost_cert_pem_file(localhost_cert: trustme.LeafCert) -> typing.Iterator[str]:
     with localhost_cert.cert_chain_pems[0].tempfile() as tmp:
         yield tmp
@@ -149,6 +140,21 @@ def localhost_cert_private_key_file(
 ) -> typing.Iterator[str]:
     with localhost_cert.private_key_pem.tempfile() as tmp:
         yield tmp
+
+
+@pytest.fixture(scope="session")
+def ssl_context(
+    cert_authority: trustme.CA, localhost_cert: trustme.LeafCert
+) -> ssl.SSLContext:
+    ssl_context = ssl.create_default_context()
+
+    if hypercorn is None:
+        ssl_context.load_verify_locations(certifi.where())
+    else:
+        cert_authority.configure_trust(ssl_context)
+        localhost_cert.configure_cert(ssl_context)
+
+    return ssl_context
 
 
 @pytest.fixture(scope="session")
