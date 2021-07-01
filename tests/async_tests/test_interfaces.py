@@ -302,9 +302,6 @@ async def test_http_proxy(
 @pytest.mark.parametrize("proxy_mode", ["DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY"])
 @pytest.mark.parametrize("protocol,port", [(b"http", 80), (b"https", 443)])
 @pytest.mark.trio
-# Filter out asyncio module resource warning, convert other warnings to errors.
-@pytest.mark.filterwarnings("ignore::ResourceWarning:asyncio")
-@pytest.mark.filterwarnings("error")
 async def test_proxy_socket_does_not_leak_when_the_connection_hasnt_been_added_to_pool(
     proxy_server: URL,
     server: Server,
