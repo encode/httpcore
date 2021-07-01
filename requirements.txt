@@ -9,7 +9,7 @@ curio==1.5; python_version >= '3.7'
 # Docs
 sphinx==3.5.3
 sphinx-autobuild==2021.3.14
-myst-parser==0.14.0
+myst-parser==0.15.1
 furo==2021.4.11b34
 ghp-import==2.0.1
 # myst-parser + docutils==0.17 has a bug: https://github.com/executablebooks/MyST-Parser/issues/343
@@ -20,19 +20,19 @@ twine==3.4.1
 wheel==0.36.2
 
 # Tests & Linting
-anyio==3.1.0
+anyio==3.2.1
 autoflake==1.4
-black==21.5b2
+black==21.6b0
 coverage==5.5
 flake8==3.9.2
 flake8-bugbear==21.4.3
 flake8-pie==0.6.1
 hypercorn==0.11.2; python_version >= '3.7'
-isort==5.8.0
-mypy==0.812
+isort==5.9.1
+mypy==0.910
 pproxy==2.7.8
 pytest==6.2.4
 pytest-trio==0.7.0
 pytest-asyncio==0.15.1
-trustme==0.7.0
+trustme==0.8.0
 uvicorn==0.12.1; python_version < '3.7'
