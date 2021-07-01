@@ -1,5 +1,6 @@
 import contextlib
 import os
+import ssl
 import threading
 import time
 import typing
@@ -124,6 +125,16 @@ def localhost_cert(cert_authority: trustme.CA) -> trustme.LeafCert:
 def localhost_cert_path(localhost_cert: trustme.LeafCert) -> typing.Iterator[str]:
     with localhost_cert.private_key_and_cert_chain_pem.tempfile() as tmp:
         yield tmp
+
+
+@pytest.fixture(scope="session")
+def localhost_ssl_context(
+    cert_authority: trustme.CA, localhost_cert: trustme.LeafCert
+) -> ssl.SSLContext:
+    ssl_context = ssl.create_default_context()
+    cert_authority.configure_trust(ssl_context)
+    localhost_cert.configure_cert(ssl_context)
+    return ssl_context
 
 
 @pytest.fixture(scope="session")
