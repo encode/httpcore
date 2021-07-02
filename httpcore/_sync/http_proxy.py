@@ -268,6 +268,9 @@ class SyncHTTPProxy(SyncConnectionPool):
             )
             self._add_to_pool(connection, timeout)
 
+            proxy_connection.connection.socket = None  # type: ignore
+            proxy_connection.close()
+
         # Once the connection has been established we can send requests on
         # it as normal.
         (

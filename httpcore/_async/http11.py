@@ -266,4 +266,5 @@ class AsyncHTTP11Connection(AsyncBaseHTTPConnection):
                 event = h11.ConnectionClosed()
                 self._h11_state.send(event)
 
-            await self.socket.aclose()
+            if self.socket is not None:
+                await self.socket.aclose()

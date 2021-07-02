@@ -210,7 +210,8 @@ class AsyncHTTP2Connection(AsyncBaseHTTPConnection):
         if self._state != ConnectionState.CLOSED:
             self._state = ConnectionState.CLOSED
 
-            await self.socket.aclose()
+            if self.socket is not None:
+                await self.socket.aclose()
 
     async def wait_for_outgoing_flow(self, stream_id: int, timeout: TimeoutDict) -> int:
         """

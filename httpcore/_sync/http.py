@@ -1,3 +1,4 @@
+import warnings
 from ssl import SSLContext
 
 from .._backends.sync import SyncSocketStream
@@ -6,6 +7,8 @@ from .base import SyncHTTPTransport
 
 
 class SyncBaseHTTPConnection(SyncHTTPTransport):
+    socket: SyncSocketStream
+
     def info(self) -> str:
         raise NotImplementedError()  # pragma: nocover
 

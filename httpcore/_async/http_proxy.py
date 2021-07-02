@@ -268,6 +268,9 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             )
             await self._add_to_pool(connection, timeout)
 
+            proxy_connection.connection.socket = None  # type: ignore
+            await proxy_connection.aclose()
+
         # Once the connection has been established we can send requests on
         # it as normal.
         (

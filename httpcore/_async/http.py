@@ -1,3 +1,4 @@
+import warnings
 from ssl import SSLContext
 
 from .._backends.auto import AsyncSocketStream
@@ -6,6 +7,8 @@ from .base import AsyncHTTPTransport
 
 
 class AsyncBaseHTTPConnection(AsyncHTTPTransport):
+    socket: AsyncSocketStream
+
     def info(self) -> str:
         raise NotImplementedError()  # pragma: nocover
 

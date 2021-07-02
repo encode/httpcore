@@ -210,7 +210,8 @@ class SyncHTTP2Connection(SyncBaseHTTPConnection):
         if self._state != ConnectionState.CLOSED:
             self._state = ConnectionState.CLOSED
 
-            self.socket.close()
+            if self.socket is not None:
+                self.socket.close()
 
     def wait_for_outgoing_flow(self, stream_id: int, timeout: TimeoutDict) -> int:
         """

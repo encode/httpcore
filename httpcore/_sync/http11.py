@@ -266,4 +266,5 @@ class SyncHTTP11Connection(SyncBaseHTTPConnection):
                 event = h11.ConnectionClosed()
                 self._h11_state.send(event)
 
-            self.socket.close()
+            if self.socket is not None:
+                self.socket.close()
