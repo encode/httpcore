@@ -40,3 +40,7 @@ class SyncBaseHTTPConnection(SyncHTTPTransport):
         Upgrade the underlying socket to TLS.
         """
         raise NotImplementedError()  # pragma: nocover
+
+    def __del__(self) -> None:
+        if not self.is_closed():
+            warnings.warn(f"Unclosed {self!r} {id(self)}")
