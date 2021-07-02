@@ -155,8 +155,8 @@ class SyncBackend:
 
         with map_exceptions(exc_map):
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.settimeout(connect_timeout)
             try:
-                sock.settimeout(connect_timeout)
                 sock.connect(path)
 
                 if ssl_context is not None:
