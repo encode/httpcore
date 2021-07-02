@@ -245,8 +245,8 @@ class AsyncConnectionPool(AsyncHTTPTransport):
             except BaseException:  # noqa: PIE786
                 # See https://github.com/encode/httpcore/pull/305 for motivation
                 # behind catching 'BaseException' rather than 'Exception' here.
-                logger.trace("remove from pool connection=%r", connection)
                 await self._remove_from_pool(connection)
+                await connection.aclose()
                 raise
 
         status_code, headers, stream, extensions = response

@@ -245,8 +245,8 @@ class SyncConnectionPool(SyncHTTPTransport):
             except BaseException:  # noqa: PIE786
                 # See https://github.com/encode/httpcore/pull/305 for motivation
                 # behind catching 'BaseException' rather than 'Exception' here.
-                logger.trace("remove from pool connection=%r", connection)
                 self._remove_from_pool(connection)
+                connection.close()
                 raise
 
         status_code, headers, stream, extensions = response
