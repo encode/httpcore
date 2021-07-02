@@ -167,14 +167,19 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         url = self.proxy_origin + (target,)
         headers = merge_headers(self.proxy_headers, headers)
 
-        (
-            status_code,
-            headers,
-            stream,
-            extensions,
-        ) = await connection.handle_async_request(
-            method, url, headers=headers, stream=stream, extensions=extensions
-        )
+        try:
+            (
+                status_code,
+                headers,
+                stream,
+                extensions,
+            ) = await connection.handle_async_request(
+                method, url, headers=headers, stream=stream, extensions=extensions
+            )
+        except BaseException:  # noqa: PIE786
+            await self._remove_from_pool(connection)
+            await connection.aclose()
+            raise
 
         wrapped_stream = ResponseByteStream(
             stream, connection=connection, callback=self._response_closed
@@ -273,18 +278,24 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
         # Once the connection has been established we can send requests on
         # it as normal.
-        (
-            status_code,
-            headers,
-            stream,
-            extensions,
-        ) = await connection.handle_async_request(
-            method,
-            url,
-            headers=headers,
-            stream=stream,
-            extensions=extensions,
-        )
+        try:
+            (
+                status_code,
+                headers,
+                stream,
+                extensions,
+            ) = await connection.handle_async_request(
+                method,
+                url,
+                headers=headers,
+                stream=stream,
+                extensions=extensions,
+            )
+        except BaseException:  # noqa: PIE786
+            # TODO add test case
+            await self._remove_from_pool(connection)
+            await connection.aclose()
+            raise
 
         wrapped_stream = ResponseByteStream(
             stream, connection=connection, callback=self._response_closed

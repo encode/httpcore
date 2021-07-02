@@ -302,16 +302,15 @@ def test_http_proxy(
 @pytest.mark.parametrize("proxy_mode", ["DEFAULT", "FORWARD_ONLY", "TUNNEL_ONLY"])
 @pytest.mark.parametrize("protocol,port", [(b"http", 80), (b"https", 443)])
 
-def test_proxy_socket_does_not_leak_when_the_connection_hasnt_been_added_to_pool(
+def test_proxy_connection_does_not_leak(
     proxy_server: URL,
-    server: Server,
     proxy_mode: str,
     protocol: bytes,
     port: int,
 ):
     with httpcore.SyncHTTPProxy(proxy_server, proxy_mode=proxy_mode) as http:
         for _ in range(100):
-            try:
+            with pytest.raises((httpcore.ProxyError, httpcore.RemoteProtocolError)):
                 _ = http.handle_request(
                     method=b"GET",
                     url=(protocol, b"blockedhost.example.com", port, b"/"),
@@ -319,8 +318,7 @@ def test_proxy_socket_does_not_leak_when_the_connection_hasnt_been_added_to_pool
                     stream=httpcore.ByteStream(b""),
                     extensions={},
                 )
-            except (httpcore.ProxyError, httpcore.RemoteProtocolError):
-                pass
+            assert len(http.get_connection_info()) == 0
 
 
 
