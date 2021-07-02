@@ -292,7 +292,6 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 extensions=extensions,
             )
         except BaseException:  # noqa: PIE786
-            # TODO add test case
             await self._remove_from_pool(connection)
             await connection.aclose()
             raise

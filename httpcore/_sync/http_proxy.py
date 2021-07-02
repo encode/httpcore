@@ -292,7 +292,6 @@ class SyncHTTPProxy(SyncConnectionPool):
                 extensions=extensions,
             )
         except BaseException:  # noqa: PIE786
-            # TODO add test case
             self._remove_from_pool(connection)
             connection.close()
             raise
