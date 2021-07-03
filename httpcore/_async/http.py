@@ -46,4 +46,4 @@ class AsyncBaseHTTPConnection(AsyncHTTPTransport):
 
     def __del__(self) -> None:
         if not self.is_closed():
-            warnings.warn(f"Unclosed {self!r} {id(self)}")
+            warnings.warn(f"Unclosed {self!r}")
