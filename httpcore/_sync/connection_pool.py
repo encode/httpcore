@@ -1,4 +1,3 @@
-import ssl
 import warnings
 from ssl import SSLContext
 from typing import (
@@ -16,6 +15,7 @@ from typing import (
 from .._backends.sync import SyncBackend, SyncLock, SyncSemaphore
 from .._backends.base import lookup_sync_backend
 from .._exceptions import LocalProtocolError, PoolTimeout, UnsupportedProtocol
+from .._ssl import default_ssl_context
 from .._threadlock import ThreadLock
 from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import get_logger, origin_to_url_string, url_to_origin
@@ -127,7 +127,7 @@ class SyncConnectionPool(SyncHTTPTransport):
             backend = lookup_sync_backend(backend)
 
         self._ssl_context = (
-            ssl.create_default_context() if ssl_context is None else ssl_context
+            default_ssl_context() if ssl_context is None else ssl_context
         )
         self._max_connections = max_connections
         self._max_keepalive_connections = max_keepalive_connections

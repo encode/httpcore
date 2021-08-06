@@ -1,9 +1,9 @@
-import ssl
 from ssl import SSLContext
 from typing import List, Optional, Tuple, cast
 
 from .._backends.sync import SyncBackend, SyncLock, SyncSocketStream, SyncBackend
 from .._exceptions import ConnectError, ConnectTimeout
+from .._ssl import default_ssl_context
 from .._types import URL, Headers, Origin, TimeoutDict
 from .._utils import exponential_backoff, get_logger, url_to_origin
 from .base import SyncByteStream, SyncHTTPTransport, NewConnectionRequired
@@ -35,7 +35,7 @@ class SyncHTTPConnection(SyncHTTPTransport):
         self._keepalive_expiry = keepalive_expiry
         self._uds = uds
         self._ssl_context = (
-            ssl.create_default_context() if ssl_context is None else ssl_context
+            default_ssl_context() if ssl_context is None else ssl_context
         )
         self.socket = socket
         self._local_address = local_address
