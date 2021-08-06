@@ -163,7 +163,7 @@ class SyncBackend:
                     sock = ssl_context.wrap_socket(
                         sock, server_hostname=hostname.decode("ascii")
                     )
-            except OSError:
+            except BaseException:
                 sock.close()
                 raise
 
