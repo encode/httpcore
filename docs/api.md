@@ -8,7 +8,7 @@ These classes provide the base interface which transport classes need to impleme
 
 :::{eval-rst}
 .. autoclass:: httpcore.AsyncHTTPTransport
-    :members: arequest, aclose
+    :members: handle_async_request, aclose
 
 .. autoclass:: httpcore.AsyncByteStream
     :members: __aiter__, aclose
