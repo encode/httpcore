@@ -5,10 +5,10 @@ import threading
 import time
 import typing
 
-import certifi
 import pytest
 import trustme
 
+from httpcore._ssl import default_ssl_context
 from httpcore._types import URL
 
 from .utils import HypercornServer, LiveServer, Server, http_proxy_server
@@ -146,11 +146,9 @@ def localhost_cert_private_key_file(
 def ssl_context(
     cert_authority: trustme.CA, localhost_cert: trustme.LeafCert
 ) -> ssl.SSLContext:
-    ssl_context = ssl.create_default_context()
+    ssl_context = default_ssl_context()
 
-    if hypercorn is None:
-        ssl_context.load_verify_locations(certifi.where())
-    else:
+    if hypercorn is not None:
         cert_authority.configure_trust(ssl_context)
         localhost_cert.configure_cert(ssl_context)
 
