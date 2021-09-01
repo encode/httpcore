@@ -19,7 +19,7 @@ docutils==0.17.1
 
 # Packaging
 twine==3.4.2
-wheel==0.36.2
+wheel==0.37.0
 
 # Tests & Linting
 anyio==3.3.0
