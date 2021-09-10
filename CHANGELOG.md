@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Master
 
-- Fix broken error messaging when URL scheme is missing, or a non HTTP(S) scheme is used.
+- Fix broken error messaging when URL scheme is missing, or a non HTTP(S) scheme is used. (Pull #403)
 
 ## 0.13.6 (June 15th, 2021)
 
