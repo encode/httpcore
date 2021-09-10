@@ -195,19 +195,16 @@ class SyncConnectionPool(SyncHTTPTransport):
         stream: SyncByteStream,
         extensions: dict,
     ) -> Tuple[int, Headers, SyncByteStream, dict]:
+        if not url[0]:
+            raise UnsupportedProtocol(
+                "Request URL missing either an 'http://' or 'https://' protocol."
+            )
+
         if url[0] not in (b"http", b"https"):
-            scheme = url[0].decode("latin-1")
-            host = url[1].decode("latin-1")
-            if scheme == "":
-                raise UnsupportedProtocol(
-                    f"The request to '://{host}/' is missing either an 'http://' \
-                        or 'https://' protocol."
-                )
-            else:
-                raise UnsupportedProtocol(
-                    f"The request to '{scheme}://{host}' has \
-                        an unsupported protocol {scheme!r}"
-                )
+            protocol = url[0].decode("ascii")
+            raise UnsupportedProtocol(
+                f"Request URL has an unsupported protocol '{protocol}://'."
+            )
 
         if not url[1]:
             raise LocalProtocolError("Missing hostname in URL.")
