@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Master
+## 0.13.7 (September 13th, 2021)
 
 - Fix broken error messaging when URL scheme is missing, or a non HTTP(S) scheme is used. (Pull #403)
 
