@@ -22,7 +22,7 @@ twine==3.4.2
 wheel==0.37.0
 
 # Tests & Linting
-anyio==3.3.2
+anyio==3.3.4
 autoflake==1.4
 black==21.10b0
 coverage==5.5
