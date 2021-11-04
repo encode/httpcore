@@ -15,7 +15,7 @@ myst-parser==0.15.2
 furo==2021.10.9
 ghp-import==2.0.2
 # myst-parser + docutils==0.17 has a bug: https://github.com/executablebooks/MyST-Parser/issues/343
-docutils==0.17.1
+docutils==0.18
 
 # Packaging
 twine==3.4.2
