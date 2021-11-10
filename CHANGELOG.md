@@ -90,7 +90,7 @@ with httpcore.SyncConnectionPool() as http:
 
 ### Fixed
 
-- Task cancelation no longer leaks connections from the connection pool. (Pull #305)
+- Task cancellation no longer leaks connections from the connection pool. (Pull #305)
 
 ## 0.12.3 (December 7th, 2020)
 
