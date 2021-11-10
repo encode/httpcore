@@ -1,4 +1,3 @@
-import socket
 import ssl
 
 import pytest
