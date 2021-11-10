@@ -122,7 +122,7 @@ class HTTP11Connection(ConnectionInterface):
         assert isinstance(request.stream, Iterable)
         for chunk in request.stream:
             event = h11.Data(data=chunk)
-            self._send_event(event)
+            self._send_event(event, timeout=timeout)
 
         event = h11.EndOfMessage()
         self._send_event(event, timeout=timeout)
