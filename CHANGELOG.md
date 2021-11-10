@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.14.0
+
+The 0.14 release is a complete reworking of `httpcore`, comprehensively addressing some underlying issues in the connection pooling, as well as substantially redesigning the API to be more user friendly.
+
+Some of the lower-level API design also makes the components more easily testable in isolation, and the package now has 100% test coverage.
+
+There's some other neat bits in there too, such as the "trace" extension, which gives a hook into inspecting the internal events that occur during the request/response cycle. This extension is needed for the HTTPX cli, in order to...
+
+Log the point at which the connection is established, and the IP/port on which it is made.
+Determine if the outgoing request should log as HTTP/1.1 or HTTP/2, rather than having to assume it's HTTP/2 if the --http2 flag was passed. (Which may not actually be true.)
+Log SSL version info / certificate info.
+
 ## 0.13.7 (September 13th, 2021)
 
 - Fix broken error messaging when URL scheme is missing, or a non HTTP(S) scheme is used. (Pull #403)
