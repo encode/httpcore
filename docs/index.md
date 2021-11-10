@@ -28,10 +28,16 @@ Some things HTTP Core does do:
 For HTTP/1.1 only support, install with...
 
 ```shell
-$ pip install git+https://github.com/tomchristie/httpcore-the-directors-cut
+$ pip install git+https://github.com/encode/httpcore
 ```
 
-Send an HTTP request:
+For HTTP/1.1 and HTTP/2 support, install with...
+
+```shell
+$ pip install git+https://github.com/encode/httpcore[http2]
+```
+
+# Sending requests
 
 ```python
 import httpcore
