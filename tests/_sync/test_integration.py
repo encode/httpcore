@@ -43,7 +43,7 @@ def test_extra_info(httpbin_secure):
             assert "https://%s:%d" % remote_addr == httpbin_secure.url
 
             sock = stream.get_extra_info("socket")
-            assert (sock.family, sock.type) == (socket.AF_INET, socket.SOCK_STREAM)
+            assert hasattr(sock, "family") == (socket.AF_INET, socket.SOCK_STREAM)
 
             invalid = stream.get_extra_info("invalid")
             assert invalid is None
