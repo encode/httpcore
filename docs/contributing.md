@@ -84,7 +84,7 @@ as part of the unasync process.
 - Run `scripts/unasync` to generate the synchronous versions. Note the script
 is ran as part of other scripts as well, so you don't usually need to run this
 yourself.
-- Run the entire test suite as decribed below.
+- Run the entire test suite as described below.
 
 ## Testing and Linting
 
