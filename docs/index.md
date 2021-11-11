@@ -37,7 +37,9 @@ For HTTP/1.1 and HTTP/2 support, install with...
 $ pip install git+https://github.com/encode/httpcore[http2]
 ```
 
-# Sending requests
+## Example
+
+Let's check we're able to send HTTP requests:
 
 ```python
 import httpcore
