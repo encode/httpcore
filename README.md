@@ -28,13 +28,13 @@ Some things HTTP Core does do:
 For HTTP/1.1 only support, install with...
 
 ```shell
-$ pip install git+https://github.com/encode/httpcore
+$ pip install httpcore
 ```
 
 For HTTP/1.1 and HTTP/2 support, install with...
 
 ```shell
-$ pip install git+https://github.com/encode/httpcore[http2]
+$ pip install httpcore[http2]
 ```
 
 # Sending requests
