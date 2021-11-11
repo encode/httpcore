@@ -10,11 +10,15 @@ The 0.14 release is a complete reworking of `httpcore`, comprehensively addressi
 
 Some of the lower-level API design also makes the components more easily testable in isolation, and the package now has 100% test coverage.
 
+See [discussion #419](https://github.com/encode/httpcore/discussions/419) for a little more background.
+
 There's some other neat bits in there too, such as the "trace" extension, which gives a hook into inspecting the internal events that occur during the request/response cycle. This extension is needed for the HTTPX cli, in order to...
 
-Log the point at which the connection is established, and the IP/port on which it is made.
-Determine if the outgoing request should log as HTTP/1.1 or HTTP/2, rather than having to assume it's HTTP/2 if the --http2 flag was passed. (Which may not actually be true.)
-Log SSL version info / certificate info.
+* Log the point at which the connection is established, and the IP/port on which it is made.
+* Determine if the outgoing request should log as HTTP/1.1 or HTTP/2, rather than having to assume it's HTTP/2 if the --http2 flag was passed. (Which may not actually be true.)
+* Log SSL version info / certificate info.
+
+Note that `curio` support is not currently available in 0.14.0. If you're using `httpcore` with `curio` please get in touch, so we can assess if we ought to prioritize it as a feature or not.
 
 ## 0.13.7 (September 13th, 2021)
 
