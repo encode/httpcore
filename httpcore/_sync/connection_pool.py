@@ -1,4 +1,5 @@
 import ssl
+import sys
 from types import TracebackType
 from typing import Iterable, Iterator, List, Optional, Type
 
@@ -44,7 +45,7 @@ class ConnectionPool(RequestInterface):
     def __init__(
         self,
         ssl_context: ssl.SSLContext = None,
-        max_connections: int = 10,
+        max_connections: Optional[int] = 10,
         max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
         http1: bool = True,
@@ -81,17 +82,21 @@ class ConnectionPool(RequestInterface):
             uds: Path to a Unix Domain Socket to use instead of TCP sockets.
             network_backend: A backend instance to use for handling network I/O.
         """
-        if max_keepalive_connections is None:
-            max_keepalive_connections = max_connections
-
         if ssl_context is None:
             ssl_context = default_ssl_context()
 
         self._ssl_context = ssl_context
 
-        self._max_connections = max_connections
+        self._max_connections = (
+            sys.maxsize if max_connections is None else max_connections
+        )
+        self._max_keepalive_connections = (
+            sys.maxsize
+            if max_keepalive_connections is None
+            else max_keepalive_connections
+        )
         self._max_keepalive_connections = min(
-            max_keepalive_connections, max_connections
+            self._max_connections, self._max_keepalive_connections
         )
 
         self._keepalive_expiry = keepalive_expiry
@@ -209,7 +214,7 @@ class ConnectionPool(RequestInterface):
             )
         if scheme not in ("http", "https"):
             raise UnsupportedProtocol(
-                "Request URL has an unsupported protocol '{scheme}://'."
+                f"Request URL has an unsupported protocol '{scheme}://'."
             )
 
         status = RequestStatus(request)
