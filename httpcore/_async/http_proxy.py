@@ -1,5 +1,5 @@
 import ssl
-from typing import Dict, List, Tuple, Union
+from typing import List, Mapping, Sequence, Tuple, Union
 
 from .._exceptions import ProxyError
 from .._models import URL, Origin, Request, Response, enforce_headers, enforce_url
@@ -11,20 +11,20 @@ from .connection_pool import AsyncConnectionPool
 from .http11 import AsyncHTTP11Connection
 from .interfaces import AsyncConnectionInterface
 
-HeadersAsList = List[Tuple[Union[bytes, str], Union[bytes, str]]]
-HeadersAsDict = Dict[Union[bytes, str], Union[bytes, str]]
+HeadersAsSequence = Sequence[Tuple[Union[bytes, str], Union[bytes, str]]]
+HeadersAsMapping = Mapping[Union[bytes, str], Union[bytes, str]]
 
 
 def merge_headers(
-    default_headers: List[Tuple[bytes, bytes]] = None,
-    override_headers: List[Tuple[bytes, bytes]] = None,
+    default_headers: Sequence[Tuple[bytes, bytes]] = None,
+    override_headers: Sequence[Tuple[bytes, bytes]] = None,
 ) -> List[Tuple[bytes, bytes]]:
     """
     Append default_headers and override_headers, de-duplicating if a key exists
     in both cases.
     """
-    default_headers = [] if default_headers is None else default_headers
-    override_headers = [] if override_headers is None else override_headers
+    default_headers = [] if default_headers is None else list(default_headers)
+    override_headers = [] if override_headers is None else list(override_headers)
     has_override = set([key.lower() for key, value in override_headers])
     default_headers = [
         (key, value)
@@ -42,7 +42,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
     def __init__(
         self,
         proxy_url: Union[URL, bytes, str],
-        proxy_headers: Union[HeadersAsDict, HeadersAsList] = None,
+        proxy_headers: Union[HeadersAsMapping, HeadersAsSequence] = None,
         ssl_context: ssl.SSLContext = None,
         max_connections: int = 10,
         max_keepalive_connections: int = None,
@@ -106,6 +106,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             )
         return AsyncTunnelHTTPConnection(
             proxy_origin=self._proxy_url.origin,
+            proxy_headers=self._proxy_headers,
             remote_origin=origin,
             ssl_context=self._ssl_context,
             keepalive_expiry=self._keepalive_expiry,
@@ -117,7 +118,7 @@ class AsyncForwardHTTPConnection(AsyncConnectionInterface):
     def __init__(
         self,
         proxy_origin: Origin,
-        proxy_headers: Union[HeadersAsDict, HeadersAsList] = None,
+        proxy_headers: Union[HeadersAsMapping, HeadersAsSequence] = None,
         keepalive_expiry: float = None,
         network_backend: AsyncNetworkBackend = None,
     ) -> None:
@@ -177,7 +178,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
         proxy_origin: Origin,
         remote_origin: Origin,
         ssl_context: ssl.SSLContext,
-        proxy_headers: List[Tuple[bytes, bytes]] = None,
+        proxy_headers: Sequence[Tuple[bytes, bytes]] = None,
         keepalive_expiry: float = None,
         network_backend: AsyncNetworkBackend = None,
     ) -> None:
@@ -189,7 +190,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
         self._proxy_origin = proxy_origin
         self._remote_origin = remote_origin
         self._ssl_context = ssl_context
-        self._proxy_headers = [] if proxy_headers is None else proxy_headers
+        self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
         self._keepalive_expiry = keepalive_expiry
         self._connect_lock = AsyncLock()
         self._connected = False
@@ -208,7 +209,9 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
                     port=self._proxy_origin.port,
                     target=target,
                 )
-                connect_headers = [(b"Host", target), (b"Accept", b"*/*")]
+                connect_headers = merge_headers(
+                    [(b"Host", target), (b"Accept", b"*/*")], self._proxy_headers
+                )
                 connect_request = Request(
                     method=b"CONNECT", url=connect_url, headers=connect_headers
                 )
