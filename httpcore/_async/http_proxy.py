@@ -1,5 +1,5 @@
 import ssl
-from typing import List, Mapping, Sequence, Tuple, Union
+from typing import List, Mapping, Optional, Sequence, Tuple, Union
 
 from .._exceptions import ProxyError
 from .._models import URL, Origin, Request, Response, enforce_headers, enforce_url
@@ -44,7 +44,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         proxy_url: Union[URL, bytes, str],
         proxy_headers: Union[HeadersAsMapping, HeadersAsSequence] = None,
         ssl_context: ssl.SSLContext = None,
-        max_connections: int = 10,
+        max_connections: Optional[int] = 10,
         max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
         retries: int = 0,
