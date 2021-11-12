@@ -5,13 +5,19 @@ from typing import (
     Iterable,
     Iterator,
     List,
+    Mapping,
     Optional,
+    Sequence,
     Tuple,
     Union,
 )
 from urllib.parse import urlparse
 
 # Functions for typechecking...
+
+
+HeadersAsSequence = Sequence[Tuple[Union[bytes, str], Union[bytes, str]]]
+HeadersAsMapping = Mapping[Union[bytes, str], Union[bytes, str]]
 
 
 def enforce_bytes(value: Union[bytes, str], *, name: str) -> bytes:
@@ -49,7 +55,7 @@ def enforce_url(value: Union["URL", bytes, str], *, name: str) -> "URL":
 
 
 def enforce_headers(
-    value: Union[dict, list] = None, *, name: str
+    value: Union[HeadersAsMapping, HeadersAsSequence] = None, *, name: str
 ) -> List[Tuple[bytes, bytes]]:
     """
     Convienence function that ensure all items in request or response headers
@@ -57,15 +63,7 @@ def enforce_headers(
     """
     if value is None:
         return []
-    elif isinstance(value, (list, tuple)):
-        return [
-            (
-                enforce_bytes(k, name="header name"),
-                enforce_bytes(v, name="header value"),
-            )
-            for k, v in value
-        ]
-    elif isinstance(value, dict):
+    elif isinstance(value, Mapping):
         return [
             (
                 enforce_bytes(k, name="header name"),
@@ -73,9 +71,19 @@ def enforce_headers(
             )
             for k, v in value.items()
         ]
+    elif isinstance(value, Sequence):
+        return [
+            (
+                enforce_bytes(k, name="header name"),
+                enforce_bytes(v, name="header value"),
+            )
+            for k, v in value
+        ]
 
     seen_type = type(value).__name__
-    raise TypeError(f"{name} must be a list, but got {seen_type}.")
+    raise TypeError(
+        f"{name} must be a mapping or sequence of two-tuples, but got {seen_type}."
+    )
 
 
 def enforce_stream(

@@ -73,7 +73,10 @@ def test_request_with_invalid_url():
 def test_request_with_invalid_headers():
     with pytest.raises(TypeError) as exc_info:
         httpcore.Request("GET", "https://www.example.com/", headers=123)  # type: ignore
-    assert str(exc_info.value) == "headers must be a list, but got int."
+    assert (
+        str(exc_info.value)
+        == "headers must be a mapping or sequence of two-tuples, but got int."
+    )
 
 
 # Response
