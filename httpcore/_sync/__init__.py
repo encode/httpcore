@@ -7,7 +7,13 @@ from .interfaces import ConnectionInterface
 try:
     from .http2 import HTTP2Connection
 except ImportError:  # pragma: nocover
-    pass
+
+    class HTTP2Connection:  # type: ignore
+        def __init__(self, *args, **kwargs) -> None:  # type: ignore
+            raise RuntimeError(
+                "Attempted to use http2 support, but the `h2` package is not "
+                "installed. Use 'pip install httpcore[http2]'."
+            )
 
 
 __all__ = [

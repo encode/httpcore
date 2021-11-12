@@ -53,7 +53,12 @@ setup(
     packages=get_packages("httpcore"),
     include_package_data=True,
     zip_safe=False,
-    install_requires=["h11>=0.11,<0.13", "sniffio==1.*", "anyio==3.*"],
+    install_requires=[
+        "h11>=0.11,<0.13",
+        "sniffio==1.*",
+        "anyio==3.*",
+        "certifi",
+    ],
     extras_require={
         "http2": ["h2>=3,<5"],
     },
