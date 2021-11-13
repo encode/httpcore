@@ -4,6 +4,126 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.14.1 (November 12th, 2021)
+
+- `max_connections` becomes optional. (Pull #429)
+- `certifi` is now included in the install dependancies. (Pull #428)
+- `h2` is now strictly optional. (Pull #428)
+
+## 0.14.0 (November 11th, 2021)
+
+The 0.14 release is a complete reworking of `httpcore`, comprehensively addressing some underlying issues in the connection pooling, as well as substantially redesigning the API to be more user friendly.
+
+Some of the lower-level API design also makes the components more easily testable in isolation, and the package now has 100% test coverage.
+
+See [discussion #419](https://github.com/encode/httpcore/discussions/419) for a little more background.
+
+There's some other neat bits in there too, such as the "trace" extension, which gives a hook into inspecting the internal events that occur during the request/response cycle. This extension is needed for the HTTPX cli, in order to...
+
+* Log the point at which the connection is established, and the IP/port on which it is made.
+* Determine if the outgoing request should log as HTTP/1.1 or HTTP/2, rather than having to assume it's HTTP/2 if the --http2 flag was passed. (Which may not actually be true.)
+* Log SSL version info / certificate info.
+
+Note that `curio` support is not currently available in 0.14.0. If you're using `httpcore` with `curio` please get in touch, so we can assess if we ought to prioritize it as a feature or not.
+
+## 0.13.7 (September 13th, 2021)
+
+- Fix broken error messaging when URL scheme is missing, or a non HTTP(S) scheme is used. (Pull #403)
+
+## 0.13.6 (June 15th, 2021)
+
+### Fixed
+
+- Close sockets when read or write timeouts occur. (Pull #365)
+
+## 0.13.5 (June 14th, 2021)
+
+### Fixed
+
+- Resolved niggles with AnyIO EOF behaviours. (Pull #358, #362)
+
+## 0.13.4 (June 9th, 2021)
+
+### Added
+
+- Improved error messaging when URL scheme is missing, or a non HTTP(S) scheme is used. (Pull #354)
+
+### Fixed
+
+- Switched to `anyio` as the default backend implementation when running with `asyncio`. Resolves some awkward [TLS timeout issues](https://github.com/encode/httpx/discussions/1511).
+
+## 0.13.3 (May 6th, 2021)
+
+### Added
+
+- Support HTTP/2 prior knowledge, using `httpcore.SyncConnectionPool(http1=False)`. (Pull #333)
+
+### Fixed
+
+- Handle cases where environment does not provide `select.poll` support. (Pull #331)
+
+## 0.13.2 (April 29th, 2021)
+
+### Added
+
+- Improve error message for specific case of `RemoteProtocolError` where server disconnects without sending a response. (Pull #313)
+
+## 0.13.1 (April 28th, 2021)
+
+### Fixed
+
+- More resiliant testing for closed connections. (Pull #311)
+- Don't raise exceptions on ungraceful connection closes. (Pull #310)
+
+## 0.13.0 (April 21st, 2021)
+
+The 0.13 release updates the core API in order to match the HTTPX Transport API,
+introduced in HTTPX 0.18 onwards.
+
+An example of making requests with the new interface is:
+
+```python
+with httpcore.SyncConnectionPool() as http:
+    status_code, headers, stream, extensions = http.handle_request(
+        method=b'GET',
+        url=(b'https', b'example.org', 443, b'/'),
+        headers=[(b'host', b'example.org'), (b'user-agent', b'httpcore')]
+        stream=httpcore.ByteStream(b''),
+        extensions={}
+    )
+    body = stream.read()
+    print(status_code, body)
+```
+
+### Changed
+
+- The `.request()` method is now `handle_request()`. (Pull #296)
+- The `.arequest()` method is now `.handle_async_request()`. (Pull #296)
+- The `headers` argument is no longer optional. (Pull #296)
+- The `stream` argument is no longer optional. (Pull #296)
+- The `ext` argument is now named `extensions`, and is no longer optional. (Pull #296)
+- The `"reason"` extension keyword is now named `"reason_phrase"`. (Pull #296)
+- The `"reason_phrase"` and `"http_version"` extensions now use byte strings for their values. (Pull #296)
+- The `httpcore.PlainByteStream()` class becomes `httpcore.ByteStream()`. (Pull #296)
+
+### Added
+
+- Streams now support a `.read()` interface. (Pull #296)
+
+### Fixed
+
+- Task cancellation no longer leaks connections from the connection pool. (Pull #305)
+
+## 0.12.3 (December 7th, 2020)
+
+### Fixed
+
+- Abort SSL connections on close rather than waiting for remote EOF when using `asyncio`.  (Pull #167)
+- Fix exception raised in case of connect timeouts when using the `anyio` backend. (Pull #236)
+- Fix `Host` header precedence for `:authority` in HTTP/2. (Pull #241, #243)
+- Handle extra edge case when detecting for socket readability when using `asyncio`. (Pull #242, #244)
+- Fix `asyncio` SSL warning when using proxy tunneling. (Pull #249)
+
 ## 0.12.2 (November 20th, 2020)
 
 ### Fixed

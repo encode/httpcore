@@ -1,23 +1,34 @@
-site_name: HTTP Core
-site_description: Do one thing, and do it well.
-site_url: https://www.encode.io/httpcore
-
-theme:
-    name: 'material'
+site_name: HTTPCore
+site_description: A minimal HTTP client for Python.
+site_url: https://www.encode.io/httpcore/
 
 repo_name: encode/httpcore
 repo_url: https://github.com/encode/httpcore/
-edit_uri: ""
 
 nav:
     - Introduction: 'index.md'
-    - Developer Interface: 'api.md'
-    - Contributing: 'contributing.md'
+    - Quickstart: 'quickstart.md'
+    - Connection Pools: 'connection-pools.md'
+    - Proxies: 'proxies.md'
+    - HTTP/2: 'http2.md'
+    - Async Support: 'async.md'
+    - Extensions: 'extensions.md'
+    - Exceptions: 'exceptions.md'
+
+theme:
+  name: "material"
+
+plugins:
+    - search
+    - mkdocstrings:
+        default_handler: python
+        watch:
+            - httpcore
+        handlers:
+            python:
+                members_order:
+                    - "source"
 
 markdown_extensions:
-  - admonition
-  - codehilite
-  - mkautodoc
-
-extra_css:
-    - css/custom.css
+  - codehilite:
+      css_class: highlight

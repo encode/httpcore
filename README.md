@@ -17,11 +17,11 @@ defaults, or any of that Jazz.
 Some things HTTP Core does do:
 
 * Sending HTTP requests.
-* Provides both sync and async interfaces.
-* Supports HTTP/1.1 and HTTP/2.
-* Async backend support for `asyncio`, `trio` and `curio`.
-* Automatic connection pooling.
+* Thread-safe / task-safe connection pooling.
 * HTTP(S) proxy support.
+* Supports HTTP/1.1 and HTTP/2.
+* Provides both sync and async interfaces.
+* Async backend support for `asyncio` and `trio`.
 
 ## Installation
 
@@ -37,47 +37,39 @@ For HTTP/1.1 and HTTP/2 support, install with...
 $ pip install httpcore[http2]
 ```
 
-## Quickstart
+# Sending requests
 
-Here's an example of making an HTTP GET request using `httpcore`...
-
-```python
-with httpcore.SyncConnectionPool() as http:
-    status_code, headers, stream, ext = http.request(
-        method=b'GET',
-        url=(b'https', b'example.org', 443, b'/'),
-        headers=[(b'host', b'example.org'), (b'user-agent', 'httpcore')]
-    )
-
-    try:
-        body = b''.join([chunk for chunk in stream])
-    finally:
-        stream.close()
-
-    print(status_code, body)
-```
-
-Or, using async...
+Send an HTTP request:
 
 ```python
-async with httpcore.AsyncConnectionPool() as http:
-    status_code, headers, stream, ext = await http.arequest(
-        method=b'GET',
-        url=(b'https', b'example.org', 443, b'/'),
-        headers=[(b'host', b'example.org'), (b'user-agent', 'httpcore')]
-    )
+import httpcore
 
-    try:
-        body = b''.join([chunk async for chunk in stream])
-    finally:
-        await stream.aclose()
+response = httpcore.request("GET", "https://www.example.com/")
 
-    print(status_code, body)
+print(response)
+# <Response [200]>
+print(response.status)
+# 200
+print(response.headers)
+# [(b'Accept-Ranges', b'bytes'), (b'Age', b'557328'), (b'Cache-Control', b'max-age=604800'), ...]
+print(response.content)
+# b'<!doctype html>\n<html>\n<head>\n<title>Example Domain</title>\n\n<meta charset="utf-8"/>\n ...'
 ```
+
+The top-level `httpcore.request()` function is provided for convenience. In practice whenever you're working with `httpcore` you'll want to use the connection pooling functionality that it provides.
+
+```python
+import httpcore
+
+pool = httpcore.ConnectionPool()
+response = pool.request("GET", "https://www.example.com/")
+```
+
+Once you're ready to get going, [head over to the documentation](https://www.encode.io/httpcore/).
 
 ## Motivation
 
-You probably don't want to be using HTTP Core directly. It might make sense if
+You *probably* don't want to be using HTTP Core directly. It might make sense if
 you're writing something like a proxy service in Python, and you just want
 something at the lowest possible level, but more typically you'll want to use
 a higher level client library, such as `httpx`.

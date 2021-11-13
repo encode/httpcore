@@ -1,4 +1,4 @@
-# HTTP Core
+# HTTPCore
 
 [![Test Suite](https://github.com/encode/httpcore/workflows/Test%20Suite/badge.svg)](https://github.com/encode/httpcore/actions)
 [![Package version](https://badge.fury.io/py/httpcore.svg)](https://pypi.org/project/httpcore/)
@@ -17,11 +17,11 @@ defaults, or any of that Jazz.
 Some things HTTP Core does do:
 
 * Sending HTTP requests.
-* Provides both sync and async interfaces.
-* Supports HTTP/1.1 and HTTP/2.
-* Async backend support for `asyncio`, `trio` and `curio`.
-* Automatic connection pooling.
+* Thread-safe / task-safe connection pooling.
 * HTTP(S) proxy support.
+* Supports HTTP/1.1 and HTTP/2.
+* Provides both sync and async interfaces.
+* Async backend support for `asyncio` and `trio`.
 
 ## Installation
 
@@ -37,53 +37,25 @@ For HTTP/1.1 and HTTP/2 support, install with...
 $ pip install httpcore[http2]
 ```
 
-## Quickstart
+## Example
 
-Here's an example of making an HTTP GET request using `httpcore`...
-
-```python
-with httpcore.SyncConnectionPool() as http:
-    status_code, headers, stream, ext = http.request(
-        method=b'GET',
-        url=(b'https', b'example.org', 443, b'/'),
-        headers=[(b'host', b'example.org'), (b'user-agent', 'httpcore')]
-    )
-
-    try:
-        body = b''.join([chunk for chunk in stream])
-    finally:
-        stream.close()
-
-    print(status_code, body)
-```
-
-Or, using async...
+Let's check we're able to send HTTP requests:
 
 ```python
-async with httpcore.AsyncConnectionPool() as http:
-    status_code, headers, stream, ext = await http.arequest(
-        method=b'GET',
-        url=(b'https', b'example.org', 443, b'/'),
-        headers=[(b'host', b'example.org'), (b'user-agent', 'httpcore')]
-    )
+import httpcore
 
-    try:
-        body = b''.join([chunk async for chunk in stream])
-    finally:
-        await stream.aclose()
+response = httpcore.request("GET", "https://www.example.com/")
 
-    print(status_code, body)
+print(response)
+# <Response [200]>
+print(response.status)
+# 200
+print(response.headers)
+# [(b'Accept-Ranges', b'bytes'), (b'Age', b'557328'), (b'Cache-Control', b'max-age=604800'), ...]
+print(response.content)
+# b'<!doctype html>\n<html>\n<head>\n<title>Example Domain</title>\n\n<meta charset="utf-8"/>\n ...'
 ```
 
-## Motivation
+Ready to get going?
 
-You probably don't want to be using HTTP Core directly. It might make sense if
-you're writing something like a proxy service in Python, and you just want
-something at the lowest possible level, but more typically you'll want to use
-a higher level client library, such as `httpx`.
-
-The motivation for `httpcore` is:
-
-* To provide a reusable low-level client library, that other packages can then build on top of.
-* To provide a *really clear interface split* between the networking code and client logic,
-  so that each is easier to understand and reason about in isolation.
+Head over to [the quickstart documentation](quickstart.md).

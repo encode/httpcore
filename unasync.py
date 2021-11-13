@@ -4,27 +4,29 @@ import os
 import sys
 
 SUBS = [
-    ('AsyncIteratorByteStream', 'IteratorByteStream'),
+    ('from .._compat import asynccontextmanager', 'from contextlib import contextmanager'),
+    ('from ..backends.auto import AutoBackend', 'from ..backends.sync import SyncBackend'),
+    ('import trio as concurrency', 'from tests import concurrency'),
+    ('AsyncByteStream', 'SyncByteStream'),
     ('AsyncIterator', 'Iterator'),
     ('AutoBackend', 'SyncBackend'),
-    ('Async([A-Z][A-Za-z0-9_]*)', r'Sync\2'),
+    ('Async([A-Z][A-Za-z0-9_]*)', r'\2'),
     ('async def', 'def'),
     ('async with', 'with'),
     ('async for', 'for'),
     ('await ', ''),
-    ('arequest', 'request'),
+    ('handle_async_request', 'handle_request'),
     ('aclose', 'close'),
     ('aclose_func', 'close_func'),
     ('aiterator', 'iterator'),
+    ('aread', 'read'),
+    ('asynccontextmanager', 'contextmanager'),
     ('__aenter__', '__enter__'),
     ('__aexit__', '__exit__'),
     ('__aiter__', '__iter__'),
     ('@pytest.mark.anyio', ''),
     ('@pytest.mark.trio', ''),
-    (r'@pytest.fixture\(params=\["auto", "anyio"\]\)',
-     '@pytest.fixture(params=["sync"])'),
-    ('lookup_async_backend', "lookup_sync_backend"),
-    ('auto', 'sync'),
+    ('AutoBackend', 'SyncBackend'),
 ]
 COMPILED_SUBS = [
     (re.compile(r'(^|\b)' + regex + r'($|\b)'), repl)
@@ -77,7 +79,7 @@ def unasync_dir(in_dir, out_dir, check_only=False):
 def main():
     check_only = '--check' in sys.argv
     unasync_dir("httpcore/_async", "httpcore/_sync", check_only=check_only)
-    unasync_dir("tests/async_tests", "tests/sync_tests", check_only=check_only)
+    unasync_dir("tests/_async", "tests/_sync", check_only=check_only)
 
 
 if __name__ == '__main__':
