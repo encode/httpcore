@@ -61,8 +61,8 @@ The top-level `httpcore.request()` function is provided for convenience. In prac
 ```python
 import httpcore
 
-pool = httpcore.ConnectionPool()
-response = pool.request("GET", "https://www.example.com/")
+http = httpcore.ConnectionPool()
+response = http.request("GET", "https://www.example.com/")
 ```
 
 Once you're ready to get going, [head over to the documentation](https://www.encode.io/httpcore/).
