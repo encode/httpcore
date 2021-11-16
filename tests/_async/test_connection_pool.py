@@ -3,7 +3,7 @@ from typing import List
 import pytest
 import trio as concurrency
 
-from httpcore import AsyncConnectionPool, UnsupportedProtocol
+from httpcore import AsyncConnectionPool, ConnectError, UnsupportedProtocol
 from httpcore.backends.mock import AsyncMockBackend
 
 
@@ -154,10 +154,10 @@ async def test_trace_request():
 
 
 @pytest.mark.anyio
-async def test_connection_pool_with_exception():
+async def test_connection_pool_with_http_exception():
     """
-    HTTP/1.1 requests that result in an exception should not be returned to the
-    connection pool.
+    HTTP/1.1 requests that result in an exception during the connection should
+    not be returned to the connection pool.
     """
     network_backend = AsyncMockBackend([b"Wait, this isn't valid HTTP!"])
 
@@ -189,6 +189,42 @@ async def test_connection_pool_with_exception():
         "http11.receive_response_headers.failed",
         "http11.response_closed.started",
         "http11.response_closed.complete",
+    ]
+
+
+@pytest.mark.anyio
+async def test_connection_pool_with_connect_exception():
+    """
+    HTTP/1.1 requests that result in an exception during connection should not
+    be returned to the connection pool.
+    """
+
+    class FailedConnectBackend(AsyncMockBackend):
+        async def connect_tcp(
+            self, host: str, port: int, timeout: float = None, local_address: str = None
+        ):
+            raise ConnectError("Could not connect")
+
+    network_backend = FailedConnectBackend([])
+
+    called = []
+
+    async def trace(name, kwargs):
+        called.append(name)
+
+    async with AsyncConnectionPool(network_backend=network_backend) as pool:
+        # Sending an initial request, which once complete will not return to the pool.
+        with pytest.raises(Exception):
+            await pool.request(
+                "GET", "https://example.com/", extensions={"trace": trace}
+            )
+
+        info = [repr(c) for c in pool.connections]
+        assert info == []
+
+    assert called == [
+        "connection.connect_tcp.started",
+        "connection.connect_tcp.failed",
     ]
 
 
