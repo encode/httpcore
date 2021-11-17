@@ -85,7 +85,7 @@ async def test_http2_connection_post_request():
 
 
 @pytest.mark.anyio
-async def test_http11_connection_with_remote_protocol_error():
+async def test_http2_connection_with_remote_protocol_error():
     """
     If a remote protocol error occurs, then no response will be returned,
     and the connection will not be reusable.
@@ -98,7 +98,7 @@ async def test_http11_connection_with_remote_protocol_error():
 
 
 @pytest.mark.anyio
-async def test_http11_connection_with_stream_cancelled():
+async def test_http2_connection_with_stream_cancelled():
     """
     If a remote protocol error occurs, then no response will be returned,
     and the connection will not be reusable.
