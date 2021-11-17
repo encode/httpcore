@@ -229,5 +229,5 @@ async def test_http2_request_to_incorrect_origin():
     origin = Origin(b"https", b"example.com", 443)
     stream = AsyncMockStream([])
     async with AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
-        with pytest.raises(ConnectionNotAvailable):
+        with pytest.raises(RuntimeError):
             await conn.request("GET", "https://other.com/")

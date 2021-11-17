@@ -56,7 +56,11 @@ class HTTP2Connection(ConnectionInterface):
 
     def handle_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
-            raise ConnectionNotAvailable(
+            # This cannot occur in normal operation, since the connection pool
+            # will only send requests on connections that handle them.
+            # It's in place simply for resilience as a guard against incorrect
+            # usage, for anyone working directly with httpcore connections.
+            raise RuntimeError(
                 f"Attempted to send request to {request.url.origin} on connection "
                 f"to {self._origin}"
             )
