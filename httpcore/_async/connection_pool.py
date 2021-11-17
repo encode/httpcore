@@ -273,7 +273,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
             # Update the state of the connection pool.
             self._requests.remove(status)
 
-            if connection.is_closed():
+            if connection.is_closed() and connection in self._pool:
                 self._pool.remove(connection)
 
             # Since we've had a response closed, it's possible we'll now be able
