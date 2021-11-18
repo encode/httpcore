@@ -98,10 +98,10 @@ async def test_http2_connection_with_remote_protocol_error():
 
 
 @pytest.mark.anyio
-async def test_http2_connection_with_stream_cancelled():
+async def test_http2_connection_with_rst_stream():
     """
-    If a remote protocol error occurs, then no response will be returned,
-    and the connection will not be reusable.
+    If a stream reset occurs, then no response will be returned,
+    but the connection will remain reusable for other requests.
     """
     origin = Origin(b"https", b"example.com", 443)
     stream = AsyncMockStream(
@@ -117,11 +117,74 @@ async def test_http2_connection_with_stream_cancelled():
                 ),
                 flags=["END_HEADERS"],
             ).serialize(),
+            # Stream is closed midway through the first response...
             hyperframe.frame.RstStreamFrame(stream_id=1, error_code=8).serialize(),
+            # ...Which doesn't prevent the second response.
+            hyperframe.frame.HeadersFrame(
+                stream_id=3,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=3, data=b"Hello, world!", flags=["END_STREAM"]
+            ).serialize(),
             b"",
         ]
     )
     async with AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
+        with pytest.raises(RemoteProtocolError):
+            await conn.request("GET", "https://example.com/")
+        response = await conn.request("GET", "https://example.com/")
+        assert response.status == 200
+
+
+@pytest.mark.anyio
+async def test_http2_connection_with_goaway():
+    """
+    If a stream reset occurs, then no response will be returned,
+    but the connection will remain reusable for other requests.
+    """
+    origin = Origin(b"https", b"example.com", 443)
+    stream = AsyncMockStream(
+        [
+            hyperframe.frame.SettingsFrame().serialize(),
+            hyperframe.frame.HeadersFrame(
+                stream_id=1,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            # Connection is closed midway through the first response...
+            hyperframe.frame.GoAwayFrame(stream_id=0, error_code=0).serialize(),
+            # ...We'll never get to this second response.
+            hyperframe.frame.HeadersFrame(
+                stream_id=3,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=3, data=b"Hello, world!", flags=["END_STREAM"]
+            ).serialize(),
+            b"",
+        ]
+    )
+    async with AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
+        with pytest.raises(RemoteProtocolError):
+            await conn.request("GET", "https://example.com/")
         with pytest.raises(RemoteProtocolError):
             await conn.request("GET", "https://example.com/")
 
