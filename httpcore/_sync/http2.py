@@ -9,7 +9,11 @@ import h2.events
 import h2.exceptions
 import h2.settings
 
-from .._exceptions import ConnectionNotAvailable, RemoteProtocolError
+from .._exceptions import (
+    ConnectionNotAvailable,
+    LocalProtocolError,
+    RemoteProtocolError,
+)
 from .._models import Origin, Request, Response
 from .._synchronization import Lock, Semaphore
 from .._trace import Trace
@@ -56,6 +60,7 @@ class HTTP2Connection(ConnectionInterface):
         self._events: typing.Dict[int, h2.events.Event] = {}
         self._read_exception: typing.Optional[Exception] = None
         self._write_exception: typing.Optional[Exception] = None
+        self._connection_error_event: typing.Optional[h2.events.Event] = None
 
     def handle_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
@@ -114,11 +119,28 @@ class HTTP2Connection(ConnectionInterface):
                 content=HTTP2ConnectionByteStream(self, request, stream_id=stream_id),
                 extensions={"stream_id": stream_id, "http_version": b"HTTP/2"},
             )
-        except Exception:  # noqa: PIE786
+        except Exception as exc:  # noqa: PIE786
             kwargs = {"stream_id": stream_id}
             with Trace("http2.response_closed", request, kwargs):
                 self._response_closed(stream_id=stream_id)
-            raise
+
+            if isinstance(exc, h2.exceptions.ProtocolError):
+                # One case where h2 can raise a protocol error is when a
+                # closed frame has been seen by the state machine.
+                #
+                # This happens when one stream is reading, and encounters
+                # a GOAWAY event. Other flows of control may then raise
+                # a protocol error at any point they interact with the 'h2_state'.
+                #
+                # In this case we'll have stored the event, and should raise
+                # it as a RemoteProtocolError.
+                if self._connection_error_event:
+                    raise RemoteProtocolError(self._connection_error_event)
+                # If h2 raises a protocol error in some other state then we
+                # must somehow have made a protocol violation.
+                raise LocalProtocolError(exc)  # pragma: nocover
+
+            raise exc
 
     def _send_connection_init(self, request: Request) -> None:
         """
@@ -235,10 +257,17 @@ class HTTP2Connection(ConnectionInterface):
     ) -> h2.events.Event:
         while not self._events.get(stream_id):
             self._receive_events(request, stream_id)
-        return self._events[stream_id].pop(0)
+        event = self._events[stream_id].pop(0)
+        # The StreamReset event applies to a single stream.
+        if hasattr(event, "error_code"):
+            raise RemoteProtocolError(event)
+        return event
 
     def _receive_events(self, request: Request, stream_id: int = None) -> None:
         with self._read_lock:
+            if self._connection_error_event is not None:  # pragma: nocover
+                raise RemoteProtocolError(self._connection_error_event)
+
             # This conditional is a bit icky. We don't want to block reading if we've
             # actually got an event to return for a given stream. We need to do that
             # check *within* the atomic read lock. Though it also need to be optional,
@@ -250,7 +279,10 @@ class HTTP2Connection(ConnectionInterface):
                 for event in events:
                     event_stream_id = getattr(event, "stream_id", 0)
 
-                    if hasattr(event, "error_code"):
+                    # The ConnectionTerminatedEvent applies to the entire connection,
+                    # and should be saved so it can be raised on all streams.
+                    if hasattr(event, "error_code") and event_stream_id == 0:
+                        self._connection_error_event = event
                         raise RemoteProtocolError(event)
 
                     if event_stream_id in self._events:
