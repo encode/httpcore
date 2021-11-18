@@ -85,7 +85,7 @@ def test_http2_connection_post_request():
 
 
 
-def test_http11_connection_with_remote_protocol_error():
+def test_http2_connection_with_remote_protocol_error():
     """
     If a remote protocol error occurs, then no response will be returned,
     and the connection will not be reusable.
@@ -98,7 +98,7 @@ def test_http11_connection_with_remote_protocol_error():
 
 
 
-def test_http11_connection_with_stream_cancelled():
+def test_http2_connection_with_stream_cancelled():
     """
     If a remote protocol error occurs, then no response will be returned,
     and the connection will not be reusable.
@@ -229,5 +229,5 @@ def test_http2_request_to_incorrect_origin():
     origin = Origin(b"https", b"example.com", 443)
     stream = MockStream([])
     with HTTP2Connection(origin=origin, stream=stream) as conn:
-        with pytest.raises(ConnectionNotAvailable):
+        with pytest.raises(RuntimeError):
             conn.request("GET", "https://other.com/")

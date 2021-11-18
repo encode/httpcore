@@ -52,11 +52,18 @@ class HTTP2Connection(ConnectionInterface):
         self._write_lock = Lock()
         self._sent_connection_init = False
         self._used_all_stream_ids = False
+        self._connection_error = False
         self._events: typing.Dict[int, h2.events.Event] = {}
+        self._read_exception: typing.Optional[Exception] = None
+        self._write_exception: typing.Optional[Exception] = None
 
     def handle_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
-            raise ConnectionNotAvailable(
+            # This cannot occur in normal operation, since the connection pool
+            # will only send requests on connections that handle them.
+            # It's in place simply for resilience as a guard against incorrect
+            # usage, for anyone working directly with httpcore connections.
+            raise RuntimeError(
                 f"Attempted to send request to {request.url.origin} on connection "
                 f"to {self._origin}"
             )
@@ -227,19 +234,27 @@ class HTTP2Connection(ConnectionInterface):
         self, request: Request, stream_id: int
     ) -> h2.events.Event:
         while not self._events.get(stream_id):
-            self._receive_events(request)
+            self._receive_events(request, stream_id)
         return self._events[stream_id].pop(0)
 
-    def _receive_events(self, request: Request) -> None:
-        events = self._read_incoming_data(request)
-        for event in events:
-            event_stream_id = getattr(event, "stream_id", 0)
+    def _receive_events(self, request: Request, stream_id: int = None) -> None:
+        with self._read_lock:
+            # This conditional is a bit icky. We don't want to block reading if we've
+            # actually got an event to return for a given stream. We need to do that
+            # check *within* the atomic read lock. Though it also need to be optional,
+            # because when we call it from `_wait_for_outgoing_flow` we *do* want to
+            # block until we've available flow control, event when we have events
+            # pending for the stream ID we're attempting to send on.
+            if stream_id is None or not self._events.get(stream_id):
+                events = self._read_incoming_data(request)
+                for event in events:
+                    event_stream_id = getattr(event, "stream_id", 0)
 
-            if hasattr(event, "error_code"):
-                raise RemoteProtocolError(event)
+                    if hasattr(event, "error_code"):
+                        raise RemoteProtocolError(event)
 
-            if event_stream_id in self._events:
-                self._events[event_stream_id].append(event)
+                    if event_stream_id in self._events:
+                        self._events[event_stream_id].append(event)
 
         self._write_outgoing_data(request)
 
@@ -271,11 +286,29 @@ class HTTP2Connection(ConnectionInterface):
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("read", None)
 
-        with self._read_lock:
+        if self._read_exception is not None:
+            raise self._read_exception  # pragma: nocover
+
+        try:
             data = self._network_stream.read(self.READ_NUM_BYTES, timeout)
             if data == b"":
                 raise RemoteProtocolError("Server disconnected")
-            return self._h2_state.receive_data(data)
+        except Exception as exc:
+            # If we get a network error we should:
+            #
+            # 1. Save the exception and just raise it immediately on any future reads.
+            #    (For example, this means that a single read timeout or disconnect will
+            #    immediately close all pending streams. Without requiring multiple
+            #    sequential timeouts.)
+            # 2. Mark the connection as errored, so that we don't accept any other
+            #    incoming requests.
+            self._read_exception = exc
+            self._connection_error = True
+            raise exc
+
+        events = self._h2_state.receive_data(data)
+
+        return events
 
     def _write_outgoing_data(self, request: Request) -> None:
         timeouts = request.extensions.get("timeout", {})
@@ -283,7 +316,24 @@ class HTTP2Connection(ConnectionInterface):
 
         with self._write_lock:
             data_to_send = self._h2_state.data_to_send()
-            self._network_stream.write(data_to_send, timeout)
+
+            if self._write_exception is not None:
+                raise self._write_exception  # pragma: nocover
+
+            try:
+                self._network_stream.write(data_to_send, timeout)
+            except Exception as exc:  # pragma: nocover
+                # If we get a network error we should:
+                #
+                # 1. Save the exception and just raise it immediately on any future write.
+                #    (For example, this means that a single write timeout or disconnect will
+                #    immediately close all pending streams. Without requiring multiple
+                #    sequential timeouts.)
+                # 2. Mark the connection as errored, so that we don't accept any other
+                #    incoming requests.
+                self._write_exception = exc
+                self._connection_error = True
+                raise exc
 
     # Flow control...
 
@@ -312,7 +362,9 @@ class HTTP2Connection(ConnectionInterface):
 
     def is_available(self) -> bool:
         return (
-            self._state != HTTPConnectionState.CLOSED and not self._used_all_stream_ids
+            self._state != HTTPConnectionState.CLOSED
+            and not self._connection_error
+            and not self._used_all_stream_ids
         )
 
     def has_expired(self) -> bool:
