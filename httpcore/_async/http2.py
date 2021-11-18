@@ -306,6 +306,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         # Note that this method unilaterally closes the connection, and does
         # not have any kind of locking in place around it.
         # For task-safe/thread-safe operations call into 'attempt_close' instead.
+        self._h2_state.close_connection()
         self._state = HTTPConnectionState.CLOSED
         await self._network_stream.aclose()
 
