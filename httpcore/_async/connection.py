@@ -143,7 +143,11 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                 "timeout": timeout,
             }
             async with Trace("connection.start_tls", request, kwargs) as trace:
-                stream = await stream.start_tls(**kwargs)
+                try:
+                    stream = await stream.start_tls(**kwargs)
+                except Exception:
+                    await stream.aclose()
+                    raise
                 trace.return_value = stream
         return stream
 

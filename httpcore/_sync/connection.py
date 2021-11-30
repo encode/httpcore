@@ -143,7 +143,11 @@ class HTTPConnection(ConnectionInterface):
                 "timeout": timeout,
             }
             with Trace("connection.start_tls", request, kwargs) as trace:
-                stream = stream.start_tls(**kwargs)
+                try:
+                    stream = stream.start_tls(**kwargs)
+                except Exception:
+                    stream.close()
+                    raise
                 trace.return_value = stream
         return stream
 
