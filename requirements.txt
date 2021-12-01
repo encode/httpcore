@@ -14,7 +14,7 @@ mkdocs-material-extensions==1.0.3
 mkdocstrings==0.16.1
 
 # Packaging
-twine==3.4.2
+twine==3.6.0
 wheel==0.37.0
 
 # Tests & Linting
