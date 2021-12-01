@@ -25,7 +25,7 @@ coverage==6.2
 flake8==4.0.1
 flake8-bugbear==21.9.2
 flake8-pie==0.6.1
-hypercorn==0.11.2; python_version >= '3.7'
+hypercorn==0.12.0; python_version >= '3.7'
 isort==5.10.1
 mypy==0.910
 pproxy==2.7.8
