@@ -186,6 +186,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
             origin=proxy_origin,
             keepalive_expiry=keepalive_expiry,
             network_backend=network_backend,
+            ssl_context=ssl_context
         )
         self._proxy_origin = proxy_origin
         self._remote_origin = remote_origin
