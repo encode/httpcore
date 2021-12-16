@@ -101,6 +101,7 @@ class HTTPProxy(ConnectionPool):
         if origin.scheme == b"http":
             return ForwardHTTPConnection(
                 proxy_origin=self._proxy_url.origin,
+                proxy_headers=self._proxy_headers,
                 keepalive_expiry=self._keepalive_expiry,
                 network_backend=self._network_backend,
             )
