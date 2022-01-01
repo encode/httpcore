@@ -8,7 +8,7 @@ curio==1.5; python_version >= '3.7'
 
 # Docs
 mkdocs==1.2.3
-mkdocs-autorefs==0.3.0
+mkdocs-autorefs==0.3.1
 mkdocs-material==8.0.2
 mkdocs-material-extensions==1.0.3
 mkdocstrings==0.16.2
@@ -25,7 +25,7 @@ coverage==6.2
 flake8==4.0.1
 flake8-bugbear==21.11.29
 flake8-pie==0.6.1
-hypercorn==0.12.0; python_version >= '3.7'
+hypercorn==0.13.2; python_version >= '3.7'
 isort==5.10.1
 mypy==0.910
 pproxy==2.7.8
