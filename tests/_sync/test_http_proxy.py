@@ -5,6 +5,7 @@ import hyperframe.frame
 import pytest
 
 from httpcore import HTTPProxy, Origin, ProxyError
+from httpcore.backends.base import NetworkStream
 from httpcore.backends.mock import MockBackend, MockStream
 
 

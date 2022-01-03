@@ -5,6 +5,7 @@ import hyperframe.frame
 import pytest
 
 from httpcore import AsyncHTTPProxy, Origin, ProxyError
+from httpcore.backends.base import AsyncNetworkStream
 from httpcore.backends.mock import AsyncMockBackend, AsyncMockStream
 
 
@@ -127,7 +128,7 @@ class HTTP1ThenHTTP2Stream(AsyncMockStream):
         ssl_context: ssl.SSLContext,
         server_hostname: str = None,
         timeout: float = None,
-    ) -> NetworkStream:
+    ) -> AsyncNetworkStream:
         self._http2 = True
         return self
 
@@ -135,7 +136,7 @@ class HTTP1ThenHTTP2Stream(AsyncMockStream):
 class HTTP1ThenHTTP2Backend(AsyncMockBackend):
     async def connect_tcp(
         self, host: str, port: int, timeout: float = None, local_address: str = None
-    ) -> NetworkStream:
+    ) -> AsyncNetworkStream:
         return HTTP1ThenHTTP2Stream(list(self._buffer))
 
 
