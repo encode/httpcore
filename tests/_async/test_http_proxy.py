@@ -139,7 +139,8 @@ async def test_proxy_tunneling_http2():
             hyperframe.frame.DataFrame(
                 stream_id=1, data=b"Hello, world!", flags=["END_STREAM"]
             ).serialize(),
-        ]
+        ],
+        http2=True,
     )
 
     async with AsyncHTTPProxy(
