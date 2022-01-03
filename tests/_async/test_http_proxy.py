@@ -1,9 +1,11 @@
+import ssl
+
 import hpack
 import hyperframe.frame
 import pytest
 
 from httpcore import AsyncHTTPProxy, Origin, ProxyError
-from httpcore.backends.mock import AsyncMockBackend
+from httpcore.backends.mock import AsyncMockBackend, AsyncMockStream
 
 
 @pytest.mark.anyio
@@ -67,7 +69,7 @@ async def test_proxy_tunneling():
     network_backend = AsyncMockBackend(
         [
             # The initial response to the proxy CONNECT
-            b"HTTP/1.1 200 OK\r\n" b"\r\n",
+            b"HTTP/1.1 200 OK\r\n\r\n",
             # The actual response from the remote server
             b"HTTP/1.1 200 OK\r\n",
             b"Content-Type: plain/text\r\n",
@@ -115,15 +117,37 @@ async def test_proxy_tunneling():
         )
 
 
+# We need to adapt the mock backend here slightly in order to deal
+# with the proxy case. We do not want the initial connection to the proxy
+# to indicate an HTTP/2 connection, but we do want it to indicate HTTP/2
+# once the SSL upgrade has taken place.
+class HTTP1ThenHTTP2Stream(AsyncMockStream):
+    async def start_tls(
+        self,
+        ssl_context: ssl.SSLContext,
+        server_hostname: str = None,
+        timeout: float = None,
+    ) -> NetworkStream:
+        self._http2 = True
+        return self
+
+
+class HTTP1ThenHTTP2Backend(AsyncMockBackend):
+    async def connect_tcp(
+        self, host: str, port: int, timeout: float = None, local_address: str = None
+    ) -> NetworkStream:
+        return HTTP1ThenHTTP2Stream(list(self._buffer))
+
+
 @pytest.mark.anyio
 async def test_proxy_tunneling_http2():
     """
     Send an HTTP/2 request via a proxy.
     """
-    network_backend = AsyncMockBackend(
+    network_backend = HTTP1ThenHTTP2Backend(
         [
             # The initial response to the proxy CONNECT
-            b"HTTP/1.1 200 OK\r\n" b"\r\n",
+            b"HTTP/1.1 200 OK\r\n\r\n",
             # The actual response from the remote server
             hyperframe.frame.SettingsFrame().serialize(),
             hyperframe.frame.HeadersFrame(
@@ -140,7 +164,6 @@ async def test_proxy_tunneling_http2():
                 stream_id=1, data=b"Hello, world!", flags=["END_STREAM"]
             ).serialize(),
         ],
-        http2=True,
     )
 
     async with AsyncHTTPProxy(
@@ -153,7 +176,7 @@ async def test_proxy_tunneling_http2():
         async with proxy.stream("GET", "https://example.com/") as response:
             info = [repr(c) for c in proxy.connections]
             assert info == [
-                "<AsyncTunnelHTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
+                "<AsyncTunnelHTTPConnection ['https://example.com:443', HTTP/2, ACTIVE, Request Count: 1]>"
             ]
             await response.aread()
 
@@ -161,7 +184,7 @@ async def test_proxy_tunneling_http2():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in proxy.connections]
         assert info == [
-            "<AsyncTunnelHTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 1]>"
+            "<AsyncTunnelHTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 1]>"
         ]
         assert proxy.connections[0].is_idle()
         assert proxy.connections[0].is_available()
