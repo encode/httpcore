@@ -8,19 +8,19 @@ curio==1.5; python_version >= '3.7'
 
 # Docs
 mkdocs==1.2.3
-mkdocs-autorefs==0.3.0
+mkdocs-autorefs==0.3.1
 mkdocs-material==8.0.2
 mkdocs-material-extensions==1.0.3
 mkdocstrings==0.16.2
 
 # Packaging
-twine==3.6.0
+twine==3.7.1
 wheel==0.37.0
 
 # Tests & Linting
 anyio==3.4.0
 autoflake==1.4
-black==21.11b1
+black==21.12b0
 coverage==6.2
 flake8==4.0.1
 flake8-bugbear==21.11.29
@@ -30,7 +30,7 @@ isort==5.10.1
 mypy==0.910
 pproxy==2.7.8
 pytest==6.2.5
-pytest-httpbin==1.0.0
+pytest-httpbin==1.0.1
 pytest-trio==0.7.0
 pytest-asyncio==0.16.0
 trustme==0.9.0

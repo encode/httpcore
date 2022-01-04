@@ -3,7 +3,6 @@ from typing import List, Mapping, Optional, Sequence, Tuple, Union
 
 from .._exceptions import ProxyError
 from .._models import URL, Origin, Request, Response, enforce_headers, enforce_url
-from .._ssl import default_ssl_context
 from .._synchronization import AsyncLock
 from ..backends.base import AsyncNetworkBackend
 from .connection import AsyncHTTPConnection
@@ -80,9 +79,6 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             uds: Path to a Unix Domain Socket to use instead of TCP sockets.
             network_backend: A backend instance to use for handling network I/O.
         """
-        if ssl_context is None:
-            ssl_context = default_ssl_context()
-
         super().__init__(
             ssl_context=ssl_context,
             max_connections=max_connections,
@@ -101,6 +97,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         if origin.scheme == b"http":
             return AsyncForwardHTTPConnection(
                 proxy_origin=self._proxy_url.origin,
+                proxy_headers=self._proxy_headers,
                 keepalive_expiry=self._keepalive_expiry,
                 network_backend=self._network_backend,
             )
@@ -177,7 +174,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
         self,
         proxy_origin: Origin,
         remote_origin: Origin,
-        ssl_context: ssl.SSLContext,
+        ssl_context: ssl.SSLContext = None,
         proxy_headers: Sequence[Tuple[bytes, bytes]] = None,
         keepalive_expiry: float = None,
         network_backend: AsyncNetworkBackend = None,
