@@ -6,7 +6,7 @@ trio==0.19.0
 # Docs
 mkdocs==1.2.3
 mkdocs-autorefs==0.3.1
-mkdocs-material==8.0.2
+mkdocs-material==8.1.4
 mkdocs-material-extensions==1.0.3
 mkdocstrings==0.16.2
 
