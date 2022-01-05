@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## 0.14.4 (January 5th, 2021)
+## 0.14.4 (January 5th, 2022)
 
 - Support HTTP/2 on HTTPS tunnelling proxies. (#468)
 - Fix proxy headers missing on HTTP forwarding. (#456)
