@@ -47,8 +47,14 @@ class SyncStream(NetworkStream):
     ) -> NetworkStream:
         exc_map = {socket.timeout: ConnectTimeout, socket.error: ConnectError}
         with map_exceptions(exc_map):
-            self._sock.settimeout(timeout)
-            sock = ssl_context.wrap_socket(self._sock, server_hostname=server_hostname)
+            try:
+                self._sock.settimeout(timeout)
+                sock = ssl_context.wrap_socket(
+                    self._sock, server_hostname=server_hostname
+                )
+            except Exception as exc:  # pragma: nocover
+                self.close()
+                raise exc
         return SyncStream(sock)
 
     def get_extra_info(self, info: str) -> typing.Any:
