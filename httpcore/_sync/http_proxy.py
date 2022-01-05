@@ -3,7 +3,9 @@ from typing import List, Mapping, Optional, Sequence, Tuple, Union
 
 from .._exceptions import ProxyError
 from .._models import URL, Origin, Request, Response, enforce_headers, enforce_url
+from .._ssl import default_ssl_context
 from .._synchronization import Lock
+from .._trace import Trace
 from ..backends.base import NetworkBackend
 from .connection import HTTPConnection
 from .connection_pool import ConnectionPool
@@ -46,6 +48,8 @@ class HTTPProxy(ConnectionPool):
         max_connections: Optional[int] = 10,
         max_keepalive_connections: int = None,
         keepalive_expiry: float = None,
+        http1: bool = True,
+        http2: bool = False,
         retries: int = 0,
         local_address: str = None,
         uds: str = None,
@@ -69,6 +73,10 @@ class HTTPProxy(ConnectionPool):
                 that will be maintained in the pool.
             keepalive_expiry: The duration in seconds that an idle HTTP connection
                 may be maintained for before being expired from the pool.
+            http1: A boolean indicating if HTTP/1.1 requests should be supported
+                by the connection pool. Defaults to True.
+            http2: A boolean indicating if HTTP/2 requests should be supported by
+                the connection pool. Defaults to False.
             retries: The maximum number of retries when trying to establish
                 a connection.
             local_address: Local address to connect from. Can also be used to
@@ -84,6 +92,8 @@ class HTTPProxy(ConnectionPool):
             max_connections=max_connections,
             max_keepalive_connections=max_keepalive_connections,
             keepalive_expiry=keepalive_expiry,
+            http1=http1,
+            http2=http2,
             network_backend=network_backend,
             retries=retries,
             local_address=local_address,
@@ -107,6 +117,8 @@ class HTTPProxy(ConnectionPool):
             remote_origin=origin,
             ssl_context=self._ssl_context,
             keepalive_expiry=self._keepalive_expiry,
+            http1=self._http1,
+            http2=self._http2,
             network_backend=self._network_backend,
         )
 
@@ -177,6 +189,8 @@ class TunnelHTTPConnection(ConnectionInterface):
         ssl_context: ssl.SSLContext = None,
         proxy_headers: Sequence[Tuple[bytes, bytes]] = None,
         keepalive_expiry: float = None,
+        http1: bool = True,
+        http2: bool = False,
         network_backend: NetworkBackend = None,
     ) -> None:
         self._connection: ConnectionInterface = HTTPConnection(
@@ -189,6 +203,8 @@ class TunnelHTTPConnection(ConnectionInterface):
         self._ssl_context = ssl_context
         self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
         self._keepalive_expiry = keepalive_expiry
+        self._http1 = http1
+        self._http2 = http2
         self._connect_lock = Lock()
         self._connected = False
 
@@ -224,16 +240,48 @@ class TunnelHTTPConnection(ConnectionInterface):
                     raise ProxyError(msg)
 
                 stream = connect_response.extensions["network_stream"]
-                stream = stream.start_tls(
-                    ssl_context=self._ssl_context,
-                    server_hostname=self._remote_origin.host.decode("ascii"),
-                    timeout=timeout,
+
+                # Upgrade the stream to SSL
+                ssl_context = (
+                    default_ssl_context()
+                    if self._ssl_context is None
+                    else self._ssl_context
                 )
-                self._connection = HTTP11Connection(
-                    origin=self._remote_origin,
-                    stream=stream,
-                    keepalive_expiry=self._keepalive_expiry,
+                alpn_protocols = ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
+                ssl_context.set_alpn_protocols(alpn_protocols)
+
+                kwargs = {
+                    "ssl_context": ssl_context,
+                    "server_hostname": self._remote_origin.host.decode("ascii"),
+                    "timeout": timeout,
+                }
+                with Trace("connection.start_tls", request, kwargs) as trace:
+                    stream = stream.start_tls(**kwargs)
+                    trace.return_value = stream
+
+                # Determine if we should be using HTTP/1.1 or HTTP/2
+                ssl_object = stream.get_extra_info("ssl_object")
+                http2_negotiated = (
+                    ssl_object is not None
+                    and ssl_object.selected_alpn_protocol() == "h2"
                 )
+
+                # Create the HTTP/1.1 or HTTP/2 connection
+                if http2_negotiated or (self._http2 and not self._http1):
+                    from .http2 import HTTP2Connection
+
+                    self._connection = HTTP2Connection(
+                        origin=self._remote_origin,
+                        stream=stream,
+                        keepalive_expiry=self._keepalive_expiry,
+                    )
+                else:
+                    self._connection = HTTP11Connection(
+                        origin=self._remote_origin,
+                        stream=stream,
+                        keepalive_expiry=self._keepalive_expiry,
+                    )
+
                 self._connected = True
         return self._connection.handle_request(request)
 
