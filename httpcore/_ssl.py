@@ -1,6 +1,6 @@
 import ssl
 
-import certifi
+import certifi  # type: ignore
 
 
 def default_ssl_context() -> ssl.SSLContext:
