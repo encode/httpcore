@@ -61,8 +61,12 @@ class TrioStream(AsyncNetworkStream):
             server_side=False,
         )
         with map_exceptions(exc_map):
-            with trio.fail_after(timeout_or_inf):
-                await ssl_stream.do_handshake()
+            try:
+                with trio.fail_after(timeout_or_inf):
+                    await ssl_stream.do_handshake()
+            except Exception as exc:  # pragma: nocover
+                await self.aclose()
+                raise exc
         return TrioStream(ssl_stream)
 
     def get_extra_info(self, info: str) -> typing.Any:
