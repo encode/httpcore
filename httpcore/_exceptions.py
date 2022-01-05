@@ -3,7 +3,7 @@ from typing import Dict, Iterator, Type
 
 
 @contextlib.contextmanager
-def map_exceptions(map: Dict[Type[Exception], Type[Exception]]) -> Iterator[None]:
+def map_exceptions(map: Dict[Type, Type]) -> Iterator[None]:
     try:
         yield
     except Exception as exc:  # noqa: PIE786

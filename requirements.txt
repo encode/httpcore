@@ -21,7 +21,7 @@ black==21.12b0
 coverage==6.2
 flake8==4.0.1
 isort==5.10.1
-mypy==0.910
+mypy==0.930
 pytest==6.2.5
 pytest-httpbin==1.0.1
 pytest-trio==0.7.0
