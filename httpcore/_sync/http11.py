@@ -172,6 +172,19 @@ class HTTP11Connection(ConnectionInterface):
                 data = self._network_stream.read(
                     self.READ_NUM_BYTES, timeout=timeout
                 )
+
+                # If we feed this case through h11 we'll raise an exception like:
+                #
+                #     httpcore.RemoteProtocolError: can't handle event type
+                #     ConnectionClosed when role=SERVER and state=SEND_RESPONSE
+                #
+                # Which is accurate, but not very informative from an end-user
+                # perspective. Instead we handle this case distinctly and treat
+                # it as a ConnectError.
+                if data == b"" and self._h11_state.their_state == h11.SEND_RESPONSE:
+                    msg = "Server disconnected without sending a response."
+                    raise RemoteProtocolError(msg)
+
                 self._h11_state.receive_data(data)
             else:
                 return event
