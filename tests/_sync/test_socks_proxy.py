@@ -1,7 +1,7 @@
 import pytest
 
 from httpcore import ProxyError
-from httpcore._async.socks_proxy import _init_socks5_connection
+from httpcore._sync.socks_proxy import _init_socks5_connection
 from httpcore.backends.mock import MockStream
 
 
