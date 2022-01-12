@@ -58,14 +58,18 @@ class AsyncIOStream(AsyncNetworkStream):
             anyio.BrokenResourceError: ConnectError,
         }
         with map_exceptions(exc_map):
-            with anyio.fail_after(timeout):
-                ssl_stream = await anyio.streams.tls.TLSStream.wrap(
-                    self._stream,
-                    ssl_context=ssl_context,
-                    hostname=server_hostname,
-                    standard_compatible=False,
-                    server_side=False,
-                )
+            try:
+                with anyio.fail_after(timeout):
+                    ssl_stream = await anyio.streams.tls.TLSStream.wrap(
+                        self._stream,
+                        ssl_context=ssl_context,
+                        hostname=server_hostname,
+                        standard_compatible=False,
+                        server_side=False,
+                    )
+            except Exception as exc:  # pragma: nocover
+                await self.aclose()
+                raise exc
         return AsyncIOStream(ssl_stream)
 
     def get_extra_info(self, info: str) -> typing.Any:
