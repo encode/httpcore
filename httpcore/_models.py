@@ -282,7 +282,7 @@ class URL:
 
     @property
     def origin(self) -> Origin:
-        default_port = {b"http": 80, b"https": 443}[self.scheme]
+        default_port = {b"http": 80, b"https": 443, b"socks5": 1080}[self.scheme]
         return Origin(
             scheme=self.scheme, host=self.host, port=self.port or default_port
         )
