@@ -349,6 +349,7 @@ def test_connection_pool_concurrency_same_domain_closing():
             b"HTTP/1.1 200 OK\r\n",
             b"Content-Type: plain/text\r\n",
             b"Content-Length: 13\r\n",
+            b"Connection: close\r\n",
             b"\r\n",
             b"Hello, world!",
         ]
