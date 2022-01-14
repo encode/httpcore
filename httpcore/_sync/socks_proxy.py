@@ -4,7 +4,7 @@ import typing
 from socksio import socks5
 
 from .._exceptions import ConnectionNotAvailable, ProxyError
-from .._models import URL, Origin, Request, Response, enforce_url
+from .._models import URL, Origin, Request, Response, enforce_bytes, enforce_url
 from .._ssl import default_ssl_context
 from .._synchronization import Lock
 from .._trace import Trace
@@ -105,7 +105,9 @@ class SOCKSProxy(ConnectionPool):
     def __init__(
         self,
         proxy_url: typing.Union[URL, bytes, str],
-        proxy_auth: typing.Tuple[bytes, bytes] = None,
+        proxy_auth: typing.Tuple[
+            typing.Union[bytes, str], typing.Union[bytes, str]
+        ] = None,
         ssl_context: ssl.SSLContext = None,
         max_connections: typing.Optional[int] = 10,
         max_keepalive_connections: int = None,
@@ -155,7 +157,16 @@ class SOCKSProxy(ConnectionPool):
         )
         self._ssl_context = ssl_context
         self._proxy_url = enforce_url(proxy_url, name="proxy_url")
-        self._proxy_auth = proxy_auth
+        if proxy_auth is not None:
+            username, password = proxy_auth
+            username_bytes = enforce_bytes(username, name="proxy_auth")
+            password_bytes = enforce_bytes(password, name="proxy_auth")
+            self._proxy_auth: typing.Optional[typing.Tuple[bytes, bytes]] = (
+                username_bytes,
+                password_bytes,
+            )
+        else:
+            self._proxy_auth = None
 
     def create_connection(self, origin: Origin) -> ConnectionInterface:
         return Socks5Connection(
