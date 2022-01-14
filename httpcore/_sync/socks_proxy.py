@@ -105,6 +105,7 @@ class SOCKSProxy(ConnectionPool):
     def __init__(
         self,
         proxy_url: typing.Union[URL, bytes, str],
+        proxy_auth: typing.Tuple[bytes, bytes] = None,
         ssl_context: ssl.SSLContext = None,
         max_connections: typing.Optional[int] = 10,
         max_keepalive_connections: int = None,
@@ -154,11 +155,13 @@ class SOCKSProxy(ConnectionPool):
         )
         self._ssl_context = ssl_context
         self._proxy_url = enforce_url(proxy_url, name="proxy_url")
+        self._proxy_auth = proxy_auth
 
     def create_connection(self, origin: Origin) -> ConnectionInterface:
         return Socks5Connection(
             proxy_origin=self._proxy_url.origin,
             remote_origin=origin,
+            proxy_auth=self._proxy_auth,
             ssl_context=self._ssl_context,
             keepalive_expiry=self._keepalive_expiry,
             http1=self._http1,
@@ -172,6 +175,7 @@ class Socks5Connection(ConnectionInterface):
         self,
         proxy_origin: Origin,
         remote_origin: Origin,
+        proxy_auth: typing.Tuple[bytes, bytes] = None,
         ssl_context: ssl.SSLContext = None,
         keepalive_expiry: float = None,
         http1: bool = True,
@@ -180,6 +184,7 @@ class Socks5Connection(ConnectionInterface):
     ) -> None:
         self._proxy_origin = proxy_origin
         self._remote_origin = remote_origin
+        self._proxy_auth = proxy_auth
         self._ssl_context = ssl_context
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
@@ -214,6 +219,7 @@ class Socks5Connection(ConnectionInterface):
                         "stream": stream,
                         "host": self._remote_origin.host.decode("ascii"),
                         "port": self._remote_origin.port,
+                        "auth": self._proxy_auth,
                     }
                     with Trace(
                         "connection.setup_socks5_connection", request, kwargs
