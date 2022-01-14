@@ -61,6 +61,7 @@ setup(
     ],
     extras_require={
         "http2": ["h2>=3,<5"],
+        "socks": ["socksio==1.*"]
     },
     classifiers=[
         "Development Status :: 3 - Alpha",

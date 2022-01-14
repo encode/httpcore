@@ -16,6 +16,18 @@ except ImportError:  # pragma: nocover
             )
 
 
+try:
+    from .socks_proxy import AsyncSOCKSProxy
+except ImportError:  # pragma: nocover
+
+    class AsyncSOCKSProxy:  # type: ignore
+        def __init__(self, *args, **kwargs) -> None:  # type: ignore
+            raise RuntimeError(
+                "Attempted to use SOCKS support, but the `socksio` package is not "
+                "installed. Use 'pip install httpcore[socks]'."
+            )
+
+
 __all__ = [
     "AsyncHTTPConnection",
     "AsyncConnectionPool",
@@ -23,4 +35,5 @@ __all__ = [
     "AsyncHTTP11Connection",
     "AsyncHTTP2Connection",
     "AsyncConnectionInterface",
+    "AsyncSOCKSProxy",
 ]

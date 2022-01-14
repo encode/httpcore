@@ -6,6 +6,7 @@ from ._async import (
     AsyncHTTP11Connection,
     AsyncHTTPConnection,
     AsyncHTTPProxy,
+    AsyncSOCKSProxy,
 )
 from ._exceptions import (
     ConnectError,
@@ -33,6 +34,7 @@ from ._sync import (
     HTTP11Connection,
     HTTPConnection,
     HTTPProxy,
+    SOCKSProxy,
 )
 
 __all__ = [
@@ -51,6 +53,7 @@ __all__ = [
     "AsyncHTTP11Connection",
     "AsyncHTTP2Connection",
     "AsyncConnectionInterface",
+    "AsyncSOCKSProxy",
     # sync
     "HTTPConnection",
     "ConnectionPool",
@@ -58,6 +61,7 @@ __all__ = [
     "HTTP11Connection",
     "HTTP2Connection",
     "ConnectionInterface",
+    "SOCKSProxy",
     # util
     "default_ssl_context",
     # exceptions
