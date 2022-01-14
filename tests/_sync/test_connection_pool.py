@@ -325,10 +325,12 @@ def test_connection_pool_concurrency():
             for domain in ["a.com", "b.com", "c.com", "d.com", "e.com"]:
                 nursery.start_soon(fetch, pool, domain, info_list)
 
-        # Check that each time we inspect the connection pool, only a
-        # single connection was established.
         for item in info_list:
+            # Check that each time we inspected the connection pool, only a
+            # single connection was established at any one time.
             assert len(item) == 1
+            # Each connection was to a different host, and only sent a single
+            # request on that connection.
             assert item[0] in [
                 "<HTTPConnection ['http://a.com:80', HTTP/1.1, ACTIVE, Request Count: 1]>",
                 "<HTTPConnection ['http://b.com:80', HTTP/1.1, ACTIVE, Request Count: 1]>",
@@ -369,17 +371,15 @@ def test_connection_pool_concurrency_same_domain_closing():
             for domain in ["a.com", "a.com", "a.com", "a.com", "a.com"]:
                 nursery.start_soon(fetch, pool, domain, info_list)
 
-        # Check that each time we inspect the connection pool, only a
-        # single connection was established.
         for item in info_list:
+            # Check that each time we inspected the connection pool, only a
+            # single connection was established at any one time.
             assert len(item) == 1
-            assert item[0] in [
-                "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>",
-                "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE, Request Count: 2]>",
-                "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE, Request Count: 3]>",
-                "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE, Request Count: 4]>",
-                "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE, Request Count: 5]>",
-            ]
+            # Only a single request was sent on each connection.
+            assert (
+                item[0]
+                == "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
+            )
 
 
 
@@ -413,10 +413,11 @@ def test_connection_pool_concurrency_same_domain_keepalive():
             for domain in ["a.com", "a.com", "a.com", "a.com", "a.com"]:
                 nursery.start_soon(fetch, pool, domain, info_list)
 
-        # Check that each time we inspect the connection pool, only a
-        # single connection was established.
         for item in info_list:
+            # Check that each time we inspected the connection pool, only a
+            # single connection was established at any one time.
             assert len(item) == 1
+            # The connection sent multiple requests.
             assert item[0] in [
                 "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>",
                 "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE, Request Count: 2]>",
