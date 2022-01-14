@@ -6,7 +6,6 @@ import sys
 SUBS = [
     ('from .._compat import asynccontextmanager', 'from contextlib import contextmanager'),
     ('from ..backends.auto import AutoBackend', 'from ..backends.sync import SyncBackend'),
-    ('from httpcore._async', 'from httpcore._sync'),
     ('import trio as concurrency', 'from tests import concurrency'),
     ('AsyncByteStream', 'SyncByteStream'),
     ('AsyncIterator', 'Iterator'),

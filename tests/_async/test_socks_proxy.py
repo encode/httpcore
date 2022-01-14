@@ -1,7 +1,6 @@
 import pytest
 
-from httpcore import Origin, ProxyError
-from httpcore._async.socks_proxy import AsyncSOCKSProxy
+from httpcore import AsyncSOCKSProxy, Origin, ProxyError
 from httpcore.backends.mock import AsyncMockBackend
 
 
