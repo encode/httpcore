@@ -82,7 +82,6 @@ async def test_proxy_tunneling():
 
     async with AsyncHTTPProxy(
         proxy_url="http://localhost:8080/",
-        max_connections=10,
         network_backend=network_backend,
     ) as proxy:
         # Sending an intial request, which once complete will return to the pool, IDLE.
@@ -169,7 +168,6 @@ async def test_proxy_tunneling_http2():
 
     async with AsyncHTTPProxy(
         proxy_url="http://localhost:8080/",
-        max_connections=10,
         network_backend=network_backend,
         http2=True,
     ) as proxy:
@@ -219,10 +217,43 @@ async def test_proxy_tunneling_with_403():
 
     async with AsyncHTTPProxy(
         proxy_url="http://localhost:8080/",
-        max_connections=10,
         network_backend=network_backend,
     ) as proxy:
         with pytest.raises(ProxyError) as exc_info:
             await proxy.request("GET", "https://example.com/")
         assert str(exc_info.value) == "403 Permission Denied"
         assert not proxy.connections
+
+
+@pytest.mark.anyio
+async def test_proxy_tunneling_with_auth():
+    """
+    Send an authenticated HTTPS request via a proxy.
+    """
+    network_backend = AsyncMockBackend(
+        [
+            # The initial response to the proxy CONNECT
+            b"HTTP/1.1 200 OK\r\n\r\n",
+            # The actual response from the remote server
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
+
+    async with AsyncHTTPProxy(
+        proxy_url="http://localhost:8080/",
+        proxy_auth=("username", "password"),
+        network_backend=network_backend,
+    ) as proxy:
+        response = await proxy.request("GET", "https://example.com/")
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+
+        # Dig into this private property as a cheap lazy way of
+        # checking that the proxy header is set correctly.
+        assert proxy._proxy_headers == [  # type: ignore
+            (b"Proxy-Authorization", b"Basic dXNlcm5hbWU6cGFzc3dvcmQ=")
+        ]
