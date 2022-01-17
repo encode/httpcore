@@ -1,8 +1,17 @@
 import ssl
+from base64 import b64encode
 from typing import List, Mapping, Optional, Sequence, Tuple, Union
 
 from .._exceptions import ProxyError
-from .._models import URL, Origin, Request, Response, enforce_headers, enforce_url
+from .._models import (
+    URL,
+    Origin,
+    Request,
+    Response,
+    enforce_bytes,
+    enforce_headers,
+    enforce_url,
+)
 from .._ssl import default_ssl_context
 from .._synchronization import Lock
 from .._trace import Trace
@@ -35,6 +44,11 @@ def merge_headers(
     return default_headers + override_headers
 
 
+def build_auth_header(username: bytes, password: bytes) -> bytes:
+    userpass = username + b":" + password
+    return b"Basic " + b64encode(userpass)
+
+
 class HTTPProxy(ConnectionPool):
     """
     A connection pool that sends requests via an HTTP proxy.
@@ -43,6 +57,7 @@ class HTTPProxy(ConnectionPool):
     def __init__(
         self,
         proxy_url: Union[URL, bytes, str],
+        proxy_auth: Tuple[Union[bytes, str], Union[bytes, str]] = None,
         proxy_headers: Union[HeadersAsMapping, HeadersAsSequence] = None,
         ssl_context: ssl.SSLContext = None,
         max_connections: Optional[int] = 10,
@@ -61,6 +76,8 @@ class HTTPProxy(ConnectionPool):
         Parameters:
             proxy_url: The URL to use when connecting to the proxy server.
                 For example `"http://127.0.0.1:8080/"`.
+            proxy_auth: Any proxy authentication as a two-tuple of
+                (username, password). May be either bytes or ascii-only str.
             proxy_headers: Any HTTP headers to use for the proxy requests.
                 For example `{"Proxy-Authorization": "Basic <username>:<password>"}`.
             ssl_context: An SSL context to use for verifying connections.
@@ -102,6 +119,13 @@ class HTTPProxy(ConnectionPool):
         self._ssl_context = ssl_context
         self._proxy_url = enforce_url(proxy_url, name="proxy_url")
         self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
+        if proxy_auth is not None:
+            username = enforce_bytes(proxy_auth[0], name="proxy_auth")
+            password = enforce_bytes(proxy_auth[1], name="proxy_auth")
+            authorization = build_auth_header(username, password)
+            self._proxy_headers = [
+                (b"Proxy-Authorization", authorization)
+            ] + self._proxy_headers
 
     def create_connection(self, origin: Origin) -> ConnectionInterface:
         if origin.scheme == b"http":
