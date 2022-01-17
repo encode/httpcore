@@ -251,6 +251,9 @@ def test_proxy_tunneling_with_auth():
         response = proxy.request("GET", "https://example.com/")
         assert response.status == 200
         assert response.content == b"Hello, world!"
-        assert proxy._proxy_headers == [
+
+        # Dig into this private property as a cheap lazy way of
+        # checking that the proxy header is set correctly.
+        assert proxy._proxy_headers == [  # type: ignore
             (b"Proxy-Authorization", b"Basic dXNlcm5hbWU6cGFzc3dvcmQ=")
-        ]  # type: ignore
+        ]
