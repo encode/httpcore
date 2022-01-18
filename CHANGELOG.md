@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.14.5 (January 18th, 2022)
+
+- SOCKS proxy support. (#478)
+- Add proxy_auth argument to HTTPProxy (#481)
+- Improve error message on 'RemoteProtocolError' exception when server disconnects without sending a response (#479)
+
 ## 0.14.4 (January 5th, 2022)
 
 - Support HTTP/2 on HTTPS tunnelling proxies. (#468)
