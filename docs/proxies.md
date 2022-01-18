@@ -33,7 +33,7 @@ import httpcore
 # A `Proxy-Authorization` header will be included on the initial proxy connection.
 proxy = httpcore.HTTPProxy(
     proxy_url="http://127.0.0.1:8080/",
-    proxy_auth=("<username", "password")
+    proxy_auth=("<username>", "<password>")
 )
 ```
 
@@ -79,7 +79,7 @@ import httpcore
 
 proxy = httpcore.SOCKSProxy(
     proxy_url="socks://127.0.0.1:8080/",
-    proxy_auth=("<username", "password")
+    proxy_auth=("<username>", "<password>")
 )
 r = proxy.request("GET", "https://www.example.com/")
 ```
