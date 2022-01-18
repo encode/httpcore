@@ -18,23 +18,29 @@ Some things HTTP Core does do:
 
 * Sending HTTP requests.
 * Thread-safe / task-safe connection pooling.
-* HTTP(S) proxy support.
+* HTTP(S) proxy & SOCKS proxy support.
 * Supports HTTP/1.1 and HTTP/2.
 * Provides both sync and async interfaces.
 * Async backend support for `asyncio` and `trio`.
 
 ## Installation
 
-For HTTP/1.1 only support, install with...
+For HTTP/1.1 only support, install with:
 
 ```shell
 $ pip install httpcore
 ```
 
-For HTTP/1.1 and HTTP/2 support, install with...
+For HTTP/1.1 and HTTP/2 support, install with:
 
 ```shell
 $ pip install httpcore[http2]
+```
+
+For SOCKS proxy support, install with:
+
+```shell
+$ pip install httpcore[socks]
 ```
 
 # Sending requests
