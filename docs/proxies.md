@@ -58,7 +58,7 @@ and does not currently support SSL proxy connections, which require HTTPS-in-HTT
 
 ## SOCKS proxy support
 
-The `httpcore` package also supports proxies using the SOCKS protocol.
+The `httpcore` package also supports proxies using the SOCKS5 protocol.
 
 Make sure to install the optional dependancy using `pip install httpcore[socks]`.
 
@@ -68,7 +68,7 @@ The `SOCKSProxy` class should be using instead of a standard connection pool:
 import httpcore
 
 # Note that the SOCKS port is 1080.
-proxy = httpcore.SOCKSProxy(proxy_url="socks://127.0.0.1:1080/")
+proxy = httpcore.SOCKSProxy(proxy_url="socks5://127.0.0.1:1080/")
 r = proxy.request("GET", "https://www.example.com/")
 ```
 
@@ -78,7 +78,7 @@ Authentication via SOCKS is also supported:
 import httpcore
 
 proxy = httpcore.SOCKSProxy(
-    proxy_url="socks://127.0.0.1:8080/",
+    proxy_url="socks5://127.0.0.1:8080/",
     proxy_auth=("<username>", "<password>")
 )
 r = proxy.request("GET", "https://www.example.com/")
