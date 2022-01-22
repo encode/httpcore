@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.14.5 (January 18th, 2022)
+
+- SOCKS proxy support. (#478)
+- Add proxy_auth argument to HTTPProxy (#481)
+- Improve error message on 'RemoteProtocolError' exception when server disconnects without sending a response (#479)
+
+## 0.14.4 (January 5th, 2022)
+
+- Support HTTP/2 on HTTPS tunnelling proxies. (#468)
+- Fix proxy headers missing on HTTP forwarding. (#456)
+- Only instantiate SSL context if required. (#457)
+- More robust HTTP/2 handling. (#253, #439, #440, #441)
+
 ## 0.14.3 (November 17th, 2021)
 
 - Fix race condition when removing closed connections from the pool (#437)

@@ -35,10 +35,6 @@ class HTTPConnection(ConnectionInterface):
         uds: str = None,
         network_backend: NetworkBackend = None,
     ) -> None:
-        ssl_context = default_ssl_context() if ssl_context is None else ssl_context
-        alpn_protocols = ["http/1.1", "h2"] if http2 else ["http/1.1"]
-        ssl_context.set_alpn_protocols(alpn_protocols)
-
         self._origin = origin
         self._ssl_context = ssl_context
         self._keepalive_expiry = keepalive_expiry
@@ -137,8 +133,16 @@ class HTTPConnection(ConnectionInterface):
                 break
 
         if self._origin.scheme == b"https":
+            ssl_context = (
+                default_ssl_context()
+                if self._ssl_context is None
+                else self._ssl_context
+            )
+            alpn_protocols = ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
+            ssl_context.set_alpn_protocols(alpn_protocols)
+
             kwargs = {
-                "ssl_context": self._ssl_context,
+                "ssl_context": ssl_context,
                 "server_hostname": self._origin.host.decode("ascii"),
                 "timeout": timeout,
             }

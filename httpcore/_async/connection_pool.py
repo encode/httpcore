@@ -5,7 +5,6 @@ from typing import AsyncIterable, AsyncIterator, List, Optional, Type
 
 from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
 from .._models import Origin, Request, Response
-from .._ssl import default_ssl_context
 from .._synchronization import AsyncEvent, AsyncLock
 from ..backends.auto import AutoBackend
 from ..backends.base import AsyncNetworkBackend
@@ -82,9 +81,6 @@ class AsyncConnectionPool(AsyncRequestInterface):
             uds: Path to a Unix Domain Socket to use instead of TCP sockets.
             network_backend: A backend instance to use for handling network I/O.
         """
-        if ssl_context is None:
-            ssl_context = default_ssl_context()
-
         self._ssl_context = ssl_context
 
         self._max_connections = (
