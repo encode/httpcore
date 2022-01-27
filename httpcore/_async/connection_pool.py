@@ -267,7 +267,8 @@ class AsyncConnectionPool(AsyncRequestInterface):
 
         async with self._pool_lock:
             # Update the state of the connection pool.
-            self._requests.remove(status)
+            if status in self._requests:
+                self._requests.remove(status)
 
             if connection.is_closed() and connection in self._pool:
                 self._pool.remove(connection)
