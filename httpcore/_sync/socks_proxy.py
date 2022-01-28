@@ -245,7 +245,9 @@ class Socks5Connection(ConnectionInterface):
                             if self._ssl_context is None
                             else self._ssl_context
                         )
-                        alpn_protocols = ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
+                        alpn_protocols = (
+                            ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
+                        )
                         ssl_context.set_alpn_protocols(alpn_protocols)
 
                         kwargs = {
@@ -253,7 +255,9 @@ class Socks5Connection(ConnectionInterface):
                             "server_hostname": self._remote_origin.host.decode("ascii"),
                             "timeout": timeout,
                         }
-                        with Trace("connection.start_tls", request, kwargs) as trace:
+                        with Trace(
+                            "connection.start_tls", request, kwargs
+                        ) as trace:
                             stream = stream.start_tls(**kwargs)
                             trace.return_value = stream
 
