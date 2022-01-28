@@ -239,7 +239,7 @@ class ConnectionPool(RequestInterface):
                     # status so that the request becomes queued again.
                     status.unset_connection()
                     self._attempt_to_acquire_connection(status)
-            except Exception as exc:
+            except BaseException as exc:
                 self.response_closed(status)
                 raise exc
             else:

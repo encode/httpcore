@@ -239,7 +239,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
                     # status so that the request becomes queued again.
                     status.unset_connection()
                     await self._attempt_to_acquire_connection(status)
-            except Exception as exc:
+            except BaseException as exc:
                 await self.response_closed(status)
                 raise exc
             else:
