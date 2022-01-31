@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Master branch
 
 - Fix SOCKS support for `http://` URLs. (#492)
+- Resolve race condition around exceptions during streaming a response. (#491)
 
 ## 0.14.5 (January 18th, 2022)
 

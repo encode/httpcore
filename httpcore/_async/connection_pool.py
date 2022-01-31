@@ -239,7 +239,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
                     # status so that the request becomes queued again.
                     status.unset_connection()
                     await self._attempt_to_acquire_connection(status)
-            except Exception as exc:
+            except BaseException as exc:
                 await self.response_closed(status)
                 raise exc
             else:
@@ -267,7 +267,8 @@ class AsyncConnectionPool(AsyncRequestInterface):
 
         async with self._pool_lock:
             # Update the state of the connection pool.
-            self._requests.remove(status)
+            if status in self._requests:
+                self._requests.remove(status)
 
             if connection.is_closed() and connection in self._pool:
                 self._pool.remove(connection)
@@ -291,10 +292,18 @@ class AsyncConnectionPool(AsyncRequestInterface):
         Close any connections in the pool.
         """
         async with self._pool_lock:
+            requests_still_in_flight = len(self._requests)
+
             for connection in self._pool:
                 await connection.aclose()
             self._pool = []
             self._requests = []
+
+            if requests_still_in_flight:
+                raise RuntimeError(
+                    f"The connection pool was closed while {requests_still_in_flight} "
+                    f"HTTP requests/responses were still in-flight."
+                )
 
     async def __aenter__(self) -> "AsyncConnectionPool":
         return self

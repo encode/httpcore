@@ -279,13 +279,23 @@ class HTTP11ConnectionByteStream:
     def __init__(self, connection: AsyncHTTP11Connection, request: Request) -> None:
         self._connection = connection
         self._request = request
+        self._closed = False
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
         kwargs = {"request": self._request}
-        async with Trace("http11.receive_response_body", self._request, kwargs):
-            async for chunk in self._connection._receive_response_body(**kwargs):
-                yield chunk
+        try:
+            async with Trace("http11.receive_response_body", self._request, kwargs):
+                async for chunk in self._connection._receive_response_body(**kwargs):
+                    yield chunk
+        except BaseException as exc:
+            # If we get an exception while streaming the response,
+            # we want to close the response (and possibly the connection)
+            # before raising that exception.
+            await self.aclose()
+            raise exc
 
     async def aclose(self) -> None:
-        async with Trace("http11.response_closed", self._request):
-            await self._connection._response_closed()
+        if not self._closed:
+            self._closed = True
+            async with Trace("http11.response_closed", self._request):
+                await self._connection._response_closed()
