@@ -170,7 +170,7 @@ class HTTP2Connection(ConnectionInterface):
         ]
 
         self._h2_state.initiate_connection()
-        self._h2_state.increment_flow_control_window(2 ** 24)
+        self._h2_state.increment_flow_control_window(2**24)
         self._write_outgoing_data(request)
 
     # Sending the request...
@@ -200,7 +200,7 @@ class HTTP2Connection(ConnectionInterface):
         ]
 
         self._h2_state.send_headers(stream_id, headers, end_stream=end_stream)
-        self._h2_state.increment_flow_control_window(2 ** 24, stream_id=stream_id)
+        self._h2_state.increment_flow_control_window(2**24, stream_id=stream_id)
         self._write_outgoing_data(request)
 
     def _send_request_body(self, request: Request, stream_id: int) -> None:
