@@ -73,7 +73,7 @@ setup(
         "Framework :: AsyncIO",
         "Framework :: Trio",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
+#         "Programming Language :: Python :: 3.6",  # remove py36 from active support
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
