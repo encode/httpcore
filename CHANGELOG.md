@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## master
+
+- Requests which raise a PoolTimeout need to be removed from the pool queue.
+
 ## 0.14.6 (February 1st, 2022)
 
 - Fix SOCKS support for `http://` URLs. (#492)

@@ -223,7 +223,16 @@ class ConnectionPool(RequestInterface):
         while True:
             timeouts = request.extensions.get("timeout", {})
             timeout = timeouts.get("pool", None)
-            connection = status.wait_for_connection(timeout=timeout)
+            try:
+                connection = status.wait_for_connection(timeout=timeout)
+            except BaseException as exc:
+                # If we timeout here, or if the task is cancelled, then make
+                # sure to remove the request from the queue before bubbling
+                # up the exception.
+                with self._pool_lock:
+                    self._requests.remove(status)
+                    raise exc
+
             try:
                 response = connection.handle_request(request)
             except ConnectionNotAvailable:
