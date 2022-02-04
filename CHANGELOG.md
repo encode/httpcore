@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## master
 
 - Requests which raise a PoolTimeout need to be removed from the pool queue. (#502)
+- Fix AttributeError that happened when Socks5Connection were terminated. (#501)
 
 ## 0.14.6 (February 1st, 2022)
 

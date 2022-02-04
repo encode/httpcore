@@ -206,7 +206,7 @@ class Socks5Connection(ConnectionInterface):
         )
         self._connect_lock = Lock()
         self._connection: typing.Optional[ConnectionInterface] = None
-        self._connection_failed = False
+        self._connect_failed = False
 
     def handle_request(self, request: Request) -> Response:
         timeouts = request.extensions.get("timeout", {})

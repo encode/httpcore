@@ -206,7 +206,7 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
         )
         self._connect_lock = AsyncLock()
         self._connection: typing.Optional[AsyncConnectionInterface] = None
-        self._connection_failed = False
+        self._connect_failed = False
 
     async def handle_async_request(self, request: Request) -> Response:
         timeouts = request.extensions.get("timeout", {})
