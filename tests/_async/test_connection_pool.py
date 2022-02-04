@@ -3,7 +3,7 @@ from typing import List
 import pytest
 import trio as concurrency
 
-from httpcore import AsyncConnectionPool, ConnectError, UnsupportedProtocol
+from httpcore import AsyncConnectionPool, ConnectError, PoolTimeout, UnsupportedProtocol
 from httpcore.backends.mock import AsyncMockBackend
 
 
@@ -461,3 +461,30 @@ async def test_connection_pool_closed_while_request_in_flight():
         async with pool.stream("GET", "https://example.com/"):
             with pytest.raises(RuntimeError):
                 await pool.aclose()
+
+
+@pytest.mark.anyio
+async def test_connection_pool_timeout():
+    """
+    Ensure that exceeding max_connections can cause a request to timeout.
+    """
+    network_backend = AsyncMockBackend(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
+
+    async with AsyncConnectionPool(
+        network_backend=network_backend, max_connections=1
+    ) as pool:
+        # Send a request to a pool that is configured to only support a single
+        # connection, and then ensure that a second concurrent request
+        # fails with a timeout.
+        async with pool.stream("GET", "https://example.com/"):
+            with pytest.raises(PoolTimeout):
+                extensions = {"timeout": {"pool": 0.0001}}
+                await pool.request("GET", "https://example.com/", extensions=extensions)
