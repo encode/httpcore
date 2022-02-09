@@ -277,9 +277,12 @@ class TunnelHTTPConnection(ConnectionInterface):
                 alpn_protocols = ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
                 ssl_context.set_alpn_protocols(alpn_protocols)
 
+                sni_hostname = request.extensions.get(
+                    "sni_hostname", self._remote_origin.host.decode("ascii")
+                )
                 kwargs = {
                     "ssl_context": ssl_context,
-                    "server_hostname": self._remote_origin.host.decode("ascii"),
+                    "server_hostname": sni_hostname,
                     "timeout": timeout,
                 }
                 with Trace("connection.start_tls", request, kwargs) as trace:

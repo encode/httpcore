@@ -68,6 +68,43 @@ print(r.extensions["http_version"])
 
 ## Request Extensions
 
+### `"connect_to"`
+
+A string containing the desired hostname or ip address to open the tcp 
+socket.
+
+This will not affact which hostname is used for initiating the TLS stream, please
+look at `"sni_hostname"` for that.
+
+For example:
+
+```python
+# Use connect_to extention to target a specific server in a pool of servers.
+r = httpcore.request(
+    "GET",
+    "https://www.example.com",
+    extensions={"connect_to": "www1.example.com"}
+)
+```
+
+### `"sni_hostname"`
+
+A string containing the desired hostname or ip address use during TLS handshake.
+
+This will not affact which hostname is used for initiating the connection, please
+look at `"connect_to"` for that.
+
+For example:
+
+```python
+# The certificates in use by the server are for a different hostname.
+r = httpcore.request(
+    "GET",
+    "https://localhost",
+    extensions={"timeout": {"sni_hostname": "www.example.com"}}
+)
+```
+
 ### `"timeout"`
 
 A dictionary of `str: Optional[float]` timeout values.

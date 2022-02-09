@@ -226,9 +226,12 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
                         trace.return_value = stream
 
                     # Connect to the remote host using socks5
+                    connect_to = request.extensions.get(
+                        "connect_to", self._remote_origin.host.decode("ascii")
+                    )
                     kwargs = {
                         "stream": stream,
-                        "host": self._remote_origin.host.decode("ascii"),
+                        "host": connect_to,
                         "port": self._remote_origin.port,
                         "auth": self._proxy_auth,
                     }
@@ -250,9 +253,12 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
                         )
                         ssl_context.set_alpn_protocols(alpn_protocols)
 
+                        sni_hostname = request.extensions.get(
+                            "sni_hostname", self._remote_origin.host.decode("ascii")
+                        )
                         kwargs = {
                             "ssl_context": ssl_context,
-                            "server_hostname": self._remote_origin.host.decode("ascii"),
+                            "server_hostname": sni_hostname,
                             "timeout": timeout,
                         }
                         async with Trace(

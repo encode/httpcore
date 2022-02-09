@@ -99,8 +99,11 @@ class HTTPConnection(ConnectionInterface):
         while True:
             try:
                 if self._uds is None:
+                    connect_to = request.extensions.get(
+                        "connect_to", self._origin.host.decode("ascii")
+                    )
                     kwargs = {
-                        "host": self._origin.host.decode("ascii"),
+                        "host": connect_to,
                         "port": self._origin.port,
                         "local_address": self._local_address,
                         "timeout": timeout,
@@ -141,9 +144,12 @@ class HTTPConnection(ConnectionInterface):
             alpn_protocols = ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
             ssl_context.set_alpn_protocols(alpn_protocols)
 
+            sni_hostname = request.extensions.get(
+                "sni_hostname", self._origin.host.decode("ascii")
+            )
             kwargs = {
                 "ssl_context": ssl_context,
-                "server_hostname": self._origin.host.decode("ascii"),
+                "server_hostname": sni_hostname,
                 "timeout": timeout,
             }
             with Trace("connection.start_tls", request, kwargs) as trace:
