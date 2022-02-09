@@ -250,7 +250,10 @@ class TunnelHTTPConnection(ConnectionInterface):
                     [(b"Host", target), (b"Accept", b"*/*")], self._proxy_headers
                 )
                 connect_request = Request(
-                    method=b"CONNECT", url=connect_url, headers=connect_headers
+                    method=b"CONNECT",
+                    url=connect_url,
+                    headers=connect_headers,
+                    extensions=request.extensions,
                 )
                 connect_response = self._connection.handle_request(
                     connect_request

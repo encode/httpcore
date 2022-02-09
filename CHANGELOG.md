@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Master branch
+
+- Ensure HTTP proxy CONNECT requests include `timeout` configuration. (#506)
+
 ## 0.14.7 (February 4th, 2022)
 
 - Requests which raise a PoolTimeout need to be removed from the pool queue. (#502)
