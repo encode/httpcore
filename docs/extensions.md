@@ -79,7 +79,7 @@ look at `"sni_hostname"` for that.
 For example:
 
 ```python
-# Use connect_to extention to target a specific server in a pool of servers.
+# Use connect_to extension to target a specific server in a pool of servers.
 r = httpcore.request(
     "GET",
     "https://www.example.com",
