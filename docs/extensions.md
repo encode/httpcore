@@ -83,7 +83,7 @@ For example:
 r = httpcore.request(
     "GET",
     "https://www.example.com",
-    extensions={"connect_to": "www1.example.com"}
+    extensions={"connect_to": "93.184.216.34"}
 )
 ```
 
