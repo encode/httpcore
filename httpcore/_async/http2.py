@@ -170,7 +170,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         ]
 
         self._h2_state.initiate_connection()
-        self._h2_state.increment_flow_control_window(2 ** 24)
+        self._h2_state.increment_flow_control_window(2**24)
         await self._write_outgoing_data(request)
 
     # Sending the request...
@@ -200,7 +200,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         ]
 
         self._h2_state.send_headers(stream_id, headers, end_stream=end_stream)
-        self._h2_state.increment_flow_control_window(2 ** 24, stream_id=stream_id)
+        self._h2_state.increment_flow_control_window(2**24, stream_id=stream_id)
         await self._write_outgoing_data(request)
 
     async def _send_request_body(self, request: Request, stream_id: int) -> None:
@@ -305,7 +305,6 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
     async def aclose(self) -> None:
         # Note that this method unilaterally closes the connection, and does
         # not have any kind of locking in place around it.
-        # For task-safe/thread-safe operations call into 'attempt_close' instead.
         self._h2_state.close_connection()
         self._state = HTTPConnectionState.CLOSED
         await self._network_stream.aclose()
@@ -446,16 +445,26 @@ class HTTP2ConnectionByteStream:
         self._connection = connection
         self._request = request
         self._stream_id = stream_id
+        self._closed = False
 
     async def __aiter__(self) -> typing.AsyncIterator[bytes]:
         kwargs = {"request": self._request, "stream_id": self._stream_id}
-        async with Trace("http2.receive_response_body", self._request, kwargs):
-            async for chunk in self._connection._receive_response_body(
-                request=self._request, stream_id=self._stream_id
-            ):
-                yield chunk
+        try:
+            async with Trace("http2.receive_response_body", self._request, kwargs):
+                async for chunk in self._connection._receive_response_body(
+                    request=self._request, stream_id=self._stream_id
+                ):
+                    yield chunk
+        except BaseException as exc:
+            # If we get an exception while streaming the response,
+            # we want to close the response (and possibly the connection)
+            # before raising that exception.
+            await self.aclose()
+            raise exc
 
     async def aclose(self) -> None:
-        kwargs = {"stream_id": self._stream_id}
-        async with Trace("http2.response_closed", self._request, kwargs):
-            await self._connection._response_closed(stream_id=self._stream_id)
+        if not self._closed:
+            self._closed = True
+            kwargs = {"stream_id": self._stream_id}
+            async with Trace("http2.response_closed", self._request, kwargs):
+                await self._connection._response_closed(stream_id=self._stream_id)

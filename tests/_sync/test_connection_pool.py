@@ -3,7 +3,7 @@ from typing import List
 import pytest
 from tests import concurrency
 
-from httpcore import ConnectionPool, ConnectError, UnsupportedProtocol
+from httpcore import ConnectionPool, ConnectError, PoolTimeout, UnsupportedProtocol
 from httpcore.backends.mock import MockBackend
 
 
@@ -435,3 +435,56 @@ def test_unsupported_protocol():
 
         with pytest.raises(UnsupportedProtocol):
             pool.request("GET", "://www.example.com/")
+
+
+
+def test_connection_pool_closed_while_request_in_flight():
+    """
+    Closing a connection pool while a request/response is still in-flight
+    should raise an error.
+    """
+    network_backend = MockBackend(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
+
+    with ConnectionPool(
+        network_backend=network_backend,
+    ) as pool:
+        # Send a request, and then close the connection pool while the
+        # response has not yet been streamed.
+        with pool.stream("GET", "https://example.com/"):
+            with pytest.raises(RuntimeError):
+                pool.close()
+
+
+
+def test_connection_pool_timeout():
+    """
+    Ensure that exceeding max_connections can cause a request to timeout.
+    """
+    network_backend = MockBackend(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
+
+    with ConnectionPool(
+        network_backend=network_backend, max_connections=1
+    ) as pool:
+        # Send a request to a pool that is configured to only support a single
+        # connection, and then ensure that a second concurrent request
+        # fails with a timeout.
+        with pool.stream("GET", "https://example.com/"):
+            with pytest.raises(PoolTimeout):
+                extensions = {"timeout": {"pool": 0.0001}}
+                pool.request("GET", "https://example.com/", extensions=extensions)

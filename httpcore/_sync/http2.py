@@ -170,7 +170,7 @@ class HTTP2Connection(ConnectionInterface):
         ]
 
         self._h2_state.initiate_connection()
-        self._h2_state.increment_flow_control_window(2 ** 24)
+        self._h2_state.increment_flow_control_window(2**24)
         self._write_outgoing_data(request)
 
     # Sending the request...
@@ -200,7 +200,7 @@ class HTTP2Connection(ConnectionInterface):
         ]
 
         self._h2_state.send_headers(stream_id, headers, end_stream=end_stream)
-        self._h2_state.increment_flow_control_window(2 ** 24, stream_id=stream_id)
+        self._h2_state.increment_flow_control_window(2**24, stream_id=stream_id)
         self._write_outgoing_data(request)
 
     def _send_request_body(self, request: Request, stream_id: int) -> None:
@@ -305,7 +305,6 @@ class HTTP2Connection(ConnectionInterface):
     def close(self) -> None:
         # Note that this method unilaterally closes the connection, and does
         # not have any kind of locking in place around it.
-        # For task-safe/thread-safe operations call into 'attempt_close' instead.
         self._h2_state.close_connection()
         self._state = HTTPConnectionState.CLOSED
         self._network_stream.close()
@@ -446,16 +445,26 @@ class HTTP2ConnectionByteStream:
         self._connection = connection
         self._request = request
         self._stream_id = stream_id
+        self._closed = False
 
     def __iter__(self) -> typing.Iterator[bytes]:
         kwargs = {"request": self._request, "stream_id": self._stream_id}
-        with Trace("http2.receive_response_body", self._request, kwargs):
-            for chunk in self._connection._receive_response_body(
-                request=self._request, stream_id=self._stream_id
-            ):
-                yield chunk
+        try:
+            with Trace("http2.receive_response_body", self._request, kwargs):
+                for chunk in self._connection._receive_response_body(
+                    request=self._request, stream_id=self._stream_id
+                ):
+                    yield chunk
+        except BaseException as exc:
+            # If we get an exception while streaming the response,
+            # we want to close the response (and possibly the connection)
+            # before raising that exception.
+            self.close()
+            raise exc
 
     def close(self) -> None:
-        kwargs = {"stream_id": self._stream_id}
-        with Trace("http2.response_closed", self._request, kwargs):
-            self._connection._response_closed(stream_id=self._stream_id)
+        if not self._closed:
+            self._closed = True
+            kwargs = {"stream_id": self._stream_id}
+            with Trace("http2.response_closed", self._request, kwargs):
+                self._connection._response_closed(stream_id=self._stream_id)

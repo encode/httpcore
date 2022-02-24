@@ -206,7 +206,7 @@ class Socks5Connection(ConnectionInterface):
         )
         self._connect_lock = Lock()
         self._connection: typing.Optional[ConnectionInterface] = None
-        self._connection_failed = False
+        self._connect_failed = False
 
     def handle_request(self, request: Request) -> Response:
         timeouts = request.extensions.get("timeout", {})
@@ -239,22 +239,27 @@ class Socks5Connection(ConnectionInterface):
                         trace.return_value = stream
 
                     # Upgrade the stream to SSL
-                    ssl_context = (
-                        default_ssl_context()
-                        if self._ssl_context is None
-                        else self._ssl_context
-                    )
-                    alpn_protocols = ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
-                    ssl_context.set_alpn_protocols(alpn_protocols)
+                    if self._remote_origin.scheme == b"https":
+                        ssl_context = (
+                            default_ssl_context()
+                            if self._ssl_context is None
+                            else self._ssl_context
+                        )
+                        alpn_protocols = (
+                            ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
+                        )
+                        ssl_context.set_alpn_protocols(alpn_protocols)
 
-                    kwargs = {
-                        "ssl_context": ssl_context,
-                        "server_hostname": self._remote_origin.host.decode("ascii"),
-                        "timeout": timeout,
-                    }
-                    with Trace("connection.start_tls", request, kwargs) as trace:
-                        stream = stream.start_tls(**kwargs)
-                        trace.return_value = stream
+                        kwargs = {
+                            "ssl_context": ssl_context,
+                            "server_hostname": self._remote_origin.host.decode("ascii"),
+                            "timeout": timeout,
+                        }
+                        with Trace(
+                            "connection.start_tls", request, kwargs
+                        ) as trace:
+                            stream = stream.start_tls(**kwargs)
+                            trace.return_value = stream
 
                     # Determine if we should be using HTTP/1.1 or HTTP/2
                     ssl_object = stream.get_extra_info("ssl_object")

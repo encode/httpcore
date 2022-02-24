@@ -92,6 +92,35 @@ async def test_http11_connection_with_remote_protocol_error():
 
 
 @pytest.mark.anyio
+async def test_http11_connection_with_incomplete_response():
+    """
+    We should be gracefully handling the case where the connection ends prematurely.
+    """
+    origin = Origin(b"https", b"example.com", 443)
+    stream = AsyncMockStream(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, wor",
+        ]
+    )
+    async with AsyncHTTP11Connection(origin=origin, stream=stream) as conn:
+        with pytest.raises(RemoteProtocolError):
+            await conn.request("GET", "https://example.com/")
+
+        assert not conn.is_idle()
+        assert conn.is_closed()
+        assert not conn.is_available()
+        assert not conn.has_expired()
+        assert (
+            repr(conn)
+            == "<AsyncHTTP11Connection ['https://example.com:443', CLOSED, Request Count: 1]>"
+        )
+
+
+@pytest.mark.anyio
 async def test_http11_connection_with_local_protocol_error():
     """
     If a local protocol error occurs, then no response will be returned,

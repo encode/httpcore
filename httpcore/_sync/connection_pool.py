@@ -223,7 +223,16 @@ class ConnectionPool(RequestInterface):
         while True:
             timeouts = request.extensions.get("timeout", {})
             timeout = timeouts.get("pool", None)
-            connection = status.wait_for_connection(timeout=timeout)
+            try:
+                connection = status.wait_for_connection(timeout=timeout)
+            except BaseException as exc:
+                # If we timeout here, or if the task is cancelled, then make
+                # sure to remove the request from the queue before bubbling
+                # up the exception.
+                with self._pool_lock:
+                    self._requests.remove(status)
+                    raise exc
+
             try:
                 response = connection.handle_request(request)
             except ConnectionNotAvailable:
@@ -239,7 +248,7 @@ class ConnectionPool(RequestInterface):
                     # status so that the request becomes queued again.
                     status.unset_connection()
                     self._attempt_to_acquire_connection(status)
-            except Exception as exc:
+            except BaseException as exc:
                 self.response_closed(status)
                 raise exc
             else:
@@ -267,7 +276,8 @@ class ConnectionPool(RequestInterface):
 
         with self._pool_lock:
             # Update the state of the connection pool.
-            self._requests.remove(status)
+            if status in self._requests:
+                self._requests.remove(status)
 
             if connection.is_closed() and connection in self._pool:
                 self._pool.remove(connection)
@@ -291,10 +301,18 @@ class ConnectionPool(RequestInterface):
         Close any connections in the pool.
         """
         with self._pool_lock:
+            requests_still_in_flight = len(self._requests)
+
             for connection in self._pool:
                 connection.close()
             self._pool = []
             self._requests = []
+
+            if requests_still_in_flight:
+                raise RuntimeError(
+                    f"The connection pool was closed while {requests_still_in_flight} "
+                    f"HTTP requests/responses were still in-flight."
+                )
 
     def __enter__(self) -> "ConnectionPool":
         return self
