@@ -23,6 +23,7 @@ flake8==4.0.1
 isort==5.10.1
 mypy==0.931
 pytest==7.0.1
-pytest-httpbin==1.0.1
+pytest-httpbin @ https://github.com/kevin1024/pytest-httpbin/archive/9d538e945be19d09f1f1efe95db80c86256ffceb.tar.gz; python_version >= '3.7'
+pytest-httpbin==1.0.2; python_version < '3.7'
 pytest-trio==0.7.0
 pytest-asyncio==0.16.0
