@@ -22,7 +22,7 @@ coverage==6.2
 flake8==4.0.1
 isort==5.10.1
 mypy==0.931
-pytest==6.2.5
+pytest==7.0.1
 pytest-httpbin==1.0.1
 pytest-trio==0.7.0
 pytest-asyncio==0.16.0
