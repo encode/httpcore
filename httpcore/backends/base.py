@@ -4,10 +4,10 @@ import typing
 
 
 class NetworkStream:
-    def read(self, max_bytes: int, timeout: float = None) -> bytes:
+    def read(self, max_bytes: int, timeout: typing.Optional[float] = None) -> bytes:
         raise NotImplementedError()  # pragma: nocover
 
-    def write(self, buffer: bytes, timeout: float = None) -> None:
+    def write(self, buffer: bytes, timeout: typing.Optional[float] = None) -> None:
         raise NotImplementedError()  # pragma: nocover
 
     def close(self) -> None:
@@ -16,8 +16,8 @@ class NetworkStream:
     def start_tls(
         self,
         ssl_context: ssl.SSLContext,
-        server_hostname: str = None,
-        timeout: float = None,
+        server_hostname: typing.Optional[str] = None,
+        timeout: typing.Optional[float] = None,
     ) -> "NetworkStream":
         raise NotImplementedError()  # pragma: nocover
 
@@ -27,11 +27,17 @@ class NetworkStream:
 
 class NetworkBackend:
     def connect_tcp(
-        self, host: str, port: int, timeout: float = None, local_address: str = None
+        self,
+        host: str,
+        port: int,
+        timeout: typing.Optional[float] = None,
+        local_address: typing.Optional[str] = None,
     ) -> NetworkStream:
         raise NotImplementedError()  # pragma: nocover
 
-    def connect_unix_socket(self, path: str, timeout: float = None) -> NetworkStream:
+    def connect_unix_socket(
+        self, path: str, timeout: typing.Optional[float] = None
+    ) -> NetworkStream:
         raise NotImplementedError()  # pragma: nocover
 
     def sleep(self, seconds: float) -> None:
@@ -39,10 +45,14 @@ class NetworkBackend:
 
 
 class AsyncNetworkStream:
-    async def read(self, max_bytes: int, timeout: float = None) -> bytes:
+    async def read(
+        self, max_bytes: int, timeout: typing.Optional[float] = None
+    ) -> bytes:
         raise NotImplementedError()  # pragma: nocover
 
-    async def write(self, buffer: bytes, timeout: float = None) -> None:
+    async def write(
+        self, buffer: bytes, timeout: typing.Optional[float] = None
+    ) -> None:
         raise NotImplementedError()  # pragma: nocover
 
     async def aclose(self) -> None:
@@ -51,8 +61,8 @@ class AsyncNetworkStream:
     async def start_tls(
         self,
         ssl_context: ssl.SSLContext,
-        server_hostname: str = None,
-        timeout: float = None,
+        server_hostname: typing.Optional[str] = None,
+        timeout: typing.Optional[float] = None,
     ) -> "AsyncNetworkStream":
         raise NotImplementedError()  # pragma: nocover
 
@@ -62,12 +72,16 @@ class AsyncNetworkStream:
 
 class AsyncNetworkBackend:
     async def connect_tcp(
-        self, host: str, port: int, timeout: float = None, local_address: str = None
+        self,
+        host: str,
+        port: int,
+        timeout: typing.Optional[float] = None,
+        local_address: typing.Optional[str] = None,
     ) -> AsyncNetworkStream:
         raise NotImplementedError()  # pragma: nocover
 
     async def connect_unix_socket(
-        self, path: str, timeout: float = None
+        self, path: str, timeout: typing.Optional[float] = None
     ) -> AsyncNetworkStream:
         raise NotImplementedError()  # pragma: nocover
 

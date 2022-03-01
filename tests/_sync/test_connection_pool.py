@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import pytest
 from tests import concurrency
@@ -201,7 +201,11 @@ def test_connection_pool_with_connect_exception():
 
     class FailedConnectBackend(MockBackend):
         def connect_tcp(
-            self, host: str, port: int, timeout: float = None, local_address: str = None
+            self,
+            host: str,
+            port: int,
+            timeout: Optional[float] = None,
+            local_address: Optional[str] = None,
         ):
             raise ConnectError("Could not connect")
 

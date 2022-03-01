@@ -38,7 +38,10 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
     READ_NUM_BYTES = 64 * 1024
 
     def __init__(
-        self, origin: Origin, stream: AsyncNetworkStream, keepalive_expiry: float = None
+        self,
+        origin: Origin,
+        stream: AsyncNetworkStream,
+        keepalive_expiry: Optional[float] = None,
     ) -> None:
         self._origin = origin
         self._network_stream = stream
@@ -127,7 +130,9 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
         event = h11.EndOfMessage()
         await self._send_event(event, timeout=timeout)
 
-    async def _send_event(self, event: H11Event, timeout: float = None) -> None:
+    async def _send_event(
+        self, event: H11Event, timeout: Optional[float] = None
+    ) -> None:
         bytes_to_send = self._h11_state.send(event)
         await self._network_stream.write(bytes_to_send, timeout=timeout)
 
@@ -163,7 +168,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
             elif isinstance(event, (h11.EndOfMessage, h11.PAUSED)):
                 break
 
-    async def _receive_event(self, timeout: float = None) -> H11Event:
+    async def _receive_event(self, timeout: Optional[float] = None) -> H11Event:
         while True:
             with map_exceptions({h11.RemoteProtocolError: RemoteProtocolError}):
                 event = self._h11_state.next_event()
@@ -268,9 +273,9 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
 
     async def __aexit__(
         self,
-        exc_type: Type[BaseException] = None,
-        exc_value: BaseException = None,
-        traceback: TracebackType = None,
+        exc_type: Optional[Type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        traceback: Optional[TracebackType] = None,
     ) -> None:
         await self.aclose()
 

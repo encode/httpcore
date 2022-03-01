@@ -1,3 +1,5 @@
+from typing import Optional
+
 import hpack
 import hyperframe.frame
 import pytest
@@ -127,7 +129,11 @@ class NeedsRetryBackend(MockBackend):
         super().__init__(*args, **kwargs)
 
     def connect_tcp(
-        self, host: str, port: int, timeout: float = None, local_address: str = None
+        self,
+        host: str,
+        port: int,
+        timeout: Optional[float] = None,
+        local_address: Optional[str] = None,
     ) -> NetworkStream:
         if self._retry > 0:
             self._retry -= 1

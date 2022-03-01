@@ -26,14 +26,14 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
     def __init__(
         self,
         origin: Origin,
-        ssl_context: ssl.SSLContext = None,
-        keepalive_expiry: float = None,
+        ssl_context: Optional[ssl.SSLContext] = None,
+        keepalive_expiry: Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
         retries: int = 0,
-        local_address: str = None,
-        uds: str = None,
-        network_backend: AsyncNetworkBackend = None,
+        local_address: Optional[str] = None,
+        uds: Optional[str] = None,
+        network_backend: Optional[AsyncNetworkBackend] = None,
     ) -> None:
         self._origin = origin
         self._ssl_context = ssl_context
@@ -201,8 +201,8 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
 
     async def __aexit__(
         self,
-        exc_type: Type[BaseException] = None,
-        exc_value: BaseException = None,
-        traceback: TracebackType = None,
+        exc_type: Optional[Type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        traceback: Optional[TracebackType] = None,
     ) -> None:
         await self.aclose()

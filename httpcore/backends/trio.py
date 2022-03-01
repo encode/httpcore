@@ -19,14 +19,18 @@ class TrioStream(AsyncNetworkStream):
     def __init__(self, stream: trio.abc.Stream) -> None:
         self._stream = stream
 
-    async def read(self, max_bytes: int, timeout: float = None) -> bytes:
+    async def read(
+        self, max_bytes: int, timeout: typing.Optional[float] = None
+    ) -> bytes:
         timeout_or_inf = float("inf") if timeout is None else timeout
         exc_map = {trio.TooSlowError: ReadTimeout, trio.BrokenResourceError: ReadError}
         with map_exceptions(exc_map):
             with trio.fail_after(timeout_or_inf):
                 return await self._stream.receive_some(max_bytes=max_bytes)
 
-    async def write(self, buffer: bytes, timeout: float = None) -> None:
+    async def write(
+        self, buffer: bytes, timeout: typing.Optional[float] = None
+    ) -> None:
         if not buffer:
             return
 
@@ -45,8 +49,8 @@ class TrioStream(AsyncNetworkStream):
     async def start_tls(
         self,
         ssl_context: ssl.SSLContext,
-        server_hostname: str = None,
-        timeout: float = None,
+        server_hostname: typing.Optional[str] = None,
+        timeout: typing.Optional[float] = None,
     ) -> AsyncNetworkStream:
         timeout_or_inf = float("inf") if timeout is None else timeout
         exc_map = {
@@ -97,7 +101,11 @@ class TrioStream(AsyncNetworkStream):
 
 class TrioBackend(AsyncNetworkBackend):
     async def connect_tcp(
-        self, host: str, port: int, timeout: float = None, local_address: str = None
+        self,
+        host: str,
+        port: int,
+        timeout: typing.Optional[float] = None,
+        local_address: typing.Optional[str] = None,
     ) -> AsyncNetworkStream:
         timeout_or_inf = float("inf") if timeout is None else timeout
         exc_map = {
@@ -116,7 +124,7 @@ class TrioBackend(AsyncNetworkBackend):
         return TrioStream(stream)
 
     async def connect_unix_socket(
-        self, path: str, timeout: float = None
+        self, path: str, timeout: typing.Optional[float] = None
     ) -> AsyncNetworkStream:  # pragma: nocover
         timeout_or_inf = float("inf") if timeout is None else timeout
         exc_map = {

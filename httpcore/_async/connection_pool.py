@@ -29,7 +29,7 @@ class RequestStatus:
         self._connection_acquired = AsyncEvent()
 
     async def wait_for_connection(
-        self, timeout: float = None
+        self, timeout: Optional[float] = None
     ) -> AsyncConnectionInterface:
         await self._connection_acquired.wait(timeout=timeout)
         assert self.connection is not None
@@ -43,16 +43,16 @@ class AsyncConnectionPool(AsyncRequestInterface):
 
     def __init__(
         self,
-        ssl_context: ssl.SSLContext = None,
+        ssl_context: Optional[ssl.SSLContext] = None,
         max_connections: Optional[int] = 10,
-        max_keepalive_connections: int = None,
-        keepalive_expiry: float = None,
+        max_keepalive_connections: Optional[int] = None,
+        keepalive_expiry: Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
         retries: int = 0,
-        local_address: str = None,
-        uds: str = None,
-        network_backend: AsyncNetworkBackend = None,
+        local_address: Optional[str] = None,
+        uds: Optional[str] = None,
+        network_backend: Optional[AsyncNetworkBackend] = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -319,9 +319,9 @@ class AsyncConnectionPool(AsyncRequestInterface):
 
     async def __aexit__(
         self,
-        exc_type: Type[BaseException] = None,
-        exc_value: BaseException = None,
-        traceback: TracebackType = None,
+        exc_type: Optional[Type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        traceback: Optional[TracebackType] = None,
     ) -> None:
         await self.aclose()
 

@@ -1,6 +1,6 @@
 import threading
 from types import TracebackType
-from typing import Type
+from typing import Optional, Type
 
 import anyio
 
@@ -17,9 +17,9 @@ class AsyncLock:
 
     async def __aexit__(
         self,
-        exc_type: Type[BaseException] = None,
-        exc_value: BaseException = None,
-        traceback: TracebackType = None,
+        exc_type: Optional[Type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        traceback: Optional[TracebackType] = None,
     ) -> None:
         self._lock.release()
 
@@ -31,7 +31,7 @@ class AsyncEvent:
     def set(self) -> None:
         self._event.set()
 
-    async def wait(self, timeout: float = None) -> None:
+    async def wait(self, timeout: Optional[float] = None) -> None:
         exc_map: dict = {TimeoutError: PoolTimeout}
         with map_exceptions(exc_map):
             with anyio.fail_after(timeout):
@@ -59,9 +59,9 @@ class Lock:
 
     def __exit__(
         self,
-        exc_type: Type[BaseException] = None,
-        exc_value: BaseException = None,
-        traceback: TracebackType = None,
+        exc_type: Optional[Type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        traceback: Optional[TracebackType] = None,
     ) -> None:
         self._lock.release()
 
@@ -73,7 +73,7 @@ class Event:
     def set(self) -> None:
         self._event.set()
 
-    def wait(self, timeout: float = None) -> None:
+    def wait(self, timeout: Optional[float] = None) -> None:
         if not self._event.wait(timeout=timeout):
             raise PoolTimeout()  # pragma: nocover
 

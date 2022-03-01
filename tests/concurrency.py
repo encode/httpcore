@@ -10,7 +10,7 @@ childen, because we don't need that for our use-case.
 """
 import threading
 from types import TracebackType
-from typing import List, Type
+from typing import List, Optional, Type
 
 
 class Nursery:
@@ -22,9 +22,9 @@ class Nursery:
 
     def __exit__(
         self,
-        exc_type: Type[BaseException] = None,
-        exc_value: BaseException = None,
-        traceback: TracebackType = None,
+        exc_type: Optional[Type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        traceback: Optional[TracebackType] = None,
     ) -> None:
         for thread in self._threads:
             thread.start()
