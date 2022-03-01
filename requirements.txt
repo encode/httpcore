@@ -18,7 +18,7 @@ wheel==0.37.1
 anyio==3.5.0
 autoflake==1.4
 black==22.1.0
-coverage==6.2
+coverage==6.3.2
 flake8==4.0.1
 isort==5.10.1
 mypy==0.931
