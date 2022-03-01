@@ -19,13 +19,13 @@ class SyncStream(NetworkStream):
     def __init__(self, sock: socket.socket) -> None:
         self._sock = sock
 
-    def read(self, max_bytes: int, timeout: float = None) -> bytes:
+    def read(self, max_bytes: int, timeout: typing.Optional[float] = None) -> bytes:
         exc_map = {socket.timeout: ReadTimeout, socket.error: ReadError}
         with map_exceptions(exc_map):
             self._sock.settimeout(timeout)
             return self._sock.recv(max_bytes)
 
-    def write(self, buffer: bytes, timeout: float = None) -> None:
+    def write(self, buffer: bytes, timeout: typing.Optional[float] = None) -> None:
         if not buffer:
             return
 
@@ -42,8 +42,8 @@ class SyncStream(NetworkStream):
     def start_tls(
         self,
         ssl_context: ssl.SSLContext,
-        server_hostname: str = None,
-        timeout: float = None,
+        server_hostname: typing.Optional[str] = None,
+        timeout: typing.Optional[float] = None,
     ) -> NetworkStream:
         exc_map = {socket.timeout: ConnectTimeout, socket.error: ConnectError}
         with map_exceptions(exc_map):
@@ -73,7 +73,11 @@ class SyncStream(NetworkStream):
 
 class SyncBackend(NetworkBackend):
     def connect_tcp(
-        self, host: str, port: int, timeout: float = None, local_address: str = None
+        self,
+        host: str,
+        port: int,
+        timeout: typing.Optional[float] = None,
+        local_address: typing.Optional[str] = None,
     ) -> NetworkStream:
         address = (host, port)
         source_address = None if local_address is None else (local_address, 0)
@@ -85,7 +89,7 @@ class SyncBackend(NetworkBackend):
         return SyncStream(sock)
 
     def connect_unix_socket(
-        self, path: str, timeout: float = None
+        self, path: str, timeout: typing.Optional[float] = None
     ) -> NetworkStream:  # pragma: nocover
         exc_map = {socket.timeout: ConnectTimeout, socket.error: ConnectError}
         with map_exceptions(exc_map):

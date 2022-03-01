@@ -1,4 +1,4 @@
-from typing import Iterator, Union
+from typing import Iterator, Optional, Union
 
 from contextlib import contextmanager
 from .._models import (
@@ -19,9 +19,9 @@ class RequestInterface:
         method: Union[bytes, str],
         url: Union[URL, bytes, str],
         *,
-        headers: Union[dict, list] = None,
-        content: Union[bytes, Iterator[bytes]] = None,
-        extensions: dict = None,
+        headers: Union[dict, list, None] = None,
+        content: Union[bytes, Iterator[bytes], None] = None,
+        extensions: Optional[dict] = None,
     ) -> Response:
         # Strict type checking on our parameters.
         method = enforce_bytes(method, name="method")
@@ -51,9 +51,9 @@ class RequestInterface:
         method: Union[bytes, str],
         url: Union[URL, bytes, str],
         *,
-        headers: Union[dict, list] = None,
-        content: Union[bytes, Iterator[bytes]] = None,
-        extensions: dict = None,
+        headers: Union[dict, list, None] = None,
+        content: Union[bytes, Iterator[bytes], None] = None,
+        extensions: Optional[dict] = None,
     ) -> Iterator[Response]:
         # Strict type checking on our parameters.
         method = enforce_bytes(method, name="method")

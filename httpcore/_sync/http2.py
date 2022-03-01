@@ -41,7 +41,10 @@ class HTTP2Connection(ConnectionInterface):
     CONFIG = h2.config.H2Configuration(validate_inbound_headers=False)
 
     def __init__(
-        self, origin: Origin, stream: NetworkStream, keepalive_expiry: float = None
+        self,
+        origin: Origin,
+        stream: NetworkStream,
+        keepalive_expiry: typing.Optional[float] = None,
     ):
         self._origin = origin
         self._network_stream = stream
@@ -263,7 +266,9 @@ class HTTP2Connection(ConnectionInterface):
             raise RemoteProtocolError(event)
         return event
 
-    def _receive_events(self, request: Request, stream_id: int = None) -> None:
+    def _receive_events(
+        self, request: Request, stream_id: typing.Optional[int] = None
+    ) -> None:
         with self._read_lock:
             if self._connection_error_event is not None:  # pragma: nocover
                 raise RemoteProtocolError(self._connection_error_event)
@@ -431,9 +436,9 @@ class HTTP2Connection(ConnectionInterface):
 
     def __exit__(
         self,
-        exc_type: typing.Type[BaseException] = None,
-        exc_value: BaseException = None,
-        traceback: types.TracebackType = None,
+        exc_type: typing.Optional[typing.Type[BaseException]] = None,
+        exc_value: typing.Optional[BaseException] = None,
+        traceback: typing.Optional[types.TracebackType] = None,
     ) -> None:
         self.close()
 

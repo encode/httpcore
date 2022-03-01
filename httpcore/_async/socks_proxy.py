@@ -39,7 +39,7 @@ async def _init_socks5_connection(
     *,
     host: bytes,
     port: int,
-    auth: typing.Tuple[bytes, bytes] = None,
+    auth: typing.Optional[typing.Tuple[bytes, bytes]] = None,
 ) -> None:
     conn = socks5.SOCKS5Connection()
 
@@ -105,16 +105,16 @@ class AsyncSOCKSProxy(AsyncConnectionPool):
     def __init__(
         self,
         proxy_url: typing.Union[URL, bytes, str],
-        proxy_auth: typing.Tuple[
-            typing.Union[bytes, str], typing.Union[bytes, str]
+        proxy_auth: typing.Optional[
+            typing.Tuple[typing.Union[bytes, str], typing.Union[bytes, str]]
         ] = None,
-        ssl_context: ssl.SSLContext = None,
+        ssl_context: typing.Optional[ssl.SSLContext] = None,
         max_connections: typing.Optional[int] = 10,
-        max_keepalive_connections: int = None,
-        keepalive_expiry: float = None,
+        max_keepalive_connections: typing.Optional[int] = None,
+        keepalive_expiry: typing.Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
-        network_backend: AsyncNetworkBackend = None,
+        network_backend: typing.Optional[AsyncNetworkBackend] = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -186,12 +186,12 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
         self,
         proxy_origin: Origin,
         remote_origin: Origin,
-        proxy_auth: typing.Tuple[bytes, bytes] = None,
-        ssl_context: ssl.SSLContext = None,
-        keepalive_expiry: float = None,
+        proxy_auth: typing.Optional[typing.Tuple[bytes, bytes]] = None,
+        ssl_context: typing.Optional[ssl.SSLContext] = None,
+        keepalive_expiry: typing.Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
-        network_backend: AsyncNetworkBackend = None,
+        network_backend: typing.Optional[AsyncNetworkBackend] = None,
     ) -> None:
         self._proxy_origin = proxy_origin
         self._remote_origin = remote_origin

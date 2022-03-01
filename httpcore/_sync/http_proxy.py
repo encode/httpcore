@@ -26,8 +26,8 @@ HeadersAsMapping = Mapping[Union[bytes, str], Union[bytes, str]]
 
 
 def merge_headers(
-    default_headers: Sequence[Tuple[bytes, bytes]] = None,
-    override_headers: Sequence[Tuple[bytes, bytes]] = None,
+    default_headers: Optional[Sequence[Tuple[bytes, bytes]]] = None,
+    override_headers: Optional[Sequence[Tuple[bytes, bytes]]] = None,
 ) -> List[Tuple[bytes, bytes]]:
     """
     Append default_headers and override_headers, de-duplicating if a key exists
@@ -57,18 +57,18 @@ class HTTPProxy(ConnectionPool):
     def __init__(
         self,
         proxy_url: Union[URL, bytes, str],
-        proxy_auth: Tuple[Union[bytes, str], Union[bytes, str]] = None,
-        proxy_headers: Union[HeadersAsMapping, HeadersAsSequence] = None,
-        ssl_context: ssl.SSLContext = None,
+        proxy_auth: Optional[Tuple[Union[bytes, str], Union[bytes, str]]] = None,
+        proxy_headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
+        ssl_context: Optional[ssl.SSLContext] = None,
         max_connections: Optional[int] = 10,
-        max_keepalive_connections: int = None,
-        keepalive_expiry: float = None,
+        max_keepalive_connections: Optional[int] = None,
+        keepalive_expiry: Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
         retries: int = 0,
-        local_address: str = None,
-        uds: str = None,
-        network_backend: NetworkBackend = None,
+        local_address: Optional[str] = None,
+        uds: Optional[str] = None,
+        network_backend: Optional[NetworkBackend] = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -151,9 +151,9 @@ class ForwardHTTPConnection(ConnectionInterface):
     def __init__(
         self,
         proxy_origin: Origin,
-        proxy_headers: Union[HeadersAsMapping, HeadersAsSequence] = None,
-        keepalive_expiry: float = None,
-        network_backend: NetworkBackend = None,
+        proxy_headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
+        keepalive_expiry: Optional[float] = None,
+        network_backend: Optional[NetworkBackend] = None,
     ) -> None:
         self._connection = HTTPConnection(
             origin=proxy_origin,
@@ -210,12 +210,12 @@ class TunnelHTTPConnection(ConnectionInterface):
         self,
         proxy_origin: Origin,
         remote_origin: Origin,
-        ssl_context: ssl.SSLContext = None,
-        proxy_headers: Sequence[Tuple[bytes, bytes]] = None,
-        keepalive_expiry: float = None,
+        ssl_context: Optional[ssl.SSLContext] = None,
+        proxy_headers: Optional[Sequence[Tuple[bytes, bytes]]] = None,
+        keepalive_expiry: Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
-        network_backend: NetworkBackend = None,
+        network_backend: Optional[NetworkBackend] = None,
     ) -> None:
         self._connection: ConnectionInterface = HTTPConnection(
             origin=proxy_origin,

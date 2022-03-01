@@ -55,7 +55,7 @@ def enforce_url(value: Union["URL", bytes, str], *, name: str) -> "URL":
 
 
 def enforce_headers(
-    value: Union[HeadersAsMapping, HeadersAsSequence] = None, *, name: str
+    value: Union[HeadersAsMapping, HeadersAsSequence, None] = None, *, name: str
 ) -> List[Tuple[bytes, bytes]]:
     """
     Convienence function that ensure all items in request or response headers
@@ -318,9 +318,9 @@ class Request:
         method: Union[bytes, str],
         url: Union[URL, bytes, str],
         *,
-        headers: Union[dict, list] = None,
-        content: Union[bytes, Iterable[bytes], AsyncIterable[bytes]] = None,
-        extensions: dict = None,
+        headers: Union[dict, list, None] = None,
+        content: Union[bytes, Iterable[bytes], AsyncIterable[bytes], None] = None,
+        extensions: Optional[dict] = None,
     ) -> None:
         """
         Parameters:
@@ -356,9 +356,9 @@ class Response:
         self,
         status: int,
         *,
-        headers: Union[dict, list] = None,
-        content: Union[bytes, Iterable[bytes], AsyncIterable[bytes]] = None,
-        extensions: dict = None,
+        headers: Union[dict, list, None] = None,
+        content: Union[bytes, Iterable[bytes], AsyncIterable[bytes], None] = None,
+        extensions: Optional[dict] = None,
     ) -> None:
         """
         Parameters:

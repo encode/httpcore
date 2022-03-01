@@ -1,11 +1,13 @@
 from types import TracebackType
-from typing import Any, Type
+from typing import Any, Optional, Type
 
 from ._models import Request
 
 
 class Trace:
-    def __init__(self, name: str, request: Request, kwargs: dict = None) -> None:
+    def __init__(
+        self, name: str, request: Request, kwargs: Optional[dict] = None
+    ) -> None:
         self.name = name
         self.trace = request.extensions.get("trace")
         self.kwargs = kwargs or {}
@@ -19,9 +21,9 @@ class Trace:
 
     def __exit__(
         self,
-        exc_type: Type[BaseException] = None,
-        exc_value: BaseException = None,
-        traceback: TracebackType = None,
+        exc_type: Optional[Type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        traceback: Optional[TracebackType] = None,
     ) -> None:
         if self.trace is not None:
             if exc_value is None:
@@ -39,9 +41,9 @@ class Trace:
 
     async def __aexit__(
         self,
-        exc_type: Type[BaseException] = None,
-        exc_value: BaseException = None,
-        traceback: TracebackType = None,
+        exc_type: Optional[Type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        traceback: Optional[TracebackType] = None,
     ) -> None:
         if self.trace is not None:
             if exc_value is None:

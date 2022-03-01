@@ -1,3 +1,5 @@
+from typing import Optional
+
 import sniffio
 
 from .base import AsyncNetworkBackend, AsyncNetworkStream
@@ -17,7 +19,11 @@ class AutoBackend(AsyncNetworkBackend):
                 self._backend = AsyncIOBackend()
 
     async def connect_tcp(
-        self, host: str, port: int, timeout: float = None, local_address: str = None
+        self,
+        host: str,
+        port: int,
+        timeout: Optional[float] = None,
+        local_address: Optional[str] = None,
     ) -> AsyncNetworkStream:
         await self._init_backend()
         return await self._backend.connect_tcp(
@@ -25,7 +31,7 @@ class AutoBackend(AsyncNetworkBackend):
         )
 
     async def connect_unix_socket(
-        self, path: str, timeout: float = None
+        self, path: str, timeout: Optional[float] = None
     ) -> AsyncNetworkStream:  # pragma: nocover
         await self._init_backend()
         return await self._backend.connect_unix_socket(path, timeout=timeout)

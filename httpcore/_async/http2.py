@@ -41,7 +41,10 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
     CONFIG = h2.config.H2Configuration(validate_inbound_headers=False)
 
     def __init__(
-        self, origin: Origin, stream: AsyncNetworkStream, keepalive_expiry: float = None
+        self,
+        origin: Origin,
+        stream: AsyncNetworkStream,
+        keepalive_expiry: typing.Optional[float] = None,
     ):
         self._origin = origin
         self._network_stream = stream
@@ -263,7 +266,9 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
             raise RemoteProtocolError(event)
         return event
 
-    async def _receive_events(self, request: Request, stream_id: int = None) -> None:
+    async def _receive_events(
+        self, request: Request, stream_id: typing.Optional[int] = None
+    ) -> None:
         async with self._read_lock:
             if self._connection_error_event is not None:  # pragma: nocover
                 raise RemoteProtocolError(self._connection_error_event)
@@ -431,9 +436,9 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
     async def __aexit__(
         self,
-        exc_type: typing.Type[BaseException] = None,
-        exc_value: BaseException = None,
-        traceback: types.TracebackType = None,
+        exc_type: typing.Optional[typing.Type[BaseException]] = None,
+        exc_value: typing.Optional[BaseException] = None,
+        traceback: typing.Optional[types.TracebackType] = None,
     ) -> None:
         await self.aclose()
 

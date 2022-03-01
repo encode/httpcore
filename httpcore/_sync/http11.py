@@ -38,7 +38,10 @@ class HTTP11Connection(ConnectionInterface):
     READ_NUM_BYTES = 64 * 1024
 
     def __init__(
-        self, origin: Origin, stream: NetworkStream, keepalive_expiry: float = None
+        self,
+        origin: Origin,
+        stream: NetworkStream,
+        keepalive_expiry: Optional[float] = None,
     ) -> None:
         self._origin = origin
         self._network_stream = stream
@@ -127,7 +130,9 @@ class HTTP11Connection(ConnectionInterface):
         event = h11.EndOfMessage()
         self._send_event(event, timeout=timeout)
 
-    def _send_event(self, event: H11Event, timeout: float = None) -> None:
+    def _send_event(
+        self, event: H11Event, timeout: Optional[float] = None
+    ) -> None:
         bytes_to_send = self._h11_state.send(event)
         self._network_stream.write(bytes_to_send, timeout=timeout)
 
@@ -163,7 +168,7 @@ class HTTP11Connection(ConnectionInterface):
             elif isinstance(event, (h11.EndOfMessage, h11.PAUSED)):
                 break
 
-    def _receive_event(self, timeout: float = None) -> H11Event:
+    def _receive_event(self, timeout: Optional[float] = None) -> H11Event:
         while True:
             with map_exceptions({h11.RemoteProtocolError: RemoteProtocolError}):
                 event = self._h11_state.next_event()
@@ -268,9 +273,9 @@ class HTTP11Connection(ConnectionInterface):
 
     def __exit__(
         self,
-        exc_type: Type[BaseException] = None,
-        exc_value: BaseException = None,
-        traceback: TracebackType = None,
+        exc_type: Optional[Type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        traceback: Optional[TracebackType] = None,
     ) -> None:
         self.close()
 

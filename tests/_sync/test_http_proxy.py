@@ -1,4 +1,5 @@
 import ssl
+from typing import Optional
 
 import hpack
 import hyperframe.frame
@@ -125,8 +126,8 @@ class HTTP1ThenHTTP2Stream(MockStream):
     def start_tls(
         self,
         ssl_context: ssl.SSLContext,
-        server_hostname: str = None,
-        timeout: float = None,
+        server_hostname: Optional[str] = None,
+        timeout: Optional[float] = None,
     ) -> NetworkStream:
         self._http2 = True
         return self
@@ -134,7 +135,11 @@ class HTTP1ThenHTTP2Stream(MockStream):
 
 class HTTP1ThenHTTP2Backend(MockBackend):
     def connect_tcp(
-        self, host: str, port: int, timeout: float = None, local_address: str = None
+        self,
+        host: str,
+        port: int,
+        timeout: Optional[float] = None,
+        local_address: Optional[str] = None,
     ) -> NetworkStream:
         return HTTP1ThenHTTP2Stream(list(self._buffer))
 

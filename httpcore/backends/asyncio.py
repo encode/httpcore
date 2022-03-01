@@ -20,7 +20,9 @@ class AsyncIOStream(AsyncNetworkStream):
     def __init__(self, stream: anyio.abc.ByteStream) -> None:
         self._stream = stream
 
-    async def read(self, max_bytes: int, timeout: float = None) -> bytes:
+    async def read(
+        self, max_bytes: int, timeout: typing.Optional[float] = None
+    ) -> bytes:
         exc_map = {
             TimeoutError: ReadTimeout,
             anyio.BrokenResourceError: ReadError,
@@ -32,7 +34,9 @@ class AsyncIOStream(AsyncNetworkStream):
                 except anyio.EndOfStream:  # pragma: nocover
                     return b""
 
-    async def write(self, buffer: bytes, timeout: float = None) -> None:
+    async def write(
+        self, buffer: bytes, timeout: typing.Optional[float] = None
+    ) -> None:
         if not buffer:
             return
 
@@ -50,8 +54,8 @@ class AsyncIOStream(AsyncNetworkStream):
     async def start_tls(
         self,
         ssl_context: ssl.SSLContext,
-        server_hostname: str = None,
-        timeout: float = None,
+        server_hostname: typing.Optional[str] = None,
+        timeout: typing.Optional[float] = None,
     ) -> AsyncNetworkStream:
         exc_map = {
             TimeoutError: ConnectTimeout,
@@ -89,7 +93,11 @@ class AsyncIOStream(AsyncNetworkStream):
 
 class AsyncIOBackend(AsyncNetworkBackend):
     async def connect_tcp(
-        self, host: str, port: int, timeout: float = None, local_address: str = None
+        self,
+        host: str,
+        port: int,
+        timeout: typing.Optional[float] = None,
+        local_address: typing.Optional[str] = None,
     ) -> AsyncNetworkStream:
         exc_map = {
             TimeoutError: ConnectTimeout,
@@ -106,7 +114,7 @@ class AsyncIOBackend(AsyncNetworkBackend):
         return AsyncIOStream(stream)
 
     async def connect_unix_socket(
-        self, path: str, timeout: float = None
+        self, path: str, timeout: typing.Optional[float] = None
     ) -> AsyncNetworkStream:  # pragma: nocover
         exc_map = {
             TimeoutError: ConnectTimeout,
