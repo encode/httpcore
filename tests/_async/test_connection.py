@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 import hpack
 import hyperframe.frame
@@ -124,7 +124,7 @@ async def test_request_to_incorrect_origin():
 
 
 class NeedsRetryBackend(AsyncMockBackend):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         self._retry = 2
         super().__init__(*args, **kwargs)
 

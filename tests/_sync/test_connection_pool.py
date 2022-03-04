@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, NoReturn, Optional
 
 import pytest
 from tests import concurrency
@@ -206,7 +206,7 @@ def test_connection_pool_with_connect_exception():
             port: int,
             timeout: Optional[float] = None,
             local_address: Optional[str] = None,
-        ):
+        ) -> NoReturn:
             raise ConnectError("Could not connect")
 
     network_backend = FailedConnectBackend([])
