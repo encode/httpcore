@@ -115,7 +115,9 @@ class TrioBackend(AsyncNetworkBackend):
         # Trio supports 'local_address' from 0.16.1 onwards.
         # We only include the keyword argument if a local_address
         # argument has been passed.
-        kwargs: dict = {} if local_address is None else {"local_address": local_address}
+        kwargs: typing.Dict[str, str] = (
+            {} if local_address is None else {"local_address": local_address}
+        )
         with map_exceptions(exc_map):
             with trio.fail_after(timeout_or_inf):
                 stream: trio.abc.Stream = await trio.open_tcp_stream(
