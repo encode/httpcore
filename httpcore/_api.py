@@ -3,13 +3,14 @@ from typing import Iterator, Optional, Union
 
 from ._models import URL, Response
 from ._sync.connection_pool import ConnectionPool
+from ._types import HeadersAsMapping, HeadersAsSequence
 
 
 def request(
     method: Union[bytes, str],
     url: Union[URL, bytes, str],
     *,
-    headers: Union[dict, list, None] = None,
+    headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
     content: Union[bytes, Iterator[bytes], None] = None,
     extensions: Optional[dict] = None,
 ) -> Response:
@@ -50,7 +51,7 @@ def stream(
     method: Union[bytes, str],
     url: Union[URL, bytes, str],
     *,
-    headers: Union[dict, list, None] = None,
+    headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
     content: Union[bytes, Iterator[bytes], None] = None,
     extensions: Optional[dict] = None,
 ) -> Iterator[Response]:

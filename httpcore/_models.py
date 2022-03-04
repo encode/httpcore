@@ -13,11 +13,9 @@ from typing import (
 )
 from urllib.parse import urlparse
 
+from ._types import HeadersAsMapping, HeadersAsSequence
+
 # Functions for typechecking...
-
-
-HeadersAsSequence = Sequence[Tuple[Union[bytes, str], Union[bytes, str]]]
-HeadersAsMapping = Mapping[Union[bytes, str], Union[bytes, str]]
 
 
 def enforce_bytes(value: Union[bytes, str], *, name: str) -> bytes:
@@ -318,7 +316,7 @@ class Request:
         method: Union[bytes, str],
         url: Union[URL, bytes, str],
         *,
-        headers: Union[dict, list, None] = None,
+        headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
         content: Union[bytes, Iterable[bytes], AsyncIterable[bytes], None] = None,
         extensions: Optional[dict] = None,
     ) -> None:
@@ -356,7 +354,7 @@ class Response:
         self,
         status: int,
         *,
-        headers: Union[dict, list, None] = None,
+        headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
         content: Union[bytes, Iterable[bytes], AsyncIterable[bytes], None] = None,
         extensions: Optional[dict] = None,
     ) -> None:

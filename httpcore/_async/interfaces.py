@@ -11,6 +11,7 @@ from .._models import (
     enforce_url,
     include_request_headers,
 )
+from .._types import HeadersAsMapping, HeadersAsSequence
 
 
 class AsyncRequestInterface:
@@ -19,7 +20,7 @@ class AsyncRequestInterface:
         method: Union[bytes, str],
         url: Union[URL, bytes, str],
         *,
-        headers: Union[dict, list, None] = None,
+        headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
         content: Union[bytes, AsyncIterator[bytes], None] = None,
         extensions: Optional[dict] = None,
     ) -> Response:
@@ -51,7 +52,7 @@ class AsyncRequestInterface:
         method: Union[bytes, str],
         url: Union[URL, bytes, str],
         *,
-        headers: Union[dict, list, None] = None,
+        headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
         content: Union[bytes, AsyncIterator[bytes], None] = None,
         extensions: Optional[dict] = None,
     ) -> AsyncIterator[Response]:

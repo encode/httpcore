@@ -11,6 +11,7 @@ from .._models import (
     enforce_url,
     include_request_headers,
 )
+from .._types import HeadersAsMapping, HeadersAsSequence
 
 
 class RequestInterface:
@@ -19,7 +20,7 @@ class RequestInterface:
         method: Union[bytes, str],
         url: Union[URL, bytes, str],
         *,
-        headers: Union[dict, list, None] = None,
+        headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
         content: Union[bytes, Iterator[bytes], None] = None,
         extensions: Optional[dict] = None,
     ) -> Response:
@@ -51,7 +52,7 @@ class RequestInterface:
         method: Union[bytes, str],
         url: Union[URL, bytes, str],
         *,
-        headers: Union[dict, list, None] = None,
+        headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
         content: Union[bytes, Iterator[bytes], None] = None,
         extensions: Optional[dict] = None,
     ) -> Iterator[Response]:

@@ -1,6 +1,6 @@
 import ssl
 from base64 import b64encode
-from typing import List, Mapping, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Sequence, Tuple, Union
 
 from .._exceptions import ProxyError
 from .._models import (
@@ -15,14 +15,12 @@ from .._models import (
 from .._ssl import default_ssl_context
 from .._synchronization import AsyncLock
 from .._trace import Trace
+from .._types import HeadersAsMapping, HeadersAsSequence
 from ..backends.base import AsyncNetworkBackend
 from .connection import AsyncHTTPConnection
 from .connection_pool import AsyncConnectionPool
 from .http11 import AsyncHTTP11Connection
 from .interfaces import AsyncConnectionInterface
-
-HeadersAsSequence = Sequence[Tuple[Union[bytes, str], Union[bytes, str]]]
-HeadersAsMapping = Mapping[Union[bytes, str], Union[bytes, str]]
 
 
 def merge_headers(
