@@ -1,12 +1,12 @@
 from types import TracebackType
-from typing import Any, Optional, Type
+from typing import Any, Dict, Optional, Type
 
 from ._models import Request
 
 
 class Trace:
     def __init__(
-        self, name: str, request: Request, kwargs: Optional[dict] = None
+        self, name: str, request: Request, kwargs: Optional[Dict[str, Any]] = None
     ) -> None:
         self.name = name
         self.trace = request.extensions.get("trace")
@@ -27,7 +27,7 @@ class Trace:
     ) -> None:
         if self.trace is not None:
             if exc_value is None:
-                info: dict = {"return_value": self.return_value}
+                info: Dict[str, Any] = {"return_value": self.return_value}
                 self.trace(f"{self.name}.complete", info)
             else:
                 info = {"exception": exc_value}
@@ -47,7 +47,7 @@ class Trace:
     ) -> None:
         if self.trace is not None:
             if exc_value is None:
-                info: dict = {"return_value": self.return_value}
+                info: Dict[str, Any] = {"return_value": self.return_value}
                 await self.trace(f"{self.name}.complete", info)
             else:
                 info = {"exception": exc_value}
