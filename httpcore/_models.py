@@ -2,6 +2,7 @@ from typing import (
     Any,
     AsyncIterable,
     AsyncIterator,
+    Dict,
     Iterable,
     Iterator,
     List,
@@ -318,7 +319,7 @@ class Request:
         *,
         headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
         content: Union[bytes, Iterable[bytes], AsyncIterable[bytes], None] = None,
-        extensions: Optional[dict] = None,
+        extensions: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         Parameters:
@@ -356,7 +357,7 @@ class Response:
         *,
         headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
         content: Union[bytes, Iterable[bytes], AsyncIterable[bytes], None] = None,
-        extensions: Optional[dict] = None,
+        extensions: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         Parameters:
@@ -374,7 +375,7 @@ class Response:
         self.stream: Union[Iterable[bytes], AsyncIterable[bytes]] = enforce_stream(
             content, name="content"
         )
-        self.extensions: dict = {} if extensions is None else extensions
+        self.extensions: Dict[str, Any] = {} if extensions is None else extensions
 
         self._stream_consumed = False
 

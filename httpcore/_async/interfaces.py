@@ -1,4 +1,4 @@
-from typing import AsyncIterator, Optional, Union
+from typing import Any, AsyncIterator, Dict, Optional, Union
 
 from .._compat import asynccontextmanager
 from .._models import (
@@ -22,7 +22,7 @@ class AsyncRequestInterface:
         *,
         headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
         content: Union[bytes, AsyncIterator[bytes], None] = None,
-        extensions: Optional[dict] = None,
+        extensions: Optional[Dict[str, Any]] = None,
     ) -> Response:
         # Strict type checking on our parameters.
         method = enforce_bytes(method, name="method")
@@ -54,7 +54,7 @@ class AsyncRequestInterface:
         *,
         headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
         content: Union[bytes, AsyncIterator[bytes], None] = None,
-        extensions: Optional[dict] = None,
+        extensions: Optional[Dict[str, Any]] = None,
     ) -> AsyncIterator[Response]:
         # Strict type checking on our parameters.
         method = enforce_bytes(method, name="method")
