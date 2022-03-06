@@ -46,7 +46,7 @@ class AsyncRequestInterface:
             await response.aclose()
         return response
 
-    @asynccontextmanager
+    @asynccontextmanager  # type: ignore[misc]
     async def stream(
         self,
         method: Union[bytes, str],

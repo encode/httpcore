@@ -46,7 +46,7 @@ class RequestInterface:
             response.close()
         return response
 
-    @contextmanager
+    @contextmanager  # type: ignore[misc]
     def stream(
         self,
         method: Union[bytes, str],
