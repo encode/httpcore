@@ -5,4 +5,4 @@ import sys
 if sys.version_info >= (3, 7):
     from contextlib import asynccontextmanager as asynccontextmanager
 else:
-    from async_generator import asynccontextmanager  # noqa: F401
+    from async_generator import asynccontextmanager as asynccontextmanager  # noqa: F401
