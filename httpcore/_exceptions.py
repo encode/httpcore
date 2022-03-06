@@ -1,9 +1,11 @@
 import contextlib
-from typing import Dict, Iterator, Type
+from typing import Iterator, Mapping, Type
+
+ExceptionMappingType = Mapping[Type[Exception], Type[Exception]]
 
 
 @contextlib.contextmanager
-def map_exceptions(map: Dict[Type, Type]) -> Iterator[None]:  # type: ignore[type-arg]
+def map_exceptions(map: ExceptionMappingType) -> Iterator[None]:
     try:
         yield
     except Exception as exc:  # noqa: PIE786
