@@ -25,7 +25,7 @@ def test_url_with_port():
 
 def test_url_with_invalid_argument():
     with pytest.raises(TypeError) as exc_info:
-        httpcore.URL(123)  # type: ignore
+        httpcore.URL(123)  # type: ignore[arg-type]
     assert str(exc_info.value) == "url must be bytes or str, but got int."
 
 
@@ -60,19 +60,19 @@ def test_request():
 
 def test_request_with_invalid_method():
     with pytest.raises(TypeError) as exc_info:
-        httpcore.Request(123, "https://www.example.com/")  # type: ignore
+        httpcore.Request(123, "https://www.example.com/")  # type: ignore[arg-type]
     assert str(exc_info.value) == "method must be bytes or str, but got int."
 
 
 def test_request_with_invalid_url():
     with pytest.raises(TypeError) as exc_info:
-        httpcore.Request("GET", 123)  # type: ignore
+        httpcore.Request("GET", 123)  # type: ignore[arg-type]
     assert str(exc_info.value) == "url must be a URL, bytes, or str, but got int."
 
 
 def test_request_with_invalid_headers():
     with pytest.raises(TypeError) as exc_info:
-        httpcore.Request("GET", "https://www.example.com/", headers=123)  # type: ignore
+        httpcore.Request("GET", "https://www.example.com/", headers=123)  # type: ignore[arg-type]
     assert (
         str(exc_info.value)
         == "headers must be a mapping or sequence of two-tuples, but got int."

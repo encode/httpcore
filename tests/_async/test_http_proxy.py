@@ -259,6 +259,6 @@ async def test_proxy_tunneling_with_auth():
 
         # Dig into this private property as a cheap lazy way of
         # checking that the proxy header is set correctly.
-        assert proxy._proxy_headers == [  # type: ignore
+        assert proxy._proxy_headers == [  # type: ignore[attr-defined]
             (b"Proxy-Authorization", b"Basic dXNlcm5hbWU6cGFzc3dvcmQ=")
         ]
