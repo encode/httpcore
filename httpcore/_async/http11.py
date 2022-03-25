@@ -133,7 +133,8 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
         self, event: H11Event, timeout: Optional[float] = None
     ) -> None:
         bytes_to_send = self._h11_state.send(event)
-        await self._network_stream.write(bytes_to_send, timeout=timeout)
+        if bytes_to_send is not None:
+            await self._network_stream.write(bytes_to_send, timeout=timeout)
 
     # Receiving the response...
 

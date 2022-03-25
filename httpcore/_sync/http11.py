@@ -133,7 +133,8 @@ class HTTP11Connection(ConnectionInterface):
         self, event: H11Event, timeout: Optional[float] = None
     ) -> None:
         bytes_to_send = self._h11_state.send(event)
-        self._network_stream.write(bytes_to_send, timeout=timeout)
+        if bytes_to_send is not None:
+            self._network_stream.write(bytes_to_send, timeout=timeout)
 
     # Receiving the response...
 
