@@ -127,8 +127,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
             event = h11.Data(data=chunk)
             await self._send_event(event, timeout=timeout)
 
-        event = h11.EndOfMessage()
-        await self._send_event(event, timeout=timeout)
+        await self._send_event(h11.EndOfMessage(), timeout=timeout)
 
     async def _send_event(
         self, event: H11Event, timeout: Optional[float] = None

@@ -127,8 +127,7 @@ class HTTP11Connection(ConnectionInterface):
             event = h11.Data(data=chunk)
             self._send_event(event, timeout=timeout)
 
-        event = h11.EndOfMessage()
-        self._send_event(event, timeout=timeout)
+        self._send_event(h11.EndOfMessage(), timeout=timeout)
 
     def _send_event(
         self, event: H11Event, timeout: Optional[float] = None
