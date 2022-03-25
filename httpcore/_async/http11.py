@@ -1,7 +1,16 @@
 import enum
 import time
 from types import TracebackType
-from typing import AsyncIterable, AsyncIterator, List, Optional, Tuple, Type, Union
+from typing import (
+    AsyncIterable,
+    AsyncIterator,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    cast,
+    Union,
+)
 
 import h11
 
@@ -16,15 +25,6 @@ from .._synchronization import AsyncLock
 from .._trace import Trace
 from ..backends.base import AsyncNetworkStream
 from .interfaces import AsyncConnectionInterface
-
-H11Event = Union[
-    h11.Request,
-    h11.Response,
-    h11.InformationalResponse,
-    h11.Data,
-    h11.EndOfMessage,
-    h11.ConnectionClosed,
-]
 
 
 class HTTPConnectionState(enum.IntEnum):
@@ -130,7 +130,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
         await self._send_event(h11.EndOfMessage(), timeout=timeout)
 
     async def _send_event(
-        self, event: H11Event, timeout: Optional[float] = None
+        self, event: h11.Event, timeout: Optional[float] = None
     ) -> None:
         bytes_to_send = self._h11_state.send(event)
         if bytes_to_send is not None:
@@ -168,10 +168,14 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
             elif isinstance(event, (h11.EndOfMessage, h11.PAUSED)):
                 break
 
-    async def _receive_event(self, timeout: Optional[float] = None) -> H11Event:
+    async def _receive_event(self, timeout: Optional[float] = None) -> h11.Event:
         while True:
             with map_exceptions({h11.RemoteProtocolError: RemoteProtocolError}):
-                event = self._h11_state.next_event()
+                # The h11 type signature uses a private return type
+                event = cast(
+                    Union[h11.Event, h11.NEED_DATA, h11.PAUSED],
+                    self._h11_state.next_event(),
+                )
 
             if event is h11.NEED_DATA:
                 data = await self._network_stream.read(
@@ -191,6 +195,9 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
                     raise RemoteProtocolError(msg)
 
                 self._h11_state.receive_data(data)
+            elif event is h11.PAUSED:
+                # TODO: Implement handling for paused
+                ...
             else:
                 return event
 

@@ -1,7 +1,7 @@
 import enum
 import time
 from types import TracebackType
-from typing import Iterable, Iterator, List, Optional, Tuple, Type, Union
+from typing import Iterable, Iterator, List, Optional, Tuple, Type, Union, cast
 
 import h11
 
@@ -16,15 +16,6 @@ from .._synchronization import Lock
 from .._trace import Trace
 from ..backends.base import NetworkStream
 from .interfaces import ConnectionInterface
-
-H11Event = Union[
-    h11.Request,
-    h11.Response,
-    h11.InformationalResponse,
-    h11.Data,
-    h11.EndOfMessage,
-    h11.ConnectionClosed,
-]
 
 
 class HTTPConnectionState(enum.IntEnum):
@@ -73,9 +64,7 @@ class HTTP11Connection(ConnectionInterface):
                 self._send_request_headers(**kwargs)
             with Trace("http11.send_request_body", request, kwargs) as trace:
                 self._send_request_body(**kwargs)
-            with Trace(
-                "http11.receive_response_headers", request, kwargs
-            ) as trace:
+            with Trace("http11.receive_response_headers", request, kwargs) as trace:
                 (
                     http_version,
                     status,
@@ -129,9 +118,7 @@ class HTTP11Connection(ConnectionInterface):
 
         self._send_event(h11.EndOfMessage(), timeout=timeout)
 
-    def _send_event(
-        self, event: H11Event, timeout: Optional[float] = None
-    ) -> None:
+    def _send_event(self, event: h11.Event, timeout: Optional[float] = None) -> None:
         bytes_to_send = self._h11_state.send(event)
         if bytes_to_send is not None:
             self._network_stream.write(bytes_to_send, timeout=timeout)
@@ -168,15 +155,17 @@ class HTTP11Connection(ConnectionInterface):
             elif isinstance(event, (h11.EndOfMessage, h11.PAUSED)):
                 break
 
-    def _receive_event(self, timeout: Optional[float] = None) -> H11Event:
+    def _receive_event(self, timeout: Optional[float] = None) -> h11.Event:
         while True:
             with map_exceptions({h11.RemoteProtocolError: RemoteProtocolError}):
-                event = self._h11_state.next_event()
+                # The h11 type signature uses a private return type
+                event = cast(
+                    Union[h11.Event, h11.NEED_DATA, h11.PAUSED],
+                    self._h11_state.next_event(),
+                )
 
             if event is h11.NEED_DATA:
-                data = self._network_stream.read(
-                    self.READ_NUM_BYTES, timeout=timeout
-                )
+                data = self._network_stream.read(self.READ_NUM_BYTES, timeout=timeout)
 
                 # If we feed this case through h11 we'll raise an exception like:
                 #
@@ -191,6 +180,9 @@ class HTTP11Connection(ConnectionInterface):
                     raise RemoteProtocolError(msg)
 
                 self._h11_state.receive_data(data)
+            elif event is h11.PAUSED:
+                # TODO: Implement handling for paused
+                ...
             else:
                 return event
 
