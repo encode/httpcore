@@ -184,7 +184,7 @@ class HTTP11Connection(ConnectionInterface):
                 # TODO: Implement handling for paused
                 ...
             else:
-                return event
+                return cast(h11.Event, event)
 
     def _response_closed(self) -> None:
         with self._state_lock:

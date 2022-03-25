@@ -8,8 +8,8 @@ from typing import (
     Optional,
     Tuple,
     Type,
-    cast,
     Union,
+    cast,
 )
 
 import h11
@@ -199,7 +199,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
                 # TODO: Implement handling for paused
                 ...
             else:
-                return event
+                return cast(h11.Event, event)
 
     async def _response_closed(self) -> None:
         async with self._state_lock:
