@@ -12,7 +12,7 @@ mkdocstrings==0.17.0
 
 # Packaging
 twine
-wheel==0.37.1
+wheel
 
 # Tests & Linting
 anyio==3.5.0
