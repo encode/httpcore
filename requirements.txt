@@ -9,6 +9,7 @@ mkdocs-autorefs==0.3.1
 mkdocs-material==8.2.3
 mkdocs-material-extensions==1.0.3
 mkdocstrings==0.17.0
+jinja2==3.0.3  # See: https://github.com/mkdocs/mkdocs/issues/2799
 
 # Packaging
 twine
@@ -19,7 +20,7 @@ anyio==3.5.0
 autoflake==1.4
 black==22.3.0
 coverage==6.2
-flake8==4.0.1
+flake8==3.9.2
 isort==5.10.1
 mypy==0.931
 pytest==7.0.1
