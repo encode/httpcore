@@ -37,7 +37,7 @@ def get_packages(package):
 
 setup(
     name="httpcore",
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     version=get_version("httpcore"),
     url="https://github.com/encode/httpcore",
     project_urls={
@@ -73,7 +73,6 @@ setup(
         "Framework :: AsyncIO",
         "Framework :: Trio",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",

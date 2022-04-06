@@ -1,6 +1,6 @@
+from contextlib import contextmanager
 from typing import Iterator, Optional, Union
 
-from contextlib import contextmanager
 from .._models import (
     URL,
     Origin,
