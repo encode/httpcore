@@ -1,6 +1,6 @@
+from contextlib import asynccontextmanager
 from typing import AsyncIterator, Optional, Union
 
-from .._compat import asynccontextmanager
 from .._models import (
     URL,
     Origin,

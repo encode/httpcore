@@ -23,6 +23,10 @@ Some things HTTP Core does do:
 * Provides both sync and async interfaces.
 * Async backend support for `asyncio` and `trio`.
 
+## Requirements
+
+Python 3.7+
+
 ## Installation
 
 For HTTP/1.1 only support, install with:
