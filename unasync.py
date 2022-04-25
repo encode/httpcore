@@ -1,10 +1,9 @@
 #!venv/bin/python
-import re
 import os
+import re
 import sys
 
 SUBS = [
-    ('from .._compat import asynccontextmanager', 'from contextlib import contextmanager'),
     ('from ..backends.auto import AutoBackend', 'from ..backends.sync import SyncBackend'),
     ('import trio as concurrency', 'from tests import concurrency'),
     ('AsyncByteStream', 'SyncByteStream'),
