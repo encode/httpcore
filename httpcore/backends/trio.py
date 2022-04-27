@@ -111,6 +111,7 @@ class TrioBackend(AsyncNetworkBackend):
         exc_map = {
             trio.TooSlowError: ConnectTimeout,
             trio.BrokenResourceError: ConnectError,
+            OSError: ConnectError,
         }
         # Trio supports 'local_address' from 0.16.1 onwards.
         # We only include the keyword argument if a local_address
@@ -130,6 +131,7 @@ class TrioBackend(AsyncNetworkBackend):
         exc_map = {
             trio.TooSlowError: ConnectTimeout,
             trio.BrokenResourceError: ConnectError,
+            OSError: ConnectError,
         }
         with map_exceptions(exc_map):
             with trio.fail_after(timeout_or_inf):
