@@ -2,6 +2,7 @@ from typing import (
     Any,
     AsyncIterable,
     AsyncIterator,
+    Callable,
     Iterable,
     Iterator,
     List,
@@ -13,7 +14,30 @@ from typing import (
 )
 from urllib.parse import urlparse
 
+try:
+    from typing import TypedDict
+except ImportError:  # pragma: nocover
+    from typing_extensions import TypedDict
+
 # Functions for typechecking...
+
+
+class TimeoutExtensions(TypedDict, total=False):
+    """A dictionary of optional information about the request timeout"""
+
+    connect: float
+    read: float
+    write: float
+    pool: float
+
+
+class RequestExtensions(TypedDict, total=False):
+    """A dictionary of optional extra information included on the request.
+    Possible keys include `"timeout"`, and `"trace"`.
+    """
+
+    timeout: TimeoutExtensions
+    trace: Callable
 
 
 HeadersAsSequence = Sequence[Tuple[Union[bytes, str], Union[bytes, str]]]
@@ -320,7 +344,7 @@ class Request:
         *,
         headers: Union[dict, list, None] = None,
         content: Union[bytes, Iterable[bytes], AsyncIterable[bytes], None] = None,
-        extensions: Optional[dict] = None,
+        extensions: Optional[RequestExtensions] = None,
     ) -> None:
         """
         Parameters:

@@ -490,5 +490,8 @@ async def test_connection_pool_timeout():
         # fails with a timeout.
         async with pool.stream("GET", "https://example.com/"):
             with pytest.raises(PoolTimeout):
-                extensions = {"timeout": {"pool": 0.0001}}
-                await pool.request("GET", "https://example.com/", extensions=extensions)
+                await pool.request(
+                    "GET",
+                    "https://example.com/",
+                    extensions={"timeout": {"pool": 0.0001}},
+                )

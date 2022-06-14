@@ -216,7 +216,7 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
             if self._connection is None:
                 try:
                     # Connect to the proxy
-                    kwargs = {
+                    kwargs: typing.Dict[str, typing.Any] = {
                         "host": self._proxy_origin.host.decode("ascii"),
                         "port": self._proxy_origin.port,
                         "timeout": timeout,

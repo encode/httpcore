@@ -5,6 +5,7 @@ from .._models import (
     URL,
     Origin,
     Request,
+    RequestExtensions,
     Response,
     enforce_bytes,
     enforce_headers,
@@ -21,7 +22,7 @@ class RequestInterface:
         *,
         headers: Union[dict, list, None] = None,
         content: Union[bytes, Iterator[bytes], None] = None,
-        extensions: Optional[dict] = None,
+        extensions: Optional[RequestExtensions] = None,
     ) -> Response:
         # Strict type checking on our parameters.
         method = enforce_bytes(method, name="method")
@@ -53,7 +54,7 @@ class RequestInterface:
         *,
         headers: Union[dict, list, None] = None,
         content: Union[bytes, Iterator[bytes], None] = None,
-        extensions: Optional[dict] = None,
+        extensions: Optional[RequestExtensions] = None,
     ) -> Iterator[Response]:
         # Strict type checking on our parameters.
         method = enforce_bytes(method, name="method")

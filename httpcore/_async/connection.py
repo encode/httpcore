@@ -1,7 +1,7 @@
 import itertools
 import ssl
 from types import TracebackType
-from typing import Iterator, Optional, Type
+from typing import Any, Dict, Iterator, Optional, Type
 
 from .._exceptions import ConnectError, ConnectionNotAvailable, ConnectTimeout
 from .._models import Origin, Request, Response
@@ -99,7 +99,7 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
         while True:
             try:
                 if self._uds is None:
-                    kwargs = {
+                    kwargs: Dict[str, Any] = {
                         "host": self._origin.host.decode("ascii"),
                         "port": self._origin.port,
                         "local_address": self._local_address,

@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 from typing import Iterator, Optional, Union
 
-from ._models import URL, Response
+from ._models import URL, RequestExtensions, Response
 from ._sync.connection_pool import ConnectionPool
 
 
@@ -11,7 +11,7 @@ def request(
     *,
     headers: Union[dict, list, None] = None,
     content: Union[bytes, Iterator[bytes], None] = None,
-    extensions: Optional[dict] = None,
+    extensions: Optional[RequestExtensions] = None,
 ) -> Response:
     """
     Sends an HTTP request, returning the response.
@@ -52,7 +52,7 @@ def stream(
     *,
     headers: Union[dict, list, None] = None,
     content: Union[bytes, Iterator[bytes], None] = None,
-    extensions: Optional[dict] = None,
+    extensions: Optional[RequestExtensions] = None,
 ) -> Iterator[Response]:
     """
     Sends an HTTP request, returning the response within a content manager.
