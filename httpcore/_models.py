@@ -14,10 +14,8 @@ from typing import (
 )
 from urllib.parse import urlparse
 
-try:
-    from typing import TypedDict
-except ImportError:  # pragma: nocover
-    from typing_extensions import TypedDict
+# This ensures backwards compatibility with Python versions below 3.8
+from typing_extensions import TypedDict
 
 # Functions for typechecking...
 
@@ -53,6 +51,7 @@ def enforce_bytes(value: Union[bytes, str], *, name: str) -> bytes:
     the plain ASCII range. chr(0)...chr(127). If you need to use characters
     outside that range then be precise, and use a byte-wise argument.
     """
+
     if isinstance(value, str):
         try:
             return value.encode("ascii")
@@ -365,7 +364,7 @@ class Request:
         self.stream: Union[Iterable[bytes], AsyncIterable[bytes]] = enforce_stream(
             content, name="content"
         )
-        self.extensions = {} if extensions is None else extensions
+        self.extensions = RequestExtensions() if extensions is None else extensions
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} [{self.method!r}]>"
