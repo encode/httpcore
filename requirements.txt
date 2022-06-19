@@ -23,7 +23,7 @@ coverage==6.2
 flake8==3.9.2  # See: https://github.com/PyCQA/flake8/pull/1438
 isort==5.10.1
 mypy==0.931
-pytest==7.0.1
+pytest==7.1.2
 pytest-httpbin==1.0.1
 pytest-trio==0.7.0
 pytest-asyncio==0.16.0
