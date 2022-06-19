@@ -1,7 +1,16 @@
 import enum
 import time
 from types import TracebackType
-from typing import Iterable, Iterator, List, Optional, Tuple, Type, Union, cast
+from typing import (
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 import h11
 
@@ -64,7 +73,9 @@ class HTTP11Connection(ConnectionInterface):
                 self._send_request_headers(**kwargs)
             with Trace("http11.send_request_body", request, kwargs) as trace:
                 self._send_request_body(**kwargs)
-            with Trace("http11.receive_response_headers", request, kwargs) as trace:
+            with Trace(
+                "http11.receive_response_headers", request, kwargs
+            ) as trace:
                 (
                     http_version,
                     status,
@@ -118,7 +129,9 @@ class HTTP11Connection(ConnectionInterface):
 
         self._send_event(h11.EndOfMessage(), timeout=timeout)
 
-    def _send_event(self, event: h11.Event, timeout: Optional[float] = None) -> None:
+    def _send_event(
+        self, event: h11.Event, timeout: Optional[float] = None
+    ) -> None:
         bytes_to_send = self._h11_state.send(event)
         if bytes_to_send is not None:
             self._network_stream.write(bytes_to_send, timeout=timeout)
@@ -165,7 +178,9 @@ class HTTP11Connection(ConnectionInterface):
                 )
 
             if event is h11.NEED_DATA:
-                data = self._network_stream.read(self.READ_NUM_BYTES, timeout=timeout)
+                data = self._network_stream.read(
+                    self.READ_NUM_BYTES, timeout=timeout
+                )
 
                 # If we feed this case through h11 we'll raise an exception like:
                 #
