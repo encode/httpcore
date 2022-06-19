@@ -168,7 +168,9 @@ class HTTP11Connection(ConnectionInterface):
             elif isinstance(event, (h11.EndOfMessage, h11.PAUSED)):
                 break
 
-    def _receive_event(self, timeout: Optional[float] = None) -> h11.Event:
+    def _receive_event(
+        self, timeout: Optional[float] = None
+    ) -> Union[h11.Event, h11.PAUSED]:
         while True:
             with map_exceptions({h11.RemoteProtocolError: RemoteProtocolError}):
                 # The h11 type signature uses a private return type
@@ -177,7 +179,7 @@ class HTTP11Connection(ConnectionInterface):
                     self._h11_state.next_event(),
                 )
 
-            if event is h11.NEED_DATA:
+            if isinstance(event, h11.NEED_DATA):
                 data = self._network_stream.read(
                     self.READ_NUM_BYTES, timeout=timeout
                 )
@@ -195,11 +197,8 @@ class HTTP11Connection(ConnectionInterface):
                     raise RemoteProtocolError(msg)
 
                 self._h11_state.receive_data(data)
-            elif event is h11.PAUSED:
-                # TODO: Implement handling for paused
-                ...
             else:
-                return cast(h11.Event, event)
+                return event
 
     def _response_closed(self) -> None:
         with self._state_lock:
