@@ -22,7 +22,7 @@ black==22.6.0
 coverage==6.4.2
 flake8==3.9.2  # See: https://github.com/PyCQA/flake8/pull/1438
 isort==5.10.1
-mypy==0.961
+mypy==0.971
 pytest==7.1.2
 pytest-httpbin==2.0.0rc1
 pytest-trio==0.7.0
