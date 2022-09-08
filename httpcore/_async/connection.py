@@ -57,9 +57,9 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                 f"Attempted to send request to {request.url.origin} on connection to {self._origin}"
             )
 
-        async with self._request_lock:
-            if self._connection is None:
-                try:
+        try:
+            async with self._request_lock:
+                if self._connection is None:
                     stream = await self._connect(request)
 
                     ssl_object = stream.get_extra_info("ssl_object")
@@ -81,13 +81,15 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                             stream=stream,
                             keepalive_expiry=self._keepalive_expiry,
                         )
-                except Exception as exc:
-                    self._connect_failed = True
-                    raise exc
-            elif not self._connection.is_available():
-                raise ConnectionNotAvailable()
+                elif not self._connection.is_available():
+                    raise ConnectionNotAvailable()
 
-        return await self._connection.handle_async_request(request)
+            return await self._connection.handle_async_request(request)
+        except BaseException as exc:
+            if not isinstance(exc, ConnectionNotAvailable):
+                self._connect_failed = True
+
+            raise exc
 
     async def _connect(self, request: Request) -> AsyncNetworkStream:
         timeouts = request.extensions.get("timeout", {})
