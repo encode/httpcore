@@ -54,7 +54,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        "h11>=0.11,<0.14",
+        "h11>=0.11,<0.15",
         "sniffio==1.*",
         "anyio==3.*",
         "certifi",
