@@ -170,16 +170,12 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
 
     async def _receive_event(
         self, timeout: Optional[float] = None
-    ) -> Union[h11.Event, h11.PAUSED]:
+    ) -> Union[h11.Event, Type[h11.PAUSED]]:
         while True:
             with map_exceptions({h11.RemoteProtocolError: RemoteProtocolError}):
-                # The h11 type signature uses a private return type
-                event = cast(
-                    Union[h11.Event, h11.NEED_DATA, h11.PAUSED],
-                    self._h11_state.next_event(),
-                )
+                event = self._h11_state.next_event()
 
-            if isinstance(event, h11.NEED_DATA):
+            if event is h11.NEED_DATA:
                 data = await self._network_stream.read(
                     self.READ_NUM_BYTES, timeout=timeout
                 )
@@ -198,7 +194,8 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
 
                 self._h11_state.receive_data(data)
             else:
-                return event
+                # mypy fails to narrow the type in the above if statement above
+                return cast(Union[h11.Event, Type[h11.PAUSED]], event)
 
     async def _response_closed(self) -> None:
         async with self._state_lock:
