@@ -27,6 +27,13 @@ from ..backends.base import AsyncNetworkStream
 from .interfaces import AsyncConnectionInterface
 
 
+# A subset of `h11.Event` types supported by `_send_event`
+H11SendEvent = Union[
+    h11.Request,
+    h11.Data,
+    h11.EndOfMessage,
+]
+
 class HTTPConnectionState(enum.IntEnum):
     NEW = 0
     ACTIVE = 1

@@ -27,6 +27,14 @@ from ..backends.base import NetworkStream
 from .interfaces import ConnectionInterface
 
 
+# A subset of `h11.Event` types supported by `_send_event`
+H11SendEvent = Union[
+    h11.Request,
+    h11.Data,
+    h11.EndOfMessage,
+]
+
+
 class HTTPConnectionState(enum.IntEnum):
     NEW = 0
     ACTIVE = 1
@@ -130,7 +138,7 @@ class HTTP11Connection(ConnectionInterface):
         self._send_event(h11.EndOfMessage(), timeout=timeout)
 
     def _send_event(
-        self, event: h11.Event, timeout: Optional[float] = None
+        self, event: H11SendEvent, timeout: Optional[float] = None
     ) -> None:
         bytes_to_send = self._h11_state.send(event)
         if bytes_to_send is not None:
