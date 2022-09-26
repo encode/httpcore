@@ -26,7 +26,6 @@ from .._trace import Trace
 from ..backends.base import NetworkStream
 from .interfaces import ConnectionInterface
 
-
 # A subset of `h11.Event` types supported by `_send_event`
 H11SendEvent = Union[
     h11.Request,
@@ -138,7 +137,7 @@ class HTTP11Connection(ConnectionInterface):
         self._send_event(h11.EndOfMessage(), timeout=timeout)
 
     def _send_event(
-        self, event: H11SendEvent, timeout: Optional[float] = None
+        self, event: h11.Event, timeout: Optional[float] = None
     ) -> None:
         bytes_to_send = self._h11_state.send(event)
         if bytes_to_send is not None:
@@ -181,7 +180,7 @@ class HTTP11Connection(ConnectionInterface):
     ) -> Union[h11.Event, Type[h11.PAUSED]]:
         while True:
             with map_exceptions({h11.RemoteProtocolError: RemoteProtocolError}):
-                event =  self._h11_state.next_event()
+                event = self._h11_state.next_event()
 
             if event is h11.NEED_DATA:
                 data = self._network_stream.read(
