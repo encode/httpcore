@@ -232,9 +232,13 @@ with httpcore.stream("GET", "https://www.example.com") as response:
 
 Trailing headers are a rarely used feature of HTTP, where supplementary headers may be sent at the end of the response data.
 
-The `trailing_headers` response extension is implemented as a list of `(byte, byte)` tuples containing any [trailing headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Trailer#chunked_transfer_encoding_using_a_trailing_header) sent at the end of the response. This list is only populated once the response is complete, and will be empty while streaming the response data.
+The `trailing_headers` response extenstion is implemented as a list of `(byte, byte)` tuples containing any [trailing headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Trailer#chunked_transfer_encoding_using_a_trailing_header) sent at the end of the response. This list is only populated once the response is complete, and will be empty while streaming the response data.
 
 ```python
+# The "TE: trailers" header should be used in order to indicate that we're
+# willing to accept trailing headers. This isn't required by the `httpcore`
+# package itself, but is mandated by the HTTP spec, and might be required
+# by some servers or proxies.
 response = httpcore.request("GET", "https://www.example.com", headers={"TE": "trailers"})
 
 # Show the standard response headers.
