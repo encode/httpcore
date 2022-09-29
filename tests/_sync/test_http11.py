@@ -76,6 +76,44 @@ def test_http11_connection_chunked_response():
 
 
 
+def test_http11_connection_trailing_headers_response():
+    origin = Origin(b"https", b"example.com", 443)
+    stream = MockStream(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Transfer-Encoding: chunked\r\n",
+            b"Trailer: Surprise\r\n",
+            b"\r\n",
+            b"3\r\n",
+            b"Hel\r\n",
+            b"4\r\n",
+            b"lo, \r\n",
+            b"6\r\n",
+            b"world!\r\n",
+            b"0\r\n",
+            b"Surprise: You thought we were done here?\r\n",
+            b"\r\n",
+        ]
+    )
+    with HTTP11Connection(
+        origin=origin, stream=stream, keepalive_expiry=5.0
+    ) as conn:
+        response = conn.request(
+            "GET", "https://example.com/", headers={"TE": "trailers"}
+        )
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+        assert response.headers == [
+            (b"Content-Type", b"plain/text"),
+            (b"Transfer-Encoding", b"chunked"),
+            (b"Trailer", b"Surprise"),
+        ]
+        trailing_headers = response.extensions["trailing_headers"]
+        assert trailing_headers == [(b"Surprise", b"You thought we were done here?")]
+
+
+
 def test_http11_connection_unread_response():
     """
     If the client releases the response without reading it to termination,

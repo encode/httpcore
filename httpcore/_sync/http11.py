@@ -181,7 +181,7 @@ class HTTP11Connection(ConnectionInterface):
             elif isinstance(event, h11.EndOfMessage):
                 # Once we get an EndOfMessage event, the response data has finished.
                 if event.headers:
-                    trailing_headers.extend(event.headers)
+                    trailing_headers.extend(event.headers.raw_items())
                 break
             elif isinstance(event, h11.PAUSED):
                 # This can occur here on a successful CONNECT or Upgrade

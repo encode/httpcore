@@ -235,7 +235,7 @@ Trailing headers are a rarely used feature of HTTP, where supplementary headers 
 The `trailing_headers` response extenstion is implemented as a list of `(byte, byte)` tuples containing any [trailing headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Trailer#chunked_transfer_encoding_using_a_trailing_header) sent at the end of the response. This list is only populated once the response is complete, and will be empty while streaming the response data.
 
 ```python
-response = httpcore.request("GET", "https://www.example.com")
+response = httpcore.request("GET", "https://www.example.com", headers={"TE": "trailers"})
 
 # Show the standard response headers.
 print(response.headers)
