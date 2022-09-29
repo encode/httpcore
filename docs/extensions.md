@@ -227,3 +227,19 @@ with httpcore.stream("GET", "https://www.example.com") as response:
     ssl_object = network_stream.get_extra_info("ssl_object")
     print("TLS version", ssl_object.version())
 ```
+
+### `"trailing_headers"`
+
+Trailing headers are a rarely used feature of HTTP, where supplementary headers may be sent at the end of the response data.
+
+The `trailing_headers` response extenstion is implemented as a list of `(byte, byte)` tuples containing any [trailing headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Trailer#chunked_transfer_encoding_using_a_trailing_header) sent at the end of the response. This list is only populated once the response is complete, and will be empty while streaming the response data.
+
+```python
+response = httpcore.request("GET", "https://www.example.com")
+
+# Show the standard response headers.
+print(response.headers)
+
+# Show any trailing headers sent at the end of the response.
+print(response.extensions['trailing_headers'])
+```

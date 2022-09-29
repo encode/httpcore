@@ -96,14 +96,16 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
                     headers,
                 )
 
+            trailing_headers: List[Tuple[bytes, bytes]] = []
             return Response(
                 status=status,
                 headers=headers,
-                content=HTTP11ConnectionByteStream(self, request),
+                content=HTTP11ConnectionByteStream(self, request, trailing_headers),
                 extensions={
                     "http_version": http_version,
                     "reason_phrase": reason_phrase,
                     "network_stream": self._network_stream,
+                    "trailing_headers": trailing_headers,
                 },
             )
         except BaseException as exc:
@@ -164,15 +166,28 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
 
         return http_version, event.status_code, event.reason, headers
 
-    async def _receive_response_body(self, request: Request) -> AsyncIterator[bytes]:
+    async def _receive_response_body(
+        self, request: Request, trailing_headers: List[Tuple[bytes, bytes]]
+    ) -> AsyncIterator[bytes]:
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("read", None)
 
         while True:
             event = await self._receive_event(timeout=timeout)
             if isinstance(event, h11.Data):
+                # Each response will have zero, one, or more data events,
+                # containing the body of the response.
                 yield bytes(event.data)
-            elif isinstance(event, (h11.EndOfMessage, h11.PAUSED)):
+            elif isinstance(event, h11.EndOfMessage):
+                # Once we get an EndOfMessage event, the response data has finished.
+                if event.headers:
+                    trailing_headers.extend(event.headers)
+                break
+            elif isinstance(event, h11.PAUSED):
+                # This can occur here on a successful CONNECT or Upgrade
+                # response, where it is returned rather than EndOfMessage.
+                #
+                # See https://h11.readthedocs.io/en/latest/api.html#flow-control
                 break
 
     async def _receive_event(
@@ -291,16 +306,24 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
 
 
 class HTTP11ConnectionByteStream:
-    def __init__(self, connection: AsyncHTTP11Connection, request: Request) -> None:
+    def __init__(
+        self,
+        connection: AsyncHTTP11Connection,
+        request: Request,
+        trailing_headers: List[Tuple[bytes, bytes]],
+    ) -> None:
         self._connection = connection
         self._request = request
+        self._trailing_headers = trailing_headers
         self._closed = False
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
-        kwargs = {"request": self._request}
+        kwargs = {"request": self._request, "trailing_headers": self._trailing_headers}
         try:
             async with Trace("http11.receive_response_body", self._request, kwargs):
-                async for chunk in self._connection._receive_response_body(**kwargs):
+                async for chunk in self._connection._receive_response_body(
+                    request=self._request, trailing_headers=self._trailing_headers
+                ):
                     yield chunk
         except BaseException as exc:
             # If we get an exception while streaming the response,
