@@ -206,3 +206,29 @@ async def test_http11_request_to_incorrect_origin():
     async with AsyncHTTP11Connection(origin=origin, stream=stream) as conn:
         with pytest.raises(RuntimeError):
             await conn.request("GET", "https://other.com/")
+
+
+@pytest.mark.anyio
+async def test_http11_upgrade_connection():
+    origin = Origin(b"https", b"example.com", 443)
+    stream = AsyncMockStream(
+        [
+            b"HTTP/1.1 101 OK\r\n",
+            b"Connection: upgrade\r\n",
+            b"Upgrade: custom\r\n",
+            b"\r\n",
+            b"...",
+        ]
+    )
+    async with AsyncHTTP11Connection(
+        origin=origin, stream=stream, keepalive_expiry=5.0
+    ) as conn:
+        async with conn.stream(
+            "GET",
+            "https://example.com/",
+            headers={"Connection": "upgrade", "Upgrade": "custom"},
+        ) as response:
+            assert response.status == 101
+            network_stream = response.extensions["network_stream"]
+            content = await network_stream.read(max_bytes=1024)
+            assert content == b"..."
