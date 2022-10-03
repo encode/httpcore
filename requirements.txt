@@ -19,7 +19,7 @@ wheel
 anyio==3.6.1
 autoflake==1.6.1
 black==22.8.0
-coverage==6.4.4
+coverage==6.5.0
 flake8==3.9.2  # See: https://github.com/PyCQA/flake8/pull/1438
 isort==5.10.1
 importlib-metadata==4.13.0
