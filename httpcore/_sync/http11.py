@@ -168,10 +168,32 @@ class HTTP11Connection(ConnectionInterface):
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("read", None)
 
+        # We could just yield `event.data` when we see h11.Data events,
+        # but we're careful to ensure that if `Transfer-Encoding: chunked`
+        # is being used, then we yield data on a chunk-by-chunk basis.
+        chunk_buffering = False
+        chunk_buffer = []
+
         while True:
             event = self._receive_event(timeout=timeout)
             if isinstance(event, h11.Data):
-                yield bytes(event.data)
+                if event.chunk_start and not event.chunk_end:
+                    # If we get an opened but not closed chunk then we need
+                    # need to switch to buffering.
+                    chunk_buffering = True
+
+                if chunk_buffering:
+                    # If we're buffering, then append the chunk.
+                    chunk_buffer.append(bytes(event.data))
+                    if event.chunk_end:
+                        # Once the chunk is complete, yield it and clear our buffering state.
+                        yield b"".join(chunk_buffer)
+                        chunk_buffer = []
+                        chunk_buffering = False
+                else:
+                    # This is our usual case.
+                    yield bytes(event.data)
+
             elif isinstance(event, (h11.EndOfMessage, h11.PAUSED)):
                 break
 
