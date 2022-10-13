@@ -206,3 +206,28 @@ async def test_http11_request_to_incorrect_origin():
     async with AsyncHTTP11Connection(origin=origin, stream=stream) as conn:
         with pytest.raises(RuntimeError):
             await conn.request("GET", "https://other.com/")
+
+
+@pytest.mark.anyio
+async def test_chunked_transfer_encoding():
+    origin = Origin(b"https", b"example.com", 443)
+    stream = AsyncMockStream(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: text/plain\r\n",
+            b"Transfer-Encoding: chunked\r\n",
+            b"\r\n",
+            b"7\r\n",
+            b"Hello, \r\n",
+            b"6\r\n",
+            b"wor",
+            b"ld!\r\n",
+            b"0\r\n",
+            b"\r\n",
+        ]
+    )
+    async with AsyncHTTP11Connection(origin=origin, stream=stream) as conn:
+        async with conn.stream("GET", "https://example.com/") as response:
+            assert response.status == 200
+            parts = [part async for part in response.stream]  # type: ignore
+            assert parts == [b"Hello, ", b"world!"]

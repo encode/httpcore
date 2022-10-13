@@ -206,3 +206,28 @@ def test_http11_request_to_incorrect_origin():
     with HTTP11Connection(origin=origin, stream=stream) as conn:
         with pytest.raises(RuntimeError):
             conn.request("GET", "https://other.com/")
+
+
+
+def test_chunked_transfer_encoding():
+    origin = Origin(b"https", b"example.com", 443)
+    stream = MockStream(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: text/plain\r\n",
+            b"Transfer-Encoding: chunked\r\n",
+            b"\r\n",
+            b"7\r\n",
+            b"Hello, \r\n",
+            b"6\r\n",
+            b"wor",
+            b"ld!\r\n",
+            b"0\r\n",
+            b"\r\n",
+        ]
+    )
+    with HTTP11Connection(origin=origin, stream=stream) as conn:
+        with conn.stream("GET", "https://example.com/") as response:
+            assert response.status == 200
+            parts = [part for part in response.stream]  # type: ignore
+            assert parts == [b"Hello, ", b"world!"]
