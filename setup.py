@@ -56,7 +56,7 @@ setup(
     install_requires=[
         "h11>=0.13,<0.15",
         "sniffio==1.*",
-        "anyio==3.*",
+        "anyio>=3.0,<5.0",
         "certifi",
     ],
     extras_require={
