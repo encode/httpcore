@@ -16,7 +16,7 @@ twine
 wheel
 
 # Tests & Linting
-anyio==git+https://github.com/agronholm/anyio.git
+anyio @ git+https://github.com/agronholm/anyio.git
 autoflake==1.6.1
 black==22.8.0
 coverage==6.5.0
