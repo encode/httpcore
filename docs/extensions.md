@@ -179,7 +179,9 @@ The interface provided by the network stream:
 
 This API can be used as the foundation for working with HTTP proxies, WebSocket upgrades, and other advanced use-cases.
 
-An example to demonstrate:
+##### `CONNECT` requests
+
+A proxy CONNECT request using the network stream:
 
 ```python
 # Formulate a CONNECT request...
@@ -205,6 +207,52 @@ with httpcore.stream("CONNECT", url) as response:
     data = network_stream.read()
     print(data)
 ```
+
+##### `Upgrade` requests
+
+Using the `wsproto` package to handle a websockets session:
+
+```python
+import httpcore
+import wsproto
+import os
+import base64
+
+
+url = "http://127.0.0.1:8000/"
+headers = {
+    b"Connection": b"Upgrade",
+    b"Upgrade": b"WebSocket",
+    b"Sec-WebSocket-Key": base64.b64encode(os.urandom(16)),
+    b"Sec-WebSocket-Version": b"13"
+}
+with httpcore.stream("GET", url, headers=headers) as response:
+    if response.status != 101:
+        raise Exception("Failed to upgrade to websockets", response)
+
+    # Get the raw network stream.
+    network_steam = response.extensions["network_stream"]
+
+    # Write a WebSocket text frame to the stream.
+    ws_connection = wsproto.Connection(wsproto.ConnectionType.CLIENT)
+    message = wsproto.events.TextMessage("hello, world!")
+    outgoing_data = ws_connection.send(message)
+    network_steam.write(outgoing_data)
+
+    # Wait for a response.
+    incoming_data = network_steam.read(max_bytes=4096)
+    ws_connection.receive_data(incoming_data)
+    for event in ws_connection.events():
+        if isinstance(event, wsproto.events.TextMessage):
+            print("Got data:", event.data)
+
+    # Write a WebSocket close to the stream.
+    message = wsproto.events.CloseConnection(code=1000)
+    outgoing_data = ws_connection.send(message)
+    network_steam.write(outgoing_data)
+```
+
+##### Extra network information
 
 The network stream abstraction also allows access to various low-level information that may be exposed by the underlying socket:
 

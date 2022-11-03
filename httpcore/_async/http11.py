@@ -155,7 +155,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
 
         while True:
             event = await self._receive_event(timeout=timeout)
-            if isinstance(event, h11.Response):
+            if isinstance(event, (h11.Response, h11.InformationalResponse)):
                 break
 
         http_version = b"HTTP/" + event.http_version
