@@ -4,12 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.16.0
+
+- Support HTTP/1.1 informational responses. (#581)
+- Fix async cancellation behaviour. (#580)
+- Support `h11` 0.14. (#579)
+
 ## 0.15.0 (May 17th, 2022)
 
 - Drop Python 3.6 support (#535)
 - Ensure HTTP proxy CONNECT requests include `timeout` configuration. (#506)
-- Switch to explicit `typing.Optional` for type hints (#513)
-- For `trio` map OSError exceptions to `ConnectError` (#543)
+- Switch to explicit `typing.Optional` for type hints. (#513)
+- For `trio` map OSError exceptions to `ConnectError`. (#543)
 
 ## 0.14.7 (February 4th, 2022)
 
@@ -24,8 +30,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## 0.14.5 (January 18th, 2022)
 
 - SOCKS proxy support. (#478)
-- Add proxy_auth argument to HTTPProxy (#481)
-- Improve error message on 'RemoteProtocolError' exception when server disconnects without sending a response (#479)
+- Add proxy_auth argument to HTTPProxy. (#481)
+- Improve error message on 'RemoteProtocolError' exception when server disconnects without sending a response. (#479)
 
 ## 0.14.4 (January 5th, 2022)
 
@@ -36,7 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## 0.14.3 (November 17th, 2021)
 
-- Fix race condition when removing closed connections from the pool (#437)
+- Fix race condition when removing closed connections from the pool. (#437)
 
 ## 0.14.2 (November 16th, 2021)
 
