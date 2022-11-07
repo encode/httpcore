@@ -214,9 +214,9 @@ class AsyncConnectionPool(AsyncRequestInterface):
             )
 
         status = RequestStatus(request)
+        self._requests.append(status)
 
         async with self._pool_lock:
-            self._requests.append(status)
             await self._close_expired_connections()
             await self._attempt_to_acquire_connection(status)
 
@@ -229,9 +229,8 @@ class AsyncConnectionPool(AsyncRequestInterface):
                 # If we timeout here, or if the task is cancelled, then make
                 # sure to remove the request from the queue before bubbling
                 # up the exception.
-                async with self._pool_lock:
-                    self._requests.remove(status)
-                    raise exc
+                self._requests.remove(status)
+                raise exc
 
             try:
                 response = await connection.handle_async_request(request)
@@ -274,10 +273,11 @@ class AsyncConnectionPool(AsyncRequestInterface):
         assert status.connection is not None
         connection = status.connection
 
+        if status in self._requests:
+            self._requests.remove(status)
+
         async with self._pool_lock:
             # Update the state of the connection pool.
-            if status in self._requests:
-                self._requests.remove(status)
 
             if connection.is_closed() and connection in self._pool:
                 self._pool.remove(connection)
