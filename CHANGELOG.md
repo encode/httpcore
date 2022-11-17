@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.16.1
+
+- Fix HTTP/1.1 interim informational responses, such as "100 Continue". (#605)
+
 ## 0.16.0
 
 - Support HTTP/1.1 informational responses. (#581)
