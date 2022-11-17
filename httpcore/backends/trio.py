@@ -26,7 +26,7 @@ class TrioStream(AsyncNetworkStream):
         exc_map = {trio.TooSlowError: ReadTimeout, trio.BrokenResourceError: ReadError}
         with map_exceptions(exc_map):
             with trio.fail_after(timeout_or_inf):
-                return await self._stream.receive_some(max_bytes=max_bytes)
+                return await self._stream.receive_some(max_bytes=max_bytes)  # type: ignore[no-any-return]
 
     async def write(
         self, buffer: bytes, timeout: typing.Optional[float] = None

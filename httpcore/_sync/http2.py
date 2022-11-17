@@ -342,7 +342,7 @@ class HTTP2Connection(ConnectionInterface):
             self._connection_error = True
             raise exc
 
-        events = self._h2_state.receive_data(data)
+        events: typing.List[h2.events.Event] = self._h2_state.receive_data(data)
 
         return events
 
@@ -381,8 +381,8 @@ class HTTP2Connection(ConnectionInterface):
         WindowUpdated frames have increased the flow rate.
         https://tools.ietf.org/html/rfc7540#section-6.9
         """
-        local_flow = self._h2_state.local_flow_control_window(stream_id)
-        max_frame_size = self._h2_state.max_outbound_frame_size
+        local_flow: int = self._h2_state.local_flow_control_window(stream_id)
+        max_frame_size: int = self._h2_state.max_outbound_frame_size
         flow = min(local_flow, max_frame_size)
         while flow == 0:
             self._receive_events(request)
