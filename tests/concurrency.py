@@ -10,7 +10,7 @@ childen, because we don't need that for our use-case.
 """
 import threading
 from types import TracebackType
-from typing import List, Optional, Type
+from typing import Any, Callable, List, Optional, Type
 
 
 class Nursery:
@@ -31,7 +31,7 @@ class Nursery:
         for thread in self._threads:
             thread.join()
 
-    def start_soon(self, func, *args):
+    def start_soon(self, func: Callable[..., object], *args: Any):
         thread = threading.Thread(target=func, args=args)
         self._threads.append(thread)
 
