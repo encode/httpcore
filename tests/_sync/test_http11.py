@@ -209,11 +209,53 @@ def test_http11_request_to_incorrect_origin():
 
 
 
-def test_http11_upgrade_connection():
+def test_http11_expect_continue():
+    """
+    HTTP "100 Continue" is an interim response.
+    We simply ignore it and return the final response.
+
+    https://httpwg.org/specs/rfc9110.html#status.100
+    https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/100
+    """
     origin = Origin(b"https", b"example.com", 443)
     stream = MockStream(
         [
-            b"HTTP/1.1 101 OK\r\n",
+            b"HTTP/1.1 100 Continue\r\n",
+            b"\r\n",
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
+    with HTTP11Connection(
+        origin=origin, stream=stream, keepalive_expiry=5.0
+    ) as conn:
+        response = conn.request(
+            "GET",
+            "https://example.com/",
+            headers={"Expect": "continue"},
+        )
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+
+
+
+def test_http11_upgrade_connection():
+    """
+    HTTP "101 Switching Protocols" indicates an upgraded connection.
+
+    We should return the response, so that the network stream
+    may be used for the upgraded connection.
+
+    https://httpwg.org/specs/rfc9110.html#status.101
+    https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/101
+    """
+    origin = Origin(b"https", b"example.com", 443)
+    stream = MockStream(
+        [
+            b"HTTP/1.1 101 Switching Protocols\r\n",
             b"Connection: upgrade\r\n",
             b"Upgrade: custom\r\n",
             b"\r\n",
@@ -232,3 +274,39 @@ def test_http11_upgrade_connection():
             network_stream = response.extensions["network_stream"]
             content = network_stream.read(max_bytes=1024)
             assert content == b"..."
+
+
+
+def test_http11_early_hints():
+    """
+    HTTP "103 Early Hints" is an interim response.
+    We simply ignore it and return the final response.
+
+    https://datatracker.ietf.org/doc/rfc8297/
+    """
+    origin = Origin(b"https", b"example.com", 443)
+    stream = MockStream(
+        [
+            b"HTTP/1.1 103 Early Hints\r\n",
+            b"Link: </style.css>; rel=preload; as=style\r\n",
+            b"Link: </script.js.css>; rel=preload; as=style\r\n",
+            b"\r\n",
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: text/html; charset=utf-8\r\n",
+            b"Content-Length: 30\r\n",
+            b"Link: </style.css>; rel=preload; as=style\r\n",
+            b"Link: </script.js>; rel=preload; as=script\r\n",
+            b"\r\n",
+            b"<html>Hello, world! ...</html>",
+        ]
+    )
+    with HTTP11Connection(
+        origin=origin, stream=stream, keepalive_expiry=5.0
+    ) as conn:
+        response = conn.request(
+            "GET",
+            "https://example.com/",
+            headers={"Expect": "continue"},
+        )
+        assert response.status == 200
+        assert response.content == b"<html>Hello, world! ...</html>"
