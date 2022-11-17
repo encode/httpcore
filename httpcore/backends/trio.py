@@ -75,7 +75,7 @@ class TrioStream(AsyncNetworkStream):
 
     def get_extra_info(self, info: str) -> typing.Any:
         if info == "ssl_object" and isinstance(self._stream, trio.SSLStream):
-            return self._stream._ssl_object  # type: ignore
+            return self._stream._ssl_object
         if info == "client_addr":
             return self._get_socket_stream().socket.getsockname()
         if info == "server_addr":
