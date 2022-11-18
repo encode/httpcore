@@ -6,6 +6,7 @@ import trio
 from .._exceptions import (
     ConnectError,
     ConnectTimeout,
+    ExceptionMapping,
     ReadError,
     ReadTimeout,
     WriteError,
@@ -23,7 +24,10 @@ class TrioStream(AsyncNetworkStream):
         self, max_bytes: int, timeout: typing.Optional[float] = None
     ) -> bytes:
         timeout_or_inf = float("inf") if timeout is None else timeout
-        exc_map = {trio.TooSlowError: ReadTimeout, trio.BrokenResourceError: ReadError}
+        exc_map: ExceptionMapping = {
+            trio.TooSlowError: ReadTimeout,
+            trio.BrokenResourceError: ReadError,
+        }
         with map_exceptions(exc_map):
             with trio.fail_after(timeout_or_inf):
                 data: bytes = await self._stream.receive_some(max_bytes=max_bytes)
@@ -36,7 +40,7 @@ class TrioStream(AsyncNetworkStream):
             return
 
         timeout_or_inf = float("inf") if timeout is None else timeout
-        exc_map = {
+        exc_map: ExceptionMapping = {
             trio.TooSlowError: WriteTimeout,
             trio.BrokenResourceError: WriteError,
         }
@@ -54,7 +58,7 @@ class TrioStream(AsyncNetworkStream):
         timeout: typing.Optional[float] = None,
     ) -> AsyncNetworkStream:
         timeout_or_inf = float("inf") if timeout is None else timeout
-        exc_map = {
+        exc_map: ExceptionMapping = {
             trio.TooSlowError: ConnectTimeout,
             trio.BrokenResourceError: ConnectError,
         }
@@ -109,7 +113,7 @@ class TrioBackend(AsyncNetworkBackend):
         local_address: typing.Optional[str] = None,
     ) -> AsyncNetworkStream:
         timeout_or_inf = float("inf") if timeout is None else timeout
-        exc_map = {
+        exc_map: ExceptionMapping = {
             trio.TooSlowError: ConnectTimeout,
             trio.BrokenResourceError: ConnectError,
             OSError: ConnectError,
@@ -117,7 +121,7 @@ class TrioBackend(AsyncNetworkBackend):
         # Trio supports 'local_address' from 0.16.1 onwards.
         # We only include the keyword argument if a local_address
         # argument has been passed.
-        kwargs: dict = {} if local_address is None else {"local_address": local_address}
+        kwargs = {} if local_address is None else {"local_address": local_address}
         with map_exceptions(exc_map):
             with trio.fail_after(timeout_or_inf):
                 stream: trio.abc.Stream = await trio.open_tcp_stream(
@@ -129,7 +133,7 @@ class TrioBackend(AsyncNetworkBackend):
         self, path: str, timeout: typing.Optional[float] = None
     ) -> AsyncNetworkStream:  # pragma: nocover
         timeout_or_inf = float("inf") if timeout is None else timeout
-        exc_map = {
+        exc_map: ExceptionMapping = {
             trio.TooSlowError: ConnectTimeout,
             trio.BrokenResourceError: ConnectError,
             OSError: ConnectError,

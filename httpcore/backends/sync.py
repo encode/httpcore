@@ -5,6 +5,7 @@ import typing
 from .._exceptions import (
     ConnectError,
     ConnectTimeout,
+    ExceptionMapping,
     ReadError,
     ReadTimeout,
     WriteError,
@@ -20,7 +21,7 @@ class SyncStream(NetworkStream):
         self._sock = sock
 
     def read(self, max_bytes: int, timeout: typing.Optional[float] = None) -> bytes:
-        exc_map = {socket.timeout: ReadTimeout, OSError: ReadError}
+        exc_map: ExceptionMapping = {socket.timeout: ReadTimeout, OSError: ReadError}
         with map_exceptions(exc_map):
             self._sock.settimeout(timeout)
             return self._sock.recv(max_bytes)
@@ -29,7 +30,7 @@ class SyncStream(NetworkStream):
         if not buffer:
             return
 
-        exc_map = {socket.timeout: WriteTimeout, OSError: WriteError}
+        exc_map: ExceptionMapping = {socket.timeout: WriteTimeout, OSError: WriteError}
         with map_exceptions(exc_map):
             while buffer:
                 self._sock.settimeout(timeout)
@@ -45,7 +46,10 @@ class SyncStream(NetworkStream):
         server_hostname: typing.Optional[str] = None,
         timeout: typing.Optional[float] = None,
     ) -> NetworkStream:
-        exc_map = {socket.timeout: ConnectTimeout, OSError: ConnectError}
+        exc_map: ExceptionMapping = {
+            socket.timeout: ConnectTimeout,
+            OSError: ConnectError,
+        }
         with map_exceptions(exc_map):
             try:
                 self._sock.settimeout(timeout)
@@ -81,7 +85,10 @@ class SyncBackend(NetworkBackend):
     ) -> NetworkStream:
         address = (host, port)
         source_address = None if local_address is None else (local_address, 0)
-        exc_map = {socket.timeout: ConnectTimeout, OSError: ConnectError}
+        exc_map: ExceptionMapping = {
+            socket.timeout: ConnectTimeout,
+            OSError: ConnectError,
+        }
         with map_exceptions(exc_map):
             sock = socket.create_connection(
                 address, timeout, source_address=source_address
@@ -91,7 +98,10 @@ class SyncBackend(NetworkBackend):
     def connect_unix_socket(
         self, path: str, timeout: typing.Optional[float] = None
     ) -> NetworkStream:  # pragma: nocover
-        exc_map = {socket.timeout: ConnectTimeout, OSError: ConnectError}
+        exc_map: ExceptionMapping = {
+            socket.timeout: ConnectTimeout,
+            OSError: ConnectError,
+        }
         with map_exceptions(exc_map):
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             sock.settimeout(timeout)
