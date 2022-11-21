@@ -4,6 +4,7 @@ import pytest
 import trio as concurrency
 
 from httpcore import AsyncConnectionPool, ConnectError, PoolTimeout, UnsupportedProtocol
+from httpcore.backends.base import AsyncNetworkStream
 from httpcore.backends.mock import AsyncMockBackend
 
 
@@ -206,7 +207,7 @@ async def test_connection_pool_with_connect_exception():
             port: int,
             timeout: Optional[float] = None,
             local_address: Optional[str] = None,
-        ):
+        ) -> AsyncNetworkStream:
             raise ConnectError("Could not connect")
 
     network_backend = FailedConnectBackend([])

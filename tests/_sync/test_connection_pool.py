@@ -4,6 +4,7 @@ import pytest
 from tests import concurrency
 
 from httpcore import ConnectionPool, ConnectError, PoolTimeout, UnsupportedProtocol
+from httpcore.backends.base import NetworkStream
 from httpcore.backends.mock import MockBackend
 
 
@@ -206,7 +207,7 @@ def test_connection_pool_with_connect_exception():
             port: int,
             timeout: Optional[float] = None,
             local_address: Optional[str] = None,
-        ):
+        ) -> NetworkStream:
             raise ConnectError("Could not connect")
 
     network_backend = FailedConnectBackend([])
