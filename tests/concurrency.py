@@ -31,7 +31,7 @@ class Nursery:
         for thread in self._threads:
             thread.join()
 
-    def start_soon(self, func: Callable[..., object], *args: Any):
+    def start_soon(self, func: Callable[..., object], *args: Any) -> None:
         thread = threading.Thread(target=func, args=args)
         self._threads.append(thread)
 

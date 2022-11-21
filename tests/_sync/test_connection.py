@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 import hpack
 import hyperframe.frame
@@ -124,9 +124,9 @@ def test_request_to_incorrect_origin():
 
 
 class NeedsRetryBackend(MockBackend):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, buffer: List[bytes], http2: bool = False) -> None:
         self._retry = 2
-        super().__init__(*args, **kwargs)
+        super().__init__(buffer, http2)
 
     def connect_tcp(
         self,
