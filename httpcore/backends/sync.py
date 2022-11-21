@@ -1,5 +1,6 @@
 import socket
 import ssl
+import sys
 import typing
 
 from .._exceptions import (
@@ -98,6 +99,11 @@ class SyncBackend(NetworkBackend):
     def connect_unix_socket(
         self, path: str, timeout: typing.Optional[float] = None
     ) -> NetworkStream:  # pragma: nocover
+        if sys.platform == "win32":
+            raise RuntimeError(
+                "Attempted to connect to a UNIX socket on a Windows system."
+            )
+
         exc_map: ExceptionMapping = {
             socket.timeout: ConnectTimeout,
             OSError: ConnectError,
