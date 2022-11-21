@@ -4,7 +4,7 @@ from typing import Optional, Type
 
 import anyio
 
-from ._exceptions import PoolTimeout, map_exceptions
+from ._exceptions import ExceptionMapping, PoolTimeout, map_exceptions
 
 
 class AsyncLock:
@@ -32,7 +32,7 @@ class AsyncEvent:
         self._event.set()
 
     async def wait(self, timeout: Optional[float] = None) -> None:
-        exc_map: dict = {TimeoutError: PoolTimeout}
+        exc_map: ExceptionMapping = {TimeoutError: PoolTimeout}
         with map_exceptions(exc_map):
             with anyio.fail_after(timeout):
                 await self._event.wait()

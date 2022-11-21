@@ -18,6 +18,9 @@ from urllib.parse import urlparse
 
 HeadersAsSequence = Sequence[Tuple[Union[bytes, str], Union[bytes, str]]]
 HeadersAsMapping = Mapping[Union[bytes, str], Union[bytes, str]]
+HeaderTypes = Union[HeadersAsSequence, HeadersAsMapping, None]
+
+Extensions = Mapping[str, Any]
 
 
 def enforce_bytes(value: Union[bytes, str], *, name: str) -> bytes:
@@ -318,9 +321,9 @@ class Request:
         method: Union[bytes, str],
         url: Union[URL, bytes, str],
         *,
-        headers: Union[dict, list, None] = None,
+        headers: HeaderTypes = None,
         content: Union[bytes, Iterable[bytes], AsyncIterable[bytes], None] = None,
-        extensions: Optional[dict] = None,
+        extensions: Optional[Extensions] = None,
     ) -> None:
         """
         Parameters:
@@ -356,9 +359,9 @@ class Response:
         self,
         status: int,
         *,
-        headers: Union[dict, list, None] = None,
+        headers: HeaderTypes = None,
         content: Union[bytes, Iterable[bytes], AsyncIterable[bytes], None] = None,
-        extensions: Optional[dict] = None,
+        extensions: Optional[Extensions] = None,
     ) -> None:
         """
         Parameters:
@@ -376,7 +379,7 @@ class Response:
         self.stream: Union[Iterable[bytes], AsyncIterable[bytes]] = enforce_stream(
             content, name="content"
         )
-        self.extensions: dict = {} if extensions is None else extensions
+        self.extensions = {} if extensions is None else extensions
 
         self._stream_consumed = False
 

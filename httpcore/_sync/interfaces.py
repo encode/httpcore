@@ -3,6 +3,8 @@ from typing import Iterator, Optional, Union
 
 from .._models import (
     URL,
+    Extensions,
+    HeaderTypes,
     Origin,
     Request,
     Response,
@@ -19,9 +21,9 @@ class RequestInterface:
         method: Union[bytes, str],
         url: Union[URL, bytes, str],
         *,
-        headers: Union[dict, list, None] = None,
+        headers: HeaderTypes = None,
         content: Union[bytes, Iterator[bytes], None] = None,
-        extensions: Optional[dict] = None,
+        extensions: Optional[Extensions] = None,
     ) -> Response:
         # Strict type checking on our parameters.
         method = enforce_bytes(method, name="method")
@@ -51,9 +53,9 @@ class RequestInterface:
         method: Union[bytes, str],
         url: Union[URL, bytes, str],
         *,
-        headers: Union[dict, list, None] = None,
+        headers: HeaderTypes = None,
         content: Union[bytes, Iterator[bytes], None] = None,
-        extensions: Optional[dict] = None,
+        extensions: Optional[Extensions] = None,
     ) -> Iterator[Response]:
         # Strict type checking on our parameters.
         method = enforce_bytes(method, name="method")
