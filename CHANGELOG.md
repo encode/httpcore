@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.16.2 (November 25th, 2022)
+
+- Revert 'Fix async cancellation behaviour', which introduced race conditions. (#627)
+- Raise `RuntimeError` if attempting to us UNIX domain sockets on Windows. (#619)
+
 ## 0.16.1 (November 17th, 2022)
 
 - Fix HTTP/1.1 interim informational responses, such as "100 Continue". (#605)
