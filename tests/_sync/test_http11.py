@@ -252,7 +252,7 @@ def test_http11_upgrade_connection():
     https://httpwg.org/specs/rfc9110.html#status.101
     https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/101
     """
-    origin = Origin(b"https", b"example.com", 443)
+    origin = Origin(b"wss", b"example.com", 443)
     stream = MockStream(
         [
             b"HTTP/1.1 101 Switching Protocols\r\n",
@@ -267,7 +267,7 @@ def test_http11_upgrade_connection():
     ) as conn:
         with conn.stream(
             "GET",
-            "https://example.com/",
+            "wss://example.com/",
             headers={"Connection": "upgrade", "Upgrade": "custom"},
         ) as response:
             assert response.status == 101
