@@ -208,7 +208,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
             raise UnsupportedProtocol(
                 "Request URL is missing an 'http://' or 'https://' protocol."
             )
-        if scheme not in ("http", "https"):
+        if scheme not in ("http", "https", "ws", "wss"):
             raise UnsupportedProtocol(
                 f"Request URL has an unsupported protocol '{scheme}://'."
             )
