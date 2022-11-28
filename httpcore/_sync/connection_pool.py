@@ -214,9 +214,9 @@ class ConnectionPool(RequestInterface):
             )
 
         status = RequestStatus(request)
-        self._requests.append(status)
 
         with self._pool_lock:
+            self._requests.append(status)
             self._close_expired_connections()
             self._attempt_to_acquire_connection(status)
 
@@ -229,8 +229,9 @@ class ConnectionPool(RequestInterface):
                 # If we timeout here, or if the task is cancelled, then make
                 # sure to remove the request from the queue before bubbling
                 # up the exception.
-                self._requests.remove(status)
-                raise exc
+                with self._pool_lock:
+                    self._requests.remove(status)
+                    raise exc
 
             try:
                 response = connection.handle_request(request)
@@ -273,11 +274,10 @@ class ConnectionPool(RequestInterface):
         assert status.connection is not None
         connection = status.connection
 
-        if status in self._requests:
-            self._requests.remove(status)
-
         with self._pool_lock:
             # Update the state of the connection pool.
+            if status in self._requests:
+                self._requests.remove(status)
 
             if connection.is_closed() and connection in self._pool:
                 self._pool.remove(connection)
