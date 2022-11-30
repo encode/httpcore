@@ -123,12 +123,7 @@ class TrioBackend(AsyncNetworkBackend):
         with map_exceptions(exc_map):
             with trio.fail_after(timeout_or_inf):
                 stream: trio.abc.Stream = await trio.open_tcp_stream(
-                    host=host,
-                    port=port,
-                    # Trio supports 'local_address' from 0.16.1 onwards.
-                    # We only include the keyword argument if a local_address
-                    # argument has been passed.
-                    local_address=local_address,
+                    host=host, port=port, local_address=local_address
                 )
         return TrioStream(stream)
 
