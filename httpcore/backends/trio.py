@@ -27,6 +27,7 @@ class TrioStream(AsyncNetworkStream):
         exc_map: ExceptionMapping = {
             trio.TooSlowError: ReadTimeout,
             trio.BrokenResourceError: ReadError,
+            trio.ClosedResourceError: ReadError,
         }
         with map_exceptions(exc_map):
             with trio.fail_after(timeout_or_inf):
@@ -43,6 +44,7 @@ class TrioStream(AsyncNetworkStream):
         exc_map: ExceptionMapping = {
             trio.TooSlowError: WriteTimeout,
             trio.BrokenResourceError: WriteError,
+            trio.ClosedResourceError: WriteError,
         }
         with map_exceptions(exc_map):
             with trio.fail_after(timeout_or_inf):

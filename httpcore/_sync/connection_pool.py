@@ -301,18 +301,10 @@ class ConnectionPool(RequestInterface):
         Close any connections in the pool.
         """
         with self._pool_lock:
-            requests_still_in_flight = len(self._requests)
-
             for connection in self._pool:
                 connection.close()
             self._pool = []
             self._requests = []
-
-            if requests_still_in_flight:
-                raise RuntimeError(
-                    f"The connection pool was closed while {requests_still_in_flight} "
-                    f"HTTP requests/responses were still in-flight."
-                )
 
     def __enter__(self) -> "ConnectionPool":
         return self
