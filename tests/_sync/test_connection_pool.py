@@ -500,3 +500,37 @@ def test_connection_pool_timeout():
             with pytest.raises(PoolTimeout):
                 extensions = {"timeout": {"pool": 0.0001}}
                 pool.request("GET", "https://example.com/", extensions=extensions)
+
+
+
+def test_http11_upgrade_connection():
+    """
+    HTTP "101 Switching Protocols" indicates an upgraded connection.
+
+    We should return the response, so that the network stream
+    may be used for the upgraded connection.
+
+    https://httpwg.org/specs/rfc9110.html#status.101
+    https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/101
+    """
+    network_backend = MockBackend(
+        [
+            b"HTTP/1.1 101 Switching Protocols\r\n",
+            b"Connection: upgrade\r\n",
+            b"Upgrade: custom\r\n",
+            b"\r\n",
+            b"...",
+        ]
+    )
+    with ConnectionPool(
+        network_backend=network_backend, max_connections=1
+    ) as pool:
+        with pool.stream(
+            "GET",
+            "wss://example.com/",
+            headers={"Connection": "upgrade", "Upgrade": "custom"},
+        ) as response:
+            assert response.status == 101
+            network_stream = response.extensions["network_stream"]
+            content = network_stream.read(max_bytes=1024)
+            assert content == b"..."
