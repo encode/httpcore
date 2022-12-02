@@ -80,7 +80,9 @@ class TrioStream(AsyncNetworkStream):
 
     def get_extra_info(self, info: str) -> typing.Any:
         if info == "ssl_object" and isinstance(self._stream, trio.SSLStream):
-            return self._stream._ssl_object
+            # Type checkers cannot see `_ssl_object` attribute because trio._ssl.SSLStream uses __getattr__/__setattr__.
+            # Tracked at https://github.com/python-trio/trio/issues/542
+            return self._stream._ssl_object  # type: ignore[attr-defined]
         if info == "client_addr":
             return self._get_socket_stream().socket.getsockname()
         if info == "server_addr":
@@ -118,14 +120,10 @@ class TrioBackend(AsyncNetworkBackend):
             trio.BrokenResourceError: ConnectError,
             OSError: ConnectError,
         }
-        # Trio supports 'local_address' from 0.16.1 onwards.
-        # We only include the keyword argument if a local_address
-        # argument has been passed.
-        kwargs = {} if local_address is None else {"local_address": local_address}
         with map_exceptions(exc_map):
             with trio.fail_after(timeout_or_inf):
                 stream: trio.abc.Stream = await trio.open_tcp_stream(
-                    host=host, port=port, **kwargs
+                    host=host, port=port, local_address=local_address
                 )
         return TrioStream(stream)
 
