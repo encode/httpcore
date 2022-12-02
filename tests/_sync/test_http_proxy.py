@@ -48,11 +48,11 @@ def test_proxy_forwarding():
         assert proxy.connections[0].is_available()
         assert not proxy.connections[0].is_closed()
 
-        # A connection on a forwarding proxy can handle HTTP requests to any host.
+        # A connection on a forwarding proxy can only handle HTTP requests to the same origin.
         assert proxy.connections[0].can_handle_request(
             Origin(b"http", b"example.com", 80)
         )
-        assert proxy.connections[0].can_handle_request(
+        assert not proxy.connections[0].can_handle_request(
             Origin(b"http", b"other.com", 80)
         )
         assert not proxy.connections[0].can_handle_request(
