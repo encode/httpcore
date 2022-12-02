@@ -1,7 +1,7 @@
 -e .[http2,socks]
 
 # Optionals
-trio==0.21.0
+trio==0.22.0
 
 # Docs
 mkdocs==1.4.2
