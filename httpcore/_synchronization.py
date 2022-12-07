@@ -6,11 +6,11 @@ import sniffio
 
 from ._exceptions import ExceptionMapping, PoolTimeout, map_exceptions
 
-
 # Our async synchronization primatives use either 'anyio' or 'trio' depending
 # on if they're running under asyncio or trio.
 #
 # We take care to only lazily import whichever of these two we need.
+
 
 class AsyncLock:
     def __init__(self) -> None:
@@ -141,6 +141,9 @@ class AsyncSemaphore:
             self._trio_semaphore.release()
         else:
             self._anyio_semaphore.release()
+
+
+# Our thread-based synchronization primitives...
 
 
 class Lock:
