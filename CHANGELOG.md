@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.16.3
+
+- Allow `ws` and `wss` schemes. Allows us to properly support websocket upgrade connections. (#625)
+- Forwarding HTTP proxies use a connection-per-remote-host. Required by some proxy implementations. (#637)
+- Don't raise `RuntimeError` when closing a connection pool with active connections. Removes some error cases when cancellations are used. (#631)
+- Lazy import `anyio`, so that it's no longer a hard dependancy, and isn't imported if unused. (#639)
+
 ## 0.16.2 (November 25th, 2022)
 
 - Revert 'Fix async cancellation behaviour', which introduced race conditions. (#627)
