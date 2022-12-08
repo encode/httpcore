@@ -23,7 +23,7 @@ coverage==6.5.0
 flake8==3.9.2  # See: https://github.com/PyCQA/flake8/pull/1438
 isort==5.10.1
 importlib-metadata==4.13.0
-mypy==0.981
+mypy==0.991
 trio-typing==0.7.0
 types-certifi==2021.10.8.3
 pytest==7.2.0
