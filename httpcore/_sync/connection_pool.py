@@ -341,6 +341,6 @@ class ConnectionPoolByteStream:
     def close(self) -> None:
         try:
             if hasattr(self._stream, "close"):
-                self._stream.close()  # type: ignore
+                self._stream.close()
         finally:
             self._pool.response_closed(self._status)

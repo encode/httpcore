@@ -341,6 +341,6 @@ class ConnectionPoolByteStream:
     async def aclose(self) -> None:
         try:
             if hasattr(self._stream, "aclose"):
-                await self._stream.aclose()  # type: ignore
+                await self._stream.aclose()
         finally:
             await self._pool.response_closed(self._status)
