@@ -441,7 +441,7 @@ class Response:
                 "You should use 'await response.aclose()' instead."
             )
         if hasattr(self.stream, "close"):
-            self.stream.close()  # type: ignore
+            self.stream.close()
 
     # Async interface...
 
@@ -480,4 +480,4 @@ class Response:
                 "You should use 'response.close()' instead."
             )
         if hasattr(self.stream, "aclose"):
-            await self.stream.aclose()  # type: ignore
+            await self.stream.aclose()
