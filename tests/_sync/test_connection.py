@@ -12,7 +12,7 @@ from httpcore import (
     WriteError,
 )
 from httpcore.backends.base import NetworkStream
-from httpcore.backends.mock import MockBackend
+from httpcore.backends.mock import MockBackend, MockStream
 
 
 
@@ -89,7 +89,7 @@ def test_write_error_but_response_sent():
     will raise a `ConnectionNotAvailable` exception.
     """
 
-    class ErrorOnRequestTooLarge(MockBackend):
+    class ErrorOnRequestTooLargeStream(MockStream):
         def __init__(self, buffer: List[bytes], http2: bool = False) -> None:
             super().__init__(buffer, http2)
             self.count = 0
@@ -99,6 +99,16 @@ def test_write_error_but_response_sent():
 
             if self.count > 1_000_000:
                 raise WriteError()
+
+    class ErrorOnRequestTooLarge(MockBackend):
+        def connect_tcp(
+            self,
+            host: str,
+            port: int,
+            timeout: Optional[float] = None,
+            local_address: Optional[str] = None,
+        ) -> MockStream:
+            return ErrorOnRequestTooLargeStream(list(self._buffer), http2=self._http2)
 
     origin = Origin(b"https", b"example.com", 443)
     network_backend = ErrorOnRequestTooLarge(
