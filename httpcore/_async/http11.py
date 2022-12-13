@@ -18,6 +18,7 @@ from .._exceptions import (
     ConnectionNotAvailable,
     LocalProtocolError,
     RemoteProtocolError,
+    WriteError,
     map_exceptions,
 )
 from .._models import Origin, Request, Response
@@ -76,13 +77,24 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
 
         try:
             kwargs = {"request": request}
-            async with Trace("http11.send_request_headers", request, kwargs) as trace:
-                await self._send_request_headers(**kwargs)
-            async with Trace("http11.send_request_body", request, kwargs) as trace:
-                await self._send_request_body(**kwargs)
-            async with Trace(
-                "http11.receive_response_headers", request, kwargs
-            ) as trace:
+            try:
+                trace_message = "http11.send_request_headers"
+                async with Trace(trace_message, request, kwargs) as trace:
+                    await self._send_request_headers(**kwargs)
+
+                trace_message = "http11.send_request_body"
+                async with Trace(trace_message, request, kwargs) as trace:
+                    await self._send_request_body(**kwargs)
+            except WriteError:
+                # If we get a write error while we're writing the request,
+                # then we supress this error and move on to attempting to
+                # read the response. Servers can sometimes close the request
+                # pre-emptively and then respond with a well formed HTTP
+                # error response.
+                pass
+
+            trace_message = "http11.receive_response_headers"
+            async with Trace(trace_message, request, kwargs) as trace:
                 (
                     http_version,
                     status,

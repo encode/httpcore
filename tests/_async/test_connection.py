@@ -4,7 +4,13 @@ import hpack
 import hyperframe.frame
 import pytest
 
-from httpcore import AsyncHTTPConnection, ConnectError, ConnectionNotAvailable, Origin
+from httpcore import (
+    AsyncHTTPConnection,
+    ConnectError,
+    ConnectionNotAvailable,
+    Origin,
+    WriteError,
+)
 from httpcore.backends.base import AsyncNetworkStream
 from httpcore.backends.mock import AsyncMockBackend
 
@@ -74,6 +80,44 @@ async def test_concurrent_requests_not_available_on_http11_connections():
         async with conn.stream("GET", "https://example.com/"):
             with pytest.raises(ConnectionNotAvailable):
                 await conn.request("GET", "https://example.com/")
+
+
+@pytest.mark.anyio
+async def test_write_error_but_response_sent():
+    """
+    Attempting to issue a request against an already active HTTP/1.1 connection
+    will raise a `ConnectionNotAvailable` exception.
+    """
+
+    class ErrorOnRequestTooLarge(AsyncMockBackend):
+        def __init__(self, buffer: List[bytes], http2: bool = False) -> None:
+            super().__init__(buffer, http2)
+            self.count = 0
+
+        async def write(self, buffer: bytes, timeout: Optional[float] = None) -> None:
+            self.count += len(buffer)
+
+            if self.count > 1_000_000:
+                raise WriteError()
+
+    origin = Origin(b"https", b"example.com", 443)
+    network_backend = ErrorOnRequestTooLarge(
+        [
+            b"HTTP/1.1 413 Payload Too Large\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 37\r\n",
+            b"\r\n",
+            b"Request body exceeded 1,000,000 bytes",
+        ]
+    )
+
+    async with AsyncHTTPConnection(
+        origin=origin, network_backend=network_backend, keepalive_expiry=5.0
+    ) as conn:
+        content = b"x" * 10_000_000
+        response = await conn.request("POST", "https://example.com/", content=content)
+        assert response.status == 413
+        assert response.content == b"Request body exceeded 1,000,000 bytes"
 
 
 @pytest.mark.anyio
