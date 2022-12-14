@@ -3,7 +3,13 @@ from typing import List, Optional
 import pytest
 from tests import concurrency
 
-from httpcore import ConnectionPool, ConnectError, PoolTimeout, UnsupportedProtocol
+from httpcore import (
+    ConnectionPool,
+    ConnectError,
+    PoolTimeout,
+    ReadError,
+    UnsupportedProtocol,
+)
 from httpcore.backends.base import NetworkStream
 from httpcore.backends.mock import MockBackend
 
@@ -463,9 +469,10 @@ def test_connection_pool_closed_while_request_in_flight():
     ) as pool:
         # Send a request, and then close the connection pool while the
         # response has not yet been streamed.
-        with pool.stream("GET", "https://example.com/"):
-            with pytest.raises(RuntimeError):
-                pool.close()
+        with pool.stream("GET", "https://example.com/") as response:
+            pool.close()
+            with pytest.raises(ReadError):
+                response.read()
 
 
 
