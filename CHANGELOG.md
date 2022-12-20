@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## 0.16.3
+## 0.16.3 (December 20th, 2022)
 
 - Allow `ws` and `wss` schemes. Allows us to properly support websocket upgrade connections. (#625)
 - Forwarding HTTP proxies use a connection-per-remote-host. Required by some proxy implementations. (#637)
