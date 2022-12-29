@@ -35,7 +35,7 @@ def merge_headers(
     """
     default_headers = [] if default_headers is None else list(default_headers)
     override_headers = [] if override_headers is None else list(override_headers)
-    has_override = set([key.lower() for key, value in override_headers])
+    has_override = set(key.lower() for key, value in override_headers)
     default_headers = [
         (key, value)
         for key, value in default_headers
@@ -132,6 +132,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             return AsyncForwardHTTPConnection(
                 proxy_origin=self._proxy_url.origin,
                 proxy_headers=self._proxy_headers,
+                remote_origin=origin,
                 keepalive_expiry=self._keepalive_expiry,
                 network_backend=self._network_backend,
             )
@@ -151,6 +152,7 @@ class AsyncForwardHTTPConnection(AsyncConnectionInterface):
     def __init__(
         self,
         proxy_origin: Origin,
+        remote_origin: Origin,
         proxy_headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
         keepalive_expiry: Optional[float] = None,
         network_backend: Optional[AsyncNetworkBackend] = None,
@@ -162,6 +164,7 @@ class AsyncForwardHTTPConnection(AsyncConnectionInterface):
         )
         self._proxy_origin = proxy_origin
         self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
+        self._remote_origin = remote_origin
 
     async def handle_async_request(self, request: Request) -> Response:
         headers = merge_headers(self._proxy_headers, request.headers)
@@ -181,7 +184,7 @@ class AsyncForwardHTTPConnection(AsyncConnectionInterface):
         return await self._connection.handle_async_request(proxy_request)
 
     def can_handle_request(self, origin: Origin) -> bool:
-        return origin.scheme == b"http"
+        return origin == self._remote_origin
 
     async def aclose(self) -> None:
         await self._connection.aclose()

@@ -301,18 +301,10 @@ class AsyncConnectionPool(AsyncRequestInterface):
         Close any connections in the pool.
         """
         async with self._pool_lock:
-            requests_still_in_flight = len(self._requests)
-
             for connection in self._pool:
                 await connection.aclose()
             self._pool = []
             self._requests = []
-
-            if requests_still_in_flight:
-                raise RuntimeError(
-                    f"The connection pool was closed while {requests_still_in_flight} "
-                    f"HTTP requests/responses were still in-flight."
-                )
 
     async def __aenter__(self) -> "AsyncConnectionPool":
         return self
@@ -349,6 +341,6 @@ class ConnectionPoolByteStream:
     async def aclose(self) -> None:
         try:
             if hasattr(self._stream, "aclose"):
-                await self._stream.aclose()  # type: ignore
+                await self._stream.aclose()
         finally:
             await self._pool.response_closed(self._status)

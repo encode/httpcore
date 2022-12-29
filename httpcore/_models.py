@@ -117,7 +117,7 @@ def include_request_headers(
     url: "URL",
     content: Union[None, bytes, Iterable[bytes], AsyncIterable[bytes]],
 ) -> List[Tuple[bytes, bytes]]:
-    headers_set = set([k.lower() for k, v in headers])
+    headers_set = set(k.lower() for k, v in headers)
 
     if b"host" not in headers_set:
         default_port = DEFAULT_PORTS.get(url.scheme)
@@ -441,7 +441,7 @@ class Response:
                 "You should use 'await response.aclose()' instead."
             )
         if hasattr(self.stream, "close"):
-            self.stream.close()  # type: ignore
+            self.stream.close()
 
     # Async interface...
 
@@ -480,4 +480,4 @@ class Response:
                 "You should use 'response.close()' instead."
             )
         if hasattr(self.stream, "aclose"):
-            await self.stream.aclose()  # type: ignore
+            await self.stream.aclose()
