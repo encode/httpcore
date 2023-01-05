@@ -43,6 +43,7 @@ class HTTPConnectionState(enum.IntEnum):
 
 class HTTP11Connection(ConnectionInterface):
     READ_NUM_BYTES = 64 * 1024
+    MAX_INCOMPLETE_EVENT_SIZE = 100 * 1024
 
     def __init__(
         self,
@@ -57,7 +58,10 @@ class HTTP11Connection(ConnectionInterface):
         self._state = HTTPConnectionState.NEW
         self._state_lock = Lock()
         self._request_count = 0
-        self._h11_state = h11.Connection(our_role=h11.CLIENT)
+        self._h11_state = h11.Connection(
+            our_role=h11.CLIENT,
+            max_incomplete_event_size=self.MAX_INCOMPLETE_EVENT_SIZE,
+        )
 
     def handle_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):

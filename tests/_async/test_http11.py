@@ -310,3 +310,27 @@ async def test_http11_early_hints():
         )
         assert response.status == 200
         assert response.content == b"<html>Hello, world! ...</html>"
+
+
+@pytest.mark.anyio
+async def test_http11_header_sub_100kb():
+    """
+    A connection should be able to handle a http header size up to 100kB.
+    """
+    origin = Origin(b"https", b"example.com", 443)
+    stream = AsyncMockStream(
+        [
+            b"HTTP/1.1 200 OK\r\n",  # 17
+            b"Content-Type: plain/text\r\n",  # 43
+            b"Cookie: " + b"x" * (100 * 1024 - 72) + b"\r\n",  # 102381
+            b"Content-Length: 0\r\n",  # 102400
+            b"\r\n",
+            b"",
+        ]
+    )
+    async with AsyncHTTP11Connection(
+        origin=origin, stream=stream, keepalive_expiry=5.0
+    ) as conn:
+        response = await conn.request("GET", "https://example.com/")
+        assert response.status == 200
+        assert response.content == b""
