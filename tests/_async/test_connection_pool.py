@@ -3,7 +3,13 @@ from typing import List, Optional
 import pytest
 import trio as concurrency
 
-from httpcore import AsyncConnectionPool, ConnectError, PoolTimeout, UnsupportedProtocol
+from httpcore import (
+    AsyncConnectionPool,
+    ConnectError,
+    PoolTimeout,
+    ReadError,
+    UnsupportedProtocol,
+)
 from httpcore.backends.base import AsyncNetworkStream
 from httpcore.backends.mock import AsyncMockBackend
 
@@ -463,9 +469,10 @@ async def test_connection_pool_closed_while_request_in_flight():
     ) as pool:
         # Send a request, and then close the connection pool while the
         # response has not yet been streamed.
-        async with pool.stream("GET", "https://example.com/"):
-            with pytest.raises(RuntimeError):
-                await pool.aclose()
+        async with pool.stream("GET", "https://example.com/") as response:
+            await pool.aclose()
+            with pytest.raises(ReadError):
+                await response.aread()
 
 
 @pytest.mark.anyio

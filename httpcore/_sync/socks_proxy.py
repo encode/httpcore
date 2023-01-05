@@ -114,6 +114,7 @@ class SOCKSProxy(ConnectionPool):
         keepalive_expiry: typing.Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
+        retries: int = 0,
         network_backend: typing.Optional[NetworkBackend] = None,
     ) -> None:
         """
@@ -154,6 +155,7 @@ class SOCKSProxy(ConnectionPool):
             http1=http1,
             http2=http2,
             network_backend=network_backend,
+            retries=retries,
         )
         self._ssl_context = ssl_context
         self._proxy_url = enforce_url(proxy_url, name="proxy_url")

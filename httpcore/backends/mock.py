@@ -2,6 +2,7 @@ import ssl
 import typing
 from typing import Optional
 
+from .._exceptions import ReadError
 from .base import AsyncNetworkBackend, AsyncNetworkStream, NetworkBackend, NetworkStream
 
 
@@ -17,8 +18,11 @@ class MockStream(NetworkStream):
     def __init__(self, buffer: typing.List[bytes], http2: bool = False) -> None:
         self._buffer = buffer
         self._http2 = http2
+        self._closed = False
 
     def read(self, max_bytes: int, timeout: Optional[float] = None) -> bytes:
+        if self._closed:
+            raise ReadError("Connection closed")
         if not self._buffer:
             return b""
         return self._buffer.pop(0)
@@ -27,7 +31,7 @@ class MockStream(NetworkStream):
         pass
 
     def close(self) -> None:
-        pass
+        self._closed = True
 
     def start_tls(
         self,
@@ -68,8 +72,11 @@ class AsyncMockStream(AsyncNetworkStream):
     def __init__(self, buffer: typing.List[bytes], http2: bool = False) -> None:
         self._buffer = buffer
         self._http2 = http2
+        self._closed = False
 
     async def read(self, max_bytes: int, timeout: Optional[float] = None) -> bytes:
+        if self._closed:
+            raise ReadError("Connection closed")
         if not self._buffer:
             return b""
         return self._buffer.pop(0)
@@ -78,7 +85,7 @@ class AsyncMockStream(AsyncNetworkStream):
         pass
 
     async def aclose(self) -> None:
-        pass
+        self._closed = True
 
     async def start_tls(
         self,
