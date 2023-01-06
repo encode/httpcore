@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional
 
 import pytest
@@ -157,6 +158,72 @@ def test_trace_request():
         "http11.receive_response_body.complete",
         "http11.response_closed.started",
         "http11.response_closed.complete",
+    ]
+
+
+
+def test_debug_request(caplog):
+    """
+    The 'trace' request extension allows for a callback function to inspect the
+    internal events that occur while sending a request.
+    """
+    caplog.set_level(logging.DEBUG)
+
+    network_backend = MockBackend(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
+
+    with ConnectionPool(network_backend=network_backend) as pool:
+        pool.request("GET", "http://example.com/")
+
+    assert caplog.record_tuples == [
+        (
+            "httpcore",
+            logging.DEBUG,
+            "connection.connect_tcp.started host='example.com' port=80 local_address=None timeout=None",
+        ),
+        (
+            "httpcore",
+            logging.DEBUG,
+            "connection.connect_tcp.complete return_value=<httpcore.MockStream>",
+        ),
+        (
+            "httpcore",
+            logging.DEBUG,
+            "http11.send_request_headers.started request=<Request [b'GET']>",
+        ),
+        ("httpcore", logging.DEBUG, "http11.send_request_headers.complete"),
+        (
+            "httpcore",
+            logging.DEBUG,
+            "http11.send_request_body.started request=<Request [b'GET']>",
+        ),
+        ("httpcore", logging.DEBUG, "http11.send_request_body.complete"),
+        (
+            "httpcore",
+            logging.DEBUG,
+            "http11.receive_response_headers.started request=<Request [b'GET']>",
+        ),
+        (
+            "httpcore",
+            logging.DEBUG,
+            "http11.receive_response_headers.complete return_value="
+            "(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'plain/text'), (b'Content-Length', b'13')])",
+        ),
+        (
+            "httpcore",
+            logging.DEBUG,
+            "http11.receive_response_body.started request=<Request [b'GET']>",
+        ),
+        ("httpcore", logging.DEBUG, "http11.receive_response_body.complete"),
+        ("httpcore", logging.DEBUG, "http11.response_closed.started"),
+        ("httpcore", logging.DEBUG, "http11.response_closed.complete"),
     ]
 
 
