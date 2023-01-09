@@ -9,10 +9,15 @@ logger = logging.getLogger("httpcore")
 
 class Trace:
     def __init__(
-        self, name: str, request: Request, kwargs: Optional[Dict[str, Any]] = None
+        self,
+        name: str,
+        request: Optional[Request] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.name = name
-        self.trace_extension = request.extensions.get("trace")
+        self.trace_extension = (
+            None if request is None else request.extensions.get("trace")
+        )
         self.debug = logger.isEnabledFor(logging.DEBUG)
         self.kwargs = kwargs or {}
         self.return_value: Any = None

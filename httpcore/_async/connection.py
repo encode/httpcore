@@ -156,7 +156,8 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
 
     async def aclose(self) -> None:
         if self._connection is not None:
-            await self._connection.aclose()
+            async with Trace("connection.close", None, {}):
+                await self._connection.aclose()
 
     def is_available(self) -> bool:
         if self._connection is None:

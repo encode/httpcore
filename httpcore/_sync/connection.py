@@ -156,7 +156,8 @@ class HTTPConnection(ConnectionInterface):
 
     def close(self) -> None:
         if self._connection is not None:
-            self._connection.close()
+            with Trace("connection.close", None, {}):
+                self._connection.close()
 
     def is_available(self) -> bool:
         if self._connection is None:
