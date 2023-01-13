@@ -140,6 +140,10 @@ class ConnectionPool(RequestInterface):
         """
         return list(self._pool)
 
+    @property
+    def _is_pool_full(self) -> bool:
+        return len(self._pool) >= self._max_connections
+
     def _attempt_to_acquire_connection(self, status: RequestStatus) -> bool:
         """
         Attempt to provide a connection that can handle the given origin.
@@ -164,6 +168,21 @@ class ConnectionPool(RequestInterface):
         if len(self._pool) >= self._max_connections:
             for idx, connection in reversed(list(enumerate(self._pool))):
                 if connection.is_idle():
+                    connection.close()
+                    self._pool.pop(idx)
+                    break
+
+        # Attempt to close CONNECTING connections that no one needs
+        if self._is_pool_full:
+            for idx, connection in enumerate(self._pool):  # Try to check old connections first
+                if not connection.is_connecting():
+                    continue
+                for req_status in self._requests:
+                    if req_status is status:  # skip current request
+                        continue
+                    if connection.can_handle_request(req_status.request.url.origin):
+                        break
+                else:  # There is no requests that can be handled by this connection
                     connection.close()
                     self._pool.pop(idx)
                     break

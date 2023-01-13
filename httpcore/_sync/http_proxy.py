@@ -204,6 +204,9 @@ class ForwardHTTPConnection(ConnectionInterface):
     def is_closed(self) -> bool:
         return self._connection.is_closed()
 
+    def is_connecting(self) -> bool:
+        return self._connection.is_connecting()
+
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} [{self.info()}]>"
 
@@ -335,6 +338,9 @@ class TunnelHTTPConnection(ConnectionInterface):
 
     def is_closed(self) -> bool:
         return self._connection.is_closed()
+
+    def is_connecting(self) -> bool:
+        return self._connection.is_connecting()
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} [{self.info()}]>"

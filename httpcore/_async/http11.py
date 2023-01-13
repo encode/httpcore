@@ -269,6 +269,9 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
     def is_closed(self) -> bool:
         return self._state == HTTPConnectionState.CLOSED
 
+    def is_connecting(self) -> bool:
+        return self._state == HTTPConnectionState.NEW
+
     def info(self) -> str:
         origin = str(self._origin)
         return (

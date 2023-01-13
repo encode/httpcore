@@ -411,6 +411,9 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
     def is_closed(self) -> bool:
         return self._state == HTTPConnectionState.CLOSED
 
+    def is_connecting(self) -> bool:
+        return False
+
     def info(self) -> str:
         origin = str(self._origin)
         return (

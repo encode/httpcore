@@ -133,3 +133,9 @@ class ConnectionInterface(RequestInterface):
         returned to the connection pool or not.
         """
         raise NotImplementedError()  # pragma: nocover
+
+    def is_connecting(self) -> bool:
+        """
+        Return `True` if the connection is currently connecting. For HTTP/2 connection always returns `False`
+        """
+        raise NotImplementedError()  # pragma: nocover

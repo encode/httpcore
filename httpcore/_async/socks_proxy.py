@@ -329,6 +329,9 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
             return self._connect_failed
         return self._connection.is_closed()
 
+    def is_connecting(self) -> bool:
+        return self._connection is None and not self._connect_failed
+
     def info(self) -> str:
         if self._connection is None:  # pragma: nocover
             return "CONNECTION FAILED" if self._connect_failed else "CONNECTING"

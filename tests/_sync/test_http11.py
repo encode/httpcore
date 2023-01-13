@@ -33,6 +33,7 @@ def test_http11_connection():
         assert not conn.is_closed()
         assert conn.is_available()
         assert not conn.has_expired()
+        assert not conn.is_connecting()
         assert (
             repr(conn)
             == "<HTTP11Connection ['https://example.com:443', IDLE, Request Count: 1]>"
@@ -63,6 +64,7 @@ def test_http11_connection_unread_response():
         assert conn.is_closed()
         assert not conn.is_available()
         assert not conn.has_expired()
+        assert not conn.is_connecting()
         assert (
             repr(conn)
             == "<HTTP11Connection ['https://example.com:443', CLOSED, Request Count: 1]>"
@@ -85,6 +87,7 @@ def test_http11_connection_with_remote_protocol_error():
         assert conn.is_closed()
         assert not conn.is_available()
         assert not conn.has_expired()
+        assert not conn.is_connecting()
         assert (
             repr(conn)
             == "<HTTP11Connection ['https://example.com:443', CLOSED, Request Count: 1]>"
@@ -114,6 +117,7 @@ def test_http11_connection_with_incomplete_response():
         assert conn.is_closed()
         assert not conn.is_available()
         assert not conn.has_expired()
+        assert not conn.is_connecting()
         assert (
             repr(conn)
             == "<HTTP11Connection ['https://example.com:443', CLOSED, Request Count: 1]>"
@@ -146,6 +150,7 @@ def test_http11_connection_with_local_protocol_error():
         assert conn.is_closed()
         assert not conn.is_available()
         assert not conn.has_expired()
+        assert not conn.is_connecting()
         assert (
             repr(conn)
             == "<HTTP11Connection ['https://example.com:443', CLOSED, Request Count: 1]>"
