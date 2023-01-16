@@ -224,6 +224,8 @@ async def test_debug_request(caplog):
         ("httpcore", logging.DEBUG, "http11.receive_response_body.complete"),
         ("httpcore", logging.DEBUG, "http11.response_closed.started"),
         ("httpcore", logging.DEBUG, "http11.response_closed.complete"),
+        ("httpcore", logging.DEBUG, "connection.close.started"),
+        ("httpcore", logging.DEBUG, "connection.close.complete"),
     ]
 
 
