@@ -9,6 +9,7 @@ We don't do any smarts around cancellations, or managing exceptions from
 childen, because we don't need that for our use-case.
 """
 import threading
+import time
 from types import TracebackType
 from typing import Any, Callable, List, Optional, Type
 
@@ -38,3 +39,7 @@ class Nursery:
 
 def open_nursery() -> Nursery:
     return Nursery()
+
+
+def sleep(seconds: float) -> None:
+    time.sleep(seconds)

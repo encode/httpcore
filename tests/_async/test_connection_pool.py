@@ -8,12 +8,12 @@ from httpcore import (
     AsyncConnectionPool,
     ConnectError,
     PoolTimeout,
-    ReadTimeout,
     ReadError,
+    ReadTimeout,
     UnsupportedProtocol,
 )
 from httpcore.backends.base import AsyncNetworkStream
-from httpcore.backends.mock import AsyncMockBackend, AsyncHangingStream
+from httpcore.backends.mock import AsyncHangingStream, AsyncMockBackend
 
 
 @pytest.mark.anyio
@@ -511,21 +511,22 @@ async def test_pool_under_load():
     """
     network_backend = AsyncMockBackend([], resp_stream_cls=AsyncHangingStream)
 
-    async def fetch(_pool: AsyncConnectionPool, *exceptions: Type[BaseException]):
+    async def fetch(
+        _pool: AsyncConnectionPool, *exceptions: Type[BaseException]
+    ) -> None:
         with contextlib.suppress(*exceptions):
-            async with pool.stream(
-                    "GET",
-                    "http://a.com/",
-                    extensions={
-                        "timeout": {
-                            "connect": 0.1,
-                            "read": 0.1,
-                            "pool": 0.1,
-                            "write": 0.1,
-                        },
+            await pool.request(
+                "GET",
+                "http://a.com/",
+                extensions={
+                    "timeout": {
+                        "connect": 0.1,
+                        "read": 0.1,
+                        "pool": 0.1,
+                        "write": 0.1,
                     },
-            ) as response:
-                await response.aread()
+                },
+            )
 
     async with AsyncConnectionPool(
         max_connections=1, network_backend=network_backend
@@ -535,11 +536,11 @@ async def test_pool_under_load():
                 # Sending many requests to the same url. All of them but one will have PoolTimeout. One will
                 # be finished with ReadTimeout
                 nursery.start_soon(fetch, pool, PoolTimeout, ReadTimeout)
-        if pool.connections:  # There is one connection in pool in "CONNECTING" state
-            assert pool.connections[0].is_connecting()
-        with pytest.raises(ReadTimeout):  # ReadTimeout indicates that connection could be retrieved
+            assert pool.connections[0].is_connecting() if pool.connections else True
+        with pytest.raises(
+            ReadTimeout
+        ):  # ReadTimeout indicates that connection could be retrieved
             await fetch(pool)
-
 
 
 @pytest.mark.trio
@@ -555,7 +556,8 @@ async def test_pool_timeout_connection_cleanup():
             b"Content-Length: 13\r\n",
             b"\r\n",
             b"Hello, world!",
-        ] * 2,
+        ]
+        * 2,
     )
 
     async with AsyncConnectionPool(
@@ -568,12 +570,18 @@ async def test_pool_timeout_connection_cleanup():
             "write": 0.1,
         }
         with contextlib.suppress(PoolTimeout):
-            await pool.request("GET", "https://example.com/", extensions={"timeout": timeout})
+            await pool.request(
+                "GET", "https://example.com/", extensions={"timeout": timeout}
+            )
 
         # wait for a considerable amount of time to make sure all requests time out
         await concurrency.sleep(0.1)
 
-        await pool.request("GET", "https://example.com/", extensions={"timeout": {**timeout, 'pool': 0.1}})
+        await pool.request(
+            "GET",
+            "https://example.com/",
+            extensions={"timeout": {**timeout, "pool": 0.1}},
+        )
 
         if pool.connections:
             for conn in pool.connections:

@@ -174,7 +174,9 @@ class ConnectionPool(RequestInterface):
 
         # Attempt to close CONNECTING connections that no one needs
         if self._is_pool_full:
-            for idx, connection in enumerate(self._pool):  # Try to check old connections first
+            for idx, connection in enumerate(
+                self._pool
+            ):  # Try to check old connections first
                 if not connection.is_connecting():
                     continue
                 for req_status in self._requests:

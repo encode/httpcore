@@ -6,8 +6,9 @@ from typing import Optional, Type
 import anyio
 
 from httpcore import ReadTimeout
-from .base import AsyncNetworkBackend, AsyncNetworkStream, NetworkBackend, NetworkStream
+
 from .._exceptions import ReadError
+from .base import AsyncNetworkBackend, AsyncNetworkStream, NetworkBackend, NetworkStream
 
 
 class MockSSLObject:
@@ -51,18 +52,16 @@ class MockStream(NetworkStream):
 
 class HangingStream(MockStream):
     def read(self, max_bytes: int, timeout: Optional[float] = None) -> bytes:
-        if self._closed:
-            raise ReadError("Connection closed")
         time.sleep(timeout or 0.1)
         raise ReadTimeout
 
 
 class MockBackend(NetworkBackend):
     def __init__(
-            self,
-            buffer: typing.List[bytes],
-            http2: bool = False,
-            resp_stream_cls: Optional[Type[NetworkStream]] = None,
+        self,
+        buffer: typing.List[bytes],
+        http2: bool = False,
+        resp_stream_cls: Optional[Type[MockStream]] = None,
     ) -> None:
         self._buffer = buffer
         self._http2 = http2
@@ -119,22 +118,22 @@ class AsyncMockStream(AsyncNetworkStream):
 
 class AsyncHangingStream(AsyncMockStream):
     async def read(self, max_bytes: int, timeout: Optional[float] = None) -> bytes:
-        if self._closed:
-            raise ReadError("Connection closed")
         await anyio.sleep(timeout or 0.1)
         raise ReadTimeout
 
 
 class AsyncMockBackend(AsyncNetworkBackend):
     def __init__(
-            self,
-            buffer: typing.List[bytes],
-            http2: bool = False,
-            resp_stream_cls: Optional[Type[AsyncNetworkStream]] = None,
+        self,
+        buffer: typing.List[bytes],
+        http2: bool = False,
+        resp_stream_cls: Optional[Type[AsyncMockStream]] = None,
     ) -> None:
         self._buffer = buffer
         self._http2 = http2
-        self._resp_stream_cls: Type[AsyncMockStream] = resp_stream_cls or AsyncMockStream
+        self._resp_stream_cls: Type[AsyncMockStream] = (
+            resp_stream_cls or AsyncMockStream
+        )
 
     async def connect_tcp(
         self,
