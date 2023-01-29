@@ -1,9 +1,13 @@
 import ssl
+import time
 import typing
-from typing import Optional
+from typing import Optional, Type
 
-from .._exceptions import ReadError
+import anyio
+
+from httpcore import ReadTimeout
 from .base import AsyncNetworkBackend, AsyncNetworkStream, NetworkBackend, NetworkStream
+from .._exceptions import ReadError
 
 
 class MockSSLObject:
@@ -45,10 +49,24 @@ class MockStream(NetworkStream):
         return MockSSLObject(http2=self._http2) if info == "ssl_object" else None
 
 
+class HangingStream(MockStream):
+    def read(self, max_bytes: int, timeout: Optional[float] = None) -> bytes:
+        if self._closed:
+            raise ReadError("Connection closed")
+        time.sleep(timeout or 0.1)
+        raise ReadTimeout
+
+
 class MockBackend(NetworkBackend):
-    def __init__(self, buffer: typing.List[bytes], http2: bool = False) -> None:
+    def __init__(
+            self,
+            buffer: typing.List[bytes],
+            http2: bool = False,
+            resp_stream_cls: Optional[Type[NetworkStream]] = None,
+    ) -> None:
         self._buffer = buffer
         self._http2 = http2
+        self._resp_stream_cls: Type[MockStream] = resp_stream_cls or MockStream
 
     def connect_tcp(
         self,
@@ -57,12 +75,12 @@ class MockBackend(NetworkBackend):
         timeout: Optional[float] = None,
         local_address: Optional[str] = None,
     ) -> NetworkStream:
-        return MockStream(list(self._buffer), http2=self._http2)
+        return self._resp_stream_cls(list(self._buffer), http2=self._http2)
 
     def connect_unix_socket(
         self, path: str, timeout: Optional[float] = None
     ) -> NetworkStream:
-        return MockStream(list(self._buffer), http2=self._http2)
+        return self._resp_stream_cls(list(self._buffer), http2=self._http2)
 
     def sleep(self, seconds: float) -> None:
         pass
@@ -99,10 +117,24 @@ class AsyncMockStream(AsyncNetworkStream):
         return MockSSLObject(http2=self._http2) if info == "ssl_object" else None
 
 
+class AsyncHangingStream(AsyncMockStream):
+    async def read(self, max_bytes: int, timeout: Optional[float] = None) -> bytes:
+        if self._closed:
+            raise ReadError("Connection closed")
+        await anyio.sleep(timeout or 0.1)
+        raise ReadTimeout
+
+
 class AsyncMockBackend(AsyncNetworkBackend):
-    def __init__(self, buffer: typing.List[bytes], http2: bool = False) -> None:
+    def __init__(
+            self,
+            buffer: typing.List[bytes],
+            http2: bool = False,
+            resp_stream_cls: Optional[Type[AsyncNetworkStream]] = None,
+    ) -> None:
         self._buffer = buffer
         self._http2 = http2
+        self._resp_stream_cls: Type[AsyncMockStream] = resp_stream_cls or AsyncMockStream
 
     async def connect_tcp(
         self,
@@ -111,12 +143,12 @@ class AsyncMockBackend(AsyncNetworkBackend):
         timeout: Optional[float] = None,
         local_address: Optional[str] = None,
     ) -> AsyncNetworkStream:
-        return AsyncMockStream(list(self._buffer), http2=self._http2)
+        return self._resp_stream_cls(list(self._buffer), http2=self._http2)
 
     async def connect_unix_socket(
         self, path: str, timeout: Optional[float] = None
     ) -> AsyncNetworkStream:
-        return AsyncMockStream(list(self._buffer), http2=self._http2)
+        return self._resp_stream_cls(list(self._buffer), http2=self._http2)
 
     async def sleep(self, seconds: float) -> None:
         pass

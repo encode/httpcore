@@ -1,18 +1,20 @@
-from typing import List, Optional
+import contextlib
+import time
+from typing import List, Optional, Type
 
 import pytest
-from tests import concurrency
 
 from httpcore import (
     ConnectionPool,
     ConnectError,
     PoolTimeout,
+    ReadTimeout,
     ReadError,
     UnsupportedProtocol,
 )
 from httpcore.backends.base import NetworkStream
-from httpcore.backends.mock import MockBackend
-
+from httpcore.backends.mock import MockBackend, HangingStream
+from tests import concurrency
 
 
 def test_connection_pool_with_keepalive():
@@ -500,6 +502,81 @@ def test_connection_pool_timeout():
             with pytest.raises(PoolTimeout):
                 extensions = {"timeout": {"pool": 0.0001}}
                 pool.request("GET", "https://example.com/", extensions=extensions)
+
+
+
+def test_pool_under_load():
+    """
+    Pool must remain operational after some peak load.
+    """
+    network_backend = MockBackend([], resp_stream_cls=HangingStream)
+
+    def fetch(_pool: ConnectionPool, *exceptions: Type[BaseException]):
+        with contextlib.suppress(*exceptions):
+            with pool.stream(
+                    "GET",
+                    "http://a.com/",
+                    extensions={
+                        "timeout": {
+                            "connect": 0.1,
+                            "read": 0.1,
+                            "pool": 0.1,
+                            "write": 0.1,
+                        },
+                    },
+            ) as response:
+                response.read()
+
+    with ConnectionPool(
+        max_connections=1, network_backend=network_backend
+    ) as pool:
+        with concurrency.open_nursery() as nursery:
+            for _ in range(300):
+                # Sending many requests to the same url. All of them but one will have PoolTimeout. One will
+                # be finished with ReadTimeout
+                nursery.start_soon(fetch, pool, PoolTimeout, ReadTimeout)
+        if pool.connections:  # There is one connection in pool in "CONNECTING" state
+            assert pool.connections[0].is_connecting()
+        with pytest.raises(ReadTimeout):  # ReadTimeout indicates that connection could be retrieved
+            fetch(pool)
+
+
+
+def test_pool_timeout_connection_cleanup():
+    """
+    Test that pool cleans up connections after zero pool timeout. In case of stale
+    connection after timeout pool must not hang.
+    """
+    network_backend = MockBackend(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ] * 2,
+    )
+
+    with ConnectionPool(
+        network_backend=network_backend, max_connections=2
+    ) as pool:
+        timeout = {
+            "connect": 0.1,
+            "read": 0.1,
+            "pool": 0,
+            "write": 0.1,
+        }
+        with contextlib.suppress(PoolTimeout):
+            pool.request("GET", "https://example.com/", extensions={"timeout": timeout})
+
+        # wait for a considerable amount of time to make sure all requests time out
+        time.sleep(0.1)
+
+        pool.request("GET", "https://example.com/", extensions={"timeout": {**timeout, 'pool': 0.1}})
+
+        if pool.connections:
+            for conn in pool.connections:
+                assert not conn.is_connecting()
 
 
 
