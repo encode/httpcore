@@ -7,7 +7,7 @@ trio==0.21.0
 mkdocs==1.4.2
 mkdocs-autorefs==0.3.1
 mkdocs-material==8.5.7
-mkdocs-material-extensions==1.1
+mkdocs-material-extensions==1.1.1
 mkdocstrings[python-legacy]==0.19.1
 jinja2==3.1.2
 
