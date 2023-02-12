@@ -8,6 +8,7 @@ SUBS = [
     ('import trio as concurrency', 'from tests import concurrency'),
     ('AsyncByteStream', 'SyncByteStream'),
     ('AsyncIterator', 'Iterator'),
+    (r'AsyncGenerator\[bytes, None\]', r'Generator\[bytes, None, None\]'),
     ('AutoBackend', 'SyncBackend'),
     ('Async([A-Z][A-Za-z0-9_]*)', r'\2'),
     ('async def', 'def'),

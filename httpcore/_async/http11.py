@@ -1,7 +1,9 @@
 import enum
 import time
+from contextlib import AsyncExitStack
 from types import TracebackType
 from typing import (
+    AsyncGenerator,
     AsyncIterable,
     AsyncIterator,
     List,
@@ -173,7 +175,9 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
 
         return http_version, event.status_code, event.reason, headers
 
-    async def _receive_response_body(self, request: Request) -> AsyncIterator[bytes]:
+    async def _receive_response_body(
+        self, request: Request
+    ) -> AsyncGenerator[bytes, None]:
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("read", None)
 
@@ -304,22 +308,34 @@ class HTTP11ConnectionByteStream:
         self._connection = connection
         self._request = request
         self._closed = False
-
-    async def __aiter__(self) -> AsyncIterator[bytes]:
         kwargs = {"request": self._request}
+        self._stream = self._connection._receive_response_body(**kwargs)
+        self._trace = Trace("http11.receive_response_body", request, kwargs)
+
+    def __aiter__(self) -> AsyncIterator[bytes]:
+        return self
+
+    async def __anext__(self) -> bytes:
+        if not hasattr(self, "_trace_exit_stack"):
+            self._trace_exit_stack = AsyncExitStack()
+            await self._trace_exit_stack.enter_async_context(self._trace)
+
         try:
-            async with Trace("http11.receive_response_body", self._request, kwargs):
-                async for chunk in self._connection._receive_response_body(**kwargs):
-                    yield chunk
-        except BaseException as exc:
+            return await self._stream.__anext__()
+        except BaseException:
             # If we get an exception while streaming the response,
             # we want to close the response (and possibly the connection)
             # before raising that exception.
+            await self._stream.aclose()
             await self.aclose()
-            raise exc
+            raise
 
     async def aclose(self) -> None:
+        if hasattr(self, "_trace_exit_stack"):
+            await self._trace_exit_stack.aclose()
+
         if not self._closed:
+            await self._stream.aclose()
             self._closed = True
             async with Trace("http11.response_closed", self._request):
                 await self._connection._response_closed()

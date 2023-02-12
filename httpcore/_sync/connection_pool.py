@@ -335,8 +335,7 @@ class ConnectionPoolByteStream:
         self._status = status
 
     def __iter__(self) -> Iterator[bytes]:
-        for part in self._stream:
-            yield part
+        return self._stream.__iter__()
 
     def close(self) -> None:
         try:

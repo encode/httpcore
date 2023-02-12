@@ -334,9 +334,8 @@ class ConnectionPoolByteStream:
         self._pool = pool
         self._status = status
 
-    async def __aiter__(self) -> AsyncIterator[bytes]:
-        async for part in self._stream:
-            yield part
+    def __aiter__(self) -> AsyncIterator[bytes]:
+        return self._stream.__aiter__()
 
     async def aclose(self) -> None:
         try:
