@@ -20,7 +20,6 @@ anyio==3.6.2
 autoflake==2.0.1
 black==23.1.0
 coverage==6.5.0
-flake8==3.9.2  # See: https://github.com/PyCQA/flake8/pull/1438
 isort==5.11.4
 importlib-metadata==4.13.0
 mypy==0.991
