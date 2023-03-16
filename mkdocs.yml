@@ -13,6 +13,7 @@ nav:
     - HTTP/2: 'http2.md'
     - Async Support: 'async.md'
     - Extensions: 'extensions.md'
+    - Logging: 'logging.md'
     - Exceptions: 'exceptions.md'
 
 theme:
