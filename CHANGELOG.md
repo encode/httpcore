@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## 0.17.0 (...)
+## 0.17.0 (March 16th, 2023)
 
 - Add DEBUG level logging. (#648)
 - Respect HTTP/2 max concurrent streams when settings updates are sent by server. (#652)
