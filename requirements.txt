@@ -7,7 +7,7 @@ trio==0.21.0
 mkdocs==1.4.2
 mkdocs-autorefs==0.3.1
 mkdocs-material==8.5.7
-mkdocs-material-extensions==1.1
+mkdocs-material-extensions==1.1.1
 mkdocstrings[python-legacy]==0.19.1
 jinja2==3.1.2
 
@@ -18,7 +18,7 @@ wheel
 # Tests & Linting
 anyio==3.6.2
 autoflake==1.7.7
-black==22.8.0
+black==23.1.0
 coverage==6.5.0
 flake8==3.9.2  # See: https://github.com/PyCQA/flake8/pull/1438
 isort==5.11.4
