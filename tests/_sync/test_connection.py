@@ -1,3 +1,5 @@
+import ssl
+import typing
 from typing import List, Optional
 
 import hpack
@@ -124,8 +126,15 @@ def test_request_to_incorrect_origin():
 
 
 class NeedsRetryBackend(MockBackend):
-    def __init__(self, buffer: List[bytes], http2: bool = False) -> None:
-        self._retry = 2
+    def __init__(
+        self,
+        buffer: List[bytes],
+        http2: bool = False,
+        connect_tcp_failures: int = 2,
+        start_tls_failures: int = 0,
+    ) -> None:
+        self._connect_tcp_failures = connect_tcp_failures
+        self._start_tls_failures = start_tls_failures
         super().__init__(buffer, http2)
 
     def connect_tcp(
@@ -135,13 +144,50 @@ class NeedsRetryBackend(MockBackend):
         timeout: Optional[float] = None,
         local_address: Optional[str] = None,
     ) -> NetworkStream:
-        if self._retry > 0:
-            self._retry -= 1
+        if self._connect_tcp_failures > 0:
+            self._connect_tcp_failures -= 1
             raise ConnectError()
 
-        return super().connect_tcp(
+        stream = super().connect_tcp(
             host, port, timeout=timeout, local_address=local_address
         )
+        return self._NeedsRetryAsyncNetworkStream(self, stream)
+
+    class _NeedsRetryAsyncNetworkStream(NetworkStream):
+        def __init__(
+            self, backend: "NeedsRetryBackend", stream: NetworkStream
+        ) -> None:
+            self._backend = backend
+            self._stream = stream
+
+        def read(
+            self, max_bytes: int, timeout: typing.Optional[float] = None
+        ) -> bytes:
+            return self._stream.read(max_bytes, timeout)
+
+        def write(
+            self, buffer: bytes, timeout: typing.Optional[float] = None
+        ) -> None:
+            self._stream.write(buffer, timeout)
+
+        def close(self) -> None:
+            self._stream.close()
+
+        def start_tls(
+            self,
+            ssl_context: ssl.SSLContext,
+            server_hostname: typing.Optional[str] = None,
+            timeout: typing.Optional[float] = None,
+        ) -> "NetworkStream":
+            if self._backend._start_tls_failures > 0:
+                self._backend._start_tls_failures -= 1
+                raise ConnectError()
+
+            stream = self._stream.start_tls(ssl_context, server_hostname, timeout)
+            return self._backend._NeedsRetryAsyncNetworkStream(self._backend, stream)
+
+        def get_extra_info(self, info: str) -> typing.Any:
+            return self._stream.get_extra_info(info)
 
 
 
@@ -163,6 +209,37 @@ def test_connection_retries():
         assert response.status == 200
 
     network_backend = NeedsRetryBackend(content)
+    with HTTPConnection(
+        origin=origin,
+        network_backend=network_backend,
+    ) as conn:
+        with pytest.raises(ConnectError):
+            conn.request("GET", "https://example.com/")
+
+
+
+def test_connection_retries_tls():
+    origin = Origin(b"https", b"example.com", 443)
+    content = [
+        b"HTTP/1.1 200 OK\r\n",
+        b"Content-Type: plain/text\r\n",
+        b"Content-Length: 13\r\n",
+        b"\r\n",
+        b"Hello, world!",
+    ]
+
+    network_backend = NeedsRetryBackend(
+        content, connect_tcp_failures=0, start_tls_failures=2
+    )
+    with HTTPConnection(
+        origin=origin, network_backend=network_backend, retries=3
+    ) as conn:
+        response = conn.request("GET", "https://example.com/")
+        assert response.status == 200
+
+    network_backend = NeedsRetryBackend(
+        content, connect_tcp_failures=0, start_tls_failures=2
+    )
     with HTTPConnection(
         origin=origin,
         network_backend=network_backend,
