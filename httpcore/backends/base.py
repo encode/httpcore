@@ -2,6 +2,12 @@ import ssl
 import time
 import typing
 
+SOCKET_OPTION = typing.Union[
+    typing.Tuple[int, int, int],
+    typing.Tuple[int, int, typing.Union[bytes, bytearray]],
+    typing.Tuple[int, int, None, int],
+]
+
 
 class NetworkStream:
     def read(self, max_bytes: int, timeout: typing.Optional[float] = None) -> bytes:
@@ -77,6 +83,7 @@ class AsyncNetworkBackend:
         port: int,
         timeout: typing.Optional[float] = None,
         local_address: typing.Optional[str] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:
         raise NotImplementedError()  # pragma: nocover
 

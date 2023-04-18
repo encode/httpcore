@@ -14,48 +14,7 @@ from .._exceptions import (
     map_exceptions,
 )
 from .._utils import is_socket_readable
-from .base import NetworkBackend, NetworkStream
-
-SOCKET_OPTIONS = typing.Union[
-    typing.Tuple[int, int, int],
-    typing.Tuple[int, int, typing.Union[bytes, bytearray]],
-    typing.Tuple[int, int, None, int],
-]
-
-
-def create_connection(
-    address: typing.Tuple[str, int],
-    timeout: typing.Optional[float],
-    source_address: typing.Optional[typing.Tuple[str, int]],
-    socket_options: typing.Iterable[SOCKET_OPTIONS],
-) -> typing.Any:  # pragma: no cover
-    host, port = address
-    err = None
-    for res in socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM):
-        af, socktype, proto, canonname, sa = res
-        sock = None
-        try:
-            sock = socket.socket(af, socktype, proto)
-            for option in socket_options:
-                sock.setsockopt(*option)
-            sock.settimeout(timeout)
-            if source_address:
-                sock.bind(source_address)
-            sock.connect(sa)
-            err = None
-            return sock
-        except socket.error as _:
-            err = _
-            if sock is not None:
-                sock.close()
-
-    if err is not None:
-        try:
-            raise err
-        finally:
-            err = None
-    else:
-        raise socket.error("getaddrinfo returns an empty list")
+from .base import SOCKET_OPTION, NetworkBackend, NetworkStream
 
 
 class SyncStream(NetworkStream):
@@ -124,7 +83,7 @@ class SyncBackend(NetworkBackend):
         port: int,
         timeout: typing.Optional[float] = None,
         local_address: typing.Optional[str] = None,
-        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTIONS]] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> NetworkStream:
         if socket_options is None:
             socket_options = []
@@ -136,19 +95,20 @@ class SyncBackend(NetworkBackend):
         }
 
         with map_exceptions(exc_map):
-            sock = create_connection(
+            sock = socket.create_connection(
                 address,
                 timeout,
-                socket_options=socket_options,
                 source_address=source_address,
             )
+            for option in socket_options:
+                sock.setsockopt(*option)  # pragma: no cover
         return SyncStream(sock)
 
     def connect_unix_socket(
         self,
         path: str,
         timeout: typing.Optional[float] = None,
-        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTIONS]] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> NetworkStream:  # pragma: nocover
         if sys.platform == "win32":
             raise RuntimeError(
