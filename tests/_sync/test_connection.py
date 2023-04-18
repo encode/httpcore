@@ -7,7 +7,7 @@ import hyperframe.frame
 import pytest
 
 from httpcore import HTTPConnection, ConnectError, ConnectionNotAvailable, Origin
-from httpcore.backends.base import NetworkStream
+from httpcore.backends.base import SOCKET_OPTION, NetworkStream
 from httpcore.backends.mock import MockBackend
 
 
@@ -143,6 +143,7 @@ class NeedsRetryBackend(MockBackend):
         port: int,
         timeout: Optional[float] = None,
         local_address: Optional[str] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> NetworkStream:
         if self._connect_tcp_failures > 0:
             self._connect_tcp_failures -= 1

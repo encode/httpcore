@@ -1,8 +1,9 @@
+import typing
 from typing import Optional
 
 import sniffio
 
-from .base import AsyncNetworkBackend, AsyncNetworkStream
+from .base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
 
 
 class AutoBackend(AsyncNetworkBackend):
@@ -24,10 +25,15 @@ class AutoBackend(AsyncNetworkBackend):
         port: int,
         timeout: Optional[float] = None,
         local_address: Optional[str] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:
         await self._init_backend()
         return await self._backend.connect_tcp(
-            host, port, timeout=timeout, local_address=local_address
+            host,
+            port,
+            timeout=timeout,
+            local_address=local_address,
+            socket_options=socket_options,
         )
 
     async def connect_unix_socket(

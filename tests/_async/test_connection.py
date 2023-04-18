@@ -7,7 +7,7 @@ import hyperframe.frame
 import pytest
 
 from httpcore import AsyncHTTPConnection, ConnectError, ConnectionNotAvailable, Origin
-from httpcore.backends.base import AsyncNetworkStream
+from httpcore.backends.base import SOCKET_OPTION, AsyncNetworkStream
 from httpcore.backends.mock import AsyncMockBackend
 
 
@@ -143,6 +143,7 @@ class NeedsRetryBackend(AsyncMockBackend):
         port: int,
         timeout: Optional[float] = None,
         local_address: Optional[str] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:
         if self._connect_tcp_failures > 0:
             self._connect_tcp_failures -= 1

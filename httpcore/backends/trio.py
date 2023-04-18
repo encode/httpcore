@@ -13,7 +13,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
-from .base import AsyncNetworkBackend, AsyncNetworkStream
+from .base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
 
 
 class TrioStream(AsyncNetworkStream):
@@ -115,7 +115,10 @@ class TrioBackend(AsyncNetworkBackend):
         port: int,
         timeout: typing.Optional[float] = None,
         local_address: typing.Optional[str] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:
+        if socket_options is None:
+            socket_options = []
         timeout_or_inf = float("inf") if timeout is None else timeout
         exc_map: ExceptionMapping = {
             trio.TooSlowError: ConnectTimeout,
@@ -127,6 +130,8 @@ class TrioBackend(AsyncNetworkBackend):
                 stream: trio.abc.Stream = await trio.open_tcp_stream(
                     host=host, port=port, local_address=local_address
                 )
+                for option in socket_options:
+                    stream.setsockopt(*option)  # type: ignore[attr-defined] # pragma: no cover
         return TrioStream(stream)
 
     async def connect_unix_socket(

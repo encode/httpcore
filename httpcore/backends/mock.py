@@ -3,7 +3,13 @@ import typing
 from typing import Optional
 
 from .._exceptions import ReadError
-from .base import AsyncNetworkBackend, AsyncNetworkStream, NetworkBackend, NetworkStream
+from .base import (
+    SOCKET_OPTION,
+    AsyncNetworkBackend,
+    AsyncNetworkStream,
+    NetworkBackend,
+    NetworkStream,
+)
 
 
 class MockSSLObject:
@@ -116,6 +122,7 @@ class AsyncMockBackend(AsyncNetworkBackend):
         port: int,
         timeout: Optional[float] = None,
         local_address: Optional[str] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:
         return AsyncMockStream(list(self._buffer), http2=self._http2)
 

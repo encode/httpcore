@@ -1,4 +1,5 @@
 import logging
+import typing
 from typing import List, Optional
 
 import pytest
@@ -11,7 +12,7 @@ from httpcore import (
     ReadError,
     UnsupportedProtocol,
 )
-from httpcore.backends.base import AsyncNetworkStream
+from httpcore.backends.base import SOCKET_OPTION, AsyncNetworkStream
 from httpcore.backends.mock import AsyncMockBackend
 
 
@@ -282,6 +283,7 @@ async def test_connection_pool_with_connect_exception():
             port: int,
             timeout: Optional[float] = None,
             local_address: Optional[str] = None,
+            socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
         ) -> AsyncNetworkStream:
             raise ConnectError("Could not connect")
 
