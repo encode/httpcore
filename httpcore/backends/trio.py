@@ -118,7 +118,7 @@ class TrioBackend(AsyncNetworkBackend):
         socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:
         if socket_options is None:
-            socket_options = []
+            socket_options = []  # pragma: no cover
         timeout_or_inf = float("inf") if timeout is None else timeout
         exc_map: ExceptionMapping = {
             trio.TooSlowError: ConnectTimeout,

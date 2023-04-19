@@ -1,6 +1,6 @@
 import ssl
 from base64 import b64encode
-from typing import List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 from .._exceptions import ProxyError
 from .._models import (
@@ -15,7 +15,7 @@ from .._models import (
 from .._ssl import default_ssl_context
 from .._synchronization import Lock
 from .._trace import Trace
-from ..backends.base import NetworkBackend
+from ..backends.base import SOCKET_OPTION, NetworkBackend
 from .connection import HTTPConnection
 from .connection_pool import ConnectionPool
 from .http11 import HTTP11Connection
@@ -69,6 +69,7 @@ class HTTPProxy(ConnectionPool):
         local_address: Optional[str] = None,
         uds: Optional[str] = None,
         network_backend: Optional[NetworkBackend] = None,
+        socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -115,6 +116,7 @@ class HTTPProxy(ConnectionPool):
             retries=retries,
             local_address=local_address,
             uds=uds,
+            socket_options=socket_options,
         )
         self._ssl_context = ssl_context
         self._proxy_url = enforce_url(proxy_url, name="proxy_url")
@@ -156,11 +158,13 @@ class ForwardHTTPConnection(ConnectionInterface):
         proxy_headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
         keepalive_expiry: Optional[float] = None,
         network_backend: Optional[NetworkBackend] = None,
+        socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
     ) -> None:
         self._connection = HTTPConnection(
             origin=proxy_origin,
             keepalive_expiry=keepalive_expiry,
             network_backend=network_backend,
+            socket_options=socket_options,
         )
         self._proxy_origin = proxy_origin
         self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
@@ -219,11 +223,13 @@ class TunnelHTTPConnection(ConnectionInterface):
         http1: bool = True,
         http2: bool = False,
         network_backend: Optional[NetworkBackend] = None,
+        socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
     ) -> None:
         self._connection: ConnectionInterface = HTTPConnection(
             origin=proxy_origin,
             keepalive_expiry=keepalive_expiry,
             network_backend=network_backend,
+            socket_options=socket_options,
         )
         self._proxy_origin = proxy_origin
         self._remote_origin = remote_origin

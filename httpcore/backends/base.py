@@ -38,11 +38,15 @@ class NetworkBackend:
         port: int,
         timeout: typing.Optional[float] = None,
         local_address: typing.Optional[str] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> NetworkStream:
         raise NotImplementedError()  # pragma: nocover
 
     def connect_unix_socket(
-        self, path: str, timeout: typing.Optional[float] = None
+        self,
+        path: str,
+        timeout: typing.Optional[float] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> NetworkStream:
         raise NotImplementedError()  # pragma: nocover
 
@@ -88,7 +92,10 @@ class AsyncNetworkBackend:
         raise NotImplementedError()  # pragma: nocover
 
     async def connect_unix_socket(
-        self, path: str, timeout: typing.Optional[float] = None
+        self,
+        path: str,
+        timeout: typing.Optional[float] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:
         raise NotImplementedError()  # pragma: nocover
 

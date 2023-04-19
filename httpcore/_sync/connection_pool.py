@@ -1,13 +1,13 @@
 import ssl
 import sys
 from types import TracebackType
-from typing import Iterable, Iterator, List, Optional, Type
+from typing import Iterable, Iterator, Iterable, List, Optional, Type
 
 from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
 from .._models import Origin, Request, Response
 from .._synchronization import Event, Lock
 from ..backends.sync import SyncBackend
-from ..backends.base import NetworkBackend
+from ..backends.base import SOCKET_OPTION, NetworkBackend
 from .connection import HTTPConnection
 from .interfaces import ConnectionInterface, RequestInterface
 
@@ -53,6 +53,7 @@ class ConnectionPool(RequestInterface):
         local_address: Optional[str] = None,
         uds: Optional[str] = None,
         network_backend: Optional[NetworkBackend] = None,
+        socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -108,6 +109,7 @@ class ConnectionPool(RequestInterface):
         self._network_backend = (
             SyncBackend() if network_backend is None else network_backend
         )
+        self._socket_options = () if socket_options is None else socket_options
 
     def create_connection(self, origin: Origin) -> ConnectionInterface:
         return HTTPConnection(
@@ -120,6 +122,7 @@ class ConnectionPool(RequestInterface):
             local_address=self._local_address,
             uds=self._uds,
             network_backend=self._network_backend,
+            socket_options=self._socket_options,
         )
 
     @property

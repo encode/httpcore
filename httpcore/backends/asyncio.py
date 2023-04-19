@@ -103,7 +103,7 @@ class AsyncIOBackend(AsyncNetworkBackend):
         socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:
         if socket_options is None:
-            socket_options = []
+            socket_options = []  # pragma: no cover
         exc_map = {
             TimeoutError: ConnectTimeout,
             OSError: ConnectError,

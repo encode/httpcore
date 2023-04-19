@@ -86,7 +86,7 @@ class SyncBackend(NetworkBackend):
         socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> NetworkStream:
         if socket_options is None:
-            socket_options = []
+            socket_options = []  # pragma: no cover
         address = (host, port)
         source_address = None if local_address is None else (local_address, 0)
         exc_map: ExceptionMapping = {

@@ -1,7 +1,7 @@
 import itertools
 import ssl
 from types import TracebackType
-from typing import Iterator, Optional, Type
+from typing import Iterable, Iterator, Optional, Type
 
 from .._exceptions import ConnectError, ConnectionNotAvailable, ConnectTimeout
 from .._models import Origin, Request, Response
@@ -9,7 +9,7 @@ from .._ssl import default_ssl_context
 from .._synchronization import Lock
 from .._trace import Trace
 from ..backends.sync import SyncBackend
-from ..backends.base import NetworkBackend, NetworkStream
+from ..backends.base import SOCKET_OPTION, NetworkBackend, NetworkStream
 from .http11 import HTTP11Connection
 from .interfaces import ConnectionInterface
 
@@ -34,6 +34,7 @@ class HTTPConnection(ConnectionInterface):
         local_address: Optional[str] = None,
         uds: Optional[str] = None,
         network_backend: Optional[NetworkBackend] = None,
+        socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
     ) -> None:
         self._origin = origin
         self._ssl_context = ssl_context
@@ -50,6 +51,7 @@ class HTTPConnection(ConnectionInterface):
         self._connection: Optional[ConnectionInterface] = None
         self._connect_failed: bool = False
         self._request_lock = Lock()
+        self._socket_options = () if socket_options is None else socket_options
 
     def handle_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
@@ -104,6 +106,7 @@ class HTTPConnection(ConnectionInterface):
                         "port": self._origin.port,
                         "local_address": self._local_address,
                         "timeout": timeout,
+                        "socket_options": self._socket_options,
                     }
                     with Trace(
                         "connection.connect_tcp", request, kwargs
@@ -114,6 +117,7 @@ class HTTPConnection(ConnectionInterface):
                     kwargs = {
                         "path": self._uds,
                         "timeout": timeout,
+                        "socket_options": self._socket_options,
                     }
                     with Trace(
                         "connection.connect_unix_socket", request, kwargs

@@ -65,11 +65,15 @@ class MockBackend(NetworkBackend):
         port: int,
         timeout: Optional[float] = None,
         local_address: Optional[str] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> NetworkStream:
         return MockStream(list(self._buffer), http2=self._http2)
 
     def connect_unix_socket(
-        self, path: str, timeout: Optional[float] = None
+        self,
+        path: str,
+        timeout: Optional[float] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> NetworkStream:
         return MockStream(list(self._buffer), http2=self._http2)
 
@@ -127,7 +131,10 @@ class AsyncMockBackend(AsyncNetworkBackend):
         return AsyncMockStream(list(self._buffer), http2=self._http2)
 
     async def connect_unix_socket(
-        self, path: str, timeout: Optional[float] = None
+        self,
+        path: str,
+        timeout: Optional[float] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:
         return AsyncMockStream(list(self._buffer), http2=self._http2)
 
