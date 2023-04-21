@@ -63,6 +63,8 @@ class AsyncEvent:
         Detect if we're running under 'asyncio' or 'trio' and create
         a lock with the correct implementation.
         """
+        import sniffio
+
         self._backend = sniffio.current_async_library()
         if self._backend == "trio":
             import trio
@@ -113,6 +115,8 @@ class AsyncSemaphore:
         Detect if we're running under 'asyncio' or 'trio' and create
         a semaphore with the correct implementation.
         """
+        import sniffio
+
         self._backend = sniffio.current_async_library()
         if self._backend == "trio":
             import trio
