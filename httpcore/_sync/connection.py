@@ -122,6 +122,25 @@ class HTTPConnection(ConnectionInterface):
                             **kwargs
                         )
                         trace.return_value = stream
+
+                if self._origin.scheme == b"https":
+                    ssl_context = (
+                        default_ssl_context()
+                        if self._ssl_context is None
+                        else self._ssl_context
+                    )
+                    alpn_protocols = ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
+                    ssl_context.set_alpn_protocols(alpn_protocols)
+
+                    kwargs = {
+                        "ssl_context": ssl_context,
+                        "server_hostname": self._origin.host.decode("ascii"),
+                        "timeout": timeout,
+                    }
+                    with Trace("connection.start_tls", request, kwargs) as trace:
+                        stream = stream.start_tls(**kwargs)
+                        trace.return_value = stream
+                return stream
             except (ConnectError, ConnectTimeout):
                 if retries_left <= 0:
                     raise
@@ -129,34 +148,14 @@ class HTTPConnection(ConnectionInterface):
                 delay = next(delays)
                 # TRACE 'retry'
                 self._network_backend.sleep(delay)
-            else:
-                break
-
-        if self._origin.scheme == b"https":
-            ssl_context = (
-                default_ssl_context()
-                if self._ssl_context is None
-                else self._ssl_context
-            )
-            alpn_protocols = ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
-            ssl_context.set_alpn_protocols(alpn_protocols)
-
-            kwargs = {
-                "ssl_context": ssl_context,
-                "server_hostname": self._origin.host.decode("ascii"),
-                "timeout": timeout,
-            }
-            with Trace("connection.start_tls", request, kwargs) as trace:
-                stream = stream.start_tls(**kwargs)
-                trace.return_value = stream
-        return stream
 
     def can_handle_request(self, origin: Origin) -> bool:
         return origin == self._origin
 
     def close(self) -> None:
         if self._connection is not None:
-            self._connection.close()
+            with Trace("connection.close", None, {}):
+                self._connection.close()
 
     def is_available(self) -> bool:
         if self._connection is None:

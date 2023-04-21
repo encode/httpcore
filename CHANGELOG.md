@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.17.0 (March 16th, 2023)
+
+- Add DEBUG level logging. (#648)
+- Respect HTTP/2 max concurrent streams when settings updates are sent by server. (#652)
+- Increase the allowable HTTP header size to 100kB. (#647)
+- Add `retries` option to SOCKS proxy classes. (#643)
+
 ## 0.16.3 (December 20th, 2022)
 
 - Allow `ws` and `wss` schemes. Allows us to properly support websocket upgrade connections. (#625)

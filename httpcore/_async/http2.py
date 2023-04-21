@@ -88,8 +88,18 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 async with Trace("http2.send_connection_init", request, kwargs):
                     await self._send_connection_init(**kwargs)
                 self._sent_connection_init = True
-                max_streams = self._h2_state.local_settings.max_concurrent_streams
-                self._max_streams_semaphore = AsyncSemaphore(max_streams)
+
+                # Initially start with just 1 until the remote server provides
+                # its max_concurrent_streams value
+                self._max_streams = 1
+
+                local_settings_max_streams = (
+                    self._h2_state.local_settings.max_concurrent_streams
+                )
+                self._max_streams_semaphore = AsyncSemaphore(local_settings_max_streams)
+
+                for _ in range(local_settings_max_streams - self._max_streams):
+                    await self._max_streams_semaphore.acquire()
 
         await self._max_streams_semaphore.acquire()
 
@@ -280,6 +290,13 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
             if stream_id is None or not self._events.get(stream_id):
                 events = await self._read_incoming_data(request)
                 for event in events:
+                    if isinstance(event, h2.events.RemoteSettingsChanged):
+                        async with Trace(
+                            "http2.receive_remote_settings", request
+                        ) as trace:
+                            await self._receive_remote_settings_change(event)
+                            trace.return_value = event
+
                     event_stream_id = getattr(event, "stream_id", 0)
 
                     # The ConnectionTerminatedEvent applies to the entire connection,
@@ -292,6 +309,23 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                         self._events[event_stream_id].append(event)
 
         await self._write_outgoing_data(request)
+
+    async def _receive_remote_settings_change(self, event: h2.events.Event) -> None:
+        max_concurrent_streams = event.changed_settings.get(
+            h2.settings.SettingCodes.MAX_CONCURRENT_STREAMS
+        )
+        if max_concurrent_streams:
+            new_max_streams = min(
+                max_concurrent_streams.new_value,
+                self._h2_state.local_settings.max_concurrent_streams,
+            )
+            if new_max_streams and new_max_streams != self._max_streams:
+                while new_max_streams > self._max_streams:
+                    await self._max_streams_semaphore.release()
+                    self._max_streams += 1
+                while new_max_streams < self._max_streams:
+                    await self._max_streams_semaphore.acquire()
+                    self._max_streams -= 1
 
     async def _response_closed(self, stream_id: int) -> None:
         await self._max_streams_semaphore.release()

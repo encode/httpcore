@@ -295,3 +295,55 @@ def test_http2_request_to_incorrect_origin():
     with HTTP2Connection(origin=origin, stream=stream) as conn:
         with pytest.raises(RuntimeError):
             conn.request("GET", "https://other.com/")
+
+
+
+def test_http2_remote_max_streams_update():
+    """
+    If the remote server updates the maximum concurrent streams value, we should
+    be adjusting how many streams we will allow.
+    """
+    origin = Origin(b"https", b"example.com", 443)
+    stream = MockStream(
+        [
+            hyperframe.frame.SettingsFrame(
+                settings={hyperframe.frame.SettingsFrame.MAX_CONCURRENT_STREAMS: 1000}
+            ).serialize(),
+            hyperframe.frame.HeadersFrame(
+                stream_id=1,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(stream_id=1, data=b"Hello, world!").serialize(),
+            hyperframe.frame.SettingsFrame(
+                settings={hyperframe.frame.SettingsFrame.MAX_CONCURRENT_STREAMS: 50}
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=1, data=b"Hello, world...again!", flags=["END_STREAM"]
+            ).serialize(),
+        ]
+    )
+    with HTTP2Connection(origin=origin, stream=stream) as conn:
+        with conn.stream("GET", "https://example.com/") as response:
+            i = 0
+            for chunk in response.iter_stream():
+                if i == 0:
+                    assert chunk == b"Hello, world!"
+                    assert conn._h2_state.remote_settings.max_concurrent_streams == 1000
+                    assert conn._max_streams == min(
+                        conn._h2_state.remote_settings.max_concurrent_streams,
+                        conn._h2_state.local_settings.max_concurrent_streams,
+                    )
+                elif i == 1:
+                    assert chunk == b"Hello, world...again!"
+                    assert conn._h2_state.remote_settings.max_concurrent_streams == 50
+                    assert conn._max_streams == min(
+                        conn._h2_state.remote_settings.max_concurrent_streams,
+                        conn._h2_state.local_settings.max_concurrent_streams,
+                    )
+                i += 1
