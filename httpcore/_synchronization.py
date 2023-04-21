@@ -2,8 +2,6 @@ import threading
 from types import TracebackType
 from typing import Optional, Type
 
-import sniffio
-
 from ._exceptions import ExceptionMapping, PoolTimeout, map_exceptions
 
 # Our async synchronization primatives use either 'anyio' or 'trio' depending
@@ -21,6 +19,8 @@ class AsyncLock:
         Detect if we're running under 'asyncio' or 'trio' and create
         a lock with the correct implementation.
         """
+        import sniffio
+
         self._backend = sniffio.current_async_library()
         if self._backend == "trio":
             import trio

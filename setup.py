@@ -55,13 +55,13 @@ setup(
     zip_safe=False,
     install_requires=[
         "h11>=0.13,<0.15",
-        "sniffio==1.*",
-        "anyio>=3.0,<5.0",
         "certifi",
     ],
     extras_require={
         "http2": ["h2>=3,<5"],
-        "socks": ["socksio==1.*"]
+        "socks": ["socksio==1.*"],
+        "asyncio": ["sniffio==1.*", "anyio>=3.0,<5.0"],
+        "trio": ["sniffio==1.*", "trio>=0.21.0,<0.23.0"],
     },
     classifiers=[
         "Development Status :: 3 - Alpha",

@@ -1,13 +1,13 @@
 from typing import Optional
 
-import sniffio
-
 from .base import AsyncNetworkBackend, AsyncNetworkStream
 
 
 class AutoBackend(AsyncNetworkBackend):
     async def _init_backend(self) -> None:
         if not (hasattr(self, "_backend")):
+            import sniffio
+
             backend = sniffio.current_async_library()
             if backend == "trio":
                 from .trio import TrioBackend
