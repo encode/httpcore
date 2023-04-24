@@ -291,6 +291,7 @@ class URL:
             b"ws": 80,
             b"wss": 443,
             b"socks5": 1080,
+            b"socks5h": 1080,
         }[self.scheme]
         return Origin(
             scheme=self.scheme, host=self.host, port=self.port or default_port
