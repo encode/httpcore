@@ -73,9 +73,9 @@ class AsyncIOStream(AsyncNetworkStream):
                         standard_compatible=False,
                         server_side=False,
                     )
-            except Exception as exc:  # pragma: nocover
+            except Exception:  # pragma: nocover
                 await self.aclose()
-                raise exc
+                raise
         return AsyncIOStream(ssl_stream)
 
     def get_extra_info(self, info: str) -> typing.Any:
