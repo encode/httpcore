@@ -17,7 +17,7 @@ wheel
 
 # Tests & Linting
 anyio==3.6.2
-autoflake==1.7.7
+autoflake==2.1.1
 black==23.1.0
 coverage==6.5.0
 flake8==3.9.2  # See: https://github.com/PyCQA/flake8/pull/1438
