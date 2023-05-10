@@ -31,7 +31,8 @@ class RequestStatus:
     async def wait_for_connection(
         self, timeout: Optional[float] = None
     ) -> AsyncConnectionInterface:
-        await self._connection_acquired.wait(timeout=timeout)
+        if self.connection is None:
+            await self._connection_acquired.wait(timeout=timeout)
         assert self.connection is not None
         return self.connection
 
