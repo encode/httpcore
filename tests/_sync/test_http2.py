@@ -52,6 +52,7 @@ def test_http2_connection():
         )
 
 
+
 def test_http2_connection_closed():
     origin = Origin(b"https", b"example.com", 443)
     stream = MockStream(

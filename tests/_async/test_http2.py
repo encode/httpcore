@@ -52,6 +52,7 @@ async def test_http2_connection():
         )
 
 
+@pytest.mark.anyio
 async def test_http2_connection_closed():
     origin = Origin(b"https", b"example.com", 443)
     stream = AsyncMockStream(
