@@ -52,6 +52,39 @@ async def test_http2_connection():
         )
 
 
+async def test_http2_connection_closed():
+    origin = Origin(b"https", b"example.com", 443)
+    stream = AsyncMockStream(
+        [
+            hyperframe.frame.SettingsFrame().serialize(),
+            hyperframe.frame.HeadersFrame(
+                stream_id=1,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=1, data=b"Hello, world!", flags=["END_STREAM"]
+            ).serialize(),
+            # Connection is closed after the first response
+            hyperframe.frame.GoAwayFrame(stream_id=0, error_code=0).serialize(),
+        ]
+    )
+    with AsyncHTTP2Connection(
+        origin=origin, stream=stream, keepalive_expiry=5.0
+    ) as conn:
+        await conn.request("GET", "https://example.com/")
+
+        with pytest.raises(RemoteProtocolError):
+            await conn.request("GET", "https://example.com/")
+
+        assert not conn.is_available()
+
+
 @pytest.mark.anyio
 async def test_http2_connection_post_request():
     origin = Origin(b"https", b"example.com", 443)
