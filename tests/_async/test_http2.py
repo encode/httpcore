@@ -74,7 +74,7 @@ async def test_http2_connection_closed():
             hyperframe.frame.GoAwayFrame(stream_id=0, error_code=0).serialize(),
         ]
     )
-    with AsyncHTTP2Connection(
+    async with AsyncHTTP2Connection(
         origin=origin, stream=stream, keepalive_expiry=5.0
     ) as conn:
         await conn.request("GET", "https://example.com/")
