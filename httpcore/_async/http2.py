@@ -143,10 +143,14 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 # a GOAWAY event. Other flows of control may then raise
                 # a protocol error at any point they interact with the 'h2_state'.
                 #
-                # In this case we'll have stored the event, and should raise
-                # it as a RemoteProtocolError.
+                # In this case we'll have stored the event, and should raise it.
                 if self._connection_error_event:
-                    raise RemoteProtocolError(self._connection_error_event)
+                    if isinstance(
+                        self._connection_error_event, h2.events.ConnectionTerminated
+                    ):
+                        raise ConnectionNotAvailable(self._connection_error_event)
+                    else:
+                        raise RemoteProtocolError(self._connection_error_event)
                 # If h2 raises a protocol error in some other state then we
                 # must somehow have made a protocol violation.
                 raise LocalProtocolError(exc)  # pragma: nocover
@@ -279,7 +283,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
     ) -> None:
         async with self._read_lock:
             if self._connection_error_event is not None:  # pragma: nocover
-                raise RemoteProtocolError(self._connection_error_event)
+                raise ConnectionNotAvailable(self._connection_error_event)
 
             # This conditional is a bit icky. We don't want to block reading if we've
             # actually got an event to return for a given stream. We need to do that
@@ -303,7 +307,12 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                     # and should be saved so it can be raised on all streams.
                     if hasattr(event, "error_code") and event_stream_id == 0:
                         self._connection_error_event = event
-                        raise RemoteProtocolError(event)
+                        if isinstance(
+                            self._connection_error_event, h2.events.ConnectionTerminated
+                        ):
+                            raise ConnectionNotAvailable(self._connection_error_event)
+                        else:
+                            raise RemoteProtocolError(event)
 
                     if event_stream_id in self._events:
                         self._events[event_stream_id].append(event)

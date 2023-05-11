@@ -80,7 +80,7 @@ def test_http2_connection_closed():
     ) as conn:
         conn.request("GET", "https://example.com/")
 
-        with pytest.raises(RemoteProtocolError):
+        with pytest.raises(ConnectionNotAvailable):
             conn.request("GET", "https://example.com/")
 
         assert not conn.is_available()
@@ -217,9 +217,9 @@ def test_http2_connection_with_goaway():
         ]
     )
     with HTTP2Connection(origin=origin, stream=stream) as conn:
-        with pytest.raises(RemoteProtocolError):
+        with pytest.raises(ConnectionNotAvailable):
             conn.request("GET", "https://example.com/")
-        with pytest.raises(RemoteProtocolError):
+        with pytest.raises(ConnectionNotAvailable):
             conn.request("GET", "https://example.com/")
 
 
