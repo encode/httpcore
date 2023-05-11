@@ -44,6 +44,9 @@ class MockStream(NetworkStream):
     def get_extra_info(self, info: str) -> typing.Any:
         return MockSSLObject(http2=self._http2) if info == "ssl_object" else None
 
+    def __repr__(self) -> str:
+        return "<httpcore.MockStream>"
+
 
 class MockBackend(NetworkBackend):
     def __init__(self, buffer: typing.List[bytes], http2: bool = False) -> None:
@@ -97,6 +100,9 @@ class AsyncMockStream(AsyncNetworkStream):
 
     def get_extra_info(self, info: str) -> typing.Any:
         return MockSSLObject(http2=self._http2) if info == "ssl_object" else None
+
+    def __repr__(self) -> str:
+        return "<httpcore.AsyncMockStream>"
 
 
 class AsyncMockBackend(AsyncNetworkBackend):
