@@ -146,8 +146,8 @@ async def test_http2_connection_with_rst_stream():
 @pytest.mark.anyio
 async def test_http2_connection_with_goaway():
     """
-    If a stream reset occurs, then no response will be returned,
-    but the connection will remain reusable for other requests.
+    If a GoAway frame occurs, then no response will be returned,
+    and the connection will not be reusable for other requests.
     """
     origin = Origin(b"https", b"example.com", 443)
     stream = AsyncMockStream(
