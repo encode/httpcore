@@ -433,6 +433,10 @@ class HTTP2Connection(ConnectionInterface):
             self._state != HTTPConnectionState.CLOSED
             and not self._connection_error
             and not self._used_all_stream_ids
+            and not (
+                self._h2_state.state_machine.state
+                == h2.connection.ConnectionState.CLOSED
+            )
         )
 
     def has_expired(self) -> bool:
