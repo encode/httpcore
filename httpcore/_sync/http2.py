@@ -128,7 +128,12 @@ class HTTP2Connection(ConnectionInterface):
                 status=status,
                 headers=headers,
                 content=HTTP2ConnectionByteStream(self, request, stream_id=stream_id),
-                extensions={"stream_id": stream_id, "http_version": b"HTTP/2"},
+                extensions={
+                    "data_stream": HTTP2DataStream(self, request, stream_id),
+                    "http_version": b"HTTP/2",
+                    "network_stream": self._network_stream,
+                    "stream_id": stream_id,
+                },
             )
         except Exception as exc:  # noqa: PIE786
             kwargs = {"stream_id": stream_id}
@@ -560,6 +565,12 @@ class HTTP2ConnectionByteStream:
 
 
 class HTTP2DataStream:
+    """
+    A stream-like interface that allows read/write operations directly onto a
+    single HTTP/2 data stream. Allows for HTTP/2 bi-directional streaming.
+    Exposed via the response extensions as "data_stream".
+    """
+
     def __init__(
         self, connection: HTTP2Connection, request: Request, stream_id: int
     ) -> None:
