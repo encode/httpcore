@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.17.1 (May 17th, 2023)
+
+- Retry ConnectError/ConnectTimeout happened in stream.start_tls. (#669)
+- Chain exception re-raise in map_exceptions. (#678)
+- Add check for h2.connection.ConnectionState.CLOSED in AsyncHTTP2Connection.is_available. (#679)
+
 ## 0.17.0 (March 16th, 2023)
 
 - Add DEBUG level logging. (#648)
