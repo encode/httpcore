@@ -39,6 +39,7 @@ class H2Logger:
     """
     Enable logging from the `python-hyper/h2` package.
     """
+
     def __init__(self, *vargs):
         # We differentiate between the two different types of logging that
         # 'h2' exposes by using different logging instances for each.
@@ -56,7 +57,9 @@ class H2Logger:
 
 class HTTP2Connection(ConnectionInterface):
     READ_NUM_BYTES = 64 * 1024
-    CONFIG = h2.config.H2Configuration(validate_inbound_headers=False, logger=H2Logger())
+    CONFIG = h2.config.H2Configuration(
+        validate_inbound_headers=False, logger=H2Logger()
+    )
 
     def __init__(
         self,
