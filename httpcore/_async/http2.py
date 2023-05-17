@@ -128,11 +128,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 status=status,
                 headers=headers,
                 content=HTTP2ConnectionByteStream(self, request, stream_id=stream_id),
-                extensions={
-                    "http_version": b"HTTP/2",
-                    "network_stream": self._network_stream,
-                    "stream_id": stream_id,
-                },
+                extensions={"stream_id": stream_id, "http_version": b"HTTP/2"},
             )
         except Exception as exc:  # noqa: PIE786
             kwargs = {"stream_id": stream_id}
