@@ -6,9 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## 0.17.1 (May 17th, 2023)
 
-- Retry ConnectError/ConnectTimeout happened in stream.start_tls. (#669)
-- Chain exception re-raise in map_exceptions. (#678)
-- Add check for h2.connection.ConnectionState.CLOSED in AsyncHTTP2Connection.is_available. (#679)
+- If 'retries' is set, then allow retries if an SSL handshake error occurs. (#669)
+- Improve correctness of tracebacks on network exceptions, by raising properly chained exceptions. (#678)
+- Prevent connection-hanging behaviour when HTTP/2 connections are closed by a server-sent 'GoAway' frame". (#679)
+- Fix edge-case exception when removing requests from the connection pool. (#680)
 
 ## 0.17.0 (March 16th, 2023)
 
