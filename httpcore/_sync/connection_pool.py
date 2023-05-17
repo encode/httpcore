@@ -231,7 +231,9 @@ class ConnectionPool(RequestInterface):
                 # sure to remove the request from the queue before bubbling
                 # up the exception.
                 with self._pool_lock:
-                    self._requests.remove(status)
+                    # Ensure only remove when task exists.
+                    if status in self._requests:
+                        self._requests.remove(status)
                     raise exc
 
             try:
