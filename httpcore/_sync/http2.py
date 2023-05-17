@@ -40,16 +40,16 @@ class H2Logger:
     Enable logging from the `python-hyper/h2` package.
     """
 
-    def __init__(self, *vargs):
+    def __init__(self, *vargs: typing.Any):
         # We differentiate between the two different types of logging that
         # 'h2' exposes by using different logging instances for each.
         self._debug_logger = logging.getLogger("httpcore.h2state")
         self._trace_logger = logging.getLogger("httpcore.h2frames")
 
-    def debug(self, *vargs, **kwargs):
+    def debug(self, *vargs: typing.Any, **kwargs: typing.Any) -> None:
         self._debug_logger.debug(*vargs, **kwargs)
 
-    def trace(self, *vargs, **kwargs):
+    def trace(self, *vargs: typing.Any, **kwargs: typing.Any) -> None:
         # Instead of using a custom 'TRACE' log level we're using
         # the standard 'DEBUG' level.
         self._trace_logger.debug(*vargs, **kwargs)
