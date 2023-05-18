@@ -317,7 +317,15 @@ class TunnelHTTPConnection(ConnectionInterface):
                     )
 
                 self._connected = True
-        return self._connection.handle_request(request)
+
+        response = self._connection.handle_request(request)
+        try:
+            # Adding Received Headers from CONNECT
+            if getattr(connect_response, "headers", None):
+                response.headers += connect_response.headers
+        except Exception:
+            pass
+        return response
 
     def can_handle_request(self, origin: Origin) -> bool:
         return origin == self._remote_origin
