@@ -321,7 +321,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
         response = await self._connection.handle_async_request(request)
         try:
             # Adding Received Headers from CONNECT
-            if getattr(connect_response, 'headers', None):
+            if getattr(connect_response, "headers", None):
                 response.headers += connect_response.headers
         except Exception:
             pass
