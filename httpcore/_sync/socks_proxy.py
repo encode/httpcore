@@ -1,3 +1,4 @@
+import logging
 import ssl
 import typing
 
@@ -13,6 +14,9 @@ from ..backends.base import NetworkBackend, NetworkStream
 from .connection_pool import ConnectionPool
 from .http11 import HTTP11Connection
 from .interfaces import ConnectionInterface
+
+logger = logging.getLogger("httpcore.socks")
+
 
 AUTH_METHODS = {
     b"\x00": "NO AUTHENTICATION REQUIRED",
@@ -223,7 +227,7 @@ class Socks5Connection(ConnectionInterface):
                         "port": self._proxy_origin.port,
                         "timeout": timeout,
                     }
-                    with Trace("connection.connect_tcp", request, kwargs) as trace:
+                    with Trace("connect_tcp", logger, request, kwargs) as trace:
                         stream = self._network_backend.connect_tcp(**kwargs)
                         trace.return_value = stream
 
@@ -235,7 +239,7 @@ class Socks5Connection(ConnectionInterface):
                         "auth": self._proxy_auth,
                     }
                     with Trace(
-                        "connection.setup_socks5_connection", request, kwargs
+                        "setup_socks5_connection", logger, request, kwargs
                     ) as trace:
                         _init_socks5_connection(**kwargs)
                         trace.return_value = stream
@@ -257,9 +261,7 @@ class Socks5Connection(ConnectionInterface):
                             "server_hostname": self._remote_origin.host.decode("ascii"),
                             "timeout": timeout,
                         }
-                        with Trace(
-                            "connection.start_tls", request, kwargs
-                        ) as trace:
+                        with Trace("start_tls", logger, request, kwargs) as trace:
                             stream = stream.start_tls(**kwargs)
                             trace.return_value = stream
 

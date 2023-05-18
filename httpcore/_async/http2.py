@@ -1,4 +1,5 @@
 import enum
+import logging
 import time
 import types
 import typing
@@ -19,6 +20,8 @@ from .._synchronization import AsyncLock, AsyncSemaphore
 from .._trace import Trace
 from ..backends.base import AsyncNetworkStream
 from .interfaces import AsyncConnectionInterface
+
+logger = logging.getLogger("httpcore.http2")
 
 
 def has_body_headers(request: Request) -> bool:
@@ -85,11 +88,21 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         async with self._init_lock:
             if not self._sent_connection_init:
                 kwargs = {"request": request}
-                async with Trace("http2.send_connection_init", request, kwargs):
+                async with Trace("send_connection_init", logger, request, kwargs):
                     await self._send_connection_init(**kwargs)
                 self._sent_connection_init = True
-                max_streams = self._h2_state.local_settings.max_concurrent_streams
-                self._max_streams_semaphore = AsyncSemaphore(max_streams)
+
+                # Initially start with just 1 until the remote server provides
+                # its max_concurrent_streams value
+                self._max_streams = 1
+
+                local_settings_max_streams = (
+                    self._h2_state.local_settings.max_concurrent_streams
+                )
+                self._max_streams_semaphore = AsyncSemaphore(local_settings_max_streams)
+
+                for _ in range(local_settings_max_streams - self._max_streams):
+                    await self._max_streams_semaphore.acquire()
 
         await self._max_streams_semaphore.acquire()
 
@@ -102,12 +115,12 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
         try:
             kwargs = {"request": request, "stream_id": stream_id}
-            async with Trace("http2.send_request_headers", request, kwargs):
+            async with Trace("send_request_headers", logger, request, kwargs):
                 await self._send_request_headers(request=request, stream_id=stream_id)
-            async with Trace("http2.send_request_body", request, kwargs):
+            async with Trace("send_request_body", logger, request, kwargs):
                 await self._send_request_body(request=request, stream_id=stream_id)
             async with Trace(
-                "http2.receive_response_headers", request, kwargs
+                "receive_response_headers", logger, request, kwargs
             ) as trace:
                 status, headers = await self._receive_response(
                     request=request, stream_id=stream_id
@@ -122,7 +135,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
             )
         except Exception as exc:  # noqa: PIE786
             kwargs = {"stream_id": stream_id}
-            async with Trace("http2.response_closed", request, kwargs):
+            async with Trace("response_closed", logger, request, kwargs):
                 await self._response_closed(stream_id=stream_id)
 
             if isinstance(exc, h2.exceptions.ProtocolError):
@@ -280,6 +293,13 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
             if stream_id is None or not self._events.get(stream_id):
                 events = await self._read_incoming_data(request)
                 for event in events:
+                    if isinstance(event, h2.events.RemoteSettingsChanged):
+                        async with Trace(
+                            "receive_remote_settings", logger, request
+                        ) as trace:
+                            await self._receive_remote_settings_change(event)
+                            trace.return_value = event
+
                     event_stream_id = getattr(event, "stream_id", 0)
 
                     # The ConnectionTerminatedEvent applies to the entire connection,
@@ -292,6 +312,23 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                         self._events[event_stream_id].append(event)
 
         await self._write_outgoing_data(request)
+
+    async def _receive_remote_settings_change(self, event: h2.events.Event) -> None:
+        max_concurrent_streams = event.changed_settings.get(
+            h2.settings.SettingCodes.MAX_CONCURRENT_STREAMS
+        )
+        if max_concurrent_streams:
+            new_max_streams = min(
+                max_concurrent_streams.new_value,
+                self._h2_state.local_settings.max_concurrent_streams,
+            )
+            if new_max_streams and new_max_streams != self._max_streams:
+                while new_max_streams > self._max_streams:
+                    await self._max_streams_semaphore.release()
+                    self._max_streams += 1
+                while new_max_streams < self._max_streams:
+                    await self._max_streams_semaphore.acquire()
+                    self._max_streams -= 1
 
     async def _response_closed(self, stream_id: int) -> None:
         await self._max_streams_semaphore.release()
@@ -399,6 +436,10 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
             self._state != HTTPConnectionState.CLOSED
             and not self._connection_error
             and not self._used_all_stream_ids
+            and not (
+                self._h2_state.state_machine.state
+                == h2.connection.ConnectionState.CLOSED
+            )
         )
 
     def has_expired(self) -> bool:
@@ -453,7 +494,7 @@ class HTTP2ConnectionByteStream:
     async def __aiter__(self) -> typing.AsyncIterator[bytes]:
         kwargs = {"request": self._request, "stream_id": self._stream_id}
         try:
-            async with Trace("http2.receive_response_body", self._request, kwargs):
+            async with Trace("receive_response_body", logger, self._request, kwargs):
                 async for chunk in self._connection._receive_response_body(
                     request=self._request, stream_id=self._stream_id
                 ):
@@ -469,5 +510,5 @@ class HTTP2ConnectionByteStream:
         if not self._closed:
             self._closed = True
             kwargs = {"stream_id": self._stream_id}
-            async with Trace("http2.response_closed", self._request, kwargs):
+            async with Trace("response_closed", logger, self._request, kwargs):
                 await self._connection._response_closed(stream_id=self._stream_id)
