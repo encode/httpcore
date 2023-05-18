@@ -317,7 +317,15 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
                     )
 
                 self._connected = True
-        return await self._connection.handle_async_request(request)
+
+        response = await self._connection.handle_async_request(request)
+        try:
+            # Adding Received Headers from CONNECT
+            if getattr(connect_response, 'headers', None):
+                response.headers += connect_response.headers
+        except Exception:
+            pass
+        return response
 
     def can_handle_request(self, origin: Origin) -> bool:
         return origin == self._remote_origin
