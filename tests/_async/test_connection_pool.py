@@ -572,6 +572,68 @@ async def test_connection_pool_timeout():
 
 
 @pytest.mark.anyio
+async def test_connection_pool_timeout_zero():
+    """
+    A pool timeout of 0 shouldn't raise a PoolTimeout if there's
+    no need to wait on a new connection.
+    """
+    network_backend = AsyncMockBackend(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
+
+    # Use a pool timeout of zero.
+    extensions = {"timeout": {"pool": 0}}
+
+    # A connection pool configured to allow only one connection at a time.
+    async with AsyncConnectionPool(
+        network_backend=network_backend, max_connections=1
+    ) as pool:
+        # Two consecutive requests with a pool timeout of zero.
+        # Both succeed without raising a timeout.
+        response = await pool.request(
+            "GET", "https://example.com/", extensions=extensions
+        )
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+
+        response = await pool.request(
+            "GET", "https://example.com/", extensions=extensions
+        )
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+
+    # A connection pool configured to allow only one connection at a time.
+    async with AsyncConnectionPool(
+        network_backend=network_backend, max_connections=1
+    ) as pool:
+        # Two concurrent requests with a pool timeout of zero.
+        # Only the first will succeed without raising a timeout.
+        async with pool.stream(
+            "GET", "https://example.com/", extensions=extensions
+        ) as response:
+            # The first response hasn't yet completed.
+            with pytest.raises(PoolTimeout):
+                # So a pool timeout occurs.
+                await pool.request("GET", "https://example.com/", extensions=extensions)
+            # The first response now completes.
+            await response.aread()
+
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+
+
+@pytest.mark.anyio
 async def test_http11_upgrade_connection():
     """
     HTTP "101 Switching Protocols" indicates an upgraded connection.

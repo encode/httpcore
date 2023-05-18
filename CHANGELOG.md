@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Improve correctness of tracebacks on network exceptions, by raising properly chained exceptions. (#678)
 - Prevent connection-hanging behaviour when HTTP/2 connections are closed by a server-sent 'GoAway' frame. (#679)
 - Fix edge-case exception when removing requests from the connection pool. (#680)
+- Fix pool timeout edge-case. (#688)
 
 ## 0.17.0 (March 16th, 2023)
 
