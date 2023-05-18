@@ -1,4 +1,5 @@
 import itertools
+import logging
 import ssl
 from types import TracebackType
 from typing import Iterator, Optional, Type
@@ -14,6 +15,9 @@ from .http11 import AsyncHTTP11Connection
 from .interfaces import AsyncConnectionInterface
 
 RETRIES_BACKOFF_FACTOR = 0.5  # 0s, 0.5s, 1s, 2s, 4s, etc.
+
+
+logger = logging.getLogger("httpcore.connection")
 
 
 def exponential_backoff(factor: float) -> Iterator[float]:
@@ -105,9 +109,7 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                         "local_address": self._local_address,
                         "timeout": timeout,
                     }
-                    async with Trace(
-                        "connection.connect_tcp", request, kwargs
-                    ) as trace:
+                    async with Trace("connect_tcp", logger, request, kwargs) as trace:
                         stream = await self._network_backend.connect_tcp(**kwargs)
                         trace.return_value = stream
                 else:
@@ -116,7 +118,7 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                         "timeout": timeout,
                     }
                     async with Trace(
-                        "connection.connect_unix_socket", request, kwargs
+                        "connect_unix_socket", logger, request, kwargs
                     ) as trace:
                         stream = await self._network_backend.connect_unix_socket(
                             **kwargs
@@ -137,7 +139,7 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                         "server_hostname": self._origin.host.decode("ascii"),
                         "timeout": timeout,
                     }
-                    async with Trace("connection.start_tls", request, kwargs) as trace:
+                    async with Trace("start_tls", logger, request, kwargs) as trace:
                         stream = await stream.start_tls(**kwargs)
                         trace.return_value = stream
                 return stream
@@ -146,15 +148,15 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                     raise
                 retries_left -= 1
                 delay = next(delays)
-                # TRACE 'retry'
-                await self._network_backend.sleep(delay)
+                async with Trace("retry", logger, request, kwargs) as trace:
+                    await self._network_backend.sleep(delay)
 
     def can_handle_request(self, origin: Origin) -> bool:
         return origin == self._origin
 
     async def aclose(self) -> None:
         if self._connection is not None:
-            async with Trace("connection.close", None, {}):
+            async with Trace("close", logger, None, {}):
                 await self._connection.aclose()
 
     def is_available(self) -> bool:

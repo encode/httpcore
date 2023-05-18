@@ -184,48 +184,48 @@ async def test_debug_request(caplog):
 
     assert caplog.record_tuples == [
         (
-            "httpcore",
+            "httpcore.connection",
             logging.DEBUG,
-            "connection.connect_tcp.started host='example.com' port=80 local_address=None timeout=None",
+            "connect_tcp.started host='example.com' port=80 local_address=None timeout=None",
         ),
         (
-            "httpcore",
+            "httpcore.connection",
             logging.DEBUG,
-            "connection.connect_tcp.complete return_value=<httpcore.AsyncMockStream>",
+            "connect_tcp.complete return_value=<httpcore.AsyncMockStream>",
         ),
         (
-            "httpcore",
+            "httpcore.http11",
             logging.DEBUG,
-            "http11.send_request_headers.started request=<Request [b'GET']>",
+            "send_request_headers.started request=<Request [b'GET']>",
         ),
-        ("httpcore", logging.DEBUG, "http11.send_request_headers.complete"),
+        ("httpcore.http11", logging.DEBUG, "send_request_headers.complete"),
         (
-            "httpcore",
+            "httpcore.http11",
             logging.DEBUG,
-            "http11.send_request_body.started request=<Request [b'GET']>",
+            "send_request_body.started request=<Request [b'GET']>",
         ),
-        ("httpcore", logging.DEBUG, "http11.send_request_body.complete"),
+        ("httpcore.http11", logging.DEBUG, "send_request_body.complete"),
         (
-            "httpcore",
+            "httpcore.http11",
             logging.DEBUG,
-            "http11.receive_response_headers.started request=<Request [b'GET']>",
+            "receive_response_headers.started request=<Request [b'GET']>",
         ),
         (
-            "httpcore",
+            "httpcore.http11",
             logging.DEBUG,
-            "http11.receive_response_headers.complete return_value="
+            "receive_response_headers.complete return_value="
             "(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'plain/text'), (b'Content-Length', b'13')])",
         ),
         (
-            "httpcore",
+            "httpcore.http11",
             logging.DEBUG,
-            "http11.receive_response_body.started request=<Request [b'GET']>",
+            "receive_response_body.started request=<Request [b'GET']>",
         ),
-        ("httpcore", logging.DEBUG, "http11.receive_response_body.complete"),
-        ("httpcore", logging.DEBUG, "http11.response_closed.started"),
-        ("httpcore", logging.DEBUG, "http11.response_closed.complete"),
-        ("httpcore", logging.DEBUG, "connection.close.started"),
-        ("httpcore", logging.DEBUG, "connection.close.complete"),
+        ("httpcore.http11", logging.DEBUG, "receive_response_body.complete"),
+        ("httpcore.http11", logging.DEBUG, "response_closed.started"),
+        ("httpcore.http11", logging.DEBUG, "response_closed.complete"),
+        ("httpcore.connection", logging.DEBUG, "close.started"),
+        ("httpcore.connection", logging.DEBUG, "close.complete"),
     ]
 
 
