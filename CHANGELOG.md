@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## development
+
+- Resolve race condition during import of `anyio` package. (#692)
+
 ## 0.17.1 (May 17th, 2023)
 
 - If 'retries' is set, then allow retries if an SSL handshake error occurs. (#669)
