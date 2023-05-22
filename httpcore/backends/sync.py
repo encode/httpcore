@@ -102,6 +102,7 @@ class SyncBackend(NetworkBackend):
             )
             for option in socket_options:
                 sock.setsockopt(*option)  # pragma: no cover
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         return SyncStream(sock)
 
     def connect_unix_socket(

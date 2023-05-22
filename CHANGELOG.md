@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Improve logging with per-module logger names. (#690)
 - Resolve race condition during import of `anyio` package. (#692)
 - Add `socket_options` argument to `ConnectionPool` and `HTTProxy` classes classes. (#668)
+- Enable TCP_NODELAY for all synchronous sockets. (#651)
 
 ## 0.17.1 (May 17th, 2023)
 
