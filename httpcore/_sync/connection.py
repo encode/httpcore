@@ -137,7 +137,8 @@ class HTTPConnection(ConnectionInterface):
 
                     kwargs = {
                         "ssl_context": ssl_context,
-                	"server_hostname": sni_hostname or self._origin.host.decode("ascii"),
+                        "server_hostname": sni_hostname
+                        or self._origin.host.decode("ascii"),
                         "timeout": timeout,
                     }
                     with Trace("start_tls", logger, request, kwargs) as trace:
