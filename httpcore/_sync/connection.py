@@ -55,7 +55,7 @@ class HTTPConnection(ConnectionInterface):
         self._connection: Optional[ConnectionInterface] = None
         self._connect_failed: bool = False
         self._request_lock = Lock()
-        self._socket_options = () if socket_options is None else socket_options
+        self._socket_options = socket_options
 
     def handle_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):

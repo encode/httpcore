@@ -187,7 +187,7 @@ async def test_debug_request(caplog):
         (
             "httpcore.connection",
             logging.DEBUG,
-            "connect_tcp.started host='example.com' port=80 local_address=None timeout=None socket_options=()",
+            "connect_tcp.started host='example.com' port=80 local_address=None timeout=None socket_options=None",
         ),
         (
             "httpcore.connection",

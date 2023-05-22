@@ -110,7 +110,7 @@ class ConnectionPool(RequestInterface):
         self._network_backend = (
             SyncBackend() if network_backend is None else network_backend
         )
-        self._socket_options = () if socket_options is None else socket_options
+        self._socket_options = socket_options
 
     def create_connection(self, origin: Origin) -> ConnectionInterface:
         return HTTPConnection(

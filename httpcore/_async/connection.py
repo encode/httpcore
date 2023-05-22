@@ -55,7 +55,7 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
         self._connection: Optional[AsyncConnectionInterface] = None
         self._connect_failed: bool = False
         self._request_lock = AsyncLock()
-        self._socket_options = () if socket_options is None else socket_options
+        self._socket_options = socket_options
 
     async def handle_async_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
