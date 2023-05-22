@@ -94,6 +94,7 @@ class SyncBackend(NetworkBackend):
             sock = socket.create_connection(
                 address, timeout, source_address=source_address
             )
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         return SyncStream(sock)
 
     def connect_unix_socket(
