@@ -1,4 +1,5 @@
 import enum
+import logging
 import time
 from types import TracebackType
 from typing import (
@@ -25,6 +26,9 @@ from .._synchronization import AsyncLock
 from .._trace import Trace
 from ..backends.base import AsyncNetworkStream
 from .interfaces import AsyncConnectionInterface
+
+logger = logging.getLogger("httpcore.http11")
+
 
 # A subset of `h11.Event` types supported by `_send_event`
 H11SendEvent = Union[
@@ -80,12 +84,12 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
 
         try:
             kwargs = {"request": request}
-            async with Trace("http11.send_request_headers", request, kwargs) as trace:
+            async with Trace("send_request_headers", logger, request, kwargs) as trace:
                 await self._send_request_headers(**kwargs)
-            async with Trace("http11.send_request_body", request, kwargs) as trace:
+            async with Trace("send_request_body", logger, request, kwargs) as trace:
                 await self._send_request_body(**kwargs)
             async with Trace(
-                "http11.receive_response_headers", request, kwargs
+                "receive_response_headers", logger, request, kwargs
             ) as trace:
                 (
                     http_version,
@@ -111,7 +115,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
                 },
             )
         except BaseException as exc:
-            async with Trace("http11.response_closed", request) as trace:
+            async with Trace("response_closed", logger, request) as trace:
                 await self._response_closed()
             raise exc
 
@@ -308,7 +312,7 @@ class HTTP11ConnectionByteStream:
     async def __aiter__(self) -> AsyncIterator[bytes]:
         kwargs = {"request": self._request}
         try:
-            async with Trace("http11.receive_response_body", self._request, kwargs):
+            async with Trace("receive_response_body", logger, self._request, kwargs):
                 async for chunk in self._connection._receive_response_body(**kwargs):
                     yield chunk
         except BaseException as exc:
@@ -321,5 +325,5 @@ class HTTP11ConnectionByteStream:
     async def aclose(self) -> None:
         if not self._closed:
             self._closed = True
-            async with Trace("http11.response_closed", self._request):
+            async with Trace("response_closed", logger, self._request):
                 await self._connection._response_closed()

@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## development
+
+- Improve logging with per-module logger names. (#690)
+- Resolve race condition during import of `anyio` package. (#692)
+
+## 0.17.1 (May 17th, 2023)
+
+- If 'retries' is set, then allow retries if an SSL handshake error occurs. (#669)
+- Improve correctness of tracebacks on network exceptions, by raising properly chained exceptions. (#678)
+- Prevent connection-hanging behaviour when HTTP/2 connections are closed by a server-sent 'GoAway' frame. (#679)
+- Fix edge-case exception when removing requests from the connection pool. (#680)
+- Fix pool timeout edge-case. (#688)
+
 ## 0.17.0 (March 16th, 2023)
 
 - Add DEBUG level logging. (#648)

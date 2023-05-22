@@ -185,49 +185,48 @@ async def test_debug_request(caplog):
 
     assert caplog.record_tuples == [
         (
-            "httpcore",
+            "httpcore.connection",
             logging.DEBUG,
-            "connection.connect_tcp.started host='example.com' "
-            "port=80 local_address=None timeout=None socket_options=()",
+            "connect_tcp.started host='example.com' port=80 local_address=None timeout=None socket_options=()",
         ),
         (
-            "httpcore",
+            "httpcore.connection",
             logging.DEBUG,
-            "connection.connect_tcp.complete return_value=<httpcore.AsyncMockStream>",
+            "connect_tcp.complete return_value=<httpcore.AsyncMockStream>",
         ),
         (
-            "httpcore",
+            "httpcore.http11",
             logging.DEBUG,
-            "http11.send_request_headers.started request=<Request [b'GET']>",
+            "send_request_headers.started request=<Request [b'GET']>",
         ),
-        ("httpcore", logging.DEBUG, "http11.send_request_headers.complete"),
+        ("httpcore.http11", logging.DEBUG, "send_request_headers.complete"),
         (
-            "httpcore",
+            "httpcore.http11",
             logging.DEBUG,
-            "http11.send_request_body.started request=<Request [b'GET']>",
+            "send_request_body.started request=<Request [b'GET']>",
         ),
-        ("httpcore", logging.DEBUG, "http11.send_request_body.complete"),
+        ("httpcore.http11", logging.DEBUG, "send_request_body.complete"),
         (
-            "httpcore",
+            "httpcore.http11",
             logging.DEBUG,
-            "http11.receive_response_headers.started request=<Request [b'GET']>",
+            "receive_response_headers.started request=<Request [b'GET']>",
         ),
         (
-            "httpcore",
+            "httpcore.http11",
             logging.DEBUG,
-            "http11.receive_response_headers.complete return_value="
+            "receive_response_headers.complete return_value="
             "(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'plain/text'), (b'Content-Length', b'13')])",
         ),
         (
-            "httpcore",
+            "httpcore.http11",
             logging.DEBUG,
-            "http11.receive_response_body.started request=<Request [b'GET']>",
+            "receive_response_body.started request=<Request [b'GET']>",
         ),
-        ("httpcore", logging.DEBUG, "http11.receive_response_body.complete"),
-        ("httpcore", logging.DEBUG, "http11.response_closed.started"),
-        ("httpcore", logging.DEBUG, "http11.response_closed.complete"),
-        ("httpcore", logging.DEBUG, "connection.close.started"),
-        ("httpcore", logging.DEBUG, "connection.close.complete"),
+        ("httpcore.http11", logging.DEBUG, "receive_response_body.complete"),
+        ("httpcore.http11", logging.DEBUG, "response_closed.started"),
+        ("httpcore.http11", logging.DEBUG, "response_closed.complete"),
+        ("httpcore.connection", logging.DEBUG, "close.started"),
+        ("httpcore.connection", logging.DEBUG, "close.complete"),
     ]
 
 
@@ -572,6 +571,68 @@ async def test_connection_pool_timeout():
             with pytest.raises(PoolTimeout):
                 extensions = {"timeout": {"pool": 0.0001}}
                 await pool.request("GET", "https://example.com/", extensions=extensions)
+
+
+@pytest.mark.anyio
+async def test_connection_pool_timeout_zero():
+    """
+    A pool timeout of 0 shouldn't raise a PoolTimeout if there's
+    no need to wait on a new connection.
+    """
+    network_backend = AsyncMockBackend(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
+
+    # Use a pool timeout of zero.
+    extensions = {"timeout": {"pool": 0}}
+
+    # A connection pool configured to allow only one connection at a time.
+    async with AsyncConnectionPool(
+        network_backend=network_backend, max_connections=1
+    ) as pool:
+        # Two consecutive requests with a pool timeout of zero.
+        # Both succeed without raising a timeout.
+        response = await pool.request(
+            "GET", "https://example.com/", extensions=extensions
+        )
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+
+        response = await pool.request(
+            "GET", "https://example.com/", extensions=extensions
+        )
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+
+    # A connection pool configured to allow only one connection at a time.
+    async with AsyncConnectionPool(
+        network_backend=network_backend, max_connections=1
+    ) as pool:
+        # Two concurrent requests with a pool timeout of zero.
+        # Only the first will succeed without raising a timeout.
+        async with pool.stream(
+            "GET", "https://example.com/", extensions=extensions
+        ) as response:
+            # The first response hasn't yet completed.
+            with pytest.raises(PoolTimeout):
+                # So a pool timeout occurs.
+                await pool.request("GET", "https://example.com/", extensions=extensions)
+            # The first response now completes.
+            await response.aread()
+
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
 
 
 @pytest.mark.anyio

@@ -8,8 +8,16 @@ from ._exceptions import ExceptionMapping, PoolTimeout, map_exceptions
 
 # Our async synchronization primatives use either 'anyio' or 'trio' depending
 # on if they're running under asyncio or trio.
-#
-# We take care to only lazily import whichever of these two we need.
+
+try:
+    import trio
+except ImportError:  # pragma: nocover
+    trio = None  # type: ignore
+
+try:
+    import anyio
+except ImportError:  # pragma: nocover
+    anyio = None  # type: ignore
 
 
 class AsyncLock:
@@ -23,12 +31,16 @@ class AsyncLock:
         """
         self._backend = sniffio.current_async_library()
         if self._backend == "trio":
-            import trio
-
+            if trio is None:  # pragma: nocover
+                raise RuntimeError(
+                    "Running under trio, requires the 'trio' package to be installed."
+                )
             self._trio_lock = trio.Lock()
         else:
-            import anyio
-
+            if anyio is None:  # pragma: nocover
+                raise RuntimeError(
+                    "Running under asyncio requires the 'anyio' package to be installed."
+                )
             self._anyio_lock = anyio.Lock()
 
     async def __aenter__(self) -> "AsyncLock":
@@ -65,12 +77,16 @@ class AsyncEvent:
         """
         self._backend = sniffio.current_async_library()
         if self._backend == "trio":
-            import trio
-
+            if trio is None:  # pragma: nocover
+                raise RuntimeError(
+                    "Running under trio requires the 'trio' package to be installed."
+                )
             self._trio_event = trio.Event()
         else:
-            import anyio
-
+            if anyio is None:  # pragma: nocover
+                raise RuntimeError(
+                    "Running under asyncio requires the 'anyio' package to be installed."
+                )
             self._anyio_event = anyio.Event()
 
     def set(self) -> None:
@@ -87,7 +103,10 @@ class AsyncEvent:
             self.setup()
 
         if self._backend == "trio":
-            import trio
+            if trio is None:  # pragma: nocover
+                raise RuntimeError(
+                    "Running under trio requires the 'trio' package to be installed."
+                )
 
             trio_exc_map: ExceptionMapping = {trio.TooSlowError: PoolTimeout}
             timeout_or_inf = float("inf") if timeout is None else timeout
@@ -95,7 +114,10 @@ class AsyncEvent:
                 with trio.fail_after(timeout_or_inf):
                     await self._trio_event.wait()
         else:
-            import anyio
+            if anyio is None:  # pragma: nocover
+                raise RuntimeError(
+                    "Running under asyncio requires the 'anyio' package to be installed."
+                )
 
             anyio_exc_map: ExceptionMapping = {TimeoutError: PoolTimeout}
             with map_exceptions(anyio_exc_map):
@@ -115,13 +137,19 @@ class AsyncSemaphore:
         """
         self._backend = sniffio.current_async_library()
         if self._backend == "trio":
-            import trio
+            if trio is None:  # pragma: nocover
+                raise RuntimeError(
+                    "Running under trio requires the 'trio' package to be installed."
+                )
 
             self._trio_semaphore = trio.Semaphore(
                 initial_value=self._bound, max_value=self._bound
             )
         else:
-            import anyio
+            if anyio is None:  # pragma: nocover
+                raise RuntimeError(
+                    "Running under asyncio requires the 'anyio' package to be installed."
+                )
 
             self._anyio_semaphore = anyio.Semaphore(
                 initial_value=self._bound, max_value=self._bound

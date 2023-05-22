@@ -1,4 +1,5 @@
 import itertools
+import logging
 import ssl
 from types import TracebackType
 from typing import Iterable, Iterator, Optional, Type
@@ -14,6 +15,9 @@ from .http11 import HTTP11Connection
 from .interfaces import ConnectionInterface
 
 RETRIES_BACKOFF_FACTOR = 0.5  # 0s, 0.5s, 1s, 2s, 4s, etc.
+
+
+logger = logging.getLogger("httpcore.connection")
 
 
 def exponential_backoff(factor: float) -> Iterator[float]:
@@ -108,9 +112,7 @@ class HTTPConnection(ConnectionInterface):
                         "timeout": timeout,
                         "socket_options": self._socket_options,
                     }
-                    with Trace(
-                        "connection.connect_tcp", request, kwargs
-                    ) as trace:
+                    with Trace("connect_tcp", logger, request, kwargs) as trace:
                         stream = self._network_backend.connect_tcp(**kwargs)
                         trace.return_value = stream
                 else:
@@ -120,7 +122,7 @@ class HTTPConnection(ConnectionInterface):
                         "socket_options": self._socket_options,
                     }
                     with Trace(
-                        "connection.connect_unix_socket", request, kwargs
+                        "connect_unix_socket", logger, request, kwargs
                     ) as trace:
                         stream = self._network_backend.connect_unix_socket(
                             **kwargs
@@ -141,7 +143,7 @@ class HTTPConnection(ConnectionInterface):
                         "server_hostname": self._origin.host.decode("ascii"),
                         "timeout": timeout,
                     }
-                    with Trace("connection.start_tls", request, kwargs) as trace:
+                    with Trace("start_tls", logger, request, kwargs) as trace:
                         stream = stream.start_tls(**kwargs)
                         trace.return_value = stream
                 return stream
@@ -150,15 +152,15 @@ class HTTPConnection(ConnectionInterface):
                     raise
                 retries_left -= 1
                 delay = next(delays)
-                # TRACE 'retry'
-                self._network_backend.sleep(delay)
+                with Trace("retry", logger, request, kwargs) as trace:
+                    self._network_backend.sleep(delay)
 
     def can_handle_request(self, origin: Origin) -> bool:
         return origin == self._origin
 
     def close(self) -> None:
         if self._connection is not None:
-            with Trace("connection.close", None, {}):
+            with Trace("close", logger, None, {}):
                 self._connection.close()
 
     def is_available(self) -> bool:

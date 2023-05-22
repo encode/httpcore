@@ -1,3 +1,4 @@
+import logging
 import ssl
 from base64 import b64encode
 from typing import Iterable, List, Mapping, Optional, Sequence, Tuple, Union
@@ -23,6 +24,9 @@ from .interfaces import AsyncConnectionInterface
 
 HeadersAsSequence = Sequence[Tuple[Union[bytes, str], Union[bytes, str]]]
 HeadersAsMapping = Mapping[Union[bytes, str], Union[bytes, str]]
+
+
+logger = logging.getLogger("httpcore.proxy")
 
 
 def merge_headers(
@@ -291,7 +295,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
                     "server_hostname": self._remote_origin.host.decode("ascii"),
                     "timeout": timeout,
                 }
-                async with Trace("connection.start_tls", request, kwargs) as trace:
+                async with Trace("start_tls", logger, request, kwargs) as trace:
                     stream = await stream.start_tls(**kwargs)
                     trace.return_value = stream
 
