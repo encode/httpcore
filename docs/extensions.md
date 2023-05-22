@@ -147,7 +147,7 @@ The following event types are currently exposed...
 * `"http2.receive_response_body"`
 * `"http2.response_closed"`
 
-### `"sin_hostname"`
+### `"sni_hostname"`
 
 The server's hostname, which is used to confirm the hostname supplied by the SSL certificate.
 
