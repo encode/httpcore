@@ -1,4 +1,5 @@
 import enum
+import logging
 import time
 import types
 import typing
@@ -19,6 +20,8 @@ from .._synchronization import Lock, Semaphore
 from .._trace import Trace
 from ..backends.base import NetworkStream
 from .interfaces import ConnectionInterface
+
+logger = logging.getLogger("httpcore.http2")
 
 
 def has_body_headers(request: Request) -> bool:
@@ -85,7 +88,7 @@ class HTTP2Connection(ConnectionInterface):
         with self._init_lock:
             if not self._sent_connection_init:
                 kwargs = {"request": request}
-                with Trace("http2.send_connection_init", request, kwargs):
+                with Trace("send_connection_init", logger, request, kwargs):
                     self._send_connection_init(**kwargs)
                 self._sent_connection_init = True
 
@@ -112,12 +115,12 @@ class HTTP2Connection(ConnectionInterface):
 
         try:
             kwargs = {"request": request, "stream_id": stream_id}
-            with Trace("http2.send_request_headers", request, kwargs):
+            with Trace("send_request_headers", logger, request, kwargs):
                 self._send_request_headers(request=request, stream_id=stream_id)
-            with Trace("http2.send_request_body", request, kwargs):
+            with Trace("send_request_body", logger, request, kwargs):
                 self._send_request_body(request=request, stream_id=stream_id)
             with Trace(
-                "http2.receive_response_headers", request, kwargs
+                "receive_response_headers", logger, request, kwargs
             ) as trace:
                 status, headers = self._receive_response(
                     request=request, stream_id=stream_id
@@ -132,7 +135,7 @@ class HTTP2Connection(ConnectionInterface):
             )
         except Exception as exc:  # noqa: PIE786
             kwargs = {"stream_id": stream_id}
-            with Trace("http2.response_closed", request, kwargs):
+            with Trace("response_closed", logger, request, kwargs):
                 self._response_closed(stream_id=stream_id)
 
             if isinstance(exc, h2.exceptions.ProtocolError):
@@ -292,7 +295,7 @@ class HTTP2Connection(ConnectionInterface):
                 for event in events:
                     if isinstance(event, h2.events.RemoteSettingsChanged):
                         with Trace(
-                            "http2.receive_remote_settings", request
+                            "receive_remote_settings", logger, request
                         ) as trace:
                             self._receive_remote_settings_change(event)
                             trace.return_value = event
@@ -433,6 +436,10 @@ class HTTP2Connection(ConnectionInterface):
             self._state != HTTPConnectionState.CLOSED
             and not self._connection_error
             and not self._used_all_stream_ids
+            and not (
+                self._h2_state.state_machine.state
+                == h2.connection.ConnectionState.CLOSED
+            )
         )
 
     def has_expired(self) -> bool:
@@ -487,7 +494,7 @@ class HTTP2ConnectionByteStream:
     def __iter__(self) -> typing.Iterator[bytes]:
         kwargs = {"request": self._request, "stream_id": self._stream_id}
         try:
-            with Trace("http2.receive_response_body", self._request, kwargs):
+            with Trace("receive_response_body", logger, self._request, kwargs):
                 for chunk in self._connection._receive_response_body(
                     request=self._request, stream_id=self._stream_id
                 ):
@@ -503,5 +510,5 @@ class HTTP2ConnectionByteStream:
         if not self._closed:
             self._closed = True
             kwargs = {"stream_id": self._stream_id}
-            with Trace("http2.response_closed", self._request, kwargs):
+            with Trace("response_closed", logger, self._request, kwargs):
                 self._connection._response_closed(stream_id=self._stream_id)

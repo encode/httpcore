@@ -31,7 +31,8 @@ class RequestStatus:
     def wait_for_connection(
         self, timeout: Optional[float] = None
     ) -> ConnectionInterface:
-        self._connection_acquired.wait(timeout=timeout)
+        if self.connection is None:
+            self._connection_acquired.wait(timeout=timeout)
         assert self.connection is not None
         return self.connection
 
@@ -230,7 +231,9 @@ class ConnectionPool(RequestInterface):
                 # sure to remove the request from the queue before bubbling
                 # up the exception.
                 with self._pool_lock:
-                    self._requests.remove(status)
+                    # Ensure only remove when task exists.
+                    if status in self._requests:
+                        self._requests.remove(status)
                     raise exc
 
             try:
