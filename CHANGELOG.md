@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## development
+## 0.17.2 (May 23th, 2023)
 
 - Improve logging with per-module logger names. (#690)
 - Resolve race condition during import of `anyio` package. (#692)
