@@ -116,6 +116,7 @@ class AsyncIOBackend(AsyncNetworkBackend):
                     remote_port=port,
                     local_host=local_address,
                 )
+                # By default TCP sockets opened in `asyncio` include TCP_NODELAY.
                 for option in socket_options:
                     stream._raw_socket.setsockopt(*option)  # type: ignore[attr-defined] # pragma: no cover
         return AsyncIOStream(stream)
