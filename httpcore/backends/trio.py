@@ -117,6 +117,8 @@ class TrioBackend(AsyncNetworkBackend):
         local_address: typing.Optional[str] = None,
         socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:
+        # By default for TCP sockets, trio enables TCP_NODELAY.
+        # https://trio.readthedocs.io/en/stable/reference-io.html#trio.SocketStream
         if socket_options is None:
             socket_options = []  # pragma: no cover
         timeout_or_inf = float("inf") if timeout is None else timeout
