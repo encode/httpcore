@@ -1,4 +1,5 @@
 import logging
+import typing
 from typing import List, Optional
 
 import pytest
@@ -11,7 +12,7 @@ from httpcore import (
     ReadError,
     UnsupportedProtocol,
 )
-from httpcore.backends.base import NetworkStream
+from httpcore.backends.base import SOCKET_OPTION, NetworkStream
 from httpcore.backends.mock import MockBackend
 
 
@@ -186,7 +187,7 @@ def test_debug_request(caplog):
         (
             "httpcore.connection",
             logging.DEBUG,
-            "connect_tcp.started host='example.com' port=80 local_address=None timeout=None",
+            "connect_tcp.started host='example.com' port=80 local_address=None timeout=None socket_options=None",
         ),
         (
             "httpcore.connection",
@@ -282,6 +283,7 @@ def test_connection_pool_with_connect_exception():
             port: int,
             timeout: Optional[float] = None,
             local_address: Optional[str] = None,
+            socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
         ) -> NetworkStream:
             raise ConnectError("Could not connect")
 

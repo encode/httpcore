@@ -2,7 +2,7 @@ import itertools
 import logging
 import ssl
 from types import TracebackType
-from typing import Iterator, Optional, Type
+from typing import Iterable, Iterator, Optional, Type
 
 from .._exceptions import ConnectError, ConnectionNotAvailable, ConnectTimeout
 from .._models import Origin, Request, Response
@@ -10,7 +10,7 @@ from .._ssl import default_ssl_context
 from .._synchronization import AsyncLock
 from .._trace import Trace
 from ..backends.auto import AutoBackend
-from ..backends.base import AsyncNetworkBackend, AsyncNetworkStream
+from ..backends.base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
 from .http11 import AsyncHTTP11Connection
 from .interfaces import AsyncConnectionInterface
 
@@ -38,6 +38,7 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
         local_address: Optional[str] = None,
         uds: Optional[str] = None,
         network_backend: Optional[AsyncNetworkBackend] = None,
+        socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
     ) -> None:
         self._origin = origin
         self._ssl_context = ssl_context
@@ -54,6 +55,7 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
         self._connection: Optional[AsyncConnectionInterface] = None
         self._connect_failed: bool = False
         self._request_lock = AsyncLock()
+        self._socket_options = socket_options
 
     async def handle_async_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
@@ -109,6 +111,7 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                         "port": self._origin.port,
                         "local_address": self._local_address,
                         "timeout": timeout,
+                        "socket_options": self._socket_options,
                     }
                     async with Trace("connect_tcp", logger, request, kwargs) as trace:
                         stream = await self._network_backend.connect_tcp(**kwargs)
@@ -117,6 +120,7 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                     kwargs = {
                         "path": self._uds,
                         "timeout": timeout,
+                        "socket_options": self._socket_options,
                     }
                     async with Trace(
                         "connect_unix_socket", logger, request, kwargs

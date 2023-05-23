@@ -1,4 +1,5 @@
 import ssl
+import typing
 from typing import Optional
 
 import hpack
@@ -6,7 +7,7 @@ import hyperframe.frame
 import pytest
 
 from httpcore import AsyncHTTPProxy, Origin, ProxyError
-from httpcore.backends.base import AsyncNetworkStream
+from httpcore.backends.base import SOCKET_OPTION, AsyncNetworkStream
 from httpcore.backends.mock import AsyncMockBackend, AsyncMockStream
 
 
@@ -140,6 +141,7 @@ class HTTP1ThenHTTP2Backend(AsyncMockBackend):
         port: int,
         timeout: Optional[float] = None,
         local_address: Optional[str] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:
         return HTTP1ThenHTTP2Stream(list(self._buffer))
 

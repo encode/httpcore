@@ -14,7 +14,7 @@ from .._exceptions import (
     map_exceptions,
 )
 from .._utils import is_socket_readable
-from .base import NetworkBackend, NetworkStream
+from .base import SOCKET_OPTION, NetworkBackend, NetworkStream
 
 
 class SyncStream(NetworkStream):
@@ -83,27 +83,42 @@ class SyncBackend(NetworkBackend):
         port: int,
         timeout: typing.Optional[float] = None,
         local_address: typing.Optional[str] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> NetworkStream:
+        # Note that we automatically include `TCP_NODELAY`
+        # in addition to any other custom socket options.
+        if socket_options is None:
+            socket_options = []  # pragma: no cover
         address = (host, port)
         source_address = None if local_address is None else (local_address, 0)
         exc_map: ExceptionMapping = {
             socket.timeout: ConnectTimeout,
             OSError: ConnectError,
         }
+
         with map_exceptions(exc_map):
             sock = socket.create_connection(
-                address, timeout, source_address=source_address
+                address,
+                timeout,
+                source_address=source_address,
             )
+            for option in socket_options:
+                sock.setsockopt(*option)  # pragma: no cover
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         return SyncStream(sock)
 
     def connect_unix_socket(
-        self, path: str, timeout: typing.Optional[float] = None
+        self,
+        path: str,
+        timeout: typing.Optional[float] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> NetworkStream:  # pragma: nocover
         if sys.platform == "win32":
             raise RuntimeError(
                 "Attempted to connect to a UNIX socket on a Windows system."
             )
+        if socket_options is None:
+            socket_options = []
 
         exc_map: ExceptionMapping = {
             socket.timeout: ConnectTimeout,
@@ -111,6 +126,8 @@ class SyncBackend(NetworkBackend):
         }
         with map_exceptions(exc_map):
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            for option in socket_options:
+                sock.setsockopt(*option)
             sock.settimeout(timeout)
             sock.connect(path)
         return SyncStream(sock)
