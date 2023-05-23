@@ -85,6 +85,8 @@ class SyncBackend(NetworkBackend):
         local_address: typing.Optional[str] = None,
         socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> NetworkStream:
+        # Note that we automatically include `TCP_NODELAY`
+        # in addition to any other custom socket options.
         if socket_options is None:
             socket_options = []  # pragma: no cover
         address = (host, port)
