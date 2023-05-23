@@ -95,6 +95,7 @@ class HTTPConnection(ConnectionInterface):
 
     def _connect(self, request: Request) -> NetworkStream:
         timeouts = request.extensions.get("timeout", {})
+        sni_hostname = request.extensions.get("sni_hostname", None)
         timeout = timeouts.get("connect", None)
 
         retries_left = self._retries
@@ -136,7 +137,8 @@ class HTTPConnection(ConnectionInterface):
 
                     kwargs = {
                         "ssl_context": ssl_context,
-                        "server_hostname": self._origin.host.decode("ascii"),
+                        "server_hostname": sni_hostname
+                        or self._origin.host.decode("ascii"),
                         "timeout": timeout,
                     }
                     with Trace("start_tls", logger, request, kwargs) as trace:

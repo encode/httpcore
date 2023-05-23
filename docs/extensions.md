@@ -147,6 +147,23 @@ The following event types are currently exposed...
 * `"http2.receive_response_body"`
 * `"http2.response_closed"`
 
+### `"sni_hostname"`
+
+The server's hostname, which is used to confirm the hostname supplied by the SSL certificate.
+
+For example:
+
+``` python
+headers = {"Host": "www.encode.io"}
+extensions = {"sni_hostname": "www.encode.io"}
+response = httpcore.request(
+    "GET",
+    "https://185.199.108.153",
+    headers=headers,
+    extensions=extensions
+)
+```
+
 ## Response Extensions
 
 ### `"http_version"`

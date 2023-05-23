@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Improve logging with per-module logger names. (#690)
 - Resolve race condition during import of `anyio` package. (#692)
 - Enable TCP_NODELAY for all synchronous sockets. (#651)
+- Add `sni_hostname` request extension. (#696)
 
 ## 0.17.1 (May 17th, 2023)
 

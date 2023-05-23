@@ -95,6 +95,7 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
 
     async def _connect(self, request: Request) -> AsyncNetworkStream:
         timeouts = request.extensions.get("timeout", {})
+        sni_hostname = request.extensions.get("sni_hostname", None)
         timeout = timeouts.get("connect", None)
 
         retries_left = self._retries
@@ -136,7 +137,8 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
 
                     kwargs = {
                         "ssl_context": ssl_context,
-                        "server_hostname": self._origin.host.decode("ascii"),
+                        "server_hostname": sni_hostname
+                        or self._origin.host.decode("ascii"),
                         "timeout": timeout,
                     }
                     async with Trace("start_tls", logger, request, kwargs) as trace:
