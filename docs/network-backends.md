@@ -29,6 +29,23 @@ with httpcore.ConnectionPool(network_backend=network_backend) as http:
 
 The `httpcore.NetworkBackend()` implementation handles the opening of TCP connections, and operations on the socket stream, such as reading, writing, and closing the connection.
 
+We can get a better understanding of this by using the network backend to send a basic HTTP/1.1 request directly:
+
+**TODO**
+
+```python
+network_backend = httpcore.NetworkBackend()
+network_stream = network_backend.open_tcp_connection("www.example.com")
+network_stream = network_stream.start_tls(...)
+network_stream.write(...)
+while True:
+    content = network_stream.read()
+    if not content:
+        break
+    print(content)
+network_stream.close()
+```
+
 ### Async network backends
 
 If we're working with an `async` codebase, then we need to select a different backend. Which backend we want to choose will depend on if we're running under `asyncio`, or under `trio`:
