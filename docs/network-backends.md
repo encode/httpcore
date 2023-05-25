@@ -144,7 +144,7 @@ content = [
         stream_id=1, data=b"Hello, world!", flags=["END_STREAM"]
     ).serialize(),
 ]
-# Note that we instantie the mock backend with an `http2=True` argument.
+# Note that we instantiate the mock backend with an `http2=True` argument.
 # This ensures that the mock network stream acts as if the `h2` ALPN flag has been set,
 # and causes the connection pool to interact with the connection using HTTP/2.
 network_backend = httpcore.MockNetworkBackend(content, http2=True)
