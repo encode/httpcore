@@ -37,6 +37,28 @@ from ._sync import (
     SOCKSProxy,
 )
 
+# The 'httpcore.AnyIONetworkBackend' class is conditional on 'anyio' being installed.
+try:
+    from .backends.asyncio import AnyIONetworkBackend
+except ImportError:  # pragma: nocover
+
+    class AnyIONetworkBackend:  # type: ignore
+        def __init__(self, *args, **kwargs):  # type: ignore
+            msg = "Attempted to use 'httpcore.AnyIONetworkBackend' but 'anyio' is not installed."
+            raise RuntimeError(msg)
+
+
+# The 'httpcore.TrioNetworkBackend' class is conditional on 'trio' being installed.
+try:
+    from .backends.trio import TrioNetworkBackend
+except ImportError:  # pragma: nocover
+
+    class TrioNetworkBackend:  # type: ignore
+        def __init__(self, *args, **kwargs):  # type: ignore
+            msg = "Attempted to use 'httpcore.TrioNetworkBackend' but 'trio' is not installed."
+            raise RuntimeError(msg)
+
+
 __all__ = [
     # top-level requests
     "request",
@@ -62,6 +84,9 @@ __all__ = [
     "HTTP2Connection",
     "ConnectionInterface",
     "SOCKSProxy",
+    # network backends
+    "AnyIONetworkBackend",
+    "TrioNetworkBackend",
     # util
     "default_ssl_context",
     # exceptions

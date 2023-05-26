@@ -16,7 +16,7 @@ from .._exceptions import (
 from .base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
 
 
-class TrioStream(AsyncNetworkStream):
+class TrioNetworkStream(AsyncNetworkStream):
     def __init__(self, stream: trio.abc.Stream) -> None:
         self._stream = stream
 
@@ -78,7 +78,7 @@ class TrioStream(AsyncNetworkStream):
             except Exception as exc:  # pragma: nocover
                 await self.aclose()
                 raise exc
-        return TrioStream(ssl_stream)
+        return TrioNetworkStream(ssl_stream)
 
     def get_extra_info(self, info: str) -> typing.Any:
         if info == "ssl_object" and isinstance(self._stream, trio.SSLStream):
@@ -108,7 +108,7 @@ class TrioStream(AsyncNetworkStream):
         return stream
 
 
-class TrioBackend(AsyncNetworkBackend):
+class TrioNetworkBackend(AsyncNetworkBackend):
     async def connect_tcp(
         self,
         host: str,
@@ -134,7 +134,7 @@ class TrioBackend(AsyncNetworkBackend):
                 )
                 for option in socket_options:
                     stream.setsockopt(*option)  # type: ignore[attr-defined] # pragma: no cover
-        return TrioStream(stream)
+        return TrioNetworkStream(stream)
 
     async def connect_unix_socket(
         self,
@@ -155,7 +155,7 @@ class TrioBackend(AsyncNetworkBackend):
                 stream: trio.abc.Stream = await trio.open_unix_socket(path)
                 for option in socket_options:
                     stream.setsockopt(*option)  # type: ignore[attr-defined] # pragma: no cover
-        return TrioStream(stream)
+        return TrioNetworkStream(stream)
 
     async def sleep(self, seconds: float) -> None:
         await trio.sleep(seconds)  # pragma: nocover

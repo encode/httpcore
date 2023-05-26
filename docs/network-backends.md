@@ -249,7 +249,7 @@ with open("network-recording", "wb") as record_file:
 
 ### Networking Backends
 
-* `httpcore.NetworkBackend`
+* `httpcore.DefaultNetworkBackend`
 * `httpcore.AnyIONetworkBackend`
 * `httpcore.TrioNetworkBackend`
 
