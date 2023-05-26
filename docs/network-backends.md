@@ -254,6 +254,8 @@ with open("network-recording", "wb") as record_file:
         print(response)
 ```
 
+---
+
 ## Reference
 
 ### Networking Backends
