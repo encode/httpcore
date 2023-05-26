@@ -33,12 +33,9 @@ We can get a better understanding of this by using a network backend to send a b
 
 ```python
 import httpcore
-import ssl
-import certifi
 
 # Create an SSL context using 'certifi' for the certificates.
-ssl_context = ssl.create_default_context()
-ssl_context.load_verify_locations(certifi.where())
+ssl_context = httpcore.default_ssl_context()
 
 # A basic HTTP/1.1 request as a plain bytestring.
 request = b'\r\n'.join([
@@ -52,7 +49,7 @@ request = b'\r\n'.join([
 # Open a TCP stream and upgrade it to SSL.
 network_backend = httpcore.SyncBackend()
 network_stream = network_backend.connect_tcp("www.example.com", 443)
-network_stream.start_tls(ssl_context, server_hostname="www.example.com")
+network_stream = network_stream.start_tls(ssl_context, server_hostname="www.example.com")
 
 # Send the HTTP request.
 network_stream.write(request)
@@ -63,6 +60,11 @@ while True:
     if response == b'':
         break
     print(response)
+
+# Output should look something like this:
+#
+# b'HTTP/1.1 200 OK\r\nAge: 600005\r\n [...] Content-Length: 1256\r\nConnection: close\r\n\r\n'
+# b'<!doctype html>\n<html>\n<head>\n    <title>Example Domain</title> [...] </html>\n'
 ```
 
 ### Async network backends
