@@ -15,6 +15,7 @@ import httpcore
 
 with httpcore.ConnectionPool() as http:
     response = http.request('GET', 'https://www.example.com')
+    print(response)
 ```
 
 We can also have the same behavior, but be explicit with our selection of the network backend:
@@ -25,6 +26,7 @@ import httpcore
 network_backend = httpcore.SyncBackend()
 with httpcore.ConnectionPool(network_backend=network_backend) as http:
     response = http.request('GET', 'https://www.example.com')
+    print(response)
 ```
 
 The `httpcore.SyncBackend()` implementation handles the opening of TCP connections, and operations on the socket stream, such as reading, writing, and closing the connection.
@@ -78,9 +80,10 @@ import httpcore
 import asyncio
 
 async def main():
-    network_backend = httpcore.AnyIONetworkBackend()
+    network_backend = httpcore.AnyIOBackend()
     async with httpcore.AsyncConnectionPool(network_backend=network_backend) as http:
         response = await http.request('GET', 'https://www.example.com')
+        print(response)
 
 asyncio.run(main())
 ```
@@ -94,9 +97,10 @@ import httpcore
 import trio
 
 async def main():
-    network_backend = httpcore.TrioNetworkBackend()
+    network_backend = httpcore.TrioBackend()
     async with httpcore.AsyncConnectionPool(network_backend=network_backend) as http:
         response = await http.request('GET', 'https://www.example.com')
+        print(response)
 
 trio.run(main)
 ```
@@ -212,7 +216,7 @@ class RecordingNetworkBackend(httpcore.NetworkBackend):
     """
     def __init__(self, record_file):
         self.record_file = record_file
-        self.backend = httpcore.DefaultBackend()
+        self.backend = httpcore.SyncBackend()
 
     def connect_tcp(
         self,
@@ -221,7 +225,7 @@ class RecordingNetworkBackend(httpcore.NetworkBackend):
         timeout=None,
         local_address=None,
         socket_options=None,
-    ) -> NetworkStream:
+    ):
         # Note that we're only using a single record file here,
         # so even if multiple connections are opened the network
         # traffic will all write to the same file.
@@ -247,6 +251,7 @@ with open("network-recording", "wb") as record_file:
     network_backend = RecordingNetworkBackend(record_file)
     with httpcore.ConnectionPool(network_backend=network_backend) as http:
         response = http.request("GET", "https://www.example.com/")
+        print(response)
 ```
 
 ## Reference
