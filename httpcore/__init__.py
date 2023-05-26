@@ -36,26 +36,37 @@ from ._sync import (
     HTTPProxy,
     SOCKSProxy,
 )
+from .backends.base import (
+    SOCKET_OPTION,
+    AsyncNetworkBackend,
+    AsyncNetworkStream,
+    NetworkBackend,
+    NetworkStream,
+)
+from .backends.mock import AsyncMockBackend, AsyncMockStream, MockBackend, MockStream
+from .backends.sync import SyncBackend
 
-# The 'httpcore.AnyIONetworkBackend' class is conditional on 'anyio' being installed.
+# The 'httpcore.AnyIOBackend' class is conditional on 'anyio' being installed.
 try:
-    from .backends.asyncio import AnyIONetworkBackend
+    from .backends.asyncio import AnyIOBackend
 except ImportError:  # pragma: nocover
 
-    class AnyIONetworkBackend:  # type: ignore
+    class AnyIOBackend:  # type: ignore
         def __init__(self, *args, **kwargs):  # type: ignore
-            msg = "Attempted to use 'httpcore.AnyIONetworkBackend' but 'anyio' is not installed."
+            msg = (
+                "Attempted to use 'httpcore.AnyIOBackend' but 'anyio' is not installed."
+            )
             raise RuntimeError(msg)
 
 
-# The 'httpcore.TrioNetworkBackend' class is conditional on 'trio' being installed.
+# The 'httpcore.TrioBackend' class is conditional on 'trio' being installed.
 try:
-    from .backends.trio import TrioNetworkBackend
+    from .backends.trio import TrioBackend
 except ImportError:  # pragma: nocover
 
-    class TrioNetworkBackend:  # type: ignore
+    class TrioBackend:  # type: ignore
         def __init__(self, *args, **kwargs):  # type: ignore
-            msg = "Attempted to use 'httpcore.TrioNetworkBackend' but 'trio' is not installed."
+            msg = "Attempted to use 'httpcore.TrioBackend' but 'trio' is not installed."
             raise RuntimeError(msg)
 
 
@@ -84,11 +95,23 @@ __all__ = [
     "HTTP2Connection",
     "ConnectionInterface",
     "SOCKSProxy",
-    # network backends
-    "AnyIONetworkBackend",
-    "TrioNetworkBackend",
+    # network backends, implementations
+    "SyncBackend",
+    "AnyIOBackend",
+    "TrioBackend",
+    # network backends, mock implementations
+    "AsyncMockBackend",
+    "AsyncMockStream",
+    "MockBackend",
+    "MockStream",
+    # network backends, interface
+    "AsyncNetworkStream",
+    "AsyncNetworkBackend",
+    "NetworkStream",
+    "NetworkBackend",
     # util
     "default_ssl_context",
+    "SOCKET_OPTION",
     # exceptions
     "ConnectionNotAvailable",
     "ProxyError",

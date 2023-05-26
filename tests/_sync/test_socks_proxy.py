@@ -1,7 +1,6 @@
 import pytest
 
-from httpcore import SOCKSProxy, Origin, ProxyError
-from httpcore.backends.mock import MockBackend
+from httpcore import MockBackend, SOCKSProxy, Origin, ProxyError
 
 
 

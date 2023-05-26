@@ -22,12 +22,12 @@ We can also have the same behavior, but be explicit with our selection of the ne
 ```python
 import httpcore
 
-network_backend = httpcore.NetworkBackend()
+network_backend = httpcore.SyncBackend()
 with httpcore.ConnectionPool(network_backend=network_backend) as http:
     response = http.request('GET', 'https://www.example.com')
 ```
 
-The `httpcore.NetworkBackend()` implementation handles the opening of TCP connections, and operations on the socket stream, such as reading, writing, and closing the connection.
+The `httpcore.SyncBackend()` implementation handles the opening of TCP connections, and operations on the socket stream, such as reading, writing, and closing the connection.
 
 We can get a better understanding of this by using a network backend to send a basic HTTP/1.1 request directly:
 
@@ -50,7 +50,7 @@ request = b''.join([
 ])
 
 # Open a TCP stream and upgrade it to SSL.
-network_backend = httpcore.NetworkBackend()
+network_backend = httpcore.SyncBackend()
 network_stream = network_backend.connect_tcp("www.example.com", 443)
 network_stream.start_tls(ssl_context, server_hostname="www.example.com")
 
@@ -69,7 +69,7 @@ while True:
 
 If we're working with an `async` codebase, then we need to select a different backend.
 
-The `httpcore.AnyIONetworkBackend` is suitable for usage if you're running under `asyncio`. This is a networking backend implemented using [the `anyio` package](https://anyio.readthedocs.io/en/3.x/).
+The `httpcore.AnyIOBackend` is suitable for usage if you're running under `asyncio`. This is a networking backend implemented using [the `anyio` package](https://anyio.readthedocs.io/en/3.x/).
 
 ```python
 import httpcore
@@ -83,7 +83,7 @@ async def main():
 asyncio.run(main())
 ```
 
-The `AnyIONetworkBackend` will work when running under either `asyncio` or `trio`. However, if you're working with async using the [`trio` framework](https://trio.readthedocs.io/en/stable/), then we recommend using the `httpcore.TrioNetworkBackend`.
+The `AnyIOBackend` will work when running under either `asyncio` or `trio`. However, if you're working with async using the [`trio` framework](https://trio.readthedocs.io/en/stable/), then we recommend using the `httpcore.TrioBackend`.
 
 ```python
 import httpcore
@@ -107,7 +107,7 @@ Here's an example of mocking a simple HTTP/1.1 response...
 ```python
 import httpcore
 
-network_backend = httpcore.MockNetworkBackend([
+network_backend = httpcore.MockBackend([
     b"HTTP/1.1 200 OK\r\n",
     b"Content-Type: plain/text\r\n",
     b"Content-Length: 13\r\n",
@@ -147,7 +147,7 @@ content = [
 # Note that we instantiate the mock backend with an `http2=True` argument.
 # This ensures that the mock network stream acts as if the `h2` ALPN flag has been set,
 # and causes the connection pool to interact with the connection using HTTP/2.
-network_backend = httpcore.MockNetworkBackend(content, http2=True)
+network_backend = httpcore.MockBackend(content, http2=True)
 with httpcore.ConnectionPool(network_backend=network_backend) as http:
     response = http.request("GET", "https://example.com/")
     print(response.extensions['http_version'])
@@ -171,7 +171,7 @@ Here's an example that records the network response to a file on disk:
 import httpcore
 
 
-class RecordingNetworkStream(httpcore.BaseNetworkStream):
+class RecordingNetworkStream(httpcore.NetworkStream):
     def __init__(self, record_file, stream):
         self.record_file = record_file
         self.stream = stream
@@ -202,13 +202,13 @@ class RecordingNetworkStream(httpcore.BaseNetworkStream):
         return self.stream.get_extra_info(info)
 
 
-class RecordingNetworkBackend(httpcore.BaseNetworkBackend):
+class RecordingNetworkBackend(httpcore.NetworkBackend):
     """
     A custom network backend that records network responses.
     """
     def __init__(self, record_file):
         self.record_file = record_file
-        self.backend = httpcore.NetworkBackend()
+        self.backend = httpcore.DefaultBackend()
 
     def connect_tcp(
         self,
@@ -249,20 +249,20 @@ with open("network-recording", "wb") as record_file:
 
 ### Networking Backends
 
-* `httpcore.DefaultNetworkBackend`
-* `httpcore.AnyIONetworkBackend`
-* `httpcore.TrioNetworkBackend`
+* `httpcore.SyncBackend`
+* `httpcore.AnyIOBackend`
+* `httpcore.TrioBackend`
 
 ### Mock Backends
 
-* `httpcore.MockNetworkBackend`
-* `httpcore.MockNetworkStream`
-* `httpcore.AsyncMockNetworkBackend`
-* `httpcore.AsyncMockNetworkStream`
+* `httpcore.MockBackend`
+* `httpcore.MockStream`
+* `httpcore.AsyncMockBackend`
+* `httpcore.AsyncMockStream`
 
 ### Base Interface
 
-* `httpcore.BaseNetworkBackend`
-* `httpcore.BaseNetworkStream`
-* `httpcore.AsyncBaseNetworkBackend`
-* `httpcore.AsyncBaseNetworkStream`
+* `httpcore.NetworkBackend`
+* `httpcore.NetworkStream`
+* `httpcore.AsyncNetworkBackend`
+* `httpcore.AsyncNetworkStream`

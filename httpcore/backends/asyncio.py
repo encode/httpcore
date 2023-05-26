@@ -16,7 +16,7 @@ from .._utils import is_socket_readable
 from .base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
 
 
-class AnyIONetworkStream(AsyncNetworkStream):
+class AnyIOStream(AsyncNetworkStream):
     def __init__(self, stream: anyio.abc.ByteStream) -> None:
         self._stream = stream
 
@@ -76,7 +76,7 @@ class AnyIONetworkStream(AsyncNetworkStream):
             except Exception as exc:  # pragma: nocover
                 await self.aclose()
                 raise exc
-        return AnyIONetworkStream(ssl_stream)
+        return AnyIOStream(ssl_stream)
 
     def get_extra_info(self, info: str) -> typing.Any:
         if info == "ssl_object":
@@ -93,7 +93,7 @@ class AnyIONetworkStream(AsyncNetworkStream):
         return None
 
 
-class AnyIONetworkBackend(AsyncNetworkBackend):
+class AnyIOBackend(AsyncNetworkBackend):
     async def connect_tcp(
         self,
         host: str,
@@ -119,7 +119,7 @@ class AnyIONetworkBackend(AsyncNetworkBackend):
                 # By default TCP sockets opened in `asyncio` include TCP_NODELAY.
                 for option in socket_options:
                     stream._raw_socket.setsockopt(*option)  # type: ignore[attr-defined] # pragma: no cover
-        return AnyIONetworkStream(stream)
+        return AnyIOStream(stream)
 
     async def connect_unix_socket(
         self,
@@ -139,7 +139,7 @@ class AnyIONetworkBackend(AsyncNetworkBackend):
                 stream: anyio.abc.ByteStream = await anyio.connect_unix(path)
                 for option in socket_options:
                     stream._raw_socket.setsockopt(*option)  # type: ignore[attr-defined] # pragma: no cover
-        return AnyIONetworkStream(stream)
+        return AnyIOStream(stream)
 
     async def sleep(self, seconds: float) -> None:
         await anyio.sleep(seconds)  # pragma: nocover

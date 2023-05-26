@@ -2,12 +2,12 @@ import pytest
 
 from httpcore import (
     HTTP11Connection,
+    MockStream,
     ConnectionNotAvailable,
     LocalProtocolError,
     Origin,
     RemoteProtocolError,
 )
-from httpcore.backends.mock import MockStream
 
 
 

@@ -11,13 +11,13 @@ class AutoBackend(AsyncNetworkBackend):
         if not (hasattr(self, "_backend")):
             backend = sniffio.current_async_library()
             if backend == "trio":
-                from .trio import TrioNetworkBackend
+                from .trio import TrioBackend
 
-                self._backend: AsyncNetworkBackend = TrioNetworkBackend()
+                self._backend: AsyncNetworkBackend = TrioBackend()
             else:
-                from .asyncio import AnyIONetworkBackend
+                from .asyncio import AnyIOBackend
 
-                self._backend = AnyIONetworkBackend()
+                self._backend = AnyIOBackend()
 
     async def connect_tcp(
         self,
