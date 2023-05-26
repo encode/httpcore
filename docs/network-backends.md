@@ -41,12 +41,12 @@ ssl_context = ssl.create_default_context()
 ssl_context.load_verify_locations(certifi.where())
 
 # A basic HTTP/1.1 request as a plain bytestring.
-request = b''.join([
-    b'GET / HTTP/1.1\r\n',
-    b'Host: www.example.com\r\n',
-    b'Accept: */*\r\n',
-    b'Connection: close\r\n',
-    b'\r\n'
+request = b'\r\n'.join([
+    b'GET / HTTP/1.1',
+    b'Host: www.example.com',
+    b'Accept: */*',
+    b'Connection: close',
+    b''
 ])
 
 # Open a TCP stream and upgrade it to SSL.
