@@ -182,6 +182,10 @@ HTTP/2 onwards does not include a reason phrase on the wire.
 
 When no key is included, a default based on the status code may be used.
 
+### `"stream_id"`
+
+When HTTP/2 is being used the `"stream_id"` response extension can be accessed to determine the ID of the data stream that the response was sent on.
+
 ### `"network_stream"`
 
 The `"network_stream"` extension allows developers to handle HTTP `CONNECT` and `Upgrade` requests, by providing an API that steps outside the standard request/response model, and can directly read or write to the network.
