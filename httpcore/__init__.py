@@ -48,7 +48,7 @@ from ._sync import (
 
 # The 'httpcore.AnyIOBackend' class is conditional on 'anyio' being installed.
 try:
-    from ._backends.asyncio import AnyIOBackend
+    from ._backends.anyio import AnyIOBackend
 except ImportError:  # pragma: nocover
 
     class AnyIOBackend:  # type: ignore
