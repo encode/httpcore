@@ -63,7 +63,7 @@ while True:
         break
     print(response)
 
-# Output should look something like this:
+# The output should look something like this:
 #
 # b'HTTP/1.1 200 OK\r\nAge: 600005\r\n [...] Content-Length: 1256\r\nConnection: close\r\n\r\n'
 # b'<!doctype html>\n<html>\n<head>\n    <title>Example Domain</title> [...] </html>\n'
