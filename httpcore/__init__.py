@@ -8,6 +8,15 @@ from ._async import (
     AsyncHTTPProxy,
     AsyncSOCKSProxy,
 )
+from ._backends.base import (
+    SOCKET_OPTION,
+    AsyncNetworkBackend,
+    AsyncNetworkStream,
+    NetworkBackend,
+    NetworkStream,
+)
+from ._backends.mock import AsyncMockBackend, AsyncMockStream, MockBackend, MockStream
+from ._backends.sync import SyncBackend
 from ._exceptions import (
     ConnectError,
     ConnectionNotAvailable,
@@ -36,19 +45,10 @@ from ._sync import (
     HTTPProxy,
     SOCKSProxy,
 )
-from .backends.base import (
-    SOCKET_OPTION,
-    AsyncNetworkBackend,
-    AsyncNetworkStream,
-    NetworkBackend,
-    NetworkStream,
-)
-from .backends.mock import AsyncMockBackend, AsyncMockStream, MockBackend, MockStream
-from .backends.sync import SyncBackend
 
 # The 'httpcore.AnyIOBackend' class is conditional on 'anyio' being installed.
 try:
-    from .backends.asyncio import AnyIOBackend
+    from ._backends.asyncio import AnyIOBackend
 except ImportError:  # pragma: nocover
 
     class AnyIOBackend:  # type: ignore
@@ -61,7 +61,7 @@ except ImportError:  # pragma: nocover
 
 # The 'httpcore.TrioBackend' class is conditional on 'trio' being installed.
 try:
-    from .backends.trio import TrioBackend
+    from ._backends.trio import TrioBackend
 except ImportError:  # pragma: nocover
 
     class TrioBackend:  # type: ignore

@@ -10,6 +10,7 @@ import h2.events
 import h2.exceptions
 import h2.settings
 
+from .._backends.base import NetworkStream
 from .._exceptions import (
     ConnectionNotAvailable,
     LocalProtocolError,
@@ -18,7 +19,6 @@ from .._exceptions import (
 from .._models import Origin, Request, Response
 from .._synchronization import Lock, Semaphore
 from .._trace import Trace
-from ..backends.base import NetworkStream
 from .interfaces import ConnectionInterface
 
 logger = logging.getLogger("httpcore.http2")

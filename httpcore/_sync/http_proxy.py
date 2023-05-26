@@ -3,6 +3,7 @@ import ssl
 from base64 import b64encode
 from typing import Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
+from .._backends.base import SOCKET_OPTION, NetworkBackend
 from .._exceptions import ProxyError
 from .._models import (
     URL,
@@ -16,7 +17,6 @@ from .._models import (
 from .._ssl import default_ssl_context
 from .._synchronization import Lock
 from .._trace import Trace
-from ..backends.base import SOCKET_OPTION, NetworkBackend
 from .connection import HTTPConnection
 from .connection_pool import ConnectionPool
 from .http11 import HTTP11Connection
