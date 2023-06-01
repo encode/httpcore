@@ -1,5 +1,6 @@
 import ssl
 import sys
+import typing
 from types import TracebackType
 from typing import Iterable, Iterator, Iterable, List, Optional, Type
 
@@ -343,9 +344,10 @@ class ConnectionPoolByteStream:
         self._status = status
 
     @SyncBackend.graceful_call
-    def _force_clean_up(self) -> None:
-        if hasattr(self._stream, "close"):
-            self._stream.close()
+    def _force_clean_up(self, cancelled: bool) -> None:
+        if cancelled and hasattr(self._stream, "_connection"):  # pragma: no cover
+            self._stream._connection.close()
+
         self._pool.response_closed(self._status)
 
     def __iter__(self) -> Iterator[bytes]:
@@ -353,8 +355,11 @@ class ConnectionPoolByteStream:
             yield part
 
     def close(self) -> None:
+        cancelled: typing.Optional[bool] = None
         try:
             if hasattr(self._stream, "close"):
+                cancelled = True
                 self._stream.close()
+                cancelled = False
         finally:
-            self._force_clean_up()
+            self._force_clean_up(bool(cancelled))
