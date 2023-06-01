@@ -342,6 +342,12 @@ class ConnectionPoolByteStream:
         self._pool = pool
         self._status = status
 
+    @AutoBackend.graceful_call
+    async def _force_clean_up(self) -> None:
+        if hasattr(self._stream, "aclose"):
+            await self._stream.aclose()
+        await self._pool.response_closed(self._status)
+
     async def __aiter__(self) -> AsyncIterator[bytes]:
         async for part in self._stream:
             yield part
@@ -351,4 +357,4 @@ class ConnectionPoolByteStream:
             if hasattr(self._stream, "aclose"):
                 await self._stream.aclose()
         finally:
-            await self._pool.response_closed(self._status)
+            await self._force_clean_up()

@@ -342,6 +342,12 @@ class ConnectionPoolByteStream:
         self._pool = pool
         self._status = status
 
+    @SyncBackend.graceful_call
+    def _force_clean_up(self) -> None:
+        if hasattr(self._stream, "close"):
+            self._stream.close()
+        self._pool.response_closed(self._status)
+
     def __iter__(self) -> Iterator[bytes]:
         for part in self._stream:
             yield part
@@ -351,4 +357,4 @@ class ConnectionPoolByteStream:
             if hasattr(self._stream, "close"):
                 self._stream.close()
         finally:
-            self._pool.response_closed(self._status)
+            self._force_clean_up()

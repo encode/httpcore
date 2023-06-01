@@ -1,9 +1,13 @@
 import typing
 from typing import Optional
 
+import anyio
 import sniffio
 
 from .base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
+
+_TP = typing.ParamSpec("_TP")
+_R = typing.TypeVar("_R")
 
 
 class AutoBackend(AsyncNetworkBackend):
@@ -50,3 +54,13 @@ class AutoBackend(AsyncNetworkBackend):
     async def sleep(self, seconds: float) -> None:  # pragma: nocover
         await self._init_backend()
         return await self._backend.sleep(seconds)
+
+    @staticmethod
+    def graceful_call(
+        fnc: typing.Callable[_TP, typing.Awaitable[_R]]
+    ) -> typing.Callable[_TP, typing.Awaitable[_R]]:
+        async def inner(*args: _TP.args, **kwargs: _TP.kwargs) -> _R:
+            with anyio.CancelScope(shield=True):
+                return await fnc(*args, **kwargs)
+
+        return inner
