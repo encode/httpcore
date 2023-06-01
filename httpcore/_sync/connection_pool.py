@@ -345,6 +345,11 @@ class ConnectionPoolByteStream:
 
     @SyncBackend.graceful_call
     def _force_clean_up(self, cancelled: bool) -> None:
+        # Close the underlying "connection" if the natural closing was canceled
+        # or an exception was raised. This happens when a request is cancelled
+        # in the middle of a cycle, and async backend cancellations close all
+        # active tasks in that scope, including the clean up function, so we need
+        # to run those functions again in the cancellation isolated environment.
         if cancelled and hasattr(self._stream, "_connection"):  # pragma: no cover
             self._stream._connection.close()
 
