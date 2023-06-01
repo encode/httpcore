@@ -16,7 +16,6 @@ from .._exceptions import (
 from .._utils import is_socket_readable
 from .base import SOCKET_OPTION, NetworkBackend, NetworkStream
 
-_TP = typing.ParamSpec("_TP")
 _R = typing.TypeVar("_R")
 
 
@@ -136,5 +135,5 @@ class SyncBackend(NetworkBackend):
         return SyncStream(sock)
 
     @staticmethod
-    def graceful_call(fnc: typing.Callable[_TP, _R]) -> typing.Callable[_TP, _R]:
+    def graceful_call(fnc: typing.Callable[..., _R]) -> typing.Callable[..., _R]:
         return fnc
