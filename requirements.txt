@@ -29,4 +29,4 @@ types-certifi==2021.10.8.3
 pytest==7.3.1
 pytest-httpbin==2.0.0rc1
 pytest-trio==0.7.0
-werkzeug<2.1  # See: https://github.com/postmanlabs/httpbin/issues/673
+werkzeug<2.4  # See: https://github.com/postmanlabs/httpbin/issues/673
