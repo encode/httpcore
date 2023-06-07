@@ -1,20 +1,10 @@
 import logging
 import typing
-from typing import List, Optional
 
 import pytest
 import trio as concurrency
 
-from httpcore import (
-    SOCKET_OPTION,
-    AsyncConnectionPool,
-    AsyncMockBackend,
-    AsyncNetworkStream,
-    ConnectError,
-    PoolTimeout,
-    ReadError,
-    UnsupportedProtocol,
-)
+import httpcore
 
 
 @pytest.mark.anyio
@@ -22,7 +12,7 @@ async def test_connection_pool_with_keepalive():
     """
     By default HTTP/1.1 requests should be returned to the connection pool.
     """
-    network_backend = AsyncMockBackend(
+    network_backend = httpcore.AsyncMockBackend(
         [
             b"HTTP/1.1 200 OK\r\n",
             b"Content-Type: plain/text\r\n",
@@ -37,7 +27,7 @@ async def test_connection_pool_with_keepalive():
         ]
     )
 
-    async with AsyncConnectionPool(
+    async with httpcore.AsyncConnectionPool(
         network_backend=network_backend,
     ) as pool:
         # Sending an intial request, which once complete will return to the pool, IDLE.
@@ -94,7 +84,7 @@ async def test_connection_pool_with_close():
     HTTP/1.1 requests that include a 'Connection: Close' header should
     not be returned to the connection pool.
     """
-    network_backend = AsyncMockBackend(
+    network_backend = httpcore.AsyncMockBackend(
         [
             b"HTTP/1.1 200 OK\r\n",
             b"Content-Type: plain/text\r\n",
@@ -104,7 +94,7 @@ async def test_connection_pool_with_close():
         ]
     )
 
-    async with AsyncConnectionPool(network_backend=network_backend) as pool:
+    async with httpcore.AsyncConnectionPool(network_backend=network_backend) as pool:
         # Sending an intial request, which once complete will not return to the pool.
         async with pool.stream(
             "GET", "https://example.com/", headers={"Connection": "close"}
@@ -127,7 +117,7 @@ async def test_trace_request():
     The 'trace' request extension allows for a callback function to inspect the
     internal events that occur while sending a request.
     """
-    network_backend = AsyncMockBackend(
+    network_backend = httpcore.AsyncMockBackend(
         [
             b"HTTP/1.1 200 OK\r\n",
             b"Content-Type: plain/text\r\n",
@@ -142,7 +132,7 @@ async def test_trace_request():
     async def trace(name, kwargs):
         called.append(name)
 
-    async with AsyncConnectionPool(network_backend=network_backend) as pool:
+    async with httpcore.AsyncConnectionPool(network_backend=network_backend) as pool:
         await pool.request("GET", "https://example.com/", extensions={"trace": trace})
 
     assert called == [
@@ -171,7 +161,7 @@ async def test_debug_request(caplog):
     """
     caplog.set_level(logging.DEBUG)
 
-    network_backend = AsyncMockBackend(
+    network_backend = httpcore.AsyncMockBackend(
         [
             b"HTTP/1.1 200 OK\r\n",
             b"Content-Type: plain/text\r\n",
@@ -181,7 +171,7 @@ async def test_debug_request(caplog):
         ]
     )
 
-    async with AsyncConnectionPool(network_backend=network_backend) as pool:
+    async with httpcore.AsyncConnectionPool(network_backend=network_backend) as pool:
         await pool.request("GET", "http://example.com/")
 
     assert caplog.record_tuples == [
@@ -237,14 +227,14 @@ async def test_connection_pool_with_http_exception():
     HTTP/1.1 requests that result in an exception during the connection should
     not be returned to the connection pool.
     """
-    network_backend = AsyncMockBackend([b"Wait, this isn't valid HTTP!"])
+    network_backend = httpcore.AsyncMockBackend([b"Wait, this isn't valid HTTP!"])
 
     called = []
 
     async def trace(name, kwargs):
         called.append(name)
 
-    async with AsyncConnectionPool(network_backend=network_backend) as pool:
+    async with httpcore.AsyncConnectionPool(network_backend=network_backend) as pool:
         # Sending an initial request, which once complete will not return to the pool.
         with pytest.raises(Exception):
             await pool.request(
@@ -277,16 +267,18 @@ async def test_connection_pool_with_connect_exception():
     be returned to the connection pool.
     """
 
-    class FailedConnectBackend(AsyncMockBackend):
+    class FailedConnectBackend(httpcore.AsyncMockBackend):
         async def connect_tcp(
             self,
             host: str,
             port: int,
-            timeout: Optional[float] = None,
-            local_address: Optional[str] = None,
-            socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
-        ) -> AsyncNetworkStream:
-            raise ConnectError("Could not connect")
+            timeout: typing.Optional[float] = None,
+            local_address: typing.Optional[str] = None,
+            socket_options: typing.Optional[
+                typing.Iterable[httpcore.SOCKET_OPTION]
+            ] = None,
+        ) -> httpcore.AsyncNetworkStream:
+            raise httpcore.ConnectError("Could not connect")
 
     network_backend = FailedConnectBackend([])
 
@@ -295,7 +287,7 @@ async def test_connection_pool_with_connect_exception():
     async def trace(name, kwargs):
         called.append(name)
 
-    async with AsyncConnectionPool(network_backend=network_backend) as pool:
+    async with httpcore.AsyncConnectionPool(network_backend=network_backend) as pool:
         # Sending an initial request, which once complete will not return to the pool.
         with pytest.raises(Exception):
             await pool.request(
@@ -317,7 +309,7 @@ async def test_connection_pool_with_immediate_expiry():
     Connection pools with keepalive_expiry=0.0 should immediately expire
     keep alive connections.
     """
-    network_backend = AsyncMockBackend(
+    network_backend = httpcore.AsyncMockBackend(
         [
             b"HTTP/1.1 200 OK\r\n",
             b"Content-Type: plain/text\r\n",
@@ -327,7 +319,7 @@ async def test_connection_pool_with_immediate_expiry():
         ]
     )
 
-    async with AsyncConnectionPool(
+    async with httpcore.AsyncConnectionPool(
         keepalive_expiry=0.0,
         network_backend=network_backend,
     ) as pool:
@@ -351,7 +343,7 @@ async def test_connection_pool_with_no_keepalive_connections_allowed():
     When 'max_keepalive_connections=0' is used, IDLE connections should not
     be returned to the pool.
     """
-    network_backend = AsyncMockBackend(
+    network_backend = httpcore.AsyncMockBackend(
         [
             b"HTTP/1.1 200 OK\r\n",
             b"Content-Type: plain/text\r\n",
@@ -361,7 +353,7 @@ async def test_connection_pool_with_no_keepalive_connections_allowed():
         ]
     )
 
-    async with AsyncConnectionPool(
+    async with httpcore.AsyncConnectionPool(
         max_keepalive_connections=0, network_backend=network_backend
     ) as pool:
         # Sending an intial request, which once complete will not return to the pool.
@@ -384,7 +376,7 @@ async def test_connection_pool_concurrency():
     HTTP/1.1 requests made in concurrency must not ever exceed the maximum number
     of allowable connection in the pool.
     """
-    network_backend = AsyncMockBackend(
+    network_backend = httpcore.AsyncMockBackend(
         [
             b"HTTP/1.1 200 OK\r\n",
             b"Content-Type: plain/text\r\n",
@@ -400,10 +392,10 @@ async def test_connection_pool_concurrency():
             info_list.append(info)
             await response.aread()
 
-    async with AsyncConnectionPool(
+    async with httpcore.AsyncConnectionPool(
         max_connections=1, network_backend=network_backend
     ) as pool:
-        info_list: List[str] = []
+        info_list: typing.List[str] = []
         async with concurrency.open_nursery() as nursery:
             for domain in ["a.com", "b.com", "c.com", "d.com", "e.com"]:
                 nursery.start_soon(fetch, pool, domain, info_list)
@@ -429,7 +421,7 @@ async def test_connection_pool_concurrency_same_domain_closing():
     HTTP/1.1 requests made in concurrency must not ever exceed the maximum number
     of allowable connection in the pool.
     """
-    network_backend = AsyncMockBackend(
+    network_backend = httpcore.AsyncMockBackend(
         [
             b"HTTP/1.1 200 OK\r\n",
             b"Content-Type: plain/text\r\n",
@@ -446,10 +438,10 @@ async def test_connection_pool_concurrency_same_domain_closing():
             info_list.append(info)
             await response.aread()
 
-    async with AsyncConnectionPool(
+    async with httpcore.AsyncConnectionPool(
         max_connections=1, network_backend=network_backend, http2=True
     ) as pool:
-        info_list: List[str] = []
+        info_list: typing.List[str] = []
         async with concurrency.open_nursery() as nursery:
             for domain in ["a.com", "a.com", "a.com", "a.com", "a.com"]:
                 nursery.start_soon(fetch, pool, domain, info_list)
@@ -471,7 +463,7 @@ async def test_connection_pool_concurrency_same_domain_keepalive():
     HTTP/1.1 requests made in concurrency must not ever exceed the maximum number
     of allowable connection in the pool.
     """
-    network_backend = AsyncMockBackend(
+    network_backend = httpcore.AsyncMockBackend(
         [
             b"HTTP/1.1 200 OK\r\n",
             b"Content-Type: plain/text\r\n",
@@ -488,10 +480,10 @@ async def test_connection_pool_concurrency_same_domain_keepalive():
             info_list.append(info)
             await response.aread()
 
-    async with AsyncConnectionPool(
+    async with httpcore.AsyncConnectionPool(
         max_connections=1, network_backend=network_backend, http2=True
     ) as pool:
-        info_list: List[str] = []
+        info_list: typing.List[str] = []
         async with concurrency.open_nursery() as nursery:
             for domain in ["a.com", "a.com", "a.com", "a.com", "a.com"]:
                 nursery.start_soon(fetch, pool, domain, info_list)
@@ -512,11 +504,11 @@ async def test_connection_pool_concurrency_same_domain_keepalive():
 
 @pytest.mark.anyio
 async def test_unsupported_protocol():
-    async with AsyncConnectionPool() as pool:
-        with pytest.raises(UnsupportedProtocol):
+    async with httpcore.AsyncConnectionPool() as pool:
+        with pytest.raises(httpcore.UnsupportedProtocol):
             await pool.request("GET", "ftp://www.example.com/")
 
-        with pytest.raises(UnsupportedProtocol):
+        with pytest.raises(httpcore.UnsupportedProtocol):
             await pool.request("GET", "://www.example.com/")
 
 
@@ -526,7 +518,7 @@ async def test_connection_pool_closed_while_request_in_flight():
     Closing a connection pool while a request/response is still in-flight
     should raise an error.
     """
-    network_backend = AsyncMockBackend(
+    network_backend = httpcore.AsyncMockBackend(
         [
             b"HTTP/1.1 200 OK\r\n",
             b"Content-Type: plain/text\r\n",
@@ -536,14 +528,14 @@ async def test_connection_pool_closed_while_request_in_flight():
         ]
     )
 
-    async with AsyncConnectionPool(
+    async with httpcore.AsyncConnectionPool(
         network_backend=network_backend,
     ) as pool:
         # Send a request, and then close the connection pool while the
         # response has not yet been streamed.
         async with pool.stream("GET", "https://example.com/") as response:
             await pool.aclose()
-            with pytest.raises(ReadError):
+            with pytest.raises(httpcore.ReadError):
                 await response.aread()
 
 
@@ -552,7 +544,7 @@ async def test_connection_pool_timeout():
     """
     Ensure that exceeding max_connections can cause a request to timeout.
     """
-    network_backend = AsyncMockBackend(
+    network_backend = httpcore.AsyncMockBackend(
         [
             b"HTTP/1.1 200 OK\r\n",
             b"Content-Type: plain/text\r\n",
@@ -562,14 +554,14 @@ async def test_connection_pool_timeout():
         ]
     )
 
-    async with AsyncConnectionPool(
+    async with httpcore.AsyncConnectionPool(
         network_backend=network_backend, max_connections=1
     ) as pool:
         # Send a request to a pool that is configured to only support a single
         # connection, and then ensure that a second concurrent request
         # fails with a timeout.
         async with pool.stream("GET", "https://example.com/"):
-            with pytest.raises(PoolTimeout):
+            with pytest.raises(httpcore.PoolTimeout):
                 extensions = {"timeout": {"pool": 0.0001}}
                 await pool.request("GET", "https://example.com/", extensions=extensions)
 
@@ -580,7 +572,7 @@ async def test_connection_pool_timeout_zero():
     A pool timeout of 0 shouldn't raise a PoolTimeout if there's
     no need to wait on a new connection.
     """
-    network_backend = AsyncMockBackend(
+    network_backend = httpcore.AsyncMockBackend(
         [
             b"HTTP/1.1 200 OK\r\n",
             b"Content-Type: plain/text\r\n",
@@ -599,7 +591,7 @@ async def test_connection_pool_timeout_zero():
     extensions = {"timeout": {"pool": 0}}
 
     # A connection pool configured to allow only one connection at a time.
-    async with AsyncConnectionPool(
+    async with httpcore.AsyncConnectionPool(
         network_backend=network_backend, max_connections=1
     ) as pool:
         # Two consecutive requests with a pool timeout of zero.
@@ -617,7 +609,7 @@ async def test_connection_pool_timeout_zero():
         assert response.content == b"Hello, world!"
 
     # A connection pool configured to allow only one connection at a time.
-    async with AsyncConnectionPool(
+    async with httpcore.AsyncConnectionPool(
         network_backend=network_backend, max_connections=1
     ) as pool:
         # Two concurrent requests with a pool timeout of zero.
@@ -626,7 +618,7 @@ async def test_connection_pool_timeout_zero():
             "GET", "https://example.com/", extensions=extensions
         ) as response:
             # The first response hasn't yet completed.
-            with pytest.raises(PoolTimeout):
+            with pytest.raises(httpcore.PoolTimeout):
                 # So a pool timeout occurs.
                 await pool.request("GET", "https://example.com/", extensions=extensions)
             # The first response now completes.
@@ -647,7 +639,7 @@ async def test_http11_upgrade_connection():
     https://httpwg.org/specs/rfc9110.html#status.101
     https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/101
     """
-    network_backend = AsyncMockBackend(
+    network_backend = httpcore.AsyncMockBackend(
         [
             b"HTTP/1.1 101 Switching Protocols\r\n",
             b"Connection: upgrade\r\n",
@@ -656,7 +648,7 @@ async def test_http11_upgrade_connection():
             b"...",
         ]
     )
-    async with AsyncConnectionPool(
+    async with httpcore.AsyncConnectionPool(
         network_backend=network_backend, max_connections=1
     ) as pool:
         async with pool.stream(

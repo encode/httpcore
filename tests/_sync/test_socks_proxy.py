@@ -1,6 +1,6 @@
 import pytest
 
-from httpcore import MockBackend, SOCKSProxy, Origin, ProxyError
+import httpcore
 
 
 
@@ -8,7 +8,7 @@ def test_socks5_request():
     """
     Send an HTTP request via a SOCKS proxy.
     """
-    network_backend = MockBackend(
+    network_backend = httpcore.MockBackend(
         [
             # The initial socks CONNECT
             #   v5 NOAUTH
@@ -24,7 +24,7 @@ def test_socks5_request():
         ]
     )
 
-    with SOCKSProxy(
+    with httpcore.SOCKSProxy(
         proxy_url="socks5://localhost:8080/",
         network_backend=network_backend,
     ) as proxy:
@@ -48,16 +48,16 @@ def test_socks5_request():
 
         # A connection on a tunneled proxy can only handle HTTPS requests to the same origin.
         assert not proxy.connections[0].can_handle_request(
-            Origin(b"http", b"example.com", 80)
+            httpcore.Origin(b"http", b"example.com", 80)
         )
         assert not proxy.connections[0].can_handle_request(
-            Origin(b"http", b"other.com", 80)
+            httpcore.Origin(b"http", b"other.com", 80)
         )
         assert proxy.connections[0].can_handle_request(
-            Origin(b"https", b"example.com", 443)
+            httpcore.Origin(b"https", b"example.com", 443)
         )
         assert not proxy.connections[0].can_handle_request(
-            Origin(b"https", b"other.com", 443)
+            httpcore.Origin(b"https", b"other.com", 443)
         )
 
 
@@ -66,7 +66,7 @@ def test_authenticated_socks5_request():
     """
     Send an HTTP request via a SOCKS proxy.
     """
-    network_backend = MockBackend(
+    network_backend = httpcore.MockBackend(
         [
             # The initial socks CONNECT
             #   v5 USERNAME/PASSWORD
@@ -84,7 +84,7 @@ def test_authenticated_socks5_request():
         ]
     )
 
-    with SOCKSProxy(
+    with httpcore.SOCKSProxy(
         proxy_url="socks5://localhost:8080/",
         proxy_auth=(b"username", b"password"),
         network_backend=network_backend,
@@ -113,7 +113,7 @@ def test_socks5_request_connect_failed():
     """
     Attempt to send an HTTP request via a SOCKS proxy, resulting in a connect failure.
     """
-    network_backend = MockBackend(
+    network_backend = httpcore.MockBackend(
         [
             # The initial socks CONNECT
             #   v5 NOAUTH
@@ -123,12 +123,12 @@ def test_socks5_request_connect_failed():
         ]
     )
 
-    with SOCKSProxy(
+    with httpcore.SOCKSProxy(
         proxy_url="socks5://localhost:8080/",
         network_backend=network_backend,
     ) as proxy:
         # Sending a request, which the proxy rejects
-        with pytest.raises(ProxyError) as exc_info:
+        with pytest.raises(httpcore.ProxyError) as exc_info:
             proxy.request("GET", "https://example.com/")
         assert (
             str(exc_info.value) == "Proxy Server could not connect: Connection refused."
@@ -143,19 +143,19 @@ def test_socks5_request_failed_to_provide_auth():
     Attempt to send an HTTP request via an authenticated SOCKS proxy,
     without providing authentication credentials.
     """
-    network_backend = MockBackend(
+    network_backend = httpcore.MockBackend(
         [
             #   v5 USERNAME/PASSWORD
             b"\x05\x02",
         ]
     )
 
-    with SOCKSProxy(
+    with httpcore.SOCKSProxy(
         proxy_url="socks5://localhost:8080/",
         network_backend=network_backend,
     ) as proxy:
         # Sending a request, which the proxy rejects
-        with pytest.raises(ProxyError) as exc_info:
+        with pytest.raises(httpcore.ProxyError) as exc_info:
             proxy.request("GET", "https://example.com/")
         assert (
             str(exc_info.value)
@@ -171,7 +171,7 @@ def test_socks5_request_incorrect_auth():
     Attempt to send an HTTP request via an authenticated SOCKS proxy,
     wit incorrect authentication credentials.
     """
-    network_backend = MockBackend(
+    network_backend = httpcore.MockBackend(
         [
             #   v5 USERNAME/PASSWORD
             b"\x05\x02",
@@ -180,13 +180,13 @@ def test_socks5_request_incorrect_auth():
         ]
     )
 
-    with SOCKSProxy(
+    with httpcore.SOCKSProxy(
         proxy_url="socks5://localhost:8080/",
         proxy_auth=(b"invalid", b"invalid"),
         network_backend=network_backend,
     ) as proxy:
         # Sending a request, which the proxy rejects
-        with pytest.raises(ProxyError) as exc_info:
+        with pytest.raises(httpcore.ProxyError) as exc_info:
             proxy.request("GET", "https://example.com/")
         assert str(exc_info.value) == "Invalid username/password"
 
