@@ -4,7 +4,7 @@ import re
 import sys
 
 SUBS = [
-    ('from ..backends.auto import AutoBackend', 'from ..backends.sync import SyncBackend'),
+    ('from .._backends.auto import AutoBackend', 'from .._backends.sync import SyncBackend'),
     ('import trio as concurrency', 'from tests import concurrency'),
     ('AsyncByteStream', 'SyncByteStream'),
     ('AsyncIterator', 'Iterator'),

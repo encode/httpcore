@@ -1,7 +1,6 @@
 import pytest
 
-from httpcore import AsyncSOCKSProxy, Origin, ProxyError
-from httpcore.backends.mock import AsyncMockBackend
+from httpcore import AsyncMockBackend, AsyncSOCKSProxy, Origin, ProxyError
 
 
 @pytest.mark.anyio

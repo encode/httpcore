@@ -4,13 +4,13 @@ import ssl
 from types import TracebackType
 from typing import Iterable, Iterator, Optional, Type
 
+from .._backends.sync import SyncBackend
+from .._backends.base import SOCKET_OPTION, NetworkBackend, NetworkStream
 from .._exceptions import ConnectError, ConnectionNotAvailable, ConnectTimeout
 from .._models import Origin, Request, Response
 from .._ssl import default_ssl_context
 from .._synchronization import Lock
 from .._trace import Trace
-from ..backends.sync import SyncBackend
-from ..backends.base import SOCKET_OPTION, NetworkBackend, NetworkStream
 from .http11 import HTTP11Connection
 from .interfaces import ConnectionInterface
 

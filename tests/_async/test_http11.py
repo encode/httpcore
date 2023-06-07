@@ -2,12 +2,12 @@ import pytest
 
 from httpcore import (
     AsyncHTTP11Connection,
+    AsyncMockStream,
     ConnectionNotAvailable,
     LocalProtocolError,
     Origin,
     RemoteProtocolError,
 )
-from httpcore.backends.mock import AsyncMockStream
 
 
 @pytest.mark.anyio

@@ -6,9 +6,15 @@ import hpack
 import hyperframe.frame
 import pytest
 
-from httpcore import AsyncHTTPConnection, ConnectError, ConnectionNotAvailable, Origin
-from httpcore.backends.base import SOCKET_OPTION, AsyncNetworkStream
-from httpcore.backends.mock import AsyncMockBackend
+from httpcore import (
+    SOCKET_OPTION,
+    AsyncHTTPConnection,
+    AsyncMockBackend,
+    AsyncNetworkStream,
+    ConnectError,
+    ConnectionNotAvailable,
+    Origin,
+)
 
 
 @pytest.mark.anyio

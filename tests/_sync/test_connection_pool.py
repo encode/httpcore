@@ -6,14 +6,15 @@ import pytest
 from tests import concurrency
 
 from httpcore import (
+    SOCKET_OPTION,
     ConnectionPool,
+    MockBackend,
+    NetworkStream,
     ConnectError,
     PoolTimeout,
     ReadError,
     UnsupportedProtocol,
 )
-from httpcore.backends.base import SOCKET_OPTION, NetworkStream
-from httpcore.backends.mock import MockBackend
 
 
 

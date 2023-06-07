@@ -6,9 +6,15 @@ import hpack
 import hyperframe.frame
 import pytest
 
-from httpcore import HTTPProxy, Origin, ProxyError
-from httpcore.backends.base import SOCKET_OPTION, NetworkStream
-from httpcore.backends.mock import MockBackend, MockStream
+from httpcore import (
+    SOCKET_OPTION,
+    HTTPProxy,
+    MockBackend,
+    MockStream,
+    NetworkStream,
+    Origin,
+    ProxyError,
+)
 
 
 

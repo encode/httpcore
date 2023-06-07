@@ -3,11 +3,11 @@ import sys
 from types import TracebackType
 from typing import AsyncIterable, AsyncIterator, Iterable, List, Optional, Type
 
+from .._backends.auto import AutoBackend
+from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend
 from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
 from .._models import Origin, Request, Response
 from .._synchronization import AsyncEvent, AsyncLock
-from ..backends.auto import AutoBackend
-from ..backends.base import SOCKET_OPTION, AsyncNetworkBackend
 from .connection import AsyncHTTPConnection
 from .interfaces import AsyncConnectionInterface, AsyncRequestInterface
 

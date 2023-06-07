@@ -6,14 +6,15 @@ import pytest
 import trio as concurrency
 
 from httpcore import (
+    SOCKET_OPTION,
     AsyncConnectionPool,
+    AsyncMockBackend,
+    AsyncNetworkStream,
     ConnectError,
     PoolTimeout,
     ReadError,
     UnsupportedProtocol,
 )
-from httpcore.backends.base import SOCKET_OPTION, AsyncNetworkStream
-from httpcore.backends.mock import AsyncMockBackend
 
 
 @pytest.mark.anyio

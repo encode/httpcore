@@ -6,9 +6,15 @@ import hpack
 import hyperframe.frame
 import pytest
 
-from httpcore import HTTPConnection, ConnectError, ConnectionNotAvailable, Origin
-from httpcore.backends.base import SOCKET_OPTION, NetworkStream
-from httpcore.backends.mock import MockBackend
+from httpcore import (
+    SOCKET_OPTION,
+    HTTPConnection,
+    MockBackend,
+    NetworkStream,
+    ConnectError,
+    ConnectionNotAvailable,
+    Origin,
+)
 
 
 
