@@ -1,3 +1,4 @@
+import contextlib
 import socket
 import ssl
 import sys
@@ -79,6 +80,11 @@ class SyncStream(NetworkStream):
 
 
 class SyncBackend(NetworkBackend):
+    @staticmethod
+    @contextlib.contextmanager
+    def fail_after(delay: typing.Optional[float], shield: bool = False) -> typing.Any:
+        yield  # pragma: no cover
+
     def connect_tcp(
         self,
         host: str,
@@ -135,5 +141,5 @@ class SyncBackend(NetworkBackend):
         return SyncStream(sock)
 
     @staticmethod
-    def graceful_call(fnc: typing.Callable[..., _R]) -> typing.Callable[..., _R]:
+    def shield_cancellation(fnc: _R) -> _R:
         return fnc

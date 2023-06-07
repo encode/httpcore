@@ -12,6 +12,8 @@ from ..backends.base import SOCKET_OPTION, AsyncNetworkBackend
 from .connection import AsyncHTTPConnection
 from .interfaces import AsyncConnectionInterface, AsyncRequestInterface
 
+GRACEFUL_CLOSE_TIMEOUT = 2
+
 
 class RequestStatus:
     def __init__(self, request: Request):
@@ -343,15 +345,13 @@ class ConnectionPoolByteStream:
         self._pool = pool
         self._status = status
 
-    @AutoBackend.graceful_call
-    async def _force_clean_up(self, cancelled: bool) -> None:
+    @AutoBackend.shield_cancellation
+    async def clean_up(self) -> None:
         # Close the underlying "connection" if the natural closing was canceled
         # or an exception was raised. This happens when a request is cancelled
         # in the middle of a cycle, and async backend cancellations close all
         # active tasks in that scope, including the clean up function, so we need
         # to run those functions again in the cancellation isolated environment.
-        if cancelled and hasattr(self._stream, "_connection"):  # pragma: no cover
-            await self._stream._connection.aclose()
 
         await self._pool.response_closed(self._status)
 
@@ -367,4 +367,11 @@ class ConnectionPoolByteStream:
                 await self._stream.aclose()
                 cancelled = False
         finally:
-            await self._force_clean_up(bool(cancelled))
+            try:
+                if cancelled and hasattr(
+                    self._stream, "_connection"
+                ):  # pragma: no cover
+                    with AutoBackend.fail_after(GRACEFUL_CLOSE_TIMEOUT):
+                        await self._stream._connection.aclose()
+            finally:
+                await self.clean_up()

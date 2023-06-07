@@ -11,6 +11,8 @@ _R = typing.TypeVar("_R")
 
 
 class AutoBackend(AsyncNetworkBackend):
+    fail_after = anyio.fail_after
+
     async def _init_backend(self) -> None:
         if not (hasattr(self, "_backend")):
             backend = sniffio.current_async_library()
@@ -56,7 +58,7 @@ class AutoBackend(AsyncNetworkBackend):
         return await self._backend.sleep(seconds)
 
     @staticmethod
-    def graceful_call(
+    def shield_cancellation(
         fnc: typing.Callable[..., typing.Awaitable[_R]]
     ) -> typing.Callable[..., typing.Awaitable[_R]]:
         # Makes an async function that runs in a cancellation-isolated environment.
