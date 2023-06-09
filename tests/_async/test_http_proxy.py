@@ -14,18 +14,6 @@ from httpcore import (
     Origin,
     ProxyError,
 )
-from httpcore._async.http_proxy import AsyncForwardHTTPConnection
-
-
-def test_proxy_mode():
-    proxy = AsyncHTTPProxy("https://example.com", proxy_mode="FORWARDING")
-    assert isinstance(
-        proxy.create_connection(proxy._proxy_url.origin), AsyncForwardHTTPConnection
-    )
-    proxy = AsyncHTTPProxy("https://example.com")
-    assert not isinstance(
-        proxy.create_connection(proxy._proxy_url.origin), AsyncForwardHTTPConnection
-    )
 
 
 @pytest.mark.anyio

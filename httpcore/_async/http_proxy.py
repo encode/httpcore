@@ -1,8 +1,6 @@
 import logging
 import ssl
-import typing
 from base64 import b64encode
-from enum import Enum
 from typing import Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend
@@ -54,11 +52,6 @@ def build_auth_header(username: bytes, password: bytes) -> bytes:
     return b"Basic " + b64encode(userpass)
 
 
-class ProxyMode(Enum):
-    TUNNELING = "TUNNELING"
-    FORWARDING = "FORWARDING"
-
-
 class AsyncHTTPProxy(AsyncConnectionPool):
     """
     A connection pool that sends requests via an HTTP proxy.
@@ -81,7 +74,6 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         uds: Optional[str] = None,
         network_backend: Optional[AsyncNetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
-        proxy_mode: Optional[typing.Union[ProxyMode, str]] = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -134,7 +126,6 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         self._proxy_ssl_context = proxy_ssl_context
         self._proxy_url = enforce_url(proxy_url, name="proxy_url")
         self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
-        self._proxy_mode = proxy_mode if proxy_mode is None else ProxyMode(proxy_mode)
         if proxy_auth is not None:
             username = enforce_bytes(proxy_auth[0], name="proxy_auth")
             password = enforce_bytes(proxy_auth[1], name="proxy_auth")
@@ -144,29 +135,6 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             ] + self._proxy_headers
 
     def create_connection(self, origin: Origin) -> AsyncConnectionInterface:
-        if self._proxy_mode:
-            if self._proxy_mode is ProxyMode.FORWARDING:
-                return AsyncForwardHTTPConnection(
-                    proxy_origin=self._proxy_url.origin,
-                    proxy_headers=self._proxy_headers,
-                    remote_origin=origin,
-                    keepalive_expiry=self._keepalive_expiry,
-                    network_backend=self._network_backend,
-                    proxy_ssl_context=self._proxy_ssl_context,
-                )
-            elif origin.scheme == b"https":  # pragma: no cover
-                return AsyncTunnelHTTPConnection(
-                    proxy_origin=self._proxy_url.origin,
-                    proxy_headers=self._proxy_headers,
-                    remote_origin=origin,
-                    ssl_context=self._ssl_context,
-                    proxy_ssl_context=self._proxy_ssl_context,
-                    keepalive_expiry=self._keepalive_expiry,
-                    http1=self._http1,
-                    http2=self._http2,
-                    network_backend=self._network_backend,
-                )
-
         if origin.scheme == b"http":
             return AsyncForwardHTTPConnection(
                 proxy_origin=self._proxy_url.origin,
