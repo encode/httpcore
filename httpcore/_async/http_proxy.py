@@ -1,6 +1,8 @@
 import logging
 import ssl
+import typing
 from base64 import b64encode
+from enum import StrEnum
 from typing import Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend
@@ -24,7 +26,6 @@ from .interfaces import AsyncConnectionInterface
 
 HeadersAsSequence = Sequence[Tuple[Union[bytes, str], Union[bytes, str]]]
 HeadersAsMapping = Mapping[Union[bytes, str], Union[bytes, str]]
-
 
 logger = logging.getLogger("httpcore.proxy")
 
@@ -53,6 +54,11 @@ def build_auth_header(username: bytes, password: bytes) -> bytes:
     return b"Basic " + b64encode(userpass)
 
 
+class ProxyMode(StrEnum):
+    TUNNELING = "TUNNELING"
+    FORWARDING = "FORWARDING"
+
+
 class AsyncHTTPProxy(AsyncConnectionPool):
     """
     A connection pool that sends requests via an HTTP proxy.
@@ -64,6 +70,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         proxy_auth: Optional[Tuple[Union[bytes, str], Union[bytes, str]]] = None,
         proxy_headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
         ssl_context: Optional[ssl.SSLContext] = None,
+        proxy_ssl_context: Optional[ssl.SSLContext] = None,
         max_connections: Optional[int] = 10,
         max_keepalive_connections: Optional[int] = None,
         keepalive_expiry: Optional[float] = None,
@@ -74,6 +81,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         uds: Optional[str] = None,
         network_backend: Optional[AsyncNetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
+        proxy_mode: Optional[typing.Union[ProxyMode, str]] = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -123,8 +131,10 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             socket_options=socket_options,
         )
         self._ssl_context = ssl_context
+        self._proxy_ssl_context = proxy_ssl_context
         self._proxy_url = enforce_url(proxy_url, name="proxy_url")
         self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
+        self._proxy_mode = proxy_mode if proxy_mode is None else ProxyMode(proxy_mode)
         if proxy_auth is not None:
             username = enforce_bytes(proxy_auth[0], name="proxy_auth")
             password = enforce_bytes(proxy_auth[1], name="proxy_auth")
@@ -134,6 +144,29 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             ] + self._proxy_headers
 
     def create_connection(self, origin: Origin) -> AsyncConnectionInterface:
+        if self._proxy_mode:
+            if self._proxy_mode is ProxyMode.FORWARDING:
+                return AsyncForwardHTTPConnection(
+                    proxy_origin=self._proxy_url.origin,
+                    proxy_headers=self._proxy_headers,
+                    remote_origin=origin,
+                    keepalive_expiry=self._keepalive_expiry,
+                    network_backend=self._network_backend,
+                    proxy_ssl_context=self._proxy_ssl_context,
+                )
+            elif origin.scheme == b"https":  # pragma: no cover
+                return AsyncTunnelHTTPConnection(
+                    proxy_origin=self._proxy_url.origin,
+                    proxy_headers=self._proxy_headers,
+                    remote_origin=origin,
+                    ssl_context=self._ssl_context,
+                    proxy_ssl_context=self._proxy_ssl_context,
+                    keepalive_expiry=self._keepalive_expiry,
+                    http1=self._http1,
+                    http2=self._http2,
+                    network_backend=self._network_backend,
+                )
+
         if origin.scheme == b"http":
             return AsyncForwardHTTPConnection(
                 proxy_origin=self._proxy_url.origin,
@@ -141,12 +174,14 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 remote_origin=origin,
                 keepalive_expiry=self._keepalive_expiry,
                 network_backend=self._network_backend,
+                proxy_ssl_context=self._proxy_ssl_context,
             )
         return AsyncTunnelHTTPConnection(
             proxy_origin=self._proxy_url.origin,
             proxy_headers=self._proxy_headers,
             remote_origin=origin,
             ssl_context=self._ssl_context,
+            proxy_ssl_context=self._proxy_ssl_context,
             keepalive_expiry=self._keepalive_expiry,
             http1=self._http1,
             http2=self._http2,
@@ -163,12 +198,14 @@ class AsyncForwardHTTPConnection(AsyncConnectionInterface):
         keepalive_expiry: Optional[float] = None,
         network_backend: Optional[AsyncNetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
+        proxy_ssl_context: Optional[ssl.SSLContext] = None,
     ) -> None:
         self._connection = AsyncHTTPConnection(
             origin=proxy_origin,
             keepalive_expiry=keepalive_expiry,
             network_backend=network_backend,
             socket_options=socket_options,
+            ssl_context=proxy_ssl_context,
         )
         self._proxy_origin = proxy_origin
         self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
@@ -222,6 +259,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
         proxy_origin: Origin,
         remote_origin: Origin,
         ssl_context: Optional[ssl.SSLContext] = None,
+        proxy_ssl_context: Optional[ssl.SSLContext] = None,
         proxy_headers: Optional[Sequence[Tuple[bytes, bytes]]] = None,
         keepalive_expiry: Optional[float] = None,
         http1: bool = True,
@@ -234,10 +272,12 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
             keepalive_expiry=keepalive_expiry,
             network_backend=network_backend,
             socket_options=socket_options,
+            ssl_context=proxy_ssl_context,
         )
         self._proxy_origin = proxy_origin
         self._remote_origin = remote_origin
         self._ssl_context = ssl_context
+        self._proxy_ssl_context = proxy_ssl_context
         self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
