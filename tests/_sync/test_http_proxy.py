@@ -14,6 +14,18 @@ from httpcore import (
     Origin,
     ProxyError,
 )
+from httpcore._sync.http_proxy import ForwardHTTPConnection
+
+
+def test_proxy_mode():
+    proxy = HTTPProxy("https://example.com", proxy_mode="FORWARDING")
+    assert isinstance(
+        proxy.create_connection(proxy._proxy_url.origin), ForwardHTTPConnection
+    )
+    proxy = HTTPProxy("https://example.com")
+    assert not isinstance(
+        proxy.create_connection(proxy._proxy_url.origin), ForwardHTTPConnection
+    )
 
 
 

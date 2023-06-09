@@ -9,6 +9,8 @@ SUBS = [
     ('AsyncByteStream', 'SyncByteStream'),
     ('AsyncIterator', 'Iterator'),
     ('AutoBackend', 'SyncBackend'),
+    ('from httpcore._async.http_proxy import AsyncForwardHTTPConnection',
+     'from httpcore._sync.http_proxy import ForwardHTTPConnection'),
     ('Async([A-Z][A-Za-z0-9_]*)', r'\2'),
     ('async def', 'def'),
     ('async with', 'with'),
