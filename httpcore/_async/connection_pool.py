@@ -344,6 +344,12 @@ class AsyncConnectionPool(AsyncRequestInterface):
                 self._requests.remove(status)
 
             if connection.is_closed() and connection in self._pool:
+                await atrace(
+                    "remove_connection",
+                    logger,
+                    None,
+                    kwargs={"connection": connection},
+                )
                 self._pool.remove(connection)
 
             # Since we've had a response closed, it's possible we'll now be able
