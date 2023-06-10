@@ -1,15 +1,21 @@
+import logging
 import ssl
 import sys
 from types import TracebackType
 from typing import AsyncIterable, AsyncIterator, Iterable, List, Optional, Type
+
+import httpcore
 
 from .._backends.auto import AutoBackend
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend
 from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
 from .._models import Origin, Request, Response
 from .._synchronization import AsyncEvent, AsyncLock
+from .._trace import atrace
 from .connection import AsyncHTTPConnection
 from .interfaces import AsyncConnectionInterface, AsyncRequestInterface
+
+logger = logging.getLogger("httpcore.connection_pool")
 
 
 class RequestStatus:
@@ -161,8 +167,14 @@ class AsyncConnectionPool(AsyncRequestInterface):
         # Reuse an existing connection if one is currently available.
         for idx, connection in enumerate(self._pool):
             if connection.can_handle_request(origin) and connection.is_available():
+                kwargs = {"connection": connection, "request": status.request}
+                await atrace("reuse_connection", logger, status.request, kwargs)
                 self._pool.pop(idx)
                 self._pool.insert(0, connection)
+                kwargs = {"request": status.request, "connection": connection}
+                await atrace(
+                    "assign_request_to_connection", logger, status.request, kwargs
+                )
                 status.set_connection(connection)
                 return True
 
@@ -171,6 +183,12 @@ class AsyncConnectionPool(AsyncRequestInterface):
             for idx, connection in reversed(list(enumerate(self._pool))):
                 if connection.is_idle():
                     await connection.aclose()
+                    await atrace(
+                        "remove_connection",
+                        logger,
+                        None,
+                        kwargs={"connection": connection},
+                    )
                     self._pool.pop(idx)
                     break
 
@@ -180,7 +198,12 @@ class AsyncConnectionPool(AsyncRequestInterface):
 
         # Otherwise create a new connection.
         connection = self.create_connection(origin)
+        await atrace(
+            "add_connection", logger, status.request, kwargs={"connection": connection}
+        )
         self._pool.insert(0, connection)
+        kwargs = {"request": status.request, "connection": connection}
+        await atrace("assign_request_to_connection", logger, status.request, kwargs)
         status.set_connection(connection)
         return True
 
@@ -192,6 +215,9 @@ class AsyncConnectionPool(AsyncRequestInterface):
         for idx, connection in reversed(list(enumerate(self._pool))):
             if connection.has_expired():
                 await connection.aclose()
+                await atrace(
+                    "remove_connection", logger, None, kwargs={"connection": connection}
+                )
                 self._pool.pop(idx)
 
         # If the pool size exceeds the maximum number of allowed keep-alive connections,
@@ -200,6 +226,9 @@ class AsyncConnectionPool(AsyncRequestInterface):
         for idx, connection in reversed(list(enumerate(self._pool))):
             if connection.is_idle() and pool_size > self._max_keepalive_connections:
                 await connection.aclose()
+                await atrace(
+                    "remove_connection", logger, None, kwargs={"connection": connection}
+                )
                 self._pool.pop(idx)
                 pool_size -= 1
 
@@ -222,6 +251,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
         status = RequestStatus(request)
 
         async with self._pool_lock:
+            await atrace("add_request", logger, request, {"request": status.request})
             self._requests.append(status)
             await self._close_expired_connections()
             await self._attempt_to_acquire_connection(status)
@@ -235,9 +265,22 @@ class AsyncConnectionPool(AsyncRequestInterface):
                 # If we timeout here, or if the task is cancelled, then make
                 # sure to remove the request from the queue before bubbling
                 # up the exception.
+                if isinstance(exc, httpcore.PoolTimeout):
+                    await atrace(
+                        "timeout_waiting_for_connection",
+                        logger,
+                        status.request,
+                        {"request": status.request},
+                    )
                 async with self._pool_lock:
                     # Ensure only remove when task exists.
                     if status in self._requests:
+                        await atrace(
+                            "remove_request",
+                            logger,
+                            status.request,
+                            {"request": status.request},
+                        )
                         self._requests.remove(status)
                     raise exc
 
@@ -254,6 +297,13 @@ class AsyncConnectionPool(AsyncRequestInterface):
                 async with self._pool_lock:
                     # Maintain our position in the request queue, but reset the
                     # status so that the request becomes queued again.
+                    kwargs = {"request": status.request, "connection": connection}
+                    await atrace(
+                        "unassign_request_from_connection",
+                        logger,
+                        status.request,
+                        kwargs,
+                    )
                     status.unset_connection()
                     await self._attempt_to_acquire_connection(status)
             except BaseException as exc:
@@ -285,6 +335,12 @@ class AsyncConnectionPool(AsyncRequestInterface):
         async with self._pool_lock:
             # Update the state of the connection pool.
             if status in self._requests:
+                await atrace(
+                    "remove_request",
+                    logger,
+                    status.request,
+                    {"request": status.request},
+                )
                 self._requests.remove(status)
 
             if connection.is_closed() and connection in self._pool:
