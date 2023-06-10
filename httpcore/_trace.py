@@ -1,9 +1,10 @@
+import inspect
 import logging
 from types import TracebackType
 from typing import Any, Dict, Optional, Type
 
 from ._models import Request
-import inspect
+
 
 class Trace:
     def __init__(
@@ -27,9 +28,11 @@ class Trace:
     def trace(self, name: str, info: Dict[str, Any]) -> None:
         if self.trace_extension is not None:
             if inspect.iscoroutinefunction(self.trace_extension):
-                raise TypeError("If you are using a synchronous interface, "
-                                "the callback of the `trace` extension should "
-                                "be a normal function instead of an asynchronous function.")
+                raise TypeError(
+                    "If you are using a synchronous interface, "
+                    "the callback of the `trace` extension should "
+                    "be a normal function instead of an asynchronous function."
+                )
             prefix_and_name = f"{self.prefix}.{name}"
             self.trace_extension(prefix_and_name, info)
 
@@ -64,9 +67,11 @@ class Trace:
     async def atrace(self, name: str, info: Dict[str, Any]) -> None:
         if self.trace_extension is not None:
             if not inspect.iscoroutinefunction(self.trace_extension):
-                raise TypeError("If you're using an asynchronous interface, "
-                                "the callback of the `trace` extension should "
-                                "be an asynchronous function rather than a normal function.")
+                raise TypeError(
+                    "If you're using an asynchronous interface, "
+                    "the callback of the `trace` extension should "
+                    "be an asynchronous function rather than a normal function."
+                )
             prefix_and_name = f"{self.prefix}.{name}"
             await self.trace_extension(prefix_and_name, info)
 
