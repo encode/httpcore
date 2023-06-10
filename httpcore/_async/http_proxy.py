@@ -115,6 +115,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 `AF_INET6` address (IPv6).
             uds: Path to a Unix Domain Socket to use instead of TCP sockets.
             network_backend: A backend instance to use for handling network I/O.
+            proxy_mode: The proxy strategy that should be used, either `TUNNELING` or `FORWARDING`
         """
         super().__init__(
             ssl_context=ssl_context,
