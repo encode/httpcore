@@ -119,6 +119,8 @@ The `event_name` and `info` arguments here will be one of the following:
 * `{event_type}.{event_name}.started`, `<dictionary of keyword arguments>`
 * `{event_type}.{event_name}.complete`, `{"return_value": <...>}`
 * `{event_type}.{event_name}.failed`, `{"exception": <...>}`
+* `{event_type}.{event_name}`, `<dictionary of keyword arguments>`
+
 
 Note that when using the async variant of `httpcore` the handler function passed to `"trace"` must be an `async def ...` function.
 
@@ -129,6 +131,15 @@ The following event types are currently exposed...
 * `"connection.connect_tcp"`
 * `"connection.connect_unix_socket"`
 * `"connection.start_tls"`
+
+**Connection pool events**
+* `"connection_pool.add_request"`
+* `"connection_pool.remove_request"`
+* `"connection_pool.add_connection"`
+* `"connection_pool.reuse_connection"`
+* `"connection_pool.assign_request_to_connection"`
+* `"connection_pool.unassign_request_from_connection"`
+* `"connection_pool.timeout_waiting_for_connection"`
 
 **HTTP/1.1 events**
 
@@ -146,6 +157,7 @@ The following event types are currently exposed...
 * `"http2.receive_response_headers"`
 * `"http2.receive_response_body"`
 * `"http2.response_closed"`
+
 
 ### `"sni_hostname"`
 
