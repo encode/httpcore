@@ -2,7 +2,7 @@ import logging
 import ssl
 import typing
 from base64 import b64encode
-from enum import StrEnum
+from enum import Enum
 from typing import Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend
@@ -54,7 +54,7 @@ def build_auth_header(username: bytes, password: bytes) -> bytes:
     return b"Basic " + b64encode(userpass)
 
 
-class ProxyMode(StrEnum):
+class ProxyMode(Enum):
     TUNNELING = "TUNNELING"
     FORWARDING = "FORWARDING"
 
