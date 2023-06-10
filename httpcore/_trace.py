@@ -29,7 +29,7 @@ class Trace:
         if self.trace_extension is not None:
             prefix_and_name = f"{self.prefix}.{name}"
             ret = self.trace_extension(prefix_and_name, info)
-            if inspect.iscoroutine(ret):
+            if inspect.iscoroutine(ret):  # pragma: no cover
                 raise TypeError(
                     "If you are using a synchronous interface, "
                     "the callback of the `trace` extension should "
@@ -68,7 +68,7 @@ class Trace:
         if self.trace_extension is not None:
             prefix_and_name = f"{self.prefix}.{name}"
             coro = self.trace_extension(prefix_and_name, info)
-            if not inspect.iscoroutine(coro):
+            if not inspect.iscoroutine(coro):  # pragma: no cover
                 raise TypeError(
                     "If you're using an asynchronous interface, "
                     "the callback of the `trace` extension should "
