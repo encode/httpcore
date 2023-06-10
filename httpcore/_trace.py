@@ -27,7 +27,7 @@ class Trace:
 
     def trace(self, name: str, info: Dict[str, Any]) -> None:
         if self.trace_extension is not None:
-            if inspect.iscoroutinefunction(self.trace_extension):
+            if inspect.iscoroutinefunction(self.trace_extension):  # pragma: no cover
                 raise TypeError(
                     "If you are using a synchronous interface, "
                     "the callback of the `trace` extension should "
@@ -66,7 +66,9 @@ class Trace:
 
     async def atrace(self, name: str, info: Dict[str, Any]) -> None:
         if self.trace_extension is not None:
-            if not inspect.iscoroutinefunction(self.trace_extension):
+            if not inspect.iscoroutinefunction(
+                self.trace_extension
+            ):  # pragma: no cover
                 raise TypeError(
                     "If you're using an asynchronous interface, "
                     "the callback of the `trace` extension should "
