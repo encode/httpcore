@@ -1,3 +1,4 @@
+import inspect
 import logging
 from types import TracebackType
 from typing import Any, Dict, Optional, Type
@@ -27,7 +28,13 @@ class Trace:
     def trace(self, name: str, info: Dict[str, Any]) -> None:
         if self.trace_extension is not None:
             prefix_and_name = f"{self.prefix}.{name}"
-            self.trace_extension(prefix_and_name, info)
+            ret = self.trace_extension(prefix_and_name, info)
+            if inspect.iscoroutine(ret):  # pragma: no cover
+                raise TypeError(
+                    "If you are using a synchronous interface, "
+                    "the callback of the `trace` extension should "
+                    "be a normal function instead of an asynchronous function."
+                )
 
         if self.debug:
             if not info or "return_value" in info and info["return_value"] is None:
@@ -60,7 +67,14 @@ class Trace:
     async def atrace(self, name: str, info: Dict[str, Any]) -> None:
         if self.trace_extension is not None:
             prefix_and_name = f"{self.prefix}.{name}"
-            await self.trace_extension(prefix_and_name, info)
+            coro = self.trace_extension(prefix_and_name, info)
+            if not inspect.iscoroutine(coro):  # pragma: no cover
+                raise TypeError(
+                    "If you're using an asynchronous interface, "
+                    "the callback of the `trace` extension should "
+                    "be an asynchronous function rather than a normal function."
+                )
+            await coro
 
         if self.debug:
             if not info or "return_value" in info and info["return_value"] is None:
