@@ -133,7 +133,6 @@ class HTTP2Connection(ConnectionInterface):
                 content=HTTP2ConnectionByteStream(self, request, stream_id=stream_id),
                 extensions={
                     "http_version": b"HTTP/2",
-                    "network_stream": self._network_stream,
                     "stream_id": stream_id,
                 },
             )
