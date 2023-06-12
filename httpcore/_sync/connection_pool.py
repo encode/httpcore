@@ -4,11 +4,9 @@ import sys
 from types import TracebackType
 from typing import Iterable, Iterator, Iterable, List, Optional, Type
 
-import httpcore
-
 from .._backends.sync import SyncBackend
 from .._backends.base import SOCKET_OPTION, NetworkBackend
-from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
+from .._exceptions import ConnectionNotAvailable, PoolTimeout, UnsupportedProtocol
 from .._models import Origin, Request, Response
 from .._synchronization import Event, Lock
 from .._trace import trace
@@ -265,7 +263,7 @@ class ConnectionPool(RequestInterface):
                 # If we timeout here, or if the task is cancelled, then make
                 # sure to remove the request from the queue before bubbling
                 # up the exception.
-                if isinstance(exc, httpcore.PoolTimeout):
+                if isinstance(exc, PoolTimeout):
                     trace(
                         "timeout_waiting_for_connection",
                         logger,

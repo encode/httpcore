@@ -121,7 +121,6 @@ The `event_name` and `info` arguments here will be one of the following:
 * `{event_type}.{event_name}.failed`, `{"exception": <...>}`
 * `{event_type}.{event_name}`, `<dictionary of keyword arguments>`
 
-
 Note that when using the async variant of `httpcore` the handler function passed to `"trace"` must be an `async def ...` function.
 
 The following event types are currently exposed...
@@ -157,7 +156,6 @@ The following event types are currently exposed...
 * `"http2.receive_response_headers"`
 * `"http2.receive_response_body"`
 * `"http2.response_closed"`
-
 
 ### `"sni_hostname"`
 

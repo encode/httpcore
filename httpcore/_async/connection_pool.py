@@ -4,11 +4,9 @@ import sys
 from types import TracebackType
 from typing import AsyncIterable, AsyncIterator, Iterable, List, Optional, Type
 
-import httpcore
-
 from .._backends.auto import AutoBackend
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend
-from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
+from .._exceptions import ConnectionNotAvailable, PoolTimeout, UnsupportedProtocol
 from .._models import Origin, Request, Response
 from .._synchronization import AsyncEvent, AsyncLock
 from .._trace import atrace
@@ -265,7 +263,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
                 # If we timeout here, or if the task is cancelled, then make
                 # sure to remove the request from the queue before bubbling
                 # up the exception.
-                if isinstance(exc, httpcore.PoolTimeout):
+                if isinstance(exc, PoolTimeout):
                     await atrace(
                         "timeout_waiting_for_connection",
                         logger,
