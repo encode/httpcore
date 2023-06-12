@@ -5,30 +5,27 @@ import anyio
 import pytest
 
 import httpcore
-from httpcore.backends.auto import AutoBackend
-from httpcore.backends.base import SOCKET_OPTION, AsyncNetworkBackend
-from httpcore.backends.mock import AsyncNetworkStream
 
 
-class SlowStream(AsyncNetworkStream):
+class SlowStream(httpcore.AsyncNetworkStream):
     async def write(
         self, buffer: bytes, timeout: typing.Optional[float] = None
     ) -> None:
-        await AutoBackend().sleep(2)
+        await httpcore._backends.auto.AutoBackend().sleep(2)
 
     async def aclose(self) -> None:
         ...
 
 
-class SlowBackend(AsyncNetworkBackend):
+class SlowBackend(httpcore.AsyncNetworkBackend):
     async def connect_tcp(
         self,
         host: str,
         port: int,
         timeout: Optional[float] = None,
         local_address: Optional[str] = None,
-        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
-    ) -> AsyncNetworkStream:
+        socket_options: typing.Optional[typing.Iterable[httpcore.SOCKET_OPTION]] = None,
+    ) -> httpcore.AsyncNetworkStream:
         return SlowStream()
 
 
@@ -36,7 +33,5 @@ class SlowBackend(AsyncNetworkBackend):
 async def test_async_cancellation():
     pool = httpcore.AsyncConnectionPool(network_backend=SlowBackend())
     with anyio.move_on_after(1):
-        await pool.request(
-            "GET", "http://example.com"
-        )
+        await pool.request("GET", "http://example.com")
     assert not pool.connections
