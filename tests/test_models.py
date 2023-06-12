@@ -1,4 +1,4 @@
-from typing import AsyncIterator, Iterator, List
+import typing
 
 import pytest
 
@@ -95,10 +95,10 @@ def test_response():
 
 
 class ByteIterator:
-    def __init__(self, chunks: List[bytes]) -> None:
+    def __init__(self, chunks: typing.List[bytes]) -> None:
         self._chunks = chunks
 
-    def __iter__(self) -> Iterator[bytes]:
+    def __iter__(self) -> typing.Iterator[bytes]:
         for chunk in self._chunks:
             yield chunk
 
@@ -130,10 +130,10 @@ def test_response_sync_streaming():
 
 
 class AsyncByteIterator:
-    def __init__(self, chunks: List[bytes]) -> None:
+    def __init__(self, chunks: typing.List[bytes]) -> None:
         self._chunks = chunks
 
-    async def __aiter__(self) -> AsyncIterator[bytes]:
+    async def __aiter__(self) -> typing.AsyncIterator[bytes]:
         for chunk in self._chunks:
             yield chunk
 

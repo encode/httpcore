@@ -1,13 +1,19 @@
 import ssl
-from typing import Optional
+import typing
 
 import hpack
 import hyperframe.frame
 import pytest
 
-from httpcore import HTTPProxy, Origin, ProxyError
-from httpcore.backends.base import NetworkStream
-from httpcore.backends.mock import MockBackend, MockStream
+from httpcore import (
+    SOCKET_OPTION,
+    HTTPProxy,
+    MockBackend,
+    MockStream,
+    NetworkStream,
+    Origin,
+    ProxyError,
+)
 
 
 
@@ -126,8 +132,8 @@ class HTTP1ThenHTTP2Stream(MockStream):
     def start_tls(
         self,
         ssl_context: ssl.SSLContext,
-        server_hostname: Optional[str] = None,
-        timeout: Optional[float] = None,
+        server_hostname: typing.Optional[str] = None,
+        timeout: typing.Optional[float] = None,
     ) -> NetworkStream:
         self._http2 = True
         return self
@@ -138,8 +144,9 @@ class HTTP1ThenHTTP2Backend(MockBackend):
         self,
         host: str,
         port: int,
-        timeout: Optional[float] = None,
-        local_address: Optional[str] = None,
+        timeout: typing.Optional[float] = None,
+        local_address: typing.Optional[str] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> NetworkStream:
         return HTTP1ThenHTTP2Stream(list(self._buffer))
 
