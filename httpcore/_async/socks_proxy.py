@@ -4,13 +4,13 @@ import typing
 
 from socksio import socks5
 
+from .._backends.auto import AutoBackend
+from .._backends.base import AsyncNetworkBackend, AsyncNetworkStream
 from .._exceptions import ConnectionNotAvailable, ProxyError
 from .._models import URL, Origin, Request, Response, enforce_bytes, enforce_url
 from .._ssl import default_ssl_context
 from .._synchronization import AsyncLock
 from .._trace import Trace
-from ..backends.auto import AutoBackend
-from ..backends.base import AsyncNetworkBackend, AsyncNetworkStream
 from .connection_pool import AsyncConnectionPool
 from .http11 import AsyncHTTP11Connection
 from .interfaces import AsyncConnectionInterface

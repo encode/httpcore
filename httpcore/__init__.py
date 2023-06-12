@@ -8,6 +8,15 @@ from ._async import (
     AsyncHTTPProxy,
     AsyncSOCKSProxy,
 )
+from ._backends.base import (
+    SOCKET_OPTION,
+    AsyncNetworkBackend,
+    AsyncNetworkStream,
+    NetworkBackend,
+    NetworkStream,
+)
+from ._backends.mock import AsyncMockBackend, AsyncMockStream, MockBackend, MockStream
+from ._backends.sync import SyncBackend
 from ._exceptions import (
     ConnectError,
     ConnectionNotAvailable,
@@ -37,6 +46,30 @@ from ._sync import (
     SOCKSProxy,
 )
 
+# The 'httpcore.AnyIOBackend' class is conditional on 'anyio' being installed.
+try:
+    from ._backends.anyio import AnyIOBackend
+except ImportError:  # pragma: nocover
+
+    class AnyIOBackend:  # type: ignore
+        def __init__(self, *args, **kwargs):  # type: ignore
+            msg = (
+                "Attempted to use 'httpcore.AnyIOBackend' but 'anyio' is not installed."
+            )
+            raise RuntimeError(msg)
+
+
+# The 'httpcore.TrioBackend' class is conditional on 'trio' being installed.
+try:
+    from ._backends.trio import TrioBackend
+except ImportError:  # pragma: nocover
+
+    class TrioBackend:  # type: ignore
+        def __init__(self, *args, **kwargs):  # type: ignore
+            msg = "Attempted to use 'httpcore.TrioBackend' but 'trio' is not installed."
+            raise RuntimeError(msg)
+
+
 __all__ = [
     # top-level requests
     "request",
@@ -62,8 +95,23 @@ __all__ = [
     "HTTP2Connection",
     "ConnectionInterface",
     "SOCKSProxy",
+    # network backends, implementations
+    "SyncBackend",
+    "AnyIOBackend",
+    "TrioBackend",
+    # network backends, mock implementations
+    "AsyncMockBackend",
+    "AsyncMockStream",
+    "MockBackend",
+    "MockStream",
+    # network backends, interface
+    "AsyncNetworkStream",
+    "AsyncNetworkBackend",
+    "NetworkStream",
+    "NetworkBackend",
     # util
     "default_ssl_context",
+    "SOCKET_OPTION",
     # exceptions
     "ConnectionNotAvailable",
     "ProxyError",

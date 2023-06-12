@@ -21,9 +21,9 @@ class AutoBackend(AsyncNetworkBackend):
 
                 self._backend: AsyncNetworkBackend = TrioBackend()
             else:
-                from .asyncio import AsyncIOBackend
+                from .anyio import AnyIOBackend
 
-                self._backend = AsyncIOBackend()
+                self._backend = AnyIOBackend()
 
     async def connect_tcp(
         self,

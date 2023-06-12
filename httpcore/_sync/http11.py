@@ -15,6 +15,7 @@ from typing import (
 
 import h11
 
+from .._backends.base import NetworkStream
 from .._exceptions import (
     ConnectionNotAvailable,
     LocalProtocolError,
@@ -24,7 +25,6 @@ from .._exceptions import (
 from .._models import Origin, Request, Response
 from .._synchronization import Lock
 from .._trace import Trace
-from ..backends.base import NetworkStream
 from .interfaces import ConnectionInterface
 
 logger = logging.getLogger("httpcore.http11")
