@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## unreleased
 
 - The networking backend interface has [been added to the public API](https://www.encode.io/httpcore/network-backends). Some classes which were previously private implementation detail are now part of the top-level public API. (#699)
+- Add support for HTTPS proxies. (#714)
 
 ## 0.17.2 (May 23th, 2023)
 
