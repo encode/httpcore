@@ -1,13 +1,13 @@
 import ssl
 import sys
 from types import TracebackType
-from typing import Iterable, Iterator, List, Optional, Type
+from typing import Iterable, Iterator, Iterable, List, Optional, Type
 
+from .._backends.sync import SyncBackend
+from .._backends.base import SOCKET_OPTION, NetworkBackend
 from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
 from .._models import Origin, Request, Response
 from .._synchronization import Event, Lock
-from ..backends.sync import SyncBackend
-from ..backends.base import NetworkBackend
 from .connection import HTTPConnection
 from .interfaces import ConnectionInterface, RequestInterface
 
@@ -31,7 +31,8 @@ class RequestStatus:
     def wait_for_connection(
         self, timeout: Optional[float] = None
     ) -> ConnectionInterface:
-        self._connection_acquired.wait(timeout=timeout)
+        if self.connection is None:
+            self._connection_acquired.wait(timeout=timeout)
         assert self.connection is not None
         return self.connection
 
@@ -53,6 +54,7 @@ class ConnectionPool(RequestInterface):
         local_address: Optional[str] = None,
         uds: Optional[str] = None,
         network_backend: Optional[NetworkBackend] = None,
+        socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -80,6 +82,8 @@ class ConnectionPool(RequestInterface):
                 `local_address="::"` will connect using an `AF_INET6` address (IPv6).
             uds: Path to a Unix Domain Socket to use instead of TCP sockets.
             network_backend: A backend instance to use for handling network I/O.
+            socket_options: Socket options that have to be included
+             in the TCP socket when the connection was established.
         """
         self._ssl_context = ssl_context
 
@@ -108,6 +112,7 @@ class ConnectionPool(RequestInterface):
         self._network_backend = (
             SyncBackend() if network_backend is None else network_backend
         )
+        self._socket_options = socket_options
 
     def create_connection(self, origin: Origin) -> ConnectionInterface:
         return HTTPConnection(
@@ -120,6 +125,7 @@ class ConnectionPool(RequestInterface):
             local_address=self._local_address,
             uds=self._uds,
             network_backend=self._network_backend,
+            socket_options=self._socket_options,
         )
 
     @property
@@ -230,7 +236,9 @@ class ConnectionPool(RequestInterface):
                 # sure to remove the request from the queue before bubbling
                 # up the exception.
                 with self._pool_lock:
-                    self._requests.remove(status)
+                    # Ensure only remove when task exists.
+                    if status in self._requests:
+                        self._requests.remove(status)
                     raise exc
 
             try:

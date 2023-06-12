@@ -13,7 +13,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
-from .base import AsyncNetworkBackend, AsyncNetworkStream
+from .base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
 
 
 class TrioStream(AsyncNetworkStream):
@@ -115,7 +115,12 @@ class TrioBackend(AsyncNetworkBackend):
         port: int,
         timeout: typing.Optional[float] = None,
         local_address: typing.Optional[str] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:
+        # By default for TCP sockets, trio enables TCP_NODELAY.
+        # https://trio.readthedocs.io/en/stable/reference-io.html#trio.SocketStream
+        if socket_options is None:
+            socket_options = []  # pragma: no cover
         timeout_or_inf = float("inf") if timeout is None else timeout
         exc_map: ExceptionMapping = {
             trio.TooSlowError: ConnectTimeout,
@@ -127,11 +132,18 @@ class TrioBackend(AsyncNetworkBackend):
                 stream: trio.abc.Stream = await trio.open_tcp_stream(
                     host=host, port=port, local_address=local_address
                 )
+                for option in socket_options:
+                    stream.setsockopt(*option)  # type: ignore[attr-defined] # pragma: no cover
         return TrioStream(stream)
 
     async def connect_unix_socket(
-        self, path: str, timeout: typing.Optional[float] = None
+        self,
+        path: str,
+        timeout: typing.Optional[float] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:  # pragma: nocover
+        if socket_options is None:
+            socket_options = []
         timeout_or_inf = float("inf") if timeout is None else timeout
         exc_map: ExceptionMapping = {
             trio.TooSlowError: ConnectTimeout,
@@ -141,6 +153,8 @@ class TrioBackend(AsyncNetworkBackend):
         with map_exceptions(exc_map):
             with trio.fail_after(timeout_or_inf):
                 stream: trio.abc.Stream = await trio.open_unix_socket(path)
+                for option in socket_options:
+                    stream.setsockopt(*option)  # type: ignore[attr-defined] # pragma: no cover
         return TrioStream(stream)
 
     async def sleep(self, seconds: float) -> None:

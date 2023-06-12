@@ -1,18 +1,22 @@
+import logging
 import ssl
 import typing
 
 from socksio import socks5
 
+from .._backends.auto import AutoBackend
+from .._backends.base import AsyncNetworkBackend, AsyncNetworkStream
 from .._exceptions import ConnectionNotAvailable, ProxyError
 from .._models import URL, Origin, Request, Response, enforce_bytes, enforce_url
 from .._ssl import default_ssl_context
 from .._synchronization import AsyncLock
 from .._trace import Trace
-from ..backends.auto import AutoBackend
-from ..backends.base import AsyncNetworkBackend, AsyncNetworkStream
 from .connection_pool import AsyncConnectionPool
 from .http11 import AsyncHTTP11Connection
 from .interfaces import AsyncConnectionInterface
+
+logger = logging.getLogger("httpcore.socks")
+
 
 AUTH_METHODS = {
     b"\x00": "NO AUTHENTICATION REQUIRED",
@@ -223,7 +227,7 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
                         "port": self._proxy_origin.port,
                         "timeout": timeout,
                     }
-                    with Trace("connection.connect_tcp", request, kwargs) as trace:
+                    with Trace("connect_tcp", logger, request, kwargs) as trace:
                         stream = await self._network_backend.connect_tcp(**kwargs)
                         trace.return_value = stream
 
@@ -235,7 +239,7 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
                         "auth": self._proxy_auth,
                     }
                     with Trace(
-                        "connection.setup_socks5_connection", request, kwargs
+                        "setup_socks5_connection", logger, request, kwargs
                     ) as trace:
                         await _init_socks5_connection(**kwargs)
                         trace.return_value = stream
@@ -257,9 +261,7 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
                             "server_hostname": self._remote_origin.host.decode("ascii"),
                             "timeout": timeout,
                         }
-                        async with Trace(
-                            "connection.start_tls", request, kwargs
-                        ) as trace:
+                        async with Trace("start_tls", logger, request, kwargs) as trace:
                             stream = await stream.start_tls(**kwargs)
                             trace.return_value = stream
 

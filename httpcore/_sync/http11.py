@@ -1,4 +1,5 @@
 import enum
+import logging
 import time
 from types import TracebackType
 from typing import (
@@ -14,6 +15,7 @@ from typing import (
 
 import h11
 
+from .._backends.base import NetworkStream
 from .._exceptions import (
     ConnectionNotAvailable,
     LocalProtocolError,
@@ -23,8 +25,10 @@ from .._exceptions import (
 from .._models import Origin, Request, Response
 from .._synchronization import Lock
 from .._trace import Trace
-from ..backends.base import NetworkStream
 from .interfaces import ConnectionInterface
+
+logger = logging.getLogger("httpcore.http11")
+
 
 # A subset of `h11.Event` types supported by `_send_event`
 H11SendEvent = Union[
@@ -80,12 +84,12 @@ class HTTP11Connection(ConnectionInterface):
 
         try:
             kwargs = {"request": request}
-            with Trace("http11.send_request_headers", request, kwargs) as trace:
+            with Trace("send_request_headers", logger, request, kwargs) as trace:
                 self._send_request_headers(**kwargs)
-            with Trace("http11.send_request_body", request, kwargs) as trace:
+            with Trace("send_request_body", logger, request, kwargs) as trace:
                 self._send_request_body(**kwargs)
             with Trace(
-                "http11.receive_response_headers", request, kwargs
+                "receive_response_headers", logger, request, kwargs
             ) as trace:
                 (
                     http_version,
@@ -111,7 +115,7 @@ class HTTP11Connection(ConnectionInterface):
                 },
             )
         except BaseException as exc:
-            with Trace("http11.response_closed", request) as trace:
+            with Trace("response_closed", logger, request) as trace:
                 self._response_closed()
             raise exc
 
@@ -308,7 +312,7 @@ class HTTP11ConnectionByteStream:
     def __iter__(self) -> Iterator[bytes]:
         kwargs = {"request": self._request}
         try:
-            with Trace("http11.receive_response_body", self._request, kwargs):
+            with Trace("receive_response_body", logger, self._request, kwargs):
                 for chunk in self._connection._receive_response_body(**kwargs):
                     yield chunk
         except BaseException as exc:
@@ -321,5 +325,5 @@ class HTTP11ConnectionByteStream:
     def close(self) -> None:
         if not self._closed:
             self._closed = True
-            with Trace("http11.response_closed", self._request):
+            with Trace("response_closed", logger, self._request):
                 self._connection._response_closed()

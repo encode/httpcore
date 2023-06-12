@@ -1,13 +1,19 @@
 import ssl
-from typing import Optional
+import typing
 
 import hpack
 import hyperframe.frame
 import pytest
 
-from httpcore import AsyncHTTPProxy, Origin, ProxyError
-from httpcore.backends.base import AsyncNetworkStream
-from httpcore.backends.mock import AsyncMockBackend, AsyncMockStream
+from httpcore import (
+    SOCKET_OPTION,
+    AsyncHTTPProxy,
+    AsyncMockBackend,
+    AsyncMockStream,
+    AsyncNetworkStream,
+    Origin,
+    ProxyError,
+)
 
 
 @pytest.mark.anyio
@@ -126,8 +132,8 @@ class HTTP1ThenHTTP2Stream(AsyncMockStream):
     async def start_tls(
         self,
         ssl_context: ssl.SSLContext,
-        server_hostname: Optional[str] = None,
-        timeout: Optional[float] = None,
+        server_hostname: typing.Optional[str] = None,
+        timeout: typing.Optional[float] = None,
     ) -> AsyncNetworkStream:
         self._http2 = True
         return self
@@ -138,8 +144,9 @@ class HTTP1ThenHTTP2Backend(AsyncMockBackend):
         self,
         host: str,
         port: int,
-        timeout: Optional[float] = None,
-        local_address: Optional[str] = None,
+        timeout: typing.Optional[float] = None,
+        local_address: typing.Optional[str] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:
         return HTTP1ThenHTTP2Stream(list(self._buffer))
 
