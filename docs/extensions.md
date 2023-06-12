@@ -132,6 +132,7 @@ The following event types are currently exposed...
 * `"connection.start_tls"`
 
 **Connection pool events**
+
 * `"connection_pool.add_request"`
 * `"connection_pool.remove_request"`
 * `"connection_pool.add_connection"`
