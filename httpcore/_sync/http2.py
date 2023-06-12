@@ -129,7 +129,6 @@ class HTTP2Connection(ConnectionInterface):
                 headers=headers,
                 content=HTTP2ConnectionByteStream(self, request, stream_id=stream_id),
                 extensions={
-                    "data_stream": HTTP2DataStream(self, request, stream_id),
                     "http_version": b"HTTP/2",
                     "network_stream": self._network_stream,
                     "stream_id": stream_id,
@@ -284,28 +283,14 @@ class HTTP2Connection(ConnectionInterface):
         Iterator that returns the bytes of the response body for a given stream ID.
         """
         while True:
-            data = self._recieve_stream_data(request, stream_id)
-            if data:
-                yield data
-            else:
-                break
-
-    def _recieve_stream_data(self, request: Request, stream_id: int) -> bytes:
-        """
-        Return the bytes in the next data frame for the given stream ID,
-        or b'' when the stream ends.
-        """
-        while True:
             event = self._receive_stream_event(request, stream_id)
             if isinstance(event, h2.events.DataReceived):
                 amount = event.flow_controlled_length
                 self._h2_state.acknowledge_received_data(amount, stream_id)
                 self._write_outgoing_data(request)
-                if event.data:
-                    return event.data  # type: ignore
+                yield event.data
             elif isinstance(event, (h2.events.StreamEnded, h2.events.StreamReset)):
                 break
-        return b""
 
     def _receive_stream_event(
         self, request: Request, stream_id: int
@@ -562,29 +547,3 @@ class HTTP2ConnectionByteStream:
             kwargs = {"stream_id": self._stream_id}
             with Trace("http2.response_closed", self._request, kwargs):
                 self._connection._response_closed(stream_id=self._stream_id)
-
-
-class HTTP2DataStream:
-    """
-    A stream-like interface that allows read/write operations directly onto a
-    single HTTP/2 data stream. Allows for HTTP/2 bi-directional streaming.
-    Exposed via the response extensions as "data_stream".
-    """
-
-    def __init__(
-        self, connection: HTTP2Connection, request: Request, stream_id: int
-    ) -> None:
-        self._connection = connection
-        self._request = request
-        self._stream_id = stream_id
-
-    def read(self) -> bytes:
-        return self._connection._recieve_stream_data(
-            self._request, self._stream_id
-        )
-
-    def write(self, data: bytes) -> None:
-        self._connection._send_stream_data(self._request, self._stream_id, data)
-
-    def close(self) -> None:
-        self._connection._send_end_stream(self._request, self._stream_id)
