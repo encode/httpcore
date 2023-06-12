@@ -32,6 +32,6 @@ class SlowBackend(httpcore.AsyncNetworkBackend):
 @pytest.mark.anyio
 async def test_async_cancellation():
     pool = httpcore.AsyncConnectionPool(network_backend=SlowBackend())
-    with anyio.move_on_after(1):
+    with anyio.move_on_after(0.001):
         await pool.request("GET", "http://example.com")
     assert not pool.connections
