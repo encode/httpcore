@@ -81,6 +81,7 @@ The connection pool instance is also the main point of configuration. Let's take
                    will connect using an `AF_INET6` address (IPv6).
 * `uds`: Path to a Unix Domain Socket to use instead of TCP sockets.
 * `network_backend`: A backend instance to use for handling network I/O.
+* `socket_options`: Socket options that have to be included in the TCP socket when the connection was established.
 
 ## Pool lifespans
 

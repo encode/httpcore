@@ -2,12 +2,12 @@ import ssl
 
 import pytest
 
-from httpcore import ConnectionPool
+import httpcore
 
 
 
 def test_request(httpbin):
-    with ConnectionPool() as pool:
+    with httpcore.ConnectionPool() as pool:
         response = pool.request("GET", httpbin.url)
         assert response.status == 200
 
@@ -17,7 +17,7 @@ def test_ssl_request(httpbin_secure):
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
-    with ConnectionPool(ssl_context=ssl_context) as pool:
+    with httpcore.ConnectionPool(ssl_context=ssl_context) as pool:
         response = pool.request("GET", httpbin_secure.url)
         assert response.status == 200
 
@@ -27,7 +27,7 @@ def test_extra_info(httpbin_secure):
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
-    with ConnectionPool(ssl_context=ssl_context) as pool:
+    with httpcore.ConnectionPool(ssl_context=ssl_context) as pool:
         with pool.stream("GET", httpbin_secure.url) as response:
             assert response.status == 200
             stream = response.extensions["network_stream"]

@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## unreleased
+
+- The networking backend interface has [been added to the public API](https://www.encode.io/httpcore/network-backends). Some classes which were previously private implementation detail are now part of the top-level public API. (#699)
+- Add exceptions when a synchronous `trace callback` is passed to an asynchronous request or an asynchronous `trace callback` is passed to a synchronous request. (#717)
+
+## 0.17.2 (May 23th, 2023)
+
+- Add `socket_options` argument to `ConnectionPool` and `HTTProxy` classes. (#668)
+- Improve logging with per-module logger names. (#690)
+- Add `sni_hostname` request extension. (#696)
+- Resolve race condition during import of `anyio` package. (#692)
+- Enable TCP_NODELAY for all synchronous sockets. (#651)
+
+## 0.17.1 (May 17th, 2023)
+
+- If 'retries' is set, then allow retries if an SSL handshake error occurs. (#669)
+- Improve correctness of tracebacks on network exceptions, by raising properly chained exceptions. (#678)
+- Prevent connection-hanging behaviour when HTTP/2 connections are closed by a server-sent 'GoAway' frame. (#679)
+- Fix edge-case exception when removing requests from the connection pool. (#680)
+- Fix pool timeout edge-case. (#688)
+
 ## 0.17.0 (March 16th, 2023)
 
 - Add DEBUG level logging. (#648)

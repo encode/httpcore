@@ -10,6 +10,7 @@ import h2.events
 import h2.exceptions
 import h2.settings
 
+from .._backends.base import AsyncNetworkStream
 from .._exceptions import (
     ConnectionNotAvailable,
     LocalProtocolError,
@@ -18,8 +19,9 @@ from .._exceptions import (
 from .._models import Origin, Request, Response
 from .._synchronization import AsyncLock, AsyncSemaphore
 from .._trace import Trace
-from ..backends.base import AsyncNetworkStream
 from .interfaces import AsyncConnectionInterface
+
+logger = logging.getLogger("httpcore.http2")
 
 
 def has_body_headers(request: Request) -> bool:
@@ -108,7 +110,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         async with self._init_lock:
             if not self._sent_connection_init:
                 kwargs = {"request": request}
-                async with Trace("http2.send_connection_init", request, kwargs):
+                async with Trace("send_connection_init", logger, request, kwargs):
                     await self._send_connection_init(**kwargs)
                 self._sent_connection_init = True
 
@@ -135,12 +137,12 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
         try:
             kwargs = {"request": request, "stream_id": stream_id}
-            async with Trace("http2.send_request_headers", request, kwargs):
+            async with Trace("send_request_headers", logger, request, kwargs):
                 await self._send_request_headers(request=request, stream_id=stream_id)
-            async with Trace("http2.send_request_body", request, kwargs):
+            async with Trace("send_request_body", logger, request, kwargs):
                 await self._send_request_body(request=request, stream_id=stream_id)
             async with Trace(
-                "http2.receive_response_headers", request, kwargs
+                "receive_response_headers", logger, request, kwargs
             ) as trace:
                 status, headers = await self._receive_response(
                     request=request, stream_id=stream_id
@@ -151,11 +153,14 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 status=status,
                 headers=headers,
                 content=HTTP2ConnectionByteStream(self, request, stream_id=stream_id),
-                extensions={"stream_id": stream_id, "http_version": b"HTTP/2"},
+                extensions={
+                    "http_version": b"HTTP/2",
+                    "stream_id": stream_id,
+                },
             )
         except Exception as exc:  # noqa: PIE786
             kwargs = {"stream_id": stream_id}
-            async with Trace("http2.response_closed", request, kwargs):
+            async with Trace("response_closed", logger, request, kwargs):
                 await self._response_closed(stream_id=stream_id)
 
             if isinstance(exc, h2.exceptions.ProtocolError):
@@ -210,6 +215,9 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
     # Sending the request...
 
     async def _send_request_headers(self, request: Request, stream_id: int) -> None:
+        """
+        Send the request headers to a given stream ID.
+        """
         end_stream = not has_body_headers(request)
 
         # In HTTP/2 the ':authority' pseudo-header is used instead of 'Host'.
@@ -238,18 +246,34 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         await self._write_outgoing_data(request)
 
     async def _send_request_body(self, request: Request, stream_id: int) -> None:
+        """
+        Iterate over the request body sending it to a given stream ID.
+        """
         if not has_body_headers(request):
             return
 
         assert isinstance(request.stream, typing.AsyncIterable)
         async for data in request.stream:
-            while data:
-                max_flow = await self._wait_for_outgoing_flow(request, stream_id)
-                chunk_size = min(len(data), max_flow)
-                chunk, data = data[:chunk_size], data[chunk_size:]
-                self._h2_state.send_data(stream_id, chunk)
-                await self._write_outgoing_data(request)
+            await self._send_stream_data(request, stream_id, data)
+        await self._send_end_stream(request, stream_id)
 
+    async def _send_stream_data(
+        self, request: Request, stream_id: int, data: bytes
+    ) -> None:
+        """
+        Send a single chunk of data in one or more data frames.
+        """
+        while data:
+            max_flow = await self._wait_for_outgoing_flow(request, stream_id)
+            chunk_size = min(len(data), max_flow)
+            chunk, data = data[:chunk_size], data[chunk_size:]
+            self._h2_state.send_data(stream_id, chunk)
+            await self._write_outgoing_data(request)
+
+    async def _send_end_stream(self, request: Request, stream_id: int) -> None:
+        """
+        Send an empty data frame on on a given stream ID with the END_STREAM flag set.
+        """
         self._h2_state.end_stream(stream_id)
         await self._write_outgoing_data(request)
 
@@ -258,6 +282,9 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
     async def _receive_response(
         self, request: Request, stream_id: int
     ) -> typing.Tuple[int, typing.List[typing.Tuple[bytes, bytes]]]:
+        """
+        Return the response status code and headers for a given stream ID.
+        """
         while True:
             event = await self._receive_stream_event(request, stream_id)
             if isinstance(event, h2.events.ResponseReceived):
@@ -276,6 +303,9 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
     async def _receive_response_body(
         self, request: Request, stream_id: int
     ) -> typing.AsyncIterator[bytes]:
+        """
+        Iterator that returns the bytes of the response body for a given stream ID.
+        """
         while True:
             event = await self._receive_stream_event(request, stream_id)
             if isinstance(event, h2.events.DataReceived):
@@ -289,6 +319,11 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
     async def _receive_stream_event(
         self, request: Request, stream_id: int
     ) -> h2.events.Event:
+        """
+        Return the next available event for a given stream ID.
+
+        Will read more data from the network if required.
+        """
         while not self._events.get(stream_id):
             await self._receive_events(request, stream_id)
         event = self._events[stream_id].pop(0)
@@ -300,6 +335,10 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
     async def _receive_events(
         self, request: Request, stream_id: typing.Optional[int] = None
     ) -> None:
+        """
+        Read some data from the network until we see one or more events
+        for a given stream ID.
+        """
         async with self._read_lock:
             if self._connection_error_event is not None:  # pragma: nocover
                 raise RemoteProtocolError(self._connection_error_event)
@@ -315,7 +354,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 for event in events:
                     if isinstance(event, h2.events.RemoteSettingsChanged):
                         async with Trace(
-                            "http2.receive_remote_settings", request
+                            "receive_remote_settings", logger, request
                         ) as trace:
                             await self._receive_remote_settings_change(event)
                             trace.return_value = event
@@ -514,7 +553,7 @@ class HTTP2ConnectionByteStream:
     async def __aiter__(self) -> typing.AsyncIterator[bytes]:
         kwargs = {"request": self._request, "stream_id": self._stream_id}
         try:
-            async with Trace("http2.receive_response_body", self._request, kwargs):
+            async with Trace("receive_response_body", logger, self._request, kwargs):
                 async for chunk in self._connection._receive_response_body(
                     request=self._request, stream_id=self._stream_id
                 ):
@@ -530,5 +569,5 @@ class HTTP2ConnectionByteStream:
         if not self._closed:
             self._closed = True
             kwargs = {"stream_id": self._stream_id}
-            async with Trace("http2.response_closed", self._request, kwargs):
+            async with Trace("response_closed", logger, self._request, kwargs):
                 await self._connection._response_closed(stream_id=self._stream_id)

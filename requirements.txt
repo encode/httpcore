@@ -6,9 +6,9 @@ trio==0.21.0
 # Docs
 mkdocs==1.4.2
 mkdocs-autorefs==0.3.1
-mkdocs-material==9.1.5
+mkdocs-material==9.1.15
 mkdocs-material-extensions==1.1.1
-mkdocstrings[python-legacy]==0.19.1
+mkdocstrings[python-legacy]==0.22.0
 jinja2==3.1.2
 
 # Packaging
@@ -18,7 +18,7 @@ wheel
 # Tests & Linting
 anyio==3.6.2
 autoflake==1.7.7
-black==23.1.0
+black==23.3.0
 coverage==6.5.0
 flake8==3.9.2  # See: https://github.com/PyCQA/flake8/pull/1438
 isort==5.11.4
@@ -26,7 +26,7 @@ importlib-metadata==4.13.0
 mypy==1.2.0
 trio-typing==0.8.0
 types-certifi==2021.10.8.3
-pytest==7.2.0
+pytest==7.3.1
 pytest-httpbin==2.0.0rc1
 pytest-trio==0.7.0
 werkzeug<2.1  # See: https://github.com/postmanlabs/httpbin/issues/673

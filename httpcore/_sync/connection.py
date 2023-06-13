@@ -1,19 +1,23 @@
 import itertools
+import logging
 import ssl
 from types import TracebackType
-from typing import Iterator, Optional, Type
+from typing import Iterable, Iterator, Optional, Type
 
+from .._backends.sync import SyncBackend
+from .._backends.base import SOCKET_OPTION, NetworkBackend, NetworkStream
 from .._exceptions import ConnectError, ConnectionNotAvailable, ConnectTimeout
 from .._models import Origin, Request, Response
 from .._ssl import default_ssl_context
 from .._synchronization import Lock
 from .._trace import Trace
-from ..backends.sync import SyncBackend
-from ..backends.base import NetworkBackend, NetworkStream
 from .http11 import HTTP11Connection
 from .interfaces import ConnectionInterface
 
 RETRIES_BACKOFF_FACTOR = 0.5  # 0s, 0.5s, 1s, 2s, 4s, etc.
+
+
+logger = logging.getLogger("httpcore.connection")
 
 
 def exponential_backoff(factor: float) -> Iterator[float]:
@@ -34,6 +38,7 @@ class HTTPConnection(ConnectionInterface):
         local_address: Optional[str] = None,
         uds: Optional[str] = None,
         network_backend: Optional[NetworkBackend] = None,
+        socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
     ) -> None:
         self._origin = origin
         self._ssl_context = ssl_context
@@ -50,6 +55,7 @@ class HTTPConnection(ConnectionInterface):
         self._connection: Optional[ConnectionInterface] = None
         self._connect_failed: bool = False
         self._request_lock = Lock()
+        self._socket_options = socket_options
 
     def handle_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
@@ -91,6 +97,7 @@ class HTTPConnection(ConnectionInterface):
 
     def _connect(self, request: Request) -> NetworkStream:
         timeouts = request.extensions.get("timeout", {})
+        sni_hostname = request.extensions.get("sni_hostname", None)
         timeout = timeouts.get("connect", None)
 
         retries_left = self._retries
@@ -104,19 +111,19 @@ class HTTPConnection(ConnectionInterface):
                         "port": self._origin.port,
                         "local_address": self._local_address,
                         "timeout": timeout,
+                        "socket_options": self._socket_options,
                     }
-                    with Trace(
-                        "connection.connect_tcp", request, kwargs
-                    ) as trace:
+                    with Trace("connect_tcp", logger, request, kwargs) as trace:
                         stream = self._network_backend.connect_tcp(**kwargs)
                         trace.return_value = stream
                 else:
                     kwargs = {
                         "path": self._uds,
                         "timeout": timeout,
+                        "socket_options": self._socket_options,
                     }
                     with Trace(
-                        "connection.connect_unix_socket", request, kwargs
+                        "connect_unix_socket", logger, request, kwargs
                     ) as trace:
                         stream = self._network_backend.connect_unix_socket(
                             **kwargs
@@ -134,10 +141,11 @@ class HTTPConnection(ConnectionInterface):
 
                     kwargs = {
                         "ssl_context": ssl_context,
-                        "server_hostname": self._origin.host.decode("ascii"),
+                        "server_hostname": sni_hostname
+                        or self._origin.host.decode("ascii"),
                         "timeout": timeout,
                     }
-                    with Trace("connection.start_tls", request, kwargs) as trace:
+                    with Trace("start_tls", logger, request, kwargs) as trace:
                         stream = stream.start_tls(**kwargs)
                         trace.return_value = stream
                 return stream
@@ -146,15 +154,15 @@ class HTTPConnection(ConnectionInterface):
                     raise
                 retries_left -= 1
                 delay = next(delays)
-                # TRACE 'retry'
-                self._network_backend.sleep(delay)
+                with Trace("retry", logger, request, kwargs) as trace:
+                    self._network_backend.sleep(delay)
 
     def can_handle_request(self, origin: Origin) -> bool:
         return origin == self._origin
 
     def close(self) -> None:
         if self._connection is not None:
-            with Trace("connection.close", None, {}):
+            with Trace("close", logger, None, {}):
                 self._connection.close()
 
     def is_available(self) -> bool:
