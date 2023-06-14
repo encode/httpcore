@@ -24,7 +24,7 @@ class OverallTimeout:
 
     Because TLS socket operations necessitate
     more than one TCP socket operation, we need
-    an overall timeout that decreases with each tcp operation.
+    an overall timeout that decreases with each TCP operation.
     """
 
     def __init__(self, timeout: typing.Optional[float] = None) -> None:
