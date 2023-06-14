@@ -2,6 +2,7 @@ import socket
 import ssl
 import sys
 import typing
+from time import perf_counter
 
 from .._exceptions import (
     ConnectError,
@@ -15,6 +16,124 @@ from .._exceptions import (
 )
 from .._utils import is_socket_readable
 from .base import SOCKET_OPTION, NetworkBackend, NetworkStream
+
+
+class OverallTimeout:
+    """
+    An overall timeout for TLS operation.
+
+    Because TLS socket operations necessitate
+    more than one TCP socket operation, we need
+    an overall timeout that decreases with each tcp operation.
+    """
+
+    def __init__(self, timeout: typing.Optional[float] = None) -> None:
+        self.timeout = timeout
+        self._start: typing.Optional[float] = None
+
+    def __enter__(self) -> "OverallTimeout":
+        self._start = perf_counter()
+        return self
+
+    def __exit__(
+        self, exc_type: typing.Any, exc_val: typing.Any, exc_tb: typing.Any
+    ) -> None:
+        if self.timeout not in (0, None):
+            assert self.timeout is not None
+            assert self._start is not None
+            self.timeout -= perf_counter() - self._start
+
+
+class SyncTLSStream(NetworkStream):
+    def __init__(
+        self,
+        sock: socket.socket,
+        ssl_context: ssl.SSLContext,
+        server_hostname: typing.Optional[str] = None,
+        timeout: typing.Optional[float] = None,
+    ):
+        self._sock = sock
+        self._incoming = ssl.MemoryBIO()
+        self._outgoing = ssl.MemoryBIO()
+
+        self.ssl_obj = ssl_context.wrap_bio(
+            incoming=self._incoming,
+            outgoing=self._outgoing,
+            server_hostname=server_hostname,
+        )
+
+        self._perform_io(self.ssl_obj.do_handshake, timeout=timeout)
+
+    def _perform_io(
+        self,
+        func: typing.Callable[..., typing.Any],
+        arg1: typing.Union[int, bytes, None] = None,
+        timeout: typing.Optional[float] = None,
+    ) -> typing.Any:
+        overall_timeout = OverallTimeout(timeout)
+        ret = None
+        while True:
+            errno = None
+            try:
+                if arg1:  # read/write
+                    ret = func(arg1)
+                else:  # handshake
+                    ret = func()
+            except (ssl.SSLWantReadError, ssl.SSLWantWriteError) as e:
+                errno = e.errno
+
+            self._sock.settimeout(overall_timeout.timeout)
+            with overall_timeout:
+                self._sock.sendall(self._outgoing.read())
+
+            if errno == ssl.SSL_ERROR_WANT_READ:
+                self._sock.settimeout(overall_timeout.timeout)
+                with overall_timeout:
+                    buf = self._sock.recv(10000)
+                if buf:
+                    self._incoming.write(buf)
+                else:
+                    self._incoming.write_eof()
+            if errno is None:
+                return ret
+
+    def read(self, max_bytes: int, timeout: typing.Optional[float] = None) -> bytes:
+        exc_map: ExceptionMapping = {socket.timeout: ReadTimeout, OSError: ReadError}
+        with map_exceptions(exc_map):
+            return typing.cast(
+                bytes, self._perform_io(self.ssl_obj.read, max_bytes, timeout)
+            )
+
+    def write(self, buffer: bytes, timeout: typing.Optional[float] = None) -> None:
+        exc_map: ExceptionMapping = {socket.timeout: WriteTimeout, OSError: WriteError}
+        with map_exceptions(exc_map):
+            while buffer:
+                nsent = self._perform_io(self.ssl_obj.write, buffer, timeout)
+                buffer = buffer[nsent:]
+
+    def close(self) -> None:
+        self._sock.close()
+
+    def start_tls(
+        self,
+        ssl_context: ssl.SSLContext,
+        server_hostname: typing.Optional[str] = None,
+        timeout: typing.Optional[float] = None,
+    ) -> "NetworkStream":
+        raise NotImplementedError()
+
+    def get_extra_info(self, info: str) -> typing.Any:
+        if info == "ssl_object":
+            return self.ssl_obj
+        if info == "client_addr":
+            return self._sock.getsockname()
+        if info == "server_addr":
+            return self._sock.getpeername()
+        if info == "socket":
+            return self._sock
+        if info == "is_readable":
+            return is_socket_readable(self._sock)
+        return None
 
 
 class SyncStream(NetworkStream):
@@ -53,10 +172,15 @@ class SyncStream(NetworkStream):
         }
         with map_exceptions(exc_map):
             try:
-                self._sock.settimeout(timeout)
-                sock = ssl_context.wrap_socket(
-                    self._sock, server_hostname=server_hostname
-                )
+                if isinstance(self._sock, ssl.SSLSocket):
+                    return SyncTLSStream(
+                        self._sock, ssl_context, server_hostname, timeout
+                    )
+                else:
+                    self._sock.settimeout(timeout)
+                    sock = ssl_context.wrap_socket(
+                        self._sock, server_hostname=server_hostname
+                    )
             except Exception as exc:  # pragma: nocover
                 self.close()
                 raise exc
