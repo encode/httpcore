@@ -46,14 +46,10 @@ async def test_h11_response_closed():
     stream = httpcore.AsyncMockStream([])
     async with httpcore.AsyncHTTP11Connection(origin, stream) as conn:
         # mock
-        conn._state = HTTP11ConnectionState.ACTIVE
-
         with anyio.CancelScope() as cancel_scope:
-            async with conn._state_lock:
-                cancel_scope.cancel()
-                await conn._response_closed()
-        assert conn._state != HTTP11ConnectionState.ACTIVE
-        assert conn._state in (HTTP11ConnectionState.IDLE, HTTP11ConnectionState.CLOSED)
+            cancel_scope.cancel()
+            await conn.request("GET", "https://example.com")
+        assert conn._state == HTTP11ConnectionState.CLOSED
 
 
 @pytest.mark.anyio
@@ -69,8 +65,6 @@ async def test_h2_response_closed():
         await conn._max_streams_semaphore.acquire()
 
         with anyio.CancelScope() as cancel_scope:
-            async with conn._state_lock:
-                cancel_scope.cancel()
-                await conn._response_closed(0)
-        assert conn._state != HTTP2ConnectionState.ACTIVE
-        assert conn._state in (HTTP2ConnectionState.IDLE, HTTP2ConnectionState.CLOSED)
+            cancel_scope.cancel()
+            await conn._response_closed(0)
+        assert conn._state == HTTP2ConnectionState.CLOSED
