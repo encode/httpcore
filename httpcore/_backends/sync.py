@@ -30,7 +30,7 @@ class OverallTimeout:
     def __init__(self, timeout: typing.Optional[float] = None) -> None:
         self.timeout = timeout or None  # None if timeout is either `0` or `None`
         self._start: typing.Optional[float] = None
-        self._expires = False
+        self._expired = False
 
     def __enter__(self) -> "OverallTimeout":
         if self._expired:
