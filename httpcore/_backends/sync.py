@@ -28,20 +28,30 @@ class OverallTimeout:
     """
 
     def __init__(self, timeout: typing.Optional[float] = None) -> None:
-        self.timeout = timeout
+        self.timeout = timeout or None  # None if timeout is either `0` or `None`
         self._start: typing.Optional[float] = None
+        self._expires = False
 
     def __enter__(self) -> "OverallTimeout":
+        if self._expired:
+            raise socket.timeout()
         self._start = perf_counter()
         return self
 
     def __exit__(
         self, exc_type: typing.Any, exc_val: typing.Any, exc_tb: typing.Any
     ) -> None:
-        if self.timeout not in (0, None):
+        if self.timeout is not None:
             assert self.timeout is not None
             assert self._start is not None
             self.timeout -= perf_counter() - self._start
+            if self.timeout == 0:
+                # It is extremely unlikely, but it is possible that
+                # a socket operation will take exactly how long our
+                # timeout is; in such cases, we do not set timeout
+                # to 0 because 0 means there is no timeout at all,
+                # and we will raise an exception in a next operation.
+                self._expired = True
 
 
 class SyncTLSStream(NetworkStream):
