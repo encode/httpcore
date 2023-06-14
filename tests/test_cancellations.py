@@ -5,6 +5,9 @@ import anyio
 import pytest
 
 import httpcore
+from httpcore._async.http2 import HTTPConnectionState as HTTP2ConnectionState
+from httpcore._async.http11 import HTTPConnectionState as HTTP11ConnectionState
+from httpcore._synchronization import AsyncSemaphore
 
 
 class SlowStream(httpcore.AsyncNetworkStream):
@@ -35,3 +38,39 @@ async def test_async_cancellation():
         with anyio.move_on_after(0.001):
             await pool.request("GET", "http://example.com")
         assert not pool.connections
+
+
+@pytest.mark.anyio
+async def test_h11_response_closed():
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.AsyncMockStream([])
+    async with httpcore.AsyncHTTP11Connection(origin, stream) as conn:
+        # mock
+        conn._state = HTTP11ConnectionState.ACTIVE
+
+        with anyio.CancelScope() as cancel_scope:
+            async with conn._state_lock:
+                cancel_scope.cancel()
+                await conn._response_closed()
+        assert conn._state != HTTP11ConnectionState.ACTIVE
+        assert conn._state in (HTTP11ConnectionState.IDLE, HTTP11ConnectionState.CLOSED)
+
+
+@pytest.mark.anyio
+async def test_h2_response_closed():
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.AsyncMockStream([])
+    events = {0: None}
+    async with httpcore.AsyncHTTP2Connection(origin, stream) as conn:
+        # mock
+        conn._state = HTTP2ConnectionState.ACTIVE
+        conn._max_streams_semaphore = AsyncSemaphore(1)
+        conn._events = events
+        await conn._max_streams_semaphore.acquire()
+
+        with anyio.CancelScope() as cancel_scope:
+            async with conn._state_lock:
+                cancel_scope.cancel()
+                await conn._response_closed(0)
+        assert conn._state != HTTP2ConnectionState.ACTIVE
+        assert conn._state in (HTTP2ConnectionState.IDLE, HTTP2ConnectionState.CLOSED)
