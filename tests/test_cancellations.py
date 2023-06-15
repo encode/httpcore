@@ -29,9 +29,7 @@ class SlowReadStream(httpcore.AsyncNetworkStream):
         if not self._buffer:
             await anyio.sleep(2)
         else:
-            r = self._buffer.pop(0)
-            print(r)
-            return r
+            return self._buffer.pop(0)
 
     async def aclose(self):
         pass
@@ -92,6 +90,27 @@ async def test_h11_bytestream_cancellation():
     async with httpcore.AsyncHTTP11Connection(origin, stream) as conn:
         with anyio.move_on_after(0.001):
             async with conn.stream("GET", "http://example.com") as resp:
+                async for chunk in resp.aiter_stream():
+                    pass
+        assert conn.is_closed()
+
+
+@pytest.mark.anyio
+async def test_h2_bytestream_cancellation():
+    origin = httpcore.Origin(b"http", b"example.com", 80)
+    stream = SlowReadStream(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 1000\r\n",
+            b"\r\n",
+            b"Hello, world!...",
+        ]
+    )
+    async with httpcore.AsyncHTTP2Connection(origin, stream) as conn:
+        with anyio.move_on_after(132):
+            async with conn.stream("GET", "http://example.com") as resp:
+                print(resp)
                 async for chunk in resp.aiter_stream():
                     pass
         assert conn.is_closed()
