@@ -1,5 +1,4 @@
 import typing
-from typing import Optional
 
 import anyio
 import pytest
@@ -11,7 +10,7 @@ class SlowStream(httpcore.AsyncNetworkStream):
     async def write(
         self, buffer: bytes, timeout: typing.Optional[float] = None
     ) -> None:
-        await httpcore._backends.auto.AutoBackend().sleep(2)
+        await anyio.sleep(2)
 
     async def aclose(self) -> None:
         ...
@@ -22,8 +21,8 @@ class SlowBackend(httpcore.AsyncNetworkBackend):
         self,
         host: str,
         port: int,
-        timeout: Optional[float] = None,
-        local_address: Optional[str] = None,
+        timeout: typing.Optional[float] = None,
+        local_address: typing.Optional[str] = None,
         socket_options: typing.Optional[typing.Iterable[httpcore.SOCKET_OPTION]] = None,
     ) -> httpcore.AsyncNetworkStream:
         return SlowStream()
