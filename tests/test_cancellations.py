@@ -89,7 +89,5 @@ async def test_h11_bytestream_cancellation():
     )
     async with httpcore.AsyncHTTP11Connection(origin, stream) as conn:
         with anyio.move_on_after(0.001):
-            async with conn.stream("GET", "http://example.com") as resp:
-                async for chunk in resp.aiter_stream():
-                    pass
+            await conn.request("GET", "http://example.com")
         assert conn.is_closed()
