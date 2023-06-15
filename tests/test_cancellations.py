@@ -13,7 +13,7 @@ class SlowWriteStream(httpcore.AsyncNetworkStream):
         await anyio.sleep(2)
 
     async def aclose(self) -> None:
-        ...
+        pass
 
 
 class SlowReadStream(httpcore.AsyncNetworkStream):
@@ -93,7 +93,7 @@ async def test_h11_bytestream_cancellation():
         with anyio.move_on_after(0.001):
             async with conn.stream("GET", "http://example.com") as resp:
                 async for chunk in resp.aiter_stream():
-                    ...
+                    pass
         assert conn.is_closed()
 
 
@@ -113,5 +113,5 @@ async def test_h2_bytestream_cancellation():
         with anyio.move_on_after(0.001):
             async with conn.stream("GET", "http://example.com") as resp:
                 async for chunk in resp.aiter_stream():
-                    ...
+                    pass
         assert conn.is_closed()
