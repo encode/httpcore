@@ -31,6 +31,14 @@ def has_body_headers(request: Request) -> bool:
     )
 
 
+STREAM_EVENTS = typing.Union[
+    h2.events.ResponseReceived,
+    h2.events.DataReceived,
+    h2.events.StreamEnded,
+    h2.events.StreamReset,
+]
+
+
 class HTTPConnectionState(enum.IntEnum):
     ACTIVE = 1
     IDLE = 2
@@ -61,10 +69,26 @@ class HTTP2Connection(ConnectionInterface):
         self._sent_connection_init = False
         self._used_all_stream_ids = False
         self._connection_error = False
-        self._events: typing.Dict[int, h2.events.Event] = {}
+
+        # Mapping from stream ID to response stream events.
+        self._events: typing.Dict[
+            int,
+            typing.Union[
+                h2.events.ResponseReceived,
+                h2.events.DataReceived,
+                h2.events.StreamEnded,
+                h2.events.StreamReset,
+            ],
+        ] = {}
+
+        # Connection terminated events are stored as state since
+        # we need to handle them for all streams.
+        self._connection_terminated: typing.Optional[
+            h2.events.ConnectionTerminated
+        ] = None
+
         self._read_exception: typing.Optional[Exception] = None
         self._write_exception: typing.Optional[Exception] = None
-        self._connection_error_event: typing.Optional[h2.events.Event] = None
 
     def handle_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
@@ -152,8 +176,8 @@ class HTTP2Connection(ConnectionInterface):
                 #
                 # In this case we'll have stored the event, and should raise
                 # it as a RemoteProtocolError.
-                if self._connection_error_event:
-                    raise RemoteProtocolError(self._connection_error_event)
+                if self._connection_terminated:
+                    raise RemoteProtocolError(self._connection_terminated)
                 # If h2 raises a protocol error in some other state then we
                 # must somehow have made a protocol violation.
                 raise LocalProtocolError(exc)  # pragma: nocover
@@ -292,12 +316,14 @@ class HTTP2Connection(ConnectionInterface):
                 self._h2_state.acknowledge_received_data(amount, stream_id)
                 self._write_outgoing_data(request)
                 yield event.data
-            elif isinstance(event, (h2.events.StreamEnded, h2.events.StreamReset)):
+            elif isinstance(event, h2.events.StreamEnded):
                 break
 
     def _receive_stream_event(
         self, request: Request, stream_id: int
-    ) -> h2.events.Event:
+    ) -> typing.Union[
+        h2.events.ResponseReceived, h2.events.DataReceived, h2.events.StreamEnded
+    ]:
         """
         Return the next available event for a given stream ID.
 
@@ -306,8 +332,7 @@ class HTTP2Connection(ConnectionInterface):
         while not self._events.get(stream_id):
             self._receive_events(request, stream_id)
         event = self._events[stream_id].pop(0)
-        # The StreamReset event applies to a single stream.
-        if hasattr(event, "error_code"):
+        if isinstance(event, h2.events.StreamReset):
             raise RemoteProtocolError(event)
         return event
 
@@ -319,8 +344,8 @@ class HTTP2Connection(ConnectionInterface):
         for a given stream ID.
         """
         with self._read_lock:
-            if self._connection_error_event is not None:  # pragma: nocover
-                raise RemoteProtocolError(self._connection_error_event)
+            if self._connection_terminated is not None:  # pragma: nocover
+                raise RemoteProtocolError(self._connection_terminated)
 
             # This conditional is a bit icky. We don't want to block reading if we've
             # actually got an event to return for a given stream. We need to do that
@@ -338,16 +363,21 @@ class HTTP2Connection(ConnectionInterface):
                             self._receive_remote_settings_change(event)
                             trace.return_value = event
 
-                    event_stream_id = getattr(event, "stream_id", 0)
+                    elif isinstance(
+                        event,
+                        (
+                            h2.events.ResponseReceived,
+                            h2.events.DataReceived,
+                            h2.events.StreamEnded,
+                            h2.events.StreamReset,
+                        ),
+                    ):
+                        event_stream_id = getattr(event, "stream_id", 0)
+                        if event_stream_id in self._events:
+                            self._events[event_stream_id].append(event)
 
-                    # The ConnectionTerminatedEvent applies to the entire connection,
-                    # and should be saved so it can be raised on all streams.
-                    if hasattr(event, "error_code") and event_stream_id == 0:
-                        self._connection_error_event = event
-                        raise RemoteProtocolError(event)
-
-                    if event_stream_id in self._events:
-                        self._events[event_stream_id].append(event)
+                    elif isinstance(event, h2.events.ConnectionTerminated):
+                        self._connection_terminated = event
 
         self._write_outgoing_data(request)
 
