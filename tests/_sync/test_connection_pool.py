@@ -1,6 +1,8 @@
 import logging
 import typing
 
+import hpack
+import hyperframe.frame
 import pytest
 from tests import concurrency
 
@@ -109,6 +111,158 @@ def test_connection_pool_with_close():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in pool.connections]
         assert info == []
+
+
+
+def test_connection_pool_with_http2():
+    """
+    Test a connection pool with HTTP/2 requests.
+    """
+    network_backend = httpcore.MockBackend(
+        buffer=[
+            hyperframe.frame.SettingsFrame().serialize(),
+            hyperframe.frame.HeadersFrame(
+                stream_id=1,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=1, data=b"Hello, world!", flags=["END_STREAM"]
+            ).serialize(),
+            hyperframe.frame.HeadersFrame(
+                stream_id=3,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=3, data=b"Hello, world!", flags=["END_STREAM"]
+            ).serialize(),
+        ],
+        http2=True,
+    )
+
+    with httpcore.ConnectionPool(
+        network_backend=network_backend,
+    ) as pool:
+        # Sending an intial request, which once complete will return to the pool, IDLE.
+        with pool.stream("GET", "https://example.com/") as response:
+            info = [repr(c) for c in pool.connections]
+            assert info == [
+                "<HTTPConnection ['https://example.com:443', HTTP/2, ACTIVE, Request Count: 1]>"
+            ]
+            response.read()
+
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+        info = [repr(c) for c in pool.connections]
+        assert info == [
+            "<HTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 1]>"
+        ]
+
+        # Sending a second request to the same origin will reuse the existing IDLE connection.
+        with pool.stream("GET", "https://example.com/") as response:
+            info = [repr(c) for c in pool.connections]
+            assert info == [
+                "<HTTPConnection ['https://example.com:443', HTTP/2, ACTIVE, Request Count: 2]>"
+            ]
+            response.read()
+
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+        info = [repr(c) for c in pool.connections]
+        assert info == [
+            "<HTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 2]>"
+        ]
+
+        # Sending a request to a different origin will not reuse the existing IDLE connection.
+        with pool.stream("GET", "http://example.com/") as response:
+            info = [repr(c) for c in pool.connections]
+            assert info == [
+                "<HTTPConnection ['http://example.com:80', HTTP/2, ACTIVE, Request Count: 1]>",
+                "<HTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 2]>",
+            ]
+            response.read()
+
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+        info = [repr(c) for c in pool.connections]
+        assert info == [
+            "<HTTPConnection ['http://example.com:80', HTTP/2, IDLE, Request Count: 1]>",
+            "<HTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 2]>",
+        ]
+
+
+
+def test_connection_pool_with_http2_goaway():
+    """
+    Test a connection pool with HTTP/2 requests, that cleanly disconnects
+    with a GoAway frame after the first request.
+    """
+    network_backend = httpcore.MockBackend(
+        buffer=[
+            hyperframe.frame.SettingsFrame().serialize(),
+            hyperframe.frame.HeadersFrame(
+                stream_id=1,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=1, data=b"Hello, world!", flags=["END_STREAM"]
+            ).serialize(),
+            hyperframe.frame.GoAwayFrame(
+                stream_id=0, error_code=0, last_stream_id=1
+            ).serialize(),
+        ],
+        http2=True,
+    )
+
+    with httpcore.ConnectionPool(
+        network_backend=network_backend,
+    ) as pool:
+        # Sending an intial request, which once complete will return to the pool, IDLE.
+        with pool.stream("GET", "https://example.com/") as response:
+            info = [repr(c) for c in pool.connections]
+            assert info == [
+                "<HTTPConnection ['https://example.com:443', HTTP/2, ACTIVE, Request Count: 1]>"
+            ]
+            response.read()
+
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+        info = [repr(c) for c in pool.connections]
+        assert info == [
+            "<HTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 1]>"
+        ]
+
+        # Sending a second request to the same origin will reuse the existing IDLE connection.
+        with pool.stream("GET", "https://example.com/") as response:
+            info = [repr(c) for c in pool.connections]
+            assert info == [
+                "<HTTPConnection ['https://example.com:443', HTTP/2, ACTIVE, Request Count: 2]>"
+            ]
+            response.read()
+
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+        info = [repr(c) for c in pool.connections]
+        assert info == [
+            "<HTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 2]>"
+        ]
 
 
 
