@@ -127,6 +127,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
             self._events[stream_id] = []
         except h2.exceptions.NoAvailableStreamIDError:  # pragma: nocover
             self._used_all_stream_ids = True
+            self._request_count -= 1
             raise ConnectionNotAvailable()
 
         try:
@@ -168,7 +169,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 #
                 # In this case we'll have stored the event, and should raise
                 # it as a RemoteProtocolError.
-                if self._connection_terminated:
+                if self._connection_terminated:  # pragma: nocover
                     raise RemoteProtocolError(self._connection_terminated)
                 # If h2 raises a protocol error in some other state then we
                 # must somehow have made a protocol violation.
@@ -336,7 +337,11 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         for a given stream ID.
         """
         async with self._read_lock:
-            if self._connection_terminated is not None:  # pragma: nocover
+            if self._connection_terminated is not None:
+                last_stream_id = self._connection_terminated.last_stream_id
+                if last_stream_id and stream_id > last_stream_id:
+                    self._request_count -= 1
+                    raise ConnectionNotAvailable()
                 raise RemoteProtocolError(self._connection_terminated)
 
             # This conditional is a bit icky. We don't want to block reading if we've
@@ -394,7 +399,10 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         await self._max_streams_semaphore.release()
         del self._events[stream_id]
         async with self._state_lock:
-            if self._state == HTTPConnectionState.ACTIVE and not self._events:
+            if self._connection_terminated and not self._events:
+                await self.aclose()
+
+            elif self._state == HTTPConnectionState.ACTIVE and not self._events:
                 self._state = HTTPConnectionState.IDLE
                 if self._keepalive_expiry is not None:
                     now = time.monotonic()
