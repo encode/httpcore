@@ -25,3 +25,17 @@ async def test_write_without_tls(httpbin):
         assert True
     finally:
         await stream.aclose()
+
+
+@pytest.mark.anyio
+async def test_read_without_tls(httpbin):
+    backend = httpcore.AnyIOBackend()
+    stream = await backend.connect_tcp(httpbin.host, httpbin.port)
+    http_request = [b"GET / HTTP/1.1\r\n", b"\r\n"]
+    try:
+        for chunk in http_request:
+            await stream.write(chunk)
+        response = await stream.read(1024)
+        assert response
+    finally:
+        await stream.aclose()
