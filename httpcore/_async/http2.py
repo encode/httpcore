@@ -31,14 +31,6 @@ def has_body_headers(request: Request) -> bool:
     )
 
 
-STREAM_EVENTS = typing.Union[
-    h2.events.ResponseReceived,
-    h2.events.DataReceived,
-    h2.events.StreamEnded,
-    h2.events.StreamReset,
-]
-
-
 class HTTPConnectionState(enum.IntEnum):
     ACTIVE = 1
     IDLE = 2
