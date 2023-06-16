@@ -4,7 +4,7 @@ import httpcore
 
 
 @pytest.mark.anyio
-async def test_connect_tcp(httpbin):
+async def test_connecting_without_tls(httpbin):
     backend = httpcore.AnyIOBackend()
     stream = await backend.connect_tcp(httpbin.host, httpbin.port)
     try:

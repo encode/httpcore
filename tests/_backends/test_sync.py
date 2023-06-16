@@ -1,7 +1,7 @@
 import httpcore
 
 
-def test_connect_tcp(httpbin):
+def test_connecting_without_tls(httpbin):
     backend = httpcore.SyncBackend()
     stream = backend.connect_tcp(httpbin.host, httpbin.port)
     try:
