@@ -137,10 +137,8 @@ class HTTPProxy(ConnectionPool):
             ] + self._proxy_headers
 
     def create_connection(self, origin: Origin) -> ConnectionInterface:
-        is_tls = origin.scheme == b"https"
-
         forwarable = not (self._mode & ProxyMode.HTTP_TUNNEL)
-        if is_tls:
+        if origin.scheme == b"https":
             forwarable = bool(self._mode & ProxyMode.HTTPS_FORWARD)
 
         if forwarable:
@@ -160,7 +158,6 @@ class HTTPProxy(ConnectionPool):
             http1=self._http1,
             http2=self._http2,
             network_backend=self._network_backend,
-            is_tls=is_tls,
         )
 
 
@@ -238,7 +235,6 @@ class TunnelHTTPConnection(ConnectionInterface):
         http2: bool = False,
         network_backend: Optional[NetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
-        is_tls: bool = True,
     ) -> None:
         self._connection: ConnectionInterface = HTTPConnection(
             origin=proxy_origin,
@@ -255,7 +251,6 @@ class TunnelHTTPConnection(ConnectionInterface):
         self._http2 = http2
         self._connect_lock = Lock()
         self._connected = False
-        self._is_tls = is_tls
 
     def handle_request(self, request: Request) -> Response:
         timeouts = request.extensions.get("timeout", {})
@@ -294,7 +289,7 @@ class TunnelHTTPConnection(ConnectionInterface):
                 stream = connect_response.extensions["network_stream"]
                 http2_negotiated = False
 
-                if self._is_tls:
+                if self._remote_origin.scheme == b"https":
                     # Upgrade the stream to SSL
                     ssl_context = (
                         default_ssl_context()
