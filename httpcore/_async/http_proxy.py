@@ -9,9 +9,9 @@ from .._exceptions import ProxyError
 from .._models import (
     URL,
     Origin,
+    ProxyMode,
     Request,
     Response,
-    ProxyMode,
     enforce_bytes,
     enforce_headers,
     enforce_url,
