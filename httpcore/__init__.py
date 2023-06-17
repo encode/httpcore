@@ -75,8 +75,9 @@ __all__ = [
     "request",
     "stream",
     # models
-    "Origin",
     "URL",
+    "Origin",
+    "ProxyMode",
     "Request",
     "Response",
     # async
