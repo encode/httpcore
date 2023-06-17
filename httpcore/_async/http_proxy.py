@@ -79,6 +79,8 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         uds: Optional[str] = None,
         network_backend: Optional[AsyncNetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
+        plain_mode: Optional[ProxyMode] = None,
+        tls_mode: Optional[ProxyMode] = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
