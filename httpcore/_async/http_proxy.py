@@ -11,6 +11,7 @@ from .._models import (
     Origin,
     Request,
     Response,
+    ProxyMode,
     enforce_bytes,
     enforce_headers,
     enforce_url,
@@ -51,11 +52,6 @@ def merge_headers(
 def build_auth_header(username: bytes, password: bytes) -> bytes:
     userpass = username + b":" + password
     return b"Basic " + b64encode(userpass)
-
-
-class ProxyMode(enum.IntEnum):
-    TUNNEL = 1
-    FORWARD = 2
 
 
 class AsyncHTTPProxy(AsyncConnectionPool):
