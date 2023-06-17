@@ -168,7 +168,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             http1=self._http1,
             http2=self._http2,
             network_backend=self._network_backend,
-            is_tls=is_tls
+            is_tls=is_tls,
         )
 
 
