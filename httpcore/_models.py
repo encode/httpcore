@@ -1,4 +1,5 @@
-from enum import IntEnum
+import enum
+
 from typing import (
     Any,
     AsyncIterable,
@@ -484,6 +485,7 @@ class Response:
             await self.stream.aclose()
 
 
-class ProxyMode(IntEnum):
-    TUNNEL = 1
-    FORWARD = 2
+class ProxyMode(enum.IntFlag):
+    DEFAULT = 0
+    HTTPS_FORWARD = 1
+    HTTP_TUNNEL = 2

@@ -74,8 +74,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         uds: Optional[str] = None,
         network_backend: Optional[AsyncNetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
-        plain_mode: Optional[ProxyMode] = None,
-        tls_mode: Optional[ProxyMode] = None,
+        mode: ProxyMode = ProxyMode.DEFAULT,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -110,10 +109,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 `AF_INET6` address (IPv6).
             uds: Path to a Unix Domain Socket to use instead of TCP sockets.
             network_backend: A backend instance to use for handling network I/O.
-            plain_mode: how should talk to proxy server when request is
-                plain http. `ProxyMode.FORWARD` by default.
-            tls_mode: how should talk to proxy server when request is
-                http over tls (https). `ProxyMode.TUNNEL` by default.
+            mode: Allow HTTP connection be tunnelable and HTTPS be forwardable.
         """
         super().__init__(
             ssl_context=ssl_context,
@@ -131,8 +127,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         self._ssl_context = ssl_context
         self._proxy_url = enforce_url(proxy_url, name="proxy_url")
         self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
-        self._plain_mode = plain_mode
-        self._tls_mode = tls_mode
+        self._mode = mode
         if proxy_auth is not None:
             username = enforce_bytes(proxy_auth[0], name="proxy_auth")
             password = enforce_bytes(proxy_auth[1], name="proxy_auth")
@@ -143,12 +138,12 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
     def create_connection(self, origin: Origin) -> AsyncConnectionInterface:
         is_tls = origin.scheme == b"https"
-        if is_tls:
-            mode = self._tls_mode or ProxyMode.TUNNEL
-        else:
-            mode = self._plain_mode or ProxyMode.FORWARD
 
-        if mode == ProxyMode.FORWARD:
+        fwd = not self._mode & ProxyMode.HTTP_TUNNEL
+        if is_tls:
+            fwd = self._mode & ProxyMode.HTTPS_FORWARD
+
+        if fwd:
             return AsyncForwardHTTPConnection(
                 proxy_origin=self._proxy_url.origin,
                 proxy_headers=self._proxy_headers,
