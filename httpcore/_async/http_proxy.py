@@ -139,10 +139,9 @@ class AsyncHTTPProxy(AsyncConnectionPool):
     def create_connection(self, origin: Origin) -> AsyncConnectionInterface:
         is_tls = origin.scheme == b"https"
 
+        forwarable = not(self._mode & ProxyMode.HTTP_TUNNEL)
         if is_tls:
-            forwarable = self._mode & ProxyMode.HTTPS_FORWARD
-        else:
-            forwarable = not self._mode & ProxyMode.HTTP_TUNNEL
+            forwarable = bool(self._mode & ProxyMode.HTTPS_FORWARD)
 
         if forwarable:
             return AsyncForwardHTTPConnection(
