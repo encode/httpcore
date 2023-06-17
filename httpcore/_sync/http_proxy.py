@@ -146,7 +146,7 @@ class HTTPProxy(ConnectionPool):
                 (b"Proxy-Authorization", authorization)
             ] + self._proxy_headers
 
-    def create_connection(self, origin: Origin) -> AsyncConnectionInterface:
+    def create_connection(self, origin: Origin) -> ConnectionInterface:
         is_tls = origin.scheme == b"https"
         if is_tls:
             mode = self._tls_mode or ProxyMode.TUNNEL
