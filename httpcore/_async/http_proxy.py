@@ -1,4 +1,3 @@
-import enum
 import logging
 import ssl
 from base64 import b64encode

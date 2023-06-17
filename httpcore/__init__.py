@@ -34,7 +34,7 @@ from ._exceptions import (
     WriteError,
     WriteTimeout,
 )
-from ._models import URL, Origin, Request, Response, ProxyMode
+from ._models import URL, Origin, ProxyMode, Request, Response
 from ._ssl import default_ssl_context
 from ._sync import (
     ConnectionInterface,
