@@ -1,3 +1,4 @@
+import enum
 import logging
 import ssl
 from base64 import b64encode
@@ -25,7 +26,6 @@ from .interfaces import AsyncConnectionInterface
 HeadersAsSequence = Sequence[Tuple[Union[bytes, str], Union[bytes, str]]]
 HeadersAsMapping = Mapping[Union[bytes, str], Union[bytes, str]]
 
-
 logger = logging.getLogger("httpcore.proxy")
 
 
@@ -51,6 +51,11 @@ def merge_headers(
 def build_auth_header(username: bytes, password: bytes) -> bytes:
     userpass = username + b":" + password
     return b"Basic " + b64encode(userpass)
+
+
+class ProxyMode(enum.IntEnum):
+    TUNNEL = 1
+    FORWARD = 2
 
 
 class AsyncHTTPProxy(AsyncConnectionPool):
@@ -108,6 +113,10 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 `AF_INET6` address (IPv6).
             uds: Path to a Unix Domain Socket to use instead of TCP sockets.
             network_backend: A backend instance to use for handling network I/O.
+            plain_mode: how should talk to proxy server when request is
+                plain http. `ProxyMode.FORWARD` by default.
+            tls_mode: how should talk to proxy server when request is
+                http over tls (https). `ProxyMode.TUNNEL` by default.
         """
         super().__init__(
             ssl_context=ssl_context,
@@ -125,6 +134,8 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         self._ssl_context = ssl_context
         self._proxy_url = enforce_url(proxy_url, name="proxy_url")
         self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
+        self._plain_mode = plain_mode
+        self._tls_mode = tls_mode
         if proxy_auth is not None:
             username = enforce_bytes(proxy_auth[0], name="proxy_auth")
             password = enforce_bytes(proxy_auth[1], name="proxy_auth")
@@ -134,7 +145,12 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             ] + self._proxy_headers
 
     def create_connection(self, origin: Origin) -> AsyncConnectionInterface:
-        if origin.scheme == b"http":
+        is_tls = origin.scheme == b"https"
+        mode = self._plain_mode
+        if mode is None:
+            mode = ProxyMode.TUNNEL if is_tls else ProxyMode.FORWARD
+
+        if mode == ProxyMode.FORWARD:
             return AsyncForwardHTTPConnection(
                 proxy_origin=self._proxy_url.origin,
                 proxy_headers=self._proxy_headers,
@@ -151,6 +167,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             http1=self._http1,
             http2=self._http2,
             network_backend=self._network_backend,
+            is_tls=is_tls
         )
 
 
@@ -228,6 +245,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
         http2: bool = False,
         network_backend: Optional[AsyncNetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
+        is_tls: bool = True,
     ) -> None:
         self._connection: AsyncConnectionInterface = AsyncHTTPConnection(
             origin=proxy_origin,
@@ -244,6 +262,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
         self._http2 = http2
         self._connect_lock = AsyncLock()
         self._connected = False
+        self._is_tls = is_tls
 
     async def handle_async_request(self, request: Request) -> Response:
         timeouts = request.extensions.get("timeout", {})
@@ -280,31 +299,33 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
                     raise ProxyError(msg)
 
                 stream = connect_response.extensions["network_stream"]
+                http2_negotiated = False
 
-                # Upgrade the stream to SSL
-                ssl_context = (
-                    default_ssl_context()
-                    if self._ssl_context is None
-                    else self._ssl_context
-                )
-                alpn_protocols = ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
-                ssl_context.set_alpn_protocols(alpn_protocols)
+                if self._is_tls:
+                    # Upgrade the stream to SSL
+                    ssl_context = (
+                        default_ssl_context()
+                        if self._ssl_context is None
+                        else self._ssl_context
+                    )
+                    alpn_protocols = ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
+                    ssl_context.set_alpn_protocols(alpn_protocols)
 
-                kwargs = {
-                    "ssl_context": ssl_context,
-                    "server_hostname": self._remote_origin.host.decode("ascii"),
-                    "timeout": timeout,
-                }
-                async with Trace("start_tls", logger, request, kwargs) as trace:
-                    stream = await stream.start_tls(**kwargs)
-                    trace.return_value = stream
+                    kwargs = {
+                        "ssl_context": ssl_context,
+                        "server_hostname": self._remote_origin.host.decode("ascii"),
+                        "timeout": timeout,
+                    }
+                    async with Trace("start_tls", logger, request, kwargs) as trace:
+                        stream = await stream.start_tls(**kwargs)
+                        trace.return_value = stream
 
-                # Determine if we should be using HTTP/1.1 or HTTP/2
-                ssl_object = stream.get_extra_info("ssl_object")
-                http2_negotiated = (
-                    ssl_object is not None
-                    and ssl_object.selected_alpn_protocol() == "h2"
-                )
+                    # Determine if we should be using HTTP/1.1 or HTTP/2
+                    ssl_object = stream.get_extra_info("ssl_object")
+                    http2_negotiated = (
+                        ssl_object is not None
+                        and ssl_object.selected_alpn_protocol() == "h2"
+                    )
 
                 # Create the HTTP/1.1 or HTTP/2 connection
                 if http2_negotiated or (self._http2 and not self._http1):
