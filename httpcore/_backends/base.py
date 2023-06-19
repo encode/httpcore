@@ -1,12 +1,18 @@
 import ssl
 import time
 import typing
+from types import TracebackType
 
 SOCKET_OPTION = typing.Union[
     typing.Tuple[int, int, int],
     typing.Tuple[int, int, typing.Union[bytes, bytearray]],
     typing.Tuple[int, int, None, int],
 ]
+
+_SELF_NETWORK_STREAM = typing.TypeVar("_SELF_NETWORK_STREAM", bound="NetworkStream")
+_SELF_ASYNC_NETWORK_STREAM = typing.TypeVar(
+    "_SELF_ASYNC_NETWORK_STREAM", bound="AsyncNetworkStream"
+)
 
 
 class NetworkStream:
@@ -15,6 +21,17 @@ class NetworkStream:
 
     def write(self, buffer: bytes, timeout: typing.Optional[float] = None) -> None:
         raise NotImplementedError()  # pragma: nocover
+
+    def __enter__(self: _SELF_NETWORK_STREAM) -> _SELF_NETWORK_STREAM:
+        return self
+
+    def __exit__(
+        self: _SELF_NETWORK_STREAM,
+        exc_type: typing.Optional[typing.Type[BaseException]] = None,
+        exc_value: typing.Optional[BaseException] = None,
+        traceback: typing.Optional[TracebackType] = None,
+    ) -> None:
+        self.close()
 
     def close(self) -> None:
         raise NotImplementedError()  # pragma: nocover
@@ -64,6 +81,19 @@ class AsyncNetworkStream:
         self, buffer: bytes, timeout: typing.Optional[float] = None
     ) -> None:
         raise NotImplementedError()  # pragma: nocover
+
+    async def __aenter__(
+        self: _SELF_ASYNC_NETWORK_STREAM,
+    ) -> _SELF_ASYNC_NETWORK_STREAM:
+        return self
+
+    async def __aexit__(
+        self: _SELF_ASYNC_NETWORK_STREAM,
+        exc_type: typing.Optional[typing.Type[BaseException]] = None,
+        exc_value: typing.Optional[BaseException] = None,
+        traceback: typing.Optional[TracebackType] = None,
+    ) -> None:
+        await self.aclose()
 
     async def aclose(self) -> None:
         raise NotImplementedError()  # pragma: nocover
