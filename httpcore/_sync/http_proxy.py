@@ -137,11 +137,8 @@ class HTTPProxy(ConnectionPool):
             ] + self._proxy_headers
 
     def create_connection(self, origin: Origin) -> ConnectionInterface:
-        fwd = False if self._mode & ProxyMode.HTTP_TUNNEL else True
-        if origin.scheme == b"https":
-            fwd = True if self._mode & ProxyMode.HTTPS_FORWARD else False
-
-        if fwd:
+        if (origin.scheme == b"http" and self._mode == ProxyMode.DEFAULT) or (
+            self._mode | ProxyMode.HTTPS_FORWARD):
             return ForwardHTTPConnection(
                 proxy_origin=self._proxy_url.origin,
                 proxy_headers=self._proxy_headers,
