@@ -75,7 +75,6 @@ import base64
 
 proxy = httpcore.HTTPProxy(
     proxy_url="http://127.0.0.1:8080/",
-    # Forces HTTP requests also use Tunneling
     mode=httpcore.ProxyMode.HTTP_TUNNEL | httpcore.ProxyMode.HTTPS_FORWARD,
 )
 ```
