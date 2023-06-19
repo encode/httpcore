@@ -138,7 +138,8 @@ class AsyncHTTPProxy(AsyncConnectionPool):
 
     def create_connection(self, origin: Origin) -> AsyncConnectionInterface:
         if (origin.scheme == b"http" and self._mode == ProxyMode.DEFAULT) or (
-            self._mode | ProxyMode.HTTPS_FORWARD):
+            self._mode | ProxyMode.HTTPS_FORWARD
+        ):
             return AsyncForwardHTTPConnection(
                 proxy_origin=self._proxy_url.origin,
                 proxy_headers=self._proxy_headers,
