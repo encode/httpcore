@@ -137,8 +137,8 @@ class HTTPProxy(ConnectionPool):
             ] + self._proxy_headers
 
     def create_connection(self, origin: Origin) -> ConnectionInterface:
-        if (origin.scheme == b"http" and self._mode == ProxyMode.DEFAULT) or (
-            self._mode | ProxyMode.HTTPS_FORWARD
+        if (origin.scheme == b"http" and not self._mode) or (
+            self._mode | ProxyMode.HTTPS_FORWARD and not self._mode
         ):
             return ForwardHTTPConnection(
                 proxy_origin=self._proxy_url.origin,
