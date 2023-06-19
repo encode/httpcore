@@ -369,9 +369,8 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                             h2.events.StreamReset,
                         ),
                     ):
-                        event_stream_id = getattr(event, "stream_id", 0)
-                        if event_stream_id in self._events:
-                            self._events[event_stream_id].append(event)
+                        if event.stream_id in self._events:
+                            self._events[event.stream_id].append(event)
 
                     elif isinstance(event, h2.events.ConnectionTerminated):
                         self._connection_terminated = event
