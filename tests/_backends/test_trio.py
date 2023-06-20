@@ -1,6 +1,7 @@
 import ssl
 
 import pytest
+from pytest_httpbin import certs  # type: ignore
 
 import httpcore
 
@@ -37,8 +38,7 @@ async def test_read_without_tls(httpbin):
 async def test_connect_with_tls(httpbin_secure):
     backend = httpcore.TrioBackend()
     ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
+    ssl_context.load_verify_locations(certs.where())
     stream = await backend.connect_tcp(httpbin_secure.host, httpbin_secure.port)
     async with stream:
         tls_stream = await stream.start_tls(ssl_context=ssl_context)
@@ -49,8 +49,7 @@ async def test_connect_with_tls(httpbin_secure):
 async def test_write_with_tls(httpbin_secure):
     backend = httpcore.TrioBackend()
     ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
+    ssl_context.load_verify_locations(certs.where())
     stream = await backend.connect_tcp(httpbin_secure.host, httpbin_secure.port)
     async with stream:
         tls_stream = await stream.start_tls(ssl_context=ssl_context)
@@ -64,8 +63,7 @@ async def test_write_with_tls(httpbin_secure):
 async def test_read_with_tls(httpbin_secure):
     backend = httpcore.TrioBackend()
     ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
+    ssl_context.load_verify_locations(certs.where())
     stream = await backend.connect_tcp(httpbin_secure.host, httpbin_secure.port)
     async with stream:
         tls_stream = await stream.start_tls(ssl_context=ssl_context)
