@@ -202,9 +202,6 @@ class AsyncShieldCancellation:
             self._anyio_shield = anyio.CancelScope(shield=True)
 
     def __enter__(self) -> "AsyncShieldCancellation":
-        if not self._backend:
-            self.setup()
-
         if self._backend == "trio":
             self._trio_shield.__enter__()
         else:
