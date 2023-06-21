@@ -266,7 +266,7 @@ class Semaphore:
 class ShieldCancellation:
     # Thread-synchronous codebases don't support cancellation semantics.
     # We have this class because we need to mirror the async and sync
-    # cases within our package, but it's just a no-op. 
+    # cases within our package, but it's just a no-op.
     def __enter__(self) -> "ShieldCancellation":
         return self
 
