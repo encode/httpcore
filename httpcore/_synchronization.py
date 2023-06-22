@@ -182,7 +182,7 @@ class AsyncShieldCancellation:
     def __init__(self) -> None:
         """
         Detect if we're running under 'asyncio' or 'trio' and create
-        a semaphore with the correct implementation.
+        a shielded scope with the correct implementation.
         """
         self._backend = sniffio.current_async_library()
 
