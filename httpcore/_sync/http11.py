@@ -23,7 +23,7 @@ from .._exceptions import (
     map_exceptions,
 )
 from .._models import Origin, Request, Response
-from .._synchronization import Lock
+from .._synchronization import Lock, ShieldCancellation
 from .._trace import Trace
 from .interfaces import ConnectionInterface
 
@@ -115,8 +115,9 @@ class HTTP11Connection(ConnectionInterface):
                 },
             )
         except BaseException as exc:
-            with Trace("response_closed", logger, request) as trace:
-                self._response_closed()
+            with ShieldCancellation():
+                with Trace("response_closed", logger, request) as trace:
+                    self._response_closed()
             raise exc
 
     # Sending the request...
