@@ -577,7 +577,8 @@ class HTTP2ConnectionByteStream:
             # If we get an exception while streaming the response,
             # we want to close the response (and possibly the connection)
             # before raising that exception.
-            self.close()
+            with ShieldCancellation():
+                self.close()
             raise exc
 
     def close(self) -> None:
