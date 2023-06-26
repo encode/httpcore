@@ -1,6 +1,8 @@
 import typing
 
 import anyio
+import hpack
+import hyperframe
 import pytest
 
 import httpcore
@@ -24,7 +26,8 @@ class SlowWriteStream(httpcore.AsyncNetworkStream):
 class HandshakeThenSlowWriteStream(httpcore.AsyncNetworkStream):
     """
     A stream that we can use to test cancellations during
-    the request writing.
+    the HTTP/2 request writing, after allowing the initial
+    handshake to complete.
     """
 
     def __init__(self) -> None:
@@ -94,6 +97,13 @@ class SlowReadBackend(httpcore.AsyncNetworkBackend):
 
 @pytest.mark.anyio
 async def test_connection_pool_timeout_during_request():
+    """
+    An async timeout when writing an HTTP/1.1 response on the connection pool
+    should leave the pool in a consistent state.
+
+    In this case, that means the connection will become closed, and no
+    longer remain in the pool.
+    """
     network_backend = SlowWriteBackend()
     async with httpcore.AsyncConnectionPool(network_backend=network_backend) as pool:
         with anyio.move_on_after(0.01):
@@ -103,6 +113,13 @@ async def test_connection_pool_timeout_during_request():
 
 @pytest.mark.anyio
 async def test_connection_pool_timeout_during_response():
+    """
+    An async timeout when reading an HTTP/1.1 response on the connection pool
+    should leave the pool in a consistent state.
+
+    In this case, that means the connection will become closed, and no
+    longer remain in the pool.
+    """
     network_backend = SlowReadBackend(
         [
             b"HTTP/1.1 200 OK\r\n",
@@ -180,6 +197,43 @@ async def test_h2_timeout_during_request():
     """
     origin = httpcore.Origin(b"http", b"example.com", 80)
     stream = HandshakeThenSlowWriteStream()
+    async with httpcore.AsyncHTTP2Connection(origin, stream) as conn:
+        with anyio.move_on_after(0.01):
+            await conn.request("GET", "http://example.com")
+
+        assert not conn.is_closed()
+        assert conn.is_idle()
+
+
+@pytest.mark.anyio
+async def test_h2_timeout_during_response():
+    """
+    An async timeout on an HTTP/2 during the response reading
+    should leave the connection in a neatly idle state.
+
+    The connection is not closed because it is multiplexed,
+    and a timeout on one request does not require the entire
+    connection be closed.
+    """
+    origin = httpcore.Origin(b"http", b"example.com", 80)
+    stream = SlowReadStream(
+        [
+            hyperframe.frame.SettingsFrame().serialize(),
+            hyperframe.frame.HeadersFrame(
+                stream_id=1,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=1, data=b"Hello, world!...", flags=[]
+            ).serialize(),
+        ]
+    )
     async with httpcore.AsyncHTTP2Connection(origin, stream) as conn:
         with anyio.move_on_after(0.01):
             await conn.request("GET", "http://example.com")
