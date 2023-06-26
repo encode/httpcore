@@ -17,7 +17,7 @@ from .._exceptions import (
     RemoteProtocolError,
 )
 from .._models import Origin, Request, Response
-from .._synchronization import Lock, Semaphore
+from .._synchronization import Lock, Semaphore, ShieldCancellation
 from .._trace import Trace
 from .interfaces import ConnectionInterface
 
@@ -103,9 +103,15 @@ class HTTP2Connection(ConnectionInterface):
 
         with self._init_lock:
             if not self._sent_connection_init:
-                kwargs = {"request": request}
-                with Trace("send_connection_init", logger, request, kwargs):
-                    self._send_connection_init(**kwargs)
+                try:
+                    kwargs = {"request": request}
+                    with Trace("send_connection_init", logger, request, kwargs):
+                        self._send_connection_init(**kwargs)
+                except BaseException as exc:
+                    with ShieldCancellation():
+                        self.close()
+                    raise exc
+
                 self._sent_connection_init = True
 
                 # Initially start with just 1 until the remote server provides
@@ -154,10 +160,11 @@ class HTTP2Connection(ConnectionInterface):
                     "stream_id": stream_id,
                 },
             )
-        except Exception as exc:  # noqa: PIE786
-            kwargs = {"stream_id": stream_id}
-            with Trace("response_closed", logger, request, kwargs):
-                self._response_closed(stream_id=stream_id)
+        except BaseException as exc:  # noqa: PIE786
+            with ShieldCancellation():
+                kwargs = {"stream_id": stream_id}
+                with Trace("response_closed", logger, request, kwargs):
+                    self._response_closed(stream_id=stream_id)
 
             if isinstance(exc, h2.exceptions.ProtocolError):
                 # One case where h2 can raise a protocol error is when a
