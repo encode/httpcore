@@ -320,7 +320,8 @@ class HTTP11ConnectionByteStream:
             # If we get an exception while streaming the response,
             # we want to close the response (and possibly the connection)
             # before raising that exception.
-            await self.aclose()
+            with AsyncShieldCancellation():
+                await self.aclose()
             raise exc
 
     async def aclose(self) -> None:
