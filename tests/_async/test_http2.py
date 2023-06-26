@@ -66,7 +66,9 @@ async def test_http2_connection_closed():
                 stream_id=1, data=b"Hello, world!", flags=["END_STREAM"]
             ).serialize(),
             # Connection is closed after the first response
-            hyperframe.frame.GoAwayFrame(stream_id=0, error_code=0).serialize(),
+            hyperframe.frame.GoAwayFrame(
+                stream_id=0, error_code=0, last_stream_id=1
+            ).serialize(),
         ]
     )
     async with httpcore.AsyncHTTP2Connection(
@@ -74,7 +76,7 @@ async def test_http2_connection_closed():
     ) as conn:
         await conn.request("GET", "https://example.com/")
 
-        with pytest.raises(httpcore.RemoteProtocolError):
+        with pytest.raises(httpcore.ConnectionNotAvailable):
             await conn.request("GET", "https://example.com/")
 
         assert not conn.is_available()
@@ -211,9 +213,13 @@ async def test_http2_connection_with_goaway():
         ]
     )
     async with httpcore.AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
+        # The initial request has been closed midway, with an unrecoverable error.
         with pytest.raises(httpcore.RemoteProtocolError):
             await conn.request("GET", "https://example.com/")
-        with pytest.raises(httpcore.RemoteProtocolError):
+
+        # The second request can receive a graceful `ConnectionNotAvailable`,
+        # and may be retried on a new connection.
+        with pytest.raises(httpcore.ConnectionNotAvailable):
             await conn.request("GET", "https://example.com/")
 
 
