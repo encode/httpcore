@@ -339,7 +339,7 @@ class HTTP2Connection(ConnectionInterface):
         with self._read_lock:
             if self._connection_terminated is not None:
                 last_stream_id = self._connection_terminated.last_stream_id
-                if last_stream_id and stream_id > last_stream_id:
+                if stream_id and last_stream_id and stream_id > last_stream_id:
                     self._request_count -= 1
                     raise ConnectionNotAvailable()
                 raise RemoteProtocolError(self._connection_terminated)
