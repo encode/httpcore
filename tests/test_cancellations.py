@@ -21,6 +21,27 @@ class SlowWriteStream(httpcore.AsyncNetworkStream):
         pass
 
 
+class HandshakeThenSlowWriteStream(httpcore.AsyncNetworkStream):
+    """
+    A stream that we can use to test cancellations during
+    the request writing.
+    """
+
+    def __init__(self) -> None:
+        self._handshake_complete = False
+
+    async def write(
+        self, buffer: bytes, timeout: typing.Optional[float] = None
+    ) -> None:
+        if not self._handshake_complete:
+            self._handshake_complete = True
+        else:
+            await anyio.sleep(999)
+
+    async def aclose(self) -> None:
+        pass
+
+
 class SlowReadStream(httpcore.AsyncNetworkStream):
     """
     A stream that we can use to test cancellations during
@@ -75,7 +96,7 @@ class SlowReadBackend(httpcore.AsyncNetworkBackend):
 async def test_connection_pool_timeout_during_request():
     network_backend = SlowWriteBackend()
     async with httpcore.AsyncConnectionPool(network_backend=network_backend) as pool:
-        with anyio.move_on_after(0.001):
+        with anyio.move_on_after(0.01):
             await pool.request("GET", "http://example.com")
         assert not pool.connections
 
@@ -92,7 +113,7 @@ async def test_connection_pool_timeout_during_response():
         ]
     )
     async with httpcore.AsyncConnectionPool(network_backend=network_backend) as pool:
-        with anyio.move_on_after(0.001):
+        with anyio.move_on_after(0.01):
             await pool.request("GET", "http://example.com")
         assert not pool.connections
 
@@ -106,7 +127,7 @@ async def test_h11_timeout_during_request():
     origin = httpcore.Origin(b"http", b"example.com", 80)
     stream = SlowWriteStream()
     async with httpcore.AsyncHTTP11Connection(origin, stream) as conn:
-        with anyio.move_on_after(0.001):
+        with anyio.move_on_after(0.01):
             await conn.request("GET", "http://example.com")
         assert conn.is_closed()
 
@@ -128,6 +149,40 @@ async def test_h11_timeout_during_response():
         ]
     )
     async with httpcore.AsyncHTTP11Connection(origin, stream) as conn:
-        with anyio.move_on_after(0.001):
+        with anyio.move_on_after(0.01):
             await conn.request("GET", "http://example.com")
         assert conn.is_closed()
+
+
+@pytest.mark.anyio
+async def test_h2_timeout_during_handshake():
+    """
+    An async timeout on an HTTP/2 during the initial handshake
+    should leave the connection in a neatly closed state.
+    """
+    origin = httpcore.Origin(b"http", b"example.com", 80)
+    stream = SlowWriteStream()
+    async with httpcore.AsyncHTTP2Connection(origin, stream) as conn:
+        with anyio.move_on_after(0.01):
+            await conn.request("GET", "http://example.com")
+        assert conn.is_closed()
+
+
+@pytest.mark.anyio
+async def test_h2_timeout_during_request():
+    """
+    An async timeout on an HTTP/2 during a request
+    should leave the connection in a neatly idle state.
+
+    The connection is not closed because it is multiplexed,
+    and a timeout on one request does not require the entire
+    connection be closed.
+    """
+    origin = httpcore.Origin(b"http", b"example.com", 80)
+    stream = HandshakeThenSlowWriteStream()
+    async with httpcore.AsyncHTTP2Connection(origin, stream) as conn:
+        with anyio.move_on_after(0.01):
+            await conn.request("GET", "http://example.com")
+
+        assert not conn.is_closed()
+        assert conn.is_idle()
