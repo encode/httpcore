@@ -20,7 +20,7 @@ class SlowWriteStream(httpcore.AsyncNetworkStream):
         await anyio.sleep(999)
 
     async def aclose(self) -> None:
-        pass
+        await anyio.sleep(0)
 
 
 class HandshakeThenSlowWriteStream(httpcore.AsyncNetworkStream):
@@ -42,7 +42,7 @@ class HandshakeThenSlowWriteStream(httpcore.AsyncNetworkStream):
             await anyio.sleep(999)
 
     async def aclose(self) -> None:
-        pass
+        await anyio.sleep(0)
 
 
 class SlowReadStream(httpcore.AsyncNetworkStream):
@@ -65,7 +65,7 @@ class SlowReadStream(httpcore.AsyncNetworkStream):
         return self._buffer.pop(0)
 
     async def aclose(self):
-        pass
+        await anyio.sleep(0)
 
 
 class SlowWriteBackend(httpcore.AsyncNetworkBackend):
