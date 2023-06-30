@@ -24,6 +24,7 @@ flake8==3.9.2  # See: https://github.com/PyCQA/flake8/pull/1438
 isort==5.11.4
 importlib-metadata==4.13.0
 mypy==1.2.0
+trustme==1.0.0
 typing-extensions==4.6.3
 trio-typing==0.8.0
 types-certifi==2021.10.8.3
