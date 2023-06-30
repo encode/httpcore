@@ -1,25 +1,24 @@
 import socket
 import ssl
 import threading
-from typing import NamedTuple
+import typing
 
 import pytest
 import trustme
 
-
-class Address(NamedTuple):
-    host: str
-    port: int
-
-
-TCP_ADDRESS = None
-TLS_ADDRESS = None
+TCP_ADDRESS: typing.Optional[typing.Tuple[str, int]] = None
+TLS_ADDRESS: typing.Optional[typing.Tuple[str, int]] = None
 
 CA = trustme.CA()
 
 SERVER_CONTEXT = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS_SERVER)
 server_cert = CA.issue_cert("localhost")
 server_cert.configure_cert(SERVER_CONTEXT)
+
+
+class Address(typing.NamedTuple):
+    host: str
+    port: int
 
 
 def handle_connection(client_sock: socket.socket) -> None:
@@ -31,8 +30,15 @@ def handle_connection(client_sock: socket.socket) -> None:
                     break
                 client_sock.sendall(buffer)
             except ConnectionResetError:  # pragma: no cover
+                # This error can occur when the client has
+                # data in the kernel buffer but closes the
+                # connection, as in write tests when we
+                # are writing data and closing the
+                # connection without reading incoming data.
                 break
             except ssl.SSLEOFError:  # pragma: no cover
+                # This error is similar to `ConnectionResetError`,
+                # but it only occurs in TLS connections.
                 break
 
 
