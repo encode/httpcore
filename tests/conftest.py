@@ -40,6 +40,9 @@ def handle_connection(client_sock: socket.socket) -> None:
                 # This error is similar to `ConnectionResetError`,
                 # but it only occurs in TLS connections.
                 break
+            except BrokenPipeError:  # pragma: no cover
+                # When FIN packets were sent and we attempted to write data
+                break
 
 
 def start_tcp(event: threading.Event) -> None:
