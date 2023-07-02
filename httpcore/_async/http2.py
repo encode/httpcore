@@ -61,10 +61,26 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         self._sent_connection_init = False
         self._used_all_stream_ids = False
         self._connection_error = False
-        self._events: typing.Dict[int, h2.events.Event] = {}
+
+        # Mapping from stream ID to response stream events.
+        self._events: typing.Dict[
+            int,
+            typing.Union[
+                h2.events.ResponseReceived,
+                h2.events.DataReceived,
+                h2.events.StreamEnded,
+                h2.events.StreamReset,
+            ],
+        ] = {}
+
+        # Connection terminated events are stored as state since
+        # we need to handle them for all streams.
+        self._connection_terminated: typing.Optional[
+            h2.events.ConnectionTerminated
+        ] = None
+
         self._read_exception: typing.Optional[Exception] = None
         self._write_exception: typing.Optional[Exception] = None
-        self._connection_error_event: typing.Optional[h2.events.Event] = None
 
     async def handle_async_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
@@ -111,6 +127,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
             self._events[stream_id] = []
         except h2.exceptions.NoAvailableStreamIDError:  # pragma: nocover
             self._used_all_stream_ids = True
+            self._request_count -= 1
             raise ConnectionNotAvailable()
 
         try:
@@ -133,6 +150,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 content=HTTP2ConnectionByteStream(self, request, stream_id=stream_id),
                 extensions={
                     "http_version": b"HTTP/2",
+                    "network_stream": self._network_stream,
                     "stream_id": stream_id,
                 },
             )
@@ -151,8 +169,8 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 #
                 # In this case we'll have stored the event, and should raise
                 # it as a RemoteProtocolError.
-                if self._connection_error_event:
-                    raise RemoteProtocolError(self._connection_error_event)
+                if self._connection_terminated:  # pragma: nocover
+                    raise RemoteProtocolError(self._connection_terminated)
                 # If h2 raises a protocol error in some other state then we
                 # must somehow have made a protocol violation.
                 raise LocalProtocolError(exc)  # pragma: nocover
@@ -291,12 +309,14 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 self._h2_state.acknowledge_received_data(amount, stream_id)
                 await self._write_outgoing_data(request)
                 yield event.data
-            elif isinstance(event, (h2.events.StreamEnded, h2.events.StreamReset)):
+            elif isinstance(event, h2.events.StreamEnded):
                 break
 
     async def _receive_stream_event(
         self, request: Request, stream_id: int
-    ) -> h2.events.Event:
+    ) -> typing.Union[
+        h2.events.ResponseReceived, h2.events.DataReceived, h2.events.StreamEnded
+    ]:
         """
         Return the next available event for a given stream ID.
 
@@ -305,8 +325,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         while not self._events.get(stream_id):
             await self._receive_events(request, stream_id)
         event = self._events[stream_id].pop(0)
-        # The StreamReset event applies to a single stream.
-        if hasattr(event, "error_code"):
+        if isinstance(event, h2.events.StreamReset):
             raise RemoteProtocolError(event)
         return event
 
@@ -318,8 +337,12 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         for a given stream ID.
         """
         async with self._read_lock:
-            if self._connection_error_event is not None:  # pragma: nocover
-                raise RemoteProtocolError(self._connection_error_event)
+            if self._connection_terminated is not None:
+                last_stream_id = self._connection_terminated.last_stream_id
+                if stream_id and last_stream_id and stream_id > last_stream_id:
+                    self._request_count -= 1
+                    raise ConnectionNotAvailable()
+                raise RemoteProtocolError(self._connection_terminated)
 
             # This conditional is a bit icky. We don't want to block reading if we've
             # actually got an event to return for a given stream. We need to do that
@@ -337,16 +360,20 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                             await self._receive_remote_settings_change(event)
                             trace.return_value = event
 
-                    event_stream_id = getattr(event, "stream_id", 0)
+                    elif isinstance(
+                        event,
+                        (
+                            h2.events.ResponseReceived,
+                            h2.events.DataReceived,
+                            h2.events.StreamEnded,
+                            h2.events.StreamReset,
+                        ),
+                    ):
+                        if event.stream_id in self._events:
+                            self._events[event.stream_id].append(event)
 
-                    # The ConnectionTerminatedEvent applies to the entire connection,
-                    # and should be saved so it can be raised on all streams.
-                    if hasattr(event, "error_code") and event_stream_id == 0:
-                        self._connection_error_event = event
-                        raise RemoteProtocolError(event)
-
-                    if event_stream_id in self._events:
-                        self._events[event_stream_id].append(event)
+                    elif isinstance(event, h2.events.ConnectionTerminated):
+                        self._connection_terminated = event
 
         await self._write_outgoing_data(request)
 
@@ -371,7 +398,10 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         await self._max_streams_semaphore.release()
         del self._events[stream_id]
         async with self._state_lock:
-            if self._state == HTTPConnectionState.ACTIVE and not self._events:
+            if self._connection_terminated and not self._events:
+                await self.aclose()
+
+            elif self._state == HTTPConnectionState.ACTIVE and not self._events:
                 self._state = HTTPConnectionState.IDLE
                 if self._keepalive_expiry is not None:
                     now = time.monotonic()

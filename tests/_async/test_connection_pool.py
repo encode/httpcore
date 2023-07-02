@@ -1,6 +1,8 @@
 import logging
 import typing
 
+import hpack
+import hyperframe.frame
 import pytest
 import trio as concurrency
 
@@ -109,6 +111,123 @@ async def test_connection_pool_with_close():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in pool.connections]
         assert info == []
+
+
+@pytest.mark.anyio
+async def test_connection_pool_with_http2():
+    """
+    Test a connection pool with HTTP/2 requests.
+    """
+    network_backend = httpcore.AsyncMockBackend(
+        buffer=[
+            hyperframe.frame.SettingsFrame().serialize(),
+            hyperframe.frame.HeadersFrame(
+                stream_id=1,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=1, data=b"Hello, world!", flags=["END_STREAM"]
+            ).serialize(),
+            hyperframe.frame.HeadersFrame(
+                stream_id=3,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=3, data=b"Hello, world!", flags=["END_STREAM"]
+            ).serialize(),
+        ],
+        http2=True,
+    )
+
+    async with httpcore.AsyncConnectionPool(
+        network_backend=network_backend,
+    ) as pool:
+        # Sending an intial request, which once complete will return to the pool, IDLE.
+        response = await pool.request("GET", "https://example.com/")
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+
+        info = [repr(c) for c in pool.connections]
+        assert info == [
+            "<AsyncHTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 1]>"
+        ]
+
+        # Sending a second request to the same origin will reuse the existing IDLE connection.
+        response = await pool.request("GET", "https://example.com/")
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+
+        info = [repr(c) for c in pool.connections]
+        assert info == [
+            "<AsyncHTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 2]>"
+        ]
+
+
+@pytest.mark.anyio
+async def test_connection_pool_with_http2_goaway():
+    """
+    Test a connection pool with HTTP/2 requests, that cleanly disconnects
+    with a GoAway frame after the first request.
+    """
+    network_backend = httpcore.AsyncMockBackend(
+        buffer=[
+            hyperframe.frame.SettingsFrame().serialize(),
+            hyperframe.frame.HeadersFrame(
+                stream_id=1,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=1, data=b"Hello, world!", flags=["END_STREAM"]
+            ).serialize(),
+            hyperframe.frame.GoAwayFrame(
+                stream_id=0, error_code=0, last_stream_id=1
+            ).serialize(),
+            b"",
+        ],
+        http2=True,
+    )
+
+    async with httpcore.AsyncConnectionPool(
+        network_backend=network_backend,
+    ) as pool:
+        # Sending an intial request, which once complete will return to the pool, IDLE.
+        response = await pool.request("GET", "https://example.com/")
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+
+        info = [repr(c) for c in pool.connections]
+        assert info == [
+            "<AsyncHTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 1]>"
+        ]
+
+        # Sending a second request to the same origin will require a new connection.
+        response = await pool.request("GET", "https://example.com/")
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+
+        info = [repr(c) for c in pool.connections]
+        assert info == [
+            "<AsyncHTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 1]>",
+            "<AsyncHTTPConnection ['https://example.com:443', HTTP/2, CLOSED, Request Count: 1]>",
+        ]
 
 
 @pytest.mark.anyio
