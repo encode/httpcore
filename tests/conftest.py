@@ -57,7 +57,6 @@ def handle_tunnel_connection(client_sock: socket.socket) -> None:
     with client_sock, remote_socket:
         while True:
             try:
-                
                 try:
                     client_sock.settimeout(TUNNEL_READ_WRITE_TIMEOUT)
                     buffer = client_sock.recv(1024)
@@ -128,6 +127,7 @@ def client_context() -> ssl.SSLContext:
     CA.configure_trust(context)
     return context
 
+
 @pytest.fixture(scope="session")
 def tls_in_tls_server(tls_server) -> Address:
     threading.Thread(target=start_tls_in_tls, daemon=True).start()
@@ -135,6 +135,7 @@ def tls_in_tls_server(tls_server) -> Address:
     assert TLS_IN_TLS_ADDRESS
     host, port = TLS_IN_TLS_ADDRESS
     return Address(host, port)
+
 
 @pytest.fixture(scope="session")
 def tls_server() -> Address:

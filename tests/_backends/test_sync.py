@@ -86,15 +86,16 @@ def test_connect_with_tls_in_tls(tls_in_tls_server, client_context):
         tls_stream = stream.start_tls(
             ssl_context=client_context,
             server_hostname="localhost",
-            timeout=CONNECT_TIMEOUT
+            timeout=CONNECT_TIMEOUT,
         )
         with tls_stream:
             tls_in_tls_stream = tls_stream.start_tls(
                 ssl_context=client_context,
                 server_hostname="localhost",
-                timeout=CONNECT_TIMEOUT
+                timeout=CONNECT_TIMEOUT,
             )
             tls_in_tls_stream.close()
+
 
 def test_write_with_tls_in_tls(tls_in_tls_server, client_context):
     backend = httpcore.SyncBackend()
@@ -105,17 +106,18 @@ def test_write_with_tls_in_tls(tls_in_tls_server, client_context):
         tls_stream = stream.start_tls(
             ssl_context=client_context,
             server_hostname="localhost",
-            timeout=CONNECT_TIMEOUT
+            timeout=CONNECT_TIMEOUT,
         )
         with tls_stream:
             tls_in_tls_stream = tls_stream.start_tls(
                 ssl_context=client_context,
                 server_hostname="localhost",
-                timeout=CONNECT_TIMEOUT
+                timeout=CONNECT_TIMEOUT,
             )
             with tls_in_tls_stream:
-                tls_in_tls_stream.write(b'ping', timeout=WRITE_TIMEOUT)
-                
+                tls_in_tls_stream.write(b"ping", timeout=WRITE_TIMEOUT)
+
+
 def test_read_with_tls_in_tls(tls_in_tls_server, client_context):
     backend = httpcore.SyncBackend()
     stream = backend.connect_tcp(
@@ -125,14 +127,14 @@ def test_read_with_tls_in_tls(tls_in_tls_server, client_context):
         tls_stream = stream.start_tls(
             ssl_context=client_context,
             server_hostname="localhost",
-            timeout=CONNECT_TIMEOUT
+            timeout=CONNECT_TIMEOUT,
         )
         with tls_stream:
             tls_in_tls_stream = tls_stream.start_tls(
                 ssl_context=client_context,
                 server_hostname="localhost",
-                timeout=CONNECT_TIMEOUT
+                timeout=CONNECT_TIMEOUT,
             )
             with tls_in_tls_stream:
-                tls_in_tls_stream.write(b'ping', timeout=WRITE_TIMEOUT)
+                tls_in_tls_stream.write(b"ping", timeout=WRITE_TIMEOUT)
                 tls_in_tls_stream.read(1024, timeout=READ_TIMEOUT)
