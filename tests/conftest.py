@@ -53,8 +53,7 @@ def handle_connection(client_sock: socket.socket) -> None:
 
 
 def handle_tunnel_connection(client_sock: socket.socket) -> None:
-    remote_socket = socket.create_connection(TLS_ADDRESS)  # type: ignore
-    with client_sock, remote_socket:
+    with client_sock, socket.create_connection(TLS_ADDRESS) as remote_socket:  # type: ignore
         while True:
             try:
                 try:
@@ -65,7 +64,7 @@ def handle_tunnel_connection(client_sock: socket.socket) -> None:
                     pass
 
                 try:
-                    remote_socket.settimeout(SOCKET_READ_WRITE_TIMEOUT)
+                    remote_socket.settimeout(TUNNEL_READ_WRITE_TIMEOUT)
                     buffer = remote_socket.recv(1024)
                     client_sock.sendall(buffer)
                 except socket.timeout:
@@ -99,10 +98,15 @@ def start_tls() -> None:
 
         with SERVER_CONTEXT.wrap_socket(sock, server_side=True) as tls_sock:
             while True:
-                client_sock = tls_sock.accept()[0]
-                threading.Thread(
-                    target=handle_connection, daemon=True, args=(client_sock,)
-                ).start()
+                try:
+                    client_sock = tls_sock.accept()[0]
+                    threading.Thread(
+                        target=handle_connection, daemon=True, args=(client_sock,)
+                    ).start()
+                except ssl.SSLError as e:
+                    # Suppress the unexpected message error
+                    if e.errno != 8:
+                        raise
 
 
 def start_tls_in_tls() -> None:
@@ -129,7 +133,7 @@ def client_context() -> ssl.SSLContext:
 
 
 @pytest.fixture(scope="session")
-def tls_in_tls_server(tls_server) -> Address:
+def tls_in_tls_server(tls_server: Address) -> Address:
     threading.Thread(target=start_tls_in_tls, daemon=True).start()
     tls_in_tls_started.wait()
     assert TLS_IN_TLS_ADDRESS
