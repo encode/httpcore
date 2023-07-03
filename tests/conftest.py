@@ -20,7 +20,7 @@ SERVER_CONTEXT = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS_SERVER)
 server_cert = CA.issue_cert("localhost")
 server_cert.configure_cert(SERVER_CONTEXT)
 
-SOCKET_READ_WRITE_TIMEOUT = 0.5
+TUNNEL_READ_WRITE_TIMEOUT = 0.5
 
 
 class Address(typing.NamedTuple):
@@ -59,7 +59,7 @@ def handle_tunnel_connection(client_sock: socket.socket) -> None:
             try:
                 
                 try:
-                    client_sock.settimeout(SOCKET_READ_WRITE_TIMEOUT)
+                    client_sock.settimeout(TUNNEL_READ_WRITE_TIMEOUT)
                     buffer = client_sock.recv(1024)
                     remote_socket.sendall(buffer)
                 except socket.timeout:

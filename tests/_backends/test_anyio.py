@@ -77,3 +77,67 @@ async def test_read_with_tls(tls_server, client_context):
         async with tls_stream:
             await tls_stream.write(b"ping", timeout=WRITE_TIMEOUT)
             await tls_stream.read(1024, timeout=READ_TIMEOUT)
+
+@pytest.mark.anyio
+async def test_connect_with_tls_in_tls(tls_in_tls_server, client_context):
+    backend = httpcore.AnyIOBackend()
+    stream = await backend.connect_tcp(
+        tls_in_tls_server.host, tls_in_tls_server.port, timeout=CONNECT_TIMEOUT
+    )
+    async with stream:
+        tls_stream = await stream.start_tls(
+            ssl_context=client_context,
+            server_hostname="localhost",
+            timeout=CONNECT_TIMEOUT
+        )
+        async with tls_stream:
+            tls_in_tls_stream = await tls_stream.start_tls(
+                ssl_context=client_context,
+                server_hostname="localhost",
+                timeout=CONNECT_TIMEOUT
+            )
+            await tls_in_tls_stream.aclose()
+
+
+@pytest.mark.anyio
+async def test_write_with_tls_in_tls(tls_in_tls_server, client_context):
+    backend = httpcore.AnyIOBackend()
+    stream = await backend.connect_tcp(
+        tls_in_tls_server.host, tls_in_tls_server.port, timeout=CONNECT_TIMEOUT
+    )
+    async with stream:
+        tls_stream = await stream.start_tls(
+            ssl_context=client_context,
+            server_hostname="localhost",
+            timeout=CONNECT_TIMEOUT
+        )
+        async with tls_stream:
+            tls_in_tls_stream = await tls_stream.start_tls(
+                ssl_context=client_context,
+                server_hostname="localhost",
+                timeout=CONNECT_TIMEOUT
+            )
+            async with tls_in_tls_stream:
+                await tls_in_tls_stream.write(b'ping', timeout=WRITE_TIMEOUT)
+
+@pytest.mark.anyio
+async def test_read_with_tls_in_tls(tls_in_tls_server, client_context):
+    backend = httpcore.AnyIOBackend()
+    stream = await backend.connect_tcp(
+        tls_in_tls_server.host, tls_in_tls_server.port, timeout=CONNECT_TIMEOUT
+    )
+    async with stream:
+        tls_stream = await stream.start_tls(
+            ssl_context=client_context,
+            server_hostname="localhost",
+            timeout=CONNECT_TIMEOUT
+        )
+        async with tls_stream:
+            tls_in_tls_stream = await tls_stream.start_tls(
+                ssl_context=client_context,
+                server_hostname="localhost",
+                timeout=CONNECT_TIMEOUT
+            )
+            async with tls_in_tls_stream:
+                await tls_in_tls_stream.write(b'ping', timeout=WRITE_TIMEOUT)
+                await tls_in_tls_stream.read(1024, timeout=READ_TIMEOUT)
