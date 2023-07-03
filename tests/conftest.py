@@ -105,10 +105,9 @@ def start_tls() -> None:
                     ).start()
                 except ssl.SSLError as e:
                     # Suppress the unexpected message error
-                    if e.errno != 8:
+                    if e.errno not in (ssl.SSL_ERROR_EOF, ssl.SSL_ERROR_ZERO_RETURN):
                         raise
-                except ssl.SSL_ERROR_ZERO_RETURN:
-                    pass
+            
 
 
 def start_tls_in_tls() -> None:
