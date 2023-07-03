@@ -36,19 +36,7 @@ def handle_connection(client_sock: socket.socket) -> None:
                 if not buffer:
                     break
                 client_sock.sendall(buffer)
-            except ConnectionResetError:  # pragma: no cover
-                # This error can occur when the client has
-                # data in the kernel buffer but closes the
-                # connection, as in write tests when we
-                # are writing data and closing the
-                # connection without reading incoming data.
-                break
-            except ssl.SSLEOFError:  # pragma: no cover
-                # This error is similar to `ConnectionResetError`,
-                # but it only occurs in TLS connections.
-                break
-            except BrokenPipeError:  # pragma: no cover
-                # When FIN packets were sent and we attempted to write data
+            except OSError:
                 break
 
 
@@ -69,9 +57,7 @@ def handle_tunnel_connection(client_sock: socket.socket) -> None:
                     client_sock.sendall(buffer)
                 except socket.timeout:
                     pass
-            except ssl.SSLEOFError:  # pragma: no cover
-                break
-            except BrokenPipeError:  # pragma: no cover
+            except OSError:
                 break
 
 
@@ -103,10 +89,8 @@ def start_tls() -> None:
                     threading.Thread(
                         target=handle_connection, daemon=True, args=(client_sock,)
                     ).start()
-                except ssl.SSLError as e:
-                    # Suppress the unexpected message error
-                    if e.errno not in (ssl.SSL_ERROR_EOF, ssl.SSL_ERROR_ZERO_RETURN):
-                        raise
+                except OSError:
+                    pass
 
 
 def start_tls_in_tls() -> None:
