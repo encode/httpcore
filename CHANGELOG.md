@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## 0.17.3 (July 3rd, 2023)
+## 0.17.3
 
 - The networking backend interface has [been added to the public API](https://www.encode.io/httpcore/network-backends). Some classes which were previously private implementation detail are now part of the top-level public API. (#699)
 - Graceful handling of HTTP/2 GoAway frames, with requests being transparently retried on a new connection. (#730)
