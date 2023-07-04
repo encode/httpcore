@@ -48,14 +48,14 @@ def handle_tunnel_connection(client_sock: socket.socket) -> None:
                     client_sock.settimeout(TUNNEL_READ_WRITE_TIMEOUT)
                     buffer = client_sock.recv(1024)
                     remote_socket.sendall(buffer)
-                except socket.timeout:
+                except socket.timeout:  # pragma: no cover
                     pass
 
                 try:
                     remote_socket.settimeout(TUNNEL_READ_WRITE_TIMEOUT)
                     buffer = remote_socket.recv(1024)
                     client_sock.sendall(buffer)
-                except socket.timeout:
+                except socket.timeout:  # pragma: no cover
                     pass
             except OSError:
                 break
