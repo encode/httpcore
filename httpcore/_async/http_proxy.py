@@ -74,7 +74,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         uds: Optional[str] = None,
         network_backend: Optional[AsyncNetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
-        mode: ProxyMode = ProxyMode.DEFAULT,
+        proxy_mode: ProxyMode = ProxyMode.DEFAULT,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -109,7 +109,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 `AF_INET6` address (IPv6).
             uds: Path to a Unix Domain Socket to use instead of TCP sockets.
             network_backend: A backend instance to use for handling network I/O.
-            mode: Allow HTTP connection be tunnelable and HTTPS be forwardable.
+            proxy_mode: Allow HTTP connection be tunnelable and HTTPS be forwardable.
         """
         super().__init__(
             ssl_context=ssl_context,
@@ -127,7 +127,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         self._ssl_context = ssl_context
         self._proxy_url = enforce_url(proxy_url, name="proxy_url")
         self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
-        self._mode = mode
+        self._proxy_mode = proxy_mode
         if proxy_auth is not None:
             username = enforce_bytes(proxy_auth[0], name="proxy_auth")
             password = enforce_bytes(proxy_auth[1], name="proxy_auth")
@@ -137,8 +137,8 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             ] + self._proxy_headers
 
     def create_connection(self, origin: Origin) -> AsyncConnectionInterface:
-        if (self._mode and self._mode | ProxyMode.HTTPS_FORWARD) or (
-            not self._mode and origin.scheme == b"http"
+        if (self._proxy_mode == ProxyMode.FORWARD) or (
+            self._proxy_mode == ProxyMode.DEFAULT and origin.scheme == b"http"
         ):
             return AsyncForwardHTTPConnection(
                 proxy_origin=self._proxy_url.origin,

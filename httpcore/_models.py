@@ -484,7 +484,7 @@ class Response:
             await self.stream.aclose()
 
 
-class ProxyMode(enum.IntFlag):
+class ProxyMode(enum.IntEnum):
     DEFAULT = 0
-    HTTPS_FORWARD = 1
-    HTTP_TUNNEL = 2
+    FORWARD = 1
+    TUNNEL = 2
