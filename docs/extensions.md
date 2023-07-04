@@ -147,6 +147,23 @@ The following event types are currently exposed...
 * `"http2.receive_response_body"`
 * `"http2.response_closed"`
 
+### `"sni_hostname"`
+
+The server's hostname, which is used to confirm the hostname supplied by the SSL certificate.
+
+For example:
+
+``` python
+headers = {"Host": "www.encode.io"}
+extensions = {"sni_hostname": "www.encode.io"}
+response = httpcore.request(
+    "GET",
+    "https://185.199.108.153",
+    headers=headers,
+    extensions=extensions
+)
+```
+
 ## Response Extensions
 
 ### `"http_version"`
@@ -165,6 +182,10 @@ HTTP/2 onwards does not include a reason phrase on the wire.
 
 When no key is included, a default based on the status code may be used.
 
+### `"stream_id"`
+
+When HTTP/2 is being used the `"stream_id"` response extension can be accessed to determine the ID of the data stream that the response was sent on.
+
 ### `"network_stream"`
 
 The `"network_stream"` extension allows developers to handle HTTP `CONNECT` and `Upgrade` requests, by providing an API that steps outside the standard request/response model, and can directly read or write to the network.
@@ -178,6 +199,8 @@ The interface provided by the network stream:
 * `get_extra_info(info) -> Any`
 
 This API can be used as the foundation for working with HTTP proxies, WebSocket upgrades, and other advanced use-cases.
+
+See the [network backends documentation](network-backends.md) for more information on working directly with network streams.
 
 ##### `CONNECT` requests
 

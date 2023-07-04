@@ -1,20 +1,21 @@
 import ssl
 import typing
-from typing import List, Optional
 
 import hpack
 import hyperframe.frame
 import pytest
 
 from httpcore import (
+    SOCKET_OPTION,
     AsyncHTTPConnection,
+    AsyncMockBackend,
+    AsyncMockStream,
+    AsyncNetworkStream,
     ConnectError,
     ConnectionNotAvailable,
     Origin,
     WriteError,
 )
-from httpcore.backends.base import AsyncNetworkStream
-from httpcore.backends.mock import AsyncMockBackend, AsyncMockStream
 
 
 @pytest.mark.anyio
@@ -182,7 +183,7 @@ async def test_request_to_incorrect_origin():
 class NeedsRetryBackend(AsyncMockBackend):
     def __init__(
         self,
-        buffer: List[bytes],
+        buffer: typing.List[bytes],
         http2: bool = False,
         connect_tcp_failures: int = 2,
         start_tls_failures: int = 0,
@@ -195,8 +196,9 @@ class NeedsRetryBackend(AsyncMockBackend):
         self,
         host: str,
         port: int,
-        timeout: Optional[float] = None,
-        local_address: Optional[str] = None,
+        timeout: typing.Optional[float] = None,
+        local_address: typing.Optional[str] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:
         if self._connect_tcp_failures > 0:
             self._connect_tcp_failures -= 1

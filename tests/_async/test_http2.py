@@ -2,19 +2,13 @@ import hpack
 import hyperframe.frame
 import pytest
 
-from httpcore import (
-    AsyncHTTP2Connection,
-    ConnectionNotAvailable,
-    Origin,
-    RemoteProtocolError,
-)
-from httpcore.backends.mock import AsyncMockStream
+import httpcore
 
 
 @pytest.mark.anyio
 async def test_http2_connection():
-    origin = Origin(b"https", b"example.com", 443)
-    stream = AsyncMockStream(
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.AsyncMockStream(
         [
             hyperframe.frame.SettingsFrame().serialize(),
             hyperframe.frame.HeadersFrame(
@@ -32,7 +26,7 @@ async def test_http2_connection():
             ).serialize(),
         ]
     )
-    async with AsyncHTTP2Connection(
+    async with httpcore.AsyncHTTP2Connection(
         origin=origin, stream=stream, keepalive_expiry=5.0
     ) as conn:
         response = await conn.request("GET", "https://example.com/")
@@ -53,9 +47,45 @@ async def test_http2_connection():
 
 
 @pytest.mark.anyio
+async def test_http2_connection_closed():
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.AsyncMockStream(
+        [
+            hyperframe.frame.SettingsFrame().serialize(),
+            hyperframe.frame.HeadersFrame(
+                stream_id=1,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=1, data=b"Hello, world!", flags=["END_STREAM"]
+            ).serialize(),
+            # Connection is closed after the first response
+            hyperframe.frame.GoAwayFrame(
+                stream_id=0, error_code=0, last_stream_id=1
+            ).serialize(),
+        ]
+    )
+    async with httpcore.AsyncHTTP2Connection(
+        origin=origin, stream=stream, keepalive_expiry=5.0
+    ) as conn:
+        await conn.request("GET", "https://example.com/")
+
+        with pytest.raises(httpcore.ConnectionNotAvailable):
+            await conn.request("GET", "https://example.com/")
+
+        assert not conn.is_available()
+
+
+@pytest.mark.anyio
 async def test_http2_connection_post_request():
-    origin = Origin(b"https", b"example.com", 443)
-    stream = AsyncMockStream(
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.AsyncMockStream(
         [
             hyperframe.frame.SettingsFrame().serialize(),
             hyperframe.frame.HeadersFrame(
@@ -73,7 +103,7 @@ async def test_http2_connection_post_request():
             ).serialize(),
         ]
     )
-    async with AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
+    async with httpcore.AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
         response = await conn.request(
             "POST",
             "https://example.com/",
@@ -90,10 +120,10 @@ async def test_http2_connection_with_remote_protocol_error():
     If a remote protocol error occurs, then no response will be returned,
     and the connection will not be reusable.
     """
-    origin = Origin(b"https", b"example.com", 443)
-    stream = AsyncMockStream([b"Wait, this isn't valid HTTP!", b""])
-    async with AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
-        with pytest.raises(RemoteProtocolError):
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.AsyncMockStream([b"Wait, this isn't valid HTTP!", b""])
+    async with httpcore.AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
+        with pytest.raises(httpcore.RemoteProtocolError):
             await conn.request("GET", "https://example.com/")
 
 
@@ -103,8 +133,8 @@ async def test_http2_connection_with_rst_stream():
     If a stream reset occurs, then no response will be returned,
     but the connection will remain reusable for other requests.
     """
-    origin = Origin(b"https", b"example.com", 443)
-    stream = AsyncMockStream(
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.AsyncMockStream(
         [
             hyperframe.frame.SettingsFrame().serialize(),
             hyperframe.frame.HeadersFrame(
@@ -136,8 +166,8 @@ async def test_http2_connection_with_rst_stream():
             b"",
         ]
     )
-    async with AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
-        with pytest.raises(RemoteProtocolError):
+    async with httpcore.AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
+        with pytest.raises(httpcore.RemoteProtocolError):
             await conn.request("GET", "https://example.com/")
         response = await conn.request("GET", "https://example.com/")
         assert response.status == 200
@@ -146,11 +176,11 @@ async def test_http2_connection_with_rst_stream():
 @pytest.mark.anyio
 async def test_http2_connection_with_goaway():
     """
-    If a stream reset occurs, then no response will be returned,
-    but the connection will remain reusable for other requests.
+    If a GoAway frame occurs, then no response will be returned,
+    and the connection will not be reusable for other requests.
     """
-    origin = Origin(b"https", b"example.com", 443)
-    stream = AsyncMockStream(
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.AsyncMockStream(
         [
             hyperframe.frame.SettingsFrame().serialize(),
             hyperframe.frame.HeadersFrame(
@@ -182,17 +212,21 @@ async def test_http2_connection_with_goaway():
             b"",
         ]
     )
-    async with AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
-        with pytest.raises(RemoteProtocolError):
+    async with httpcore.AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
+        # The initial request has been closed midway, with an unrecoverable error.
+        with pytest.raises(httpcore.RemoteProtocolError):
             await conn.request("GET", "https://example.com/")
-        with pytest.raises(RemoteProtocolError):
+
+        # The second request can receive a graceful `ConnectionNotAvailable`,
+        # and may be retried on a new connection.
+        with pytest.raises(httpcore.ConnectionNotAvailable):
             await conn.request("GET", "https://example.com/")
 
 
 @pytest.mark.anyio
 async def test_http2_connection_with_flow_control():
-    origin = Origin(b"https", b"example.com", 443)
-    stream = AsyncMockStream(
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.AsyncMockStream(
         [
             hyperframe.frame.SettingsFrame().serialize(),
             # Available flow: 65,535
@@ -239,7 +273,7 @@ async def test_http2_connection_with_flow_control():
             ).serialize(),
         ]
     )
-    async with AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
+    async with httpcore.AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
         response = await conn.request(
             "POST",
             "https://example.com/",
@@ -254,8 +288,8 @@ async def test_http2_connection_attempt_close():
     """
     A connection can only be closed when it is idle.
     """
-    origin = Origin(b"https", b"example.com", 443)
-    stream = AsyncMockStream(
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.AsyncMockStream(
         [
             hyperframe.frame.SettingsFrame().serialize(),
             hyperframe.frame.HeadersFrame(
@@ -273,14 +307,14 @@ async def test_http2_connection_attempt_close():
             ).serialize(),
         ]
     )
-    async with AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
+    async with httpcore.AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
         async with conn.stream("GET", "https://example.com/") as response:
             await response.aread()
             assert response.status == 200
             assert response.content == b"Hello, world!"
 
         await conn.aclose()
-        with pytest.raises(ConnectionNotAvailable):
+        with pytest.raises(httpcore.ConnectionNotAvailable):
             await conn.request("GET", "https://example.com/")
 
 
@@ -289,9 +323,9 @@ async def test_http2_request_to_incorrect_origin():
     """
     A connection can only send requests to whichever origin it is connected to.
     """
-    origin = Origin(b"https", b"example.com", 443)
-    stream = AsyncMockStream([])
-    async with AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.AsyncMockStream([])
+    async with httpcore.AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
         with pytest.raises(RuntimeError):
             await conn.request("GET", "https://other.com/")
 
@@ -302,8 +336,8 @@ async def test_http2_remote_max_streams_update():
     If the remote server updates the maximum concurrent streams value, we should
     be adjusting how many streams we will allow.
     """
-    origin = Origin(b"https", b"example.com", 443)
-    stream = AsyncMockStream(
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.AsyncMockStream(
         [
             hyperframe.frame.SettingsFrame(
                 settings={hyperframe.frame.SettingsFrame.MAX_CONCURRENT_STREAMS: 1000}
@@ -327,7 +361,7 @@ async def test_http2_remote_max_streams_update():
             ).serialize(),
         ]
     )
-    async with AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
+    async with httpcore.AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
         async with conn.stream("GET", "https://example.com/") as response:
             i = 0
             async for chunk in response.aiter_stream():

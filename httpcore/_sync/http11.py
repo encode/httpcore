@@ -1,4 +1,5 @@
 import enum
+import logging
 import time
 from types import TracebackType
 from typing import (
@@ -14,6 +15,7 @@ from typing import (
 
 import h11
 
+from .._backends.base import NetworkStream
 from .._exceptions import (
     ConnectionNotAvailable,
     LocalProtocolError,
@@ -22,10 +24,12 @@ from .._exceptions import (
     map_exceptions,
 )
 from .._models import Origin, Request, Response
-from .._synchronization import Lock
+from .._synchronization import Lock, ShieldCancellation
 from .._trace import Trace
-from ..backends.base import NetworkStream
 from .interfaces import ConnectionInterface
+
+logger = logging.getLogger("httpcore.http11")
+
 
 # A subset of `h11.Event` types supported by `_send_event`
 H11SendEvent = Union[
@@ -82,23 +86,21 @@ class HTTP11Connection(ConnectionInterface):
         try:
             kwargs = {"request": request}
             try:
-                trace_message = "http11.send_request_headers"
-                with Trace(trace_message, request, kwargs) as trace:
+                with Trace("send_request_headers", logger, request, kwargs) as trace:
                     self._send_request_headers(**kwargs)
-
-                trace_message = "http11.send_request_body"
-                with Trace(trace_message, request, kwargs) as trace:
+                with Trace("send_request_body", logger, request, kwargs) as trace:
                     self._send_request_body(**kwargs)
-            except WriteError:
+             except WriteError:
                 # If we get a write error while we're writing the request,
                 # then we supress this error and move on to attempting to
                 # read the response. Servers can sometimes close the request
                 # pre-emptively and then respond with a well formed HTTP
                 # error response.
                 pass
-
-            trace_message = "http11.receive_response_headers"
-            with Trace(trace_message, request, kwargs) as trace:
+ 
+            with Trace(
+                "receive_response_headers", logger, request, kwargs
+            ) as trace:
                 (
                     http_version,
                     status,
@@ -123,8 +125,9 @@ class HTTP11Connection(ConnectionInterface):
                 },
             )
         except BaseException as exc:
-            with Trace("http11.response_closed", request) as trace:
-                self._response_closed()
+            with ShieldCancellation():
+                with Trace("response_closed", logger, request) as trace:
+                    self._response_closed()
             raise exc
 
     # Sending the request...
@@ -320,18 +323,19 @@ class HTTP11ConnectionByteStream:
     def __iter__(self) -> Iterator[bytes]:
         kwargs = {"request": self._request}
         try:
-            with Trace("http11.receive_response_body", self._request, kwargs):
+            with Trace("receive_response_body", logger, self._request, kwargs):
                 for chunk in self._connection._receive_response_body(**kwargs):
                     yield chunk
         except BaseException as exc:
             # If we get an exception while streaming the response,
             # we want to close the response (and possibly the connection)
             # before raising that exception.
-            self.close()
+            with ShieldCancellation():
+                self.close()
             raise exc
 
     def close(self) -> None:
         if not self._closed:
             self._closed = True
-            with Trace("http11.response_closed", self._request):
+            with Trace("response_closed", logger, self._request):
                 self._connection._response_closed()

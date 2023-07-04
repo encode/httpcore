@@ -12,6 +12,7 @@ nav:
     - Proxies: 'proxies.md'
     - HTTP/2: 'http2.md'
     - Async Support: 'async.md'
+    - Network Backends: 'network-backends.md'
     - Extensions: 'extensions.md'
     - Logging: 'logging.md'
     - Exceptions: 'exceptions.md'
