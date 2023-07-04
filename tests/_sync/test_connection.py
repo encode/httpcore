@@ -93,11 +93,11 @@ def test_write_error_but_response_sent():
     """
 
     class ErrorOnRequestTooLargeStream(MockStream):
-        def __init__(self, buffer: List[bytes], http2: bool = False) -> None:
+        def __init__(self, buffer: typing.List[bytes], http2: bool = False) -> None:
             super().__init__(buffer, http2)
             self.count = 0
 
-        def write(self, buffer: bytes, timeout: Optional[float] = None) -> None:
+        def write(self, buffer: bytes, timeout: typing.Optional[float] = None) -> None:
             self.count += len(buffer)
 
             if self.count > 1_000_000:
@@ -108,8 +108,8 @@ def test_write_error_but_response_sent():
             self,
             host: str,
             port: int,
-            timeout: Optional[float] = None,
-            local_address: Optional[str] = None,
+            timeout: typing.Optional[float] = None,
+            local_address: typing.Optional[str] = None,
         ) -> MockStream:
             return ErrorOnRequestTooLargeStream(list(self._buffer), http2=self._http2)
 
