@@ -89,7 +89,7 @@ def start_tls() -> None:
                     threading.Thread(
                         target=handle_connection, daemon=True, args=(client_sock,)
                     ).start()
-                except OSError:
+                except OSError:  # pragma: no cover
                     pass
 
 
