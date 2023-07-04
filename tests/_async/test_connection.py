@@ -97,7 +97,9 @@ async def test_write_error_but_response_sent():
             super().__init__(buffer, http2)
             self.count = 0
 
-        async def write(self, buffer: bytes, timeout: typing.Optional[float] = None) -> None:
+        async def write(
+            self, buffer: bytes, timeout: typing.Optional[float] = None
+        ) -> None:
             self.count += len(buffer)
 
             if self.count > 1_000_000:
