@@ -85,6 +85,7 @@ def test_concurrent_requests_not_available_on_http11_connections():
                 conn.request("GET", "https://example.com/")
 
 
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 
 def test_write_error_but_response_sent():
     """

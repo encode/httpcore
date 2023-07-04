@@ -85,6 +85,7 @@ async def test_concurrent_requests_not_available_on_http11_connections():
                 await conn.request("GET", "https://example.com/")
 
 
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 @pytest.mark.anyio
 async def test_write_error_but_response_sent():
     """
