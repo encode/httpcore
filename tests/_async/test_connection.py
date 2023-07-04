@@ -112,6 +112,7 @@ async def test_write_error_but_response_sent():
             port: int,
             timeout: typing.Optional[float] = None,
             local_address: typing.Optional[str] = None,
+            socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
         ) -> AsyncMockStream:
             return ErrorOnRequestTooLargeStream(list(self._buffer), http2=self._http2)
 
