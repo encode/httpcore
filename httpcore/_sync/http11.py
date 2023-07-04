@@ -86,18 +86,20 @@ class HTTP11Connection(ConnectionInterface):
         try:
             kwargs = {"request": request}
             try:
-                with Trace("send_request_headers", logger, request, kwargs) as trace:
+                with Trace(
+                    "send_request_headers", logger, request, kwargs
+                ) as trace:
                     self._send_request_headers(**kwargs)
                 with Trace("send_request_body", logger, request, kwargs) as trace:
                     self._send_request_body(**kwargs)
-             except WriteError:
+            except WriteError:
                 # If we get a write error while we're writing the request,
                 # then we supress this error and move on to attempting to
                 # read the response. Servers can sometimes close the request
                 # pre-emptively and then respond with a well formed HTTP
                 # error response.
                 pass
- 
+
             with Trace(
                 "receive_response_headers", logger, request, kwargs
             ) as trace:

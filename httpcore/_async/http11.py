@@ -86,7 +86,9 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
         try:
             kwargs = {"request": request}
             try:
-                async with Trace("send_request_headers", logger, request, kwargs) as trace:
+                async with Trace(
+                    "send_request_headers", logger, request, kwargs
+                ) as trace:
                     await self._send_request_headers(**kwargs)
                 async with Trace("send_request_body", logger, request, kwargs) as trace:
                     await self._send_request_body(**kwargs)
