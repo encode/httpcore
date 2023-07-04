@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## 0.17.3
 
 - The networking backend interface has [been added to the public API](https://www.encode.io/httpcore/network-backends). Some classes which were previously private implementation detail are now part of the top-level public API. (#699)
+- Support async cancellations, ensuring that the connection pool is left in a clean state when cancellations occur. (#726)
 - Graceful handling of HTTP/2 GoAway frames, with requests being transparently retried on a new connection. (#730)
 - Add exceptions when a synchronous `trace callback` is passed to an asynchronous request or an asynchronous `trace callback` is passed to a synchronous request. (#717)
 
