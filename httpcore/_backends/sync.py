@@ -41,9 +41,8 @@ class OverallTimeout:
     def __exit__(
         self, exc_type: typing.Any, exc_val: typing.Any, exc_tb: typing.Any
     ) -> None:
-        if self.timeout is None:
-            return
-        self._timeout -= perf_counter() - self._start
+        if self.timeout is not None:
+            self._timeout -= perf_counter() - self._start
 
     @property
     def timeout(self):
@@ -83,7 +82,7 @@ class SyncTLSStream(NetworkStream):
         ret = None
         while True:
             errno = None
-            try
+            try:
                 ret = func()
             except (ssl.SSLWantReadError, ssl.SSLWantWriteError) as e:
                 errno = e.errno
