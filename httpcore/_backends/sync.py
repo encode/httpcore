@@ -113,7 +113,7 @@ class SyncTLSStream(NetworkStream):
         exc_map: ExceptionMapping = {socket.timeout: WriteTimeout, OSError: WriteError}
         with map_exceptions(exc_map):
             while buffer:
-                nsent = self._perform_io(partial(self.ssl_obj.write), buffer, timeout)
+                nsent = self._perform_io(partial(self.ssl_obj.write, buffer), timeout)
                 buffer = buffer[nsent:]
 
     def close(self) -> None:
