@@ -14,6 +14,7 @@ from httpcore import (
     ConnectError,
     ConnectionNotAvailable,
     Origin,
+    RemoteProtocolError,
     WriteError,
 )
 
@@ -87,10 +88,13 @@ def test_concurrent_requests_not_available_on_http11_connections():
 
 @pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 
-def test_write_error_but_response_sent():
+def test_write_error_with_response_sent():
     """
-    Attempting to issue a request against an already active HTTP/1.1 connection
-    will raise a `ConnectionNotAvailable` exception.
+    If a server half-closes the connection while the client is sending
+    the request, it may still send a response. In this case the client
+    should successfully read and return the response.
+
+    See also the `test_write_error_without_response_sent` test above.
     """
 
     class ErrorOnRequestTooLargeStream(MockStream):
@@ -135,6 +139,51 @@ def test_write_error_but_response_sent():
         response = conn.request("POST", "https://example.com/", content=content)
         assert response.status == 413
         assert response.content == b"Request body exceeded 1,000,000 bytes"
+
+
+
+def test_write_error_without_response_sent():
+    """
+    If a server fully closes the connection while the client is sending
+    the request, then client should raise an error.
+
+    See also the `test_write_error_with_response_sent` test above.
+    """
+
+    class ErrorOnRequestTooLargeStream(MockStream):
+        def __init__(self, buffer: typing.List[bytes], http2: bool = False) -> None:
+            super().__init__(buffer, http2)
+            self.count = 0
+
+        def write(
+            self, buffer: bytes, timeout: typing.Optional[float] = None
+        ) -> None:
+            self.count += len(buffer)
+
+            if self.count > 1_000_000:
+                raise WriteError()
+
+    class ErrorOnRequestTooLarge(MockBackend):
+        def connect_tcp(
+            self,
+            host: str,
+            port: int,
+            timeout: typing.Optional[float] = None,
+            local_address: typing.Optional[str] = None,
+            socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
+        ) -> MockStream:
+            return ErrorOnRequestTooLargeStream(list(self._buffer), http2=self._http2)
+
+    origin = Origin(b"https", b"example.com", 443)
+    network_backend = ErrorOnRequestTooLarge([])
+
+    with HTTPConnection(
+        origin=origin, network_backend=network_backend, keepalive_expiry=5.0
+    ) as conn:
+        content = b"x" * 10_000_000
+        with pytest.raises(RemoteProtocolError) as exc_info:
+            conn.request("POST", "https://example.com/", content=content)
+        assert str(exc_info.value) == "Server disconnected without sending a response."
 
 
 
