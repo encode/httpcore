@@ -2,6 +2,7 @@ import socket
 import ssl
 import sys
 import typing
+from functools import partial
 from time import perf_counter
 
 from .._exceptions import (
@@ -28,12 +29,11 @@ class OverallTimeout:
     """
 
     def __init__(self, timeout: typing.Optional[float] = None) -> None:
-        self.timeout = timeout or None  # None if timeout is either `0` or `None`
+        self.timeout = timeout  # Replaces `0` with `None`
         self._start: typing.Optional[float] = None
-        self._expired = False
 
     def __enter__(self) -> "OverallTimeout":
-        if self._expired:  # pragma: no cover
+        if self.timeout is not None and self.timeout <= 0:
             raise socket.timeout()
         self._start = perf_counter()
         return self
@@ -41,17 +41,17 @@ class OverallTimeout:
     def __exit__(
         self, exc_type: typing.Any, exc_val: typing.Any, exc_tb: typing.Any
     ) -> None:
-        if self.timeout is not None:
-            assert self.timeout is not None
-            assert self._start is not None
-            self.timeout -= perf_counter() - self._start
-            if self.timeout == 0:  # pragma: no cover
-                # It is extremely unlikely, but it is possible that
-                # a socket operation will take exactly how long our
-                # timeout is; in such cases, we do not set timeout
-                # to 0 because 0 means there is no timeout at all,
-                # and we will raise an exception in a next operation.
-                self._expired = True
+        if self.timeout is None:
+            return
+        self._timeout -= perf_counter() - self._start
+
+    @property
+    def timeout(self):
+        return self._timeout
+
+    @timeout.setter
+    def timeout(self, value: typing.Optional[float]):
+        self._timeout = value or None
 
 
 class SyncTLSStream(NetworkStream):
@@ -72,23 +72,19 @@ class SyncTLSStream(NetworkStream):
             server_hostname=server_hostname,
         )
 
-        self._perform_io(self.ssl_obj.do_handshake, timeout=timeout)
+        self._perform_io(partial(self.ssl_obj.do_handshake), timeout)
 
     def _perform_io(
         self,
         func: typing.Callable[..., typing.Any],
-        arg1: typing.Union[int, bytes, None] = None,
-        timeout: typing.Optional[float] = None,
+        timeout: typing.Optional[float],
     ) -> typing.Any:
         overall_timeout = OverallTimeout(timeout)
         ret = None
         while True:
             errno = None
-            try:
-                if arg1:  # read/write
-                    ret = func(arg1)
-                else:  # handshake
-                    ret = func()
+            try
+                ret = func()
             except (ssl.SSLWantReadError, ssl.SSLWantWriteError) as e:
                 errno = e.errno
 
@@ -111,14 +107,14 @@ class SyncTLSStream(NetworkStream):
         exc_map: ExceptionMapping = {socket.timeout: ReadTimeout, OSError: ReadError}
         with map_exceptions(exc_map):
             return typing.cast(
-                bytes, self._perform_io(self.ssl_obj.read, max_bytes, timeout)
+                bytes, self._perform_io(partial(self.ssl_obj.read, max_bytes), timeout)
             )
 
     def write(self, buffer: bytes, timeout: typing.Optional[float] = None) -> None:
         exc_map: ExceptionMapping = {socket.timeout: WriteTimeout, OSError: WriteError}
         with map_exceptions(exc_map):
             while buffer:
-                nsent = self._perform_io(self.ssl_obj.write, buffer, timeout)
+                nsent = self._perform_io(partial(self.ssl_obj.write), buffer, timeout)
                 buffer = buffer[nsent:]
 
     def close(self) -> None:
