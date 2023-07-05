@@ -141,8 +141,8 @@ async def test_write_error_with_response_sent():
         assert response.content == b"Request body exceeded 1,000,000 bytes"
 
 
-@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 @pytest.mark.anyio
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 async def test_write_error_without_response_sent():
     """
     If a server fully closes the connection while the client is sending
@@ -188,6 +188,7 @@ async def test_write_error_without_response_sent():
 
 
 @pytest.mark.anyio
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 async def test_http2_connection():
     origin = Origin(b"https", b"example.com", 443)
     network_backend = AsyncMockBackend(

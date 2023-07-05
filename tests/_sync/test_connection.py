@@ -142,6 +142,7 @@ def test_write_error_with_response_sent():
 
 
 
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 def test_write_error_without_response_sent():
     """
     If a server fully closes the connection while the client is sending
@@ -187,6 +188,7 @@ def test_write_error_without_response_sent():
 
 
 
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 def test_http2_connection():
     origin = Origin(b"https", b"example.com", 443)
     network_backend = MockBackend(
