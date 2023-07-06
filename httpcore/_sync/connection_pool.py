@@ -8,7 +8,7 @@ from .._backends.sync import SyncBackend
 from .._backends.base import SOCKET_OPTION, NetworkBackend
 from .._exceptions import ConnectionNotAvailable, PoolTimeout, UnsupportedProtocol
 from .._models import Origin, Request, Response
-from .._synchronization import Event, Lock
+from .._synchronization import Event, Lock, ShieldCancellation
 from .._trace import trace
 from .connection import HTTPConnection
 from .interfaces import ConnectionInterface, RequestInterface
@@ -305,7 +305,8 @@ class ConnectionPool(RequestInterface):
                     status.unset_connection()
                     self._attempt_to_acquire_connection(status)
             except BaseException as exc:
-                self.response_closed(status)
+                with ShieldCancellation():
+                    self.response_closed(status)
                 raise exc
             else:
                 break
@@ -411,4 +412,5 @@ class ConnectionPoolByteStream:
             if hasattr(self._stream, "close"):
                 self._stream.close()
         finally:
-            self._pool.response_closed(self._status)
+            with ShieldCancellation():
+                self._pool.response_closed(self._status)

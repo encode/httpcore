@@ -17,7 +17,7 @@ from .._exceptions import (
     RemoteProtocolError,
 )
 from .._models import Origin, Request, Response
-from .._synchronization import AsyncLock, AsyncSemaphore
+from .._synchronization import AsyncLock, AsyncSemaphore, AsyncShieldCancellation
 from .._trace import Trace
 from .interfaces import AsyncConnectionInterface
 
@@ -103,9 +103,15 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
         async with self._init_lock:
             if not self._sent_connection_init:
-                kwargs = {"request": request}
-                async with Trace("send_connection_init", logger, request, kwargs):
-                    await self._send_connection_init(**kwargs)
+                try:
+                    kwargs = {"request": request}
+                    async with Trace("send_connection_init", logger, request, kwargs):
+                        await self._send_connection_init(**kwargs)
+                except BaseException as exc:
+                    with AsyncShieldCancellation():
+                        await self.aclose()
+                    raise exc
+
                 self._sent_connection_init = True
 
                 # Initially start with just 1 until the remote server provides
@@ -154,10 +160,11 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                     "stream_id": stream_id,
                 },
             )
-        except Exception as exc:  # noqa: PIE786
-            kwargs = {"stream_id": stream_id}
-            async with Trace("response_closed", logger, request, kwargs):
-                await self._response_closed(stream_id=stream_id)
+        except BaseException as exc:  # noqa: PIE786
+            with AsyncShieldCancellation():
+                kwargs = {"stream_id": stream_id}
+                async with Trace("response_closed", logger, request, kwargs):
+                    await self._response_closed(stream_id=stream_id)
 
             if isinstance(exc, h2.exceptions.ProtocolError):
                 # One case where h2 can raise a protocol error is when a
@@ -570,7 +577,8 @@ class HTTP2ConnectionByteStream:
             # If we get an exception while streaming the response,
             # we want to close the response (and possibly the connection)
             # before raising that exception.
-            await self.aclose()
+            with AsyncShieldCancellation():
+                await self.aclose()
             raise exc
 
     async def aclose(self) -> None:

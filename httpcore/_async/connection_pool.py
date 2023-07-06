@@ -8,7 +8,7 @@ from .._backends.auto import AutoBackend
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend
 from .._exceptions import ConnectionNotAvailable, PoolTimeout, UnsupportedProtocol
 from .._models import Origin, Request, Response
-from .._synchronization import AsyncEvent, AsyncLock
+from .._synchronization import AsyncEvent, AsyncLock, AsyncShieldCancellation
 from .._trace import atrace
 from .connection import AsyncHTTPConnection
 from .interfaces import AsyncConnectionInterface, AsyncRequestInterface
@@ -305,7 +305,8 @@ class AsyncConnectionPool(AsyncRequestInterface):
                     status.unset_connection()
                     await self._attempt_to_acquire_connection(status)
             except BaseException as exc:
-                await self.response_closed(status)
+                with AsyncShieldCancellation():
+                    await self.response_closed(status)
                 raise exc
             else:
                 break
@@ -411,4 +412,5 @@ class ConnectionPoolByteStream:
             if hasattr(self._stream, "aclose"):
                 await self._stream.aclose()
         finally:
-            await self._pool.response_closed(self._status)
+            with AsyncShieldCancellation():
+                await self._pool.response_closed(self._status)

@@ -171,6 +171,55 @@ class AsyncSemaphore:
             self._anyio_semaphore.release()
 
 
+class AsyncShieldCancellation:
+    # For certain portions of our codebase where we're dealing with
+    # closing connections during exception handling we want to shield
+    # the operation from being cancelled.
+    #
+    # with AsyncShieldCancellation():
+    #     ... # clean-up operations, shielded from cancellation.
+
+    def __init__(self) -> None:
+        """
+        Detect if we're running under 'asyncio' or 'trio' and create
+        a shielded scope with the correct implementation.
+        """
+        self._backend = sniffio.current_async_library()
+
+        if self._backend == "trio":
+            if trio is None:  # pragma: nocover
+                raise RuntimeError(
+                    "Running under trio requires the 'trio' package to be installed."
+                )
+
+            self._trio_shield = trio.CancelScope(shield=True)
+        else:
+            if anyio is None:  # pragma: nocover
+                raise RuntimeError(
+                    "Running under asyncio requires the 'anyio' package to be installed."
+                )
+
+            self._anyio_shield = anyio.CancelScope(shield=True)
+
+    def __enter__(self) -> "AsyncShieldCancellation":
+        if self._backend == "trio":
+            self._trio_shield.__enter__()
+        else:
+            self._anyio_shield.__enter__()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        traceback: Optional[TracebackType] = None,
+    ) -> None:
+        if self._backend == "trio":
+            self._trio_shield.__exit__(exc_type, exc_value, traceback)
+        else:
+            self._anyio_shield.__exit__(exc_type, exc_value, traceback)
+
+
 # Our thread-based synchronization primitives...
 
 
@@ -212,3 +261,19 @@ class Semaphore:
 
     def release(self) -> None:
         self._semaphore.release()
+
+
+class ShieldCancellation:
+    # Thread-synchronous codebases don't support cancellation semantics.
+    # We have this class because we need to mirror the async and sync
+    # cases within our package, but it's just a no-op.
+    def __enter__(self) -> "ShieldCancellation":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        traceback: Optional[TracebackType] = None,
+    ) -> None:
+        pass
