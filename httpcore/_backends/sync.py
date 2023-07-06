@@ -29,7 +29,7 @@ class OverallTimeout:
     """
 
     def __init__(self, timeout: typing.Optional[float] = None) -> None:
-        self.timeout = timeout  # Replaces `0` with `None`
+        self._timeout = timeout or None  # Replaces `0` with `None`
         self._start: typing.Optional[float] = None
 
     def __enter__(self) -> "OverallTimeout":
