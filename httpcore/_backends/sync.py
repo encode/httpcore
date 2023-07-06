@@ -29,7 +29,7 @@ class OverallTimeout:
     """
 
     def __init__(self, timeout: typing.Optional[float] = None) -> None:
-        self._timeout = timeout or None  # Replaces `0` with `None`
+        self.timeout = timeout or None  # Replaces `0` with `None`
         self._start: typing.Optional[float] = None
 
     def __enter__(self) -> "OverallTimeout":
@@ -42,15 +42,7 @@ class OverallTimeout:
         self, exc_type: typing.Any, exc_val: typing.Any, exc_tb: typing.Any
     ) -> None:
         if self.timeout is not None:
-            self._timeout -= perf_counter() - self._start
-
-    @property
-    def timeout(self):
-        return self._timeout
-
-    @timeout.setter
-    def timeout(self, value: typing.Optional[float]):
-        self._timeout = value or None
+            self.timeout -= perf_counter() - self._start
 
 
 class SyncTLSStream(NetworkStream):
