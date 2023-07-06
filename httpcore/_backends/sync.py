@@ -62,17 +62,18 @@ class SyncTLSStream(NetworkStream):
             self._sock.settimeout(timeout)
             operation_start = perf_counter()
             self._sock.sendall(self._outgoing.read())
-            # If the timeout is `None``, don't touch it.
-            timeout = timeout and perf_counter() - operation_start
-            if timeout == 0:
+            # If the timeout is `None`, don't touch it.
+            timeout = timeout and timeout - (perf_counter() - operation_start)
+            if timeout is not None and timeout <= 0:  # pragma: no cover
                 raise socket.timeout()
 
             if errno == ssl.SSL_ERROR_WANT_READ:
                 self._sock.settimeout(timeout)
                 operation_start = perf_counter()
                 # If the timeout is `None`, don't touch it.
-                timeout = timeout and perf_counter() - operation_start
-                if timeout == 0:
+                timeout = timeout and timeout - (perf_counter() - operation_start)
+
+                if timeout is not None and timeout <= 0:  # pragma: no cover
                     raise socket.timeout
 
                 buf = self._sock.recv(10000)
