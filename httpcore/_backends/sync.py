@@ -47,6 +47,13 @@ class OverallTimeout:
 
 
 class SyncTLSStream(NetworkStream):
+    """
+    Because the standard `SSLContext.wrap_socket` function does
+    not work for `SSLSocket` objects, we need this class
+    to implement TLS stream using an underlying `SSLObject`
+    instance in order to support TLS on top of TLS.
+    """
+
     def __init__(
         self,
         sock: socket.socket,
@@ -171,6 +178,9 @@ class SyncStream(NetworkStream):
         with map_exceptions(exc_map):
             try:
                 if isinstance(self._sock, ssl.SSLSocket):
+                    # If the underlying socket has already been upgraded
+                    # to the TLS layer (i.e. is an instance of SSLSocket),
+                    # we want to use another stream object that supports TLS-in-TLS.
                     return SyncTLSStream(
                         self._sock, ssl_context, server_hostname, timeout
                     )
