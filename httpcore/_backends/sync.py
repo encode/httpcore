@@ -33,7 +33,7 @@ class OverallTimeout:
         self._start: typing.Optional[float] = None
 
     def __enter__(self) -> "OverallTimeout":
-        if self.timeout is not None and self.timeout <= 0:
+        if self.timeout is not None and self.timeout <= 0:  # pragma: no cover
             raise socket.timeout()
         self._start = perf_counter()
         return self
@@ -42,6 +42,7 @@ class OverallTimeout:
         self, exc_type: typing.Any, exc_val: typing.Any, exc_tb: typing.Any
     ) -> None:
         if self.timeout is not None:
+            assert self._start
             self.timeout -= perf_counter() - self._start
 
 
