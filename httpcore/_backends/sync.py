@@ -44,7 +44,7 @@ class SyncTLSStream(NetworkStream):
             server_hostname=server_hostname,
         )
 
-        self._perform_io(partial(self.ssl_obj.do_handshake), timeout)
+        self._perform_io(self.ssl_obj.do_handshake, timeout)
 
     def _perform_io(
         self,
