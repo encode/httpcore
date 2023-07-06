@@ -19,36 +19,9 @@ from .._utils import is_socket_readable
 from .base import SOCKET_OPTION, NetworkBackend, NetworkStream
 
 
-class OverallTimeout:
-    """
-    An overall timeout for TLS operation.
-
-    Because TLS socket operations necessitate
-    more than one TCP socket operation, we need
-    an overall timeout that decreases with each TCP operation.
-    """
-
-    def __init__(self, timeout: typing.Optional[float] = None) -> None:
-        self.timeout = timeout or None  # Replaces `0` with `None`
-        self._start: typing.Optional[float] = None
-
-    def __enter__(self) -> "OverallTimeout":
-        if self.timeout is not None and self.timeout <= 0:  # pragma: no cover
-            raise socket.timeout()
-        self._start = perf_counter()
-        return self
-
-    def __exit__(
-        self, exc_type: typing.Any, exc_val: typing.Any, exc_tb: typing.Any
-    ) -> None:
-        if self.timeout is not None:
-            assert self._start
-            self.timeout -= perf_counter() - self._start
-
-
 class SyncTLSStream(NetworkStream):
     """
-    Because the standard `SSLContext.wrap_socket` function does
+    Because the standard `SSLContext.wrap_socket` method does
     not work for `SSLSocket` objects, we need this class
     to implement TLS stream using an underlying `SSLObject`
     instance in order to support TLS on top of TLS.
@@ -78,7 +51,6 @@ class SyncTLSStream(NetworkStream):
         func: typing.Callable[..., typing.Any],
         timeout: typing.Optional[float],
     ) -> typing.Any:
-        overall_timeout = OverallTimeout(timeout)
         ret = None
         while True:
             errno = None
@@ -87,14 +59,23 @@ class SyncTLSStream(NetworkStream):
             except (ssl.SSLWantReadError, ssl.SSLWantWriteError) as e:
                 errno = e.errno
 
-            self._sock.settimeout(overall_timeout.timeout)
-            with overall_timeout:
-                self._sock.sendall(self._outgoing.read())
+            self._sock.settimeout(timeout)
+            operation_start = perf_counter()
+            self._sock.sendall(self._outgoing.read())
+            # If the timeout is `None``, don't touch it.
+            timeout = timeout and perf_counter() - operation_start
+            if timeout == 0:
+                raise socket.timeout()
 
             if errno == ssl.SSL_ERROR_WANT_READ:
-                self._sock.settimeout(overall_timeout.timeout)
-                with overall_timeout:
-                    buf = self._sock.recv(10000)
+                self._sock.settimeout(timeout)
+                operation_start = perf_counter()
+                # If the timeout is `None`, don't touch it.
+                timeout = timeout and perf_counter() - operation_start
+                if timeout == 0:
+                    raise socket.timeout
+
+                buf = self._sock.recv(10000)
                 if buf:
                     self._incoming.write(buf)
                 else:
