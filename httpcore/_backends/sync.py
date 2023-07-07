@@ -62,24 +62,25 @@ class SyncTLSStream(NetworkStream):
             except (ssl.SSLWantReadError, ssl.SSLWantWriteError) as e:
                 errno = e.errno
 
+            if timeout is not None and timeout <= 0:  # pragma: no cover
+                raise socket.timeout()
+
             self._sock.settimeout(timeout)
             operation_start = perf_counter()
             self._sock.sendall(self._outgoing.read())
             # If the timeout is `None`, don't touch it.
             timeout = timeout and timeout - (perf_counter() - operation_start)
-            if timeout is not None and timeout <= 0:  # pragma: no cover
-                raise socket.timeout()
 
             if errno == ssl.SSL_ERROR_WANT_READ:
+                if timeout is not None and timeout <= 0:  # pragma: no cover
+                    raise socket.timeout()
+
                 self._sock.settimeout(timeout)
                 operation_start = perf_counter()
                 buf = self._sock.recv(self.TLS_RECORD_SIZE)
 
                 # If the timeout is `None`, don't touch it.
                 timeout = timeout and timeout - (perf_counter() - operation_start)
-
-                if timeout is not None and timeout <= 0:  # pragma: no cover
-                    raise socket.timeout()
 
                 if buf:
                     self._incoming.write(buf)
