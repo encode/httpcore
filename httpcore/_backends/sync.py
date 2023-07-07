@@ -55,6 +55,8 @@ class SyncTLSStream(NetworkStream):
         timeout: typing.Optional[float],
     ) -> typing.Any:
         ret = None
+        timeout = timeout or None  # Replaces `0` with `None`
+
         while True:
             errno = None
             try:
