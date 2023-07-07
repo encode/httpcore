@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling", "hatch-fancy-pypi-readme"]
+build-backend = "hatchling.build"
+
+[project]
+name = "httpcore"
+dynamic = ["version"]
+description = "A minimal low-level HTTP client."
+readme = "README.md"
+license = "BSD"
+requires-python = ">=3.7"
+authors = [
+    { name = "Tom Christie", email = "tom@tomchristie.com" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: AsyncIO",
+    "Framework :: Trio",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Internet :: WWW/HTTP",
+]
+dependencies = [
+    "anyio>=3.0,<5.0",
+    "certifi",
+    "h11>=0.13,<0.15",
+    "sniffio==1.*",
+]
+
+[project.optional-dependencies]
+http2 = [
+    "h2>=3,<5",
+]
+socks = [
+    "socksio==1.*",
+]
+
+[project.urls]
+Documentation = "https://www.encode.io/httpcore"
+Homepage = "https://www.encode.io/httpcore/"
+Source = "https://github.com/encode/httpcore"
+
+[tool.hatch.version]
+path = "httpcore/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/httpcore",
+    "/CHANGELOG.md",
+    "/README.md",
+]
+
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+path = "README.md"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+path = "CHANGELOG.md"
