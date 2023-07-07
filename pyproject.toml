@@ -7,7 +7,7 @@ name = "httpcore"
 dynamic = ["version"]
 description = "A minimal low-level HTTP client."
 readme = "README.md"
-license = "BSD"
+license = "BSD-3-Clause"
 requires-python = ">=3.7"
 authors = [
     { name = "Tom Christie", email = "tom@tomchristie.com" },
