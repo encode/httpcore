@@ -27,6 +27,9 @@ class SyncTLSStream(NetworkStream):
     instance in order to support TLS on top of TLS.
     """
 
+    # Defined in RFC 8449
+    TLS_RECORD_SIZE = 16384
+
     def __init__(
         self,
         sock: socket.socket,
@@ -70,13 +73,14 @@ class SyncTLSStream(NetworkStream):
             if errno == ssl.SSL_ERROR_WANT_READ:
                 self._sock.settimeout(timeout)
                 operation_start = perf_counter()
+                buf = self._sock.recv(self.TLS_RECORD_SIZE)
+
                 # If the timeout is `None`, don't touch it.
                 timeout = timeout and timeout - (perf_counter() - operation_start)
 
                 if timeout is not None and timeout <= 0:  # pragma: no cover
                     raise socket.timeout
 
-                buf = self._sock.recv(10000)
                 if buf:
                     self._incoming.write(buf)
                 else:
