@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## development
+
+- Add support for HTTPS proxies. (#745)
+
 ## 0.17.3 (5th July 2023)
 
 - Support async cancellations, ensuring that the connection pool is left in a clean state when cancellations occur. (#726)
