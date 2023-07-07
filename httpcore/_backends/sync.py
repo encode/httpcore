@@ -79,7 +79,7 @@ class SyncTLSStream(NetworkStream):
                 timeout = timeout and timeout - (perf_counter() - operation_start)
 
                 if timeout is not None and timeout <= 0:  # pragma: no cover
-                    raise socket.timeout
+                    raise socket.timeout()
 
                 if buf:
                     self._incoming.write(buf)
