@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "httpcore"
-dynamic = ["version"]
+dynamic = ["readme", "version"]
 description = "A minimal low-level HTTP client."
 readme = "README.md"
 license = "BSD-3-Clause"
