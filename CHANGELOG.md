@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## development
 
 - Add support for HTTPS proxies. (#745)
+- Handle HTTP/1.1 half-closed connections gracefully. (#641)
 
 ## 0.17.3 (5th July 2023)
 
