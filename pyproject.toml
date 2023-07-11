@@ -66,3 +66,51 @@ path = "README.md"
 
 [[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
 path = "CHANGELOG.md"
+
+[tool.mypy]
+strict = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "h2.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "hpack.*"
+ignore_missing_imports = true
+
+[tool.isort]
+profile = "black"
+combine_as_imports = true
+known_first_party = "httpcore,tests"
+known_third_party = "brotli,certifi,chardet,cryptography,h11,h2,hstspreload,pytest,rfc3986,setuptools,sniffio,trio,trustme,urllib3,uvicorn"
+skip = ["httpcore/_sync/,tests/_sync"]
+
+[tool.pytest.ini_options]
+addopts = ["-rxXs", "--strict-config", "--strict-markers"]
+markers = ["copied_from(source, changes=None): mark test as copied from somewhere else, along with a description of changes made to accodomate e.g. our test setup"]
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+omit = ["venv/*, httpcore/_sync/*"]
+include = ["httpcore/*, tests/*"]
+
+[tool.ruff]
+exclude = [
+    "httpcore/_sync",
+    "tests/_sync",
+]
+line-length = 120
+select = [
+    "E",
+    "F",
+    "W",
+]
+
+[tool.ruff.isort]
+combine-as-imports = true
