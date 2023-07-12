@@ -97,8 +97,11 @@ markers = ["copied_from(source, changes=None): mark test as copied from somewher
 filterwarnings = ["error"]
 
 [tool.coverage.run]
-omit = ["venv/*, httpcore/_sync/*"]
-include = ["httpcore/*, tests/*"]
+omit = [
+    "venv/*", 
+    "httpcore/_sync/*"
+]
+include = ["httpcore/*", "tests/*"]
 
 [tool.ruff]
 exclude = [
