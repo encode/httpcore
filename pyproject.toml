@@ -84,13 +84,6 @@ ignore_missing_imports = true
 module = "hpack.*"
 ignore_missing_imports = true
 
-[tool.isort]
-profile = "black"
-combine_as_imports = true
-known_first_party = "httpcore,tests"
-known_third_party = "brotli,certifi,chardet,cryptography,h11,h2,hstspreload,pytest,rfc3986,setuptools,sniffio,trio,trustme,urllib3,uvicorn"
-skip = ["httpcore/_sync/,tests/_sync"]
-
 [tool.pytest.ini_options]
 addopts = ["-rxXs", "--strict-config", "--strict-markers"]
 markers = ["copied_from(source, changes=None): mark test as copied from somewhere else, along with a description of changes made to accodomate e.g. our test setup"]
