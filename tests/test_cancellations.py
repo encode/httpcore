@@ -243,7 +243,7 @@ async def test_h2_timeout_during_response():
 
 
 @pytest.mark.anyio
-async def test_h2_unstarted_requests(monkeypatch):
+async def test_h2_unstarted_request_cancellation(monkeypatch):
     async def slow_acquire(self: httpcore._synchronization.AsyncSemaphore) -> None:
         await anyio.sleep(999)
 
