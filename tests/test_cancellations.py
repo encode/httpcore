@@ -240,3 +240,21 @@ async def test_h2_timeout_during_response():
 
         assert not conn.is_closed()
         assert conn.is_idle()
+
+
+@pytest.mark.anyio
+async def test_h2_unstarted_requests(monkeypatch):
+
+    async def slow_acquire(self) -> None:
+        await anyio.sleep(999)
+
+    monkeypatch.setattr(httpcore._synchronization.AsyncSemaphore, "acquire", slow_acquire)
+
+    origin = httpcore.Origin(b"http", b"example.com", 80)
+    stream = HandshakeThenSlowWriteStream()
+    async with httpcore.AsyncHTTP2Connection(origin, stream) as conn:
+        with anyio.move_on_after(0.01):
+            await conn.request("GET", "http://example.com")
+
+        assert not conn.is_closed()
+        assert conn.is_idle()
