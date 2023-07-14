@@ -128,13 +128,15 @@ class HTTP2Connection(ConnectionInterface):
                         self._max_streams_semaphore.acquire()
                 except BaseException:
                     with ShieldCancellation():
-                        self._state_housekeeping()
+                        with self._state_lock:
+                            self._state_housekeeping()
                     raise
         try:
             self._max_streams_semaphore.acquire()
         except BaseException:  # pragma: no cover
             with ShieldCancellation():
-                self._state_housekeeping()
+                with self._state_lock:
+                    self._state_housekeeping()
             raise
 
         try:

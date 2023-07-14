@@ -128,13 +128,15 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                         await self._max_streams_semaphore.acquire()
                 except BaseException:
                     with AsyncShieldCancellation():
-                        await self._state_housekeeping()
+                        async with self._state_lock:
+                            await self._state_housekeeping()
                     raise
         try:
             await self._max_streams_semaphore.acquire()
         except BaseException:  # pragma: no cover
             with AsyncShieldCancellation():
-                await self._state_housekeeping()
+                async with self._state_lock:
+                    await self._state_housekeeping()
             raise
 
         try:
