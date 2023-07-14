@@ -244,11 +244,12 @@ async def test_h2_timeout_during_response():
 
 @pytest.mark.anyio
 async def test_h2_unstarted_requests(monkeypatch):
-
-    async def slow_acquire(self) -> None:
+    async def slow_acquire(self: httpcore._synchronization.AsyncSemaphore) -> None:
         await anyio.sleep(999)
 
-    monkeypatch.setattr(httpcore._synchronization.AsyncSemaphore, "acquire", slow_acquire)
+    monkeypatch.setattr(
+        httpcore._synchronization.AsyncSemaphore, "acquire", slow_acquire
+    )
 
     origin = httpcore.Origin(b"http", b"example.com", 80)
     stream = HandshakeThenSlowWriteStream()
