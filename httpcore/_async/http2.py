@@ -1,3 +1,4 @@
+import contextlib
 import enum
 import logging
 import time
@@ -123,21 +124,12 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 )
                 self._max_streams_semaphore = AsyncSemaphore(local_settings_max_streams)
 
-                try:
+                async with self._cleanup_state_on_exception():
                     for _ in range(local_settings_max_streams - self._max_streams):
                         await self._max_streams_semaphore.acquire()
-                except BaseException:
-                    with AsyncShieldCancellation():
-                        async with self._state_lock:
-                            await self._state_housekeeping()
-                    raise
-        try:
+
+        async with self._cleanup_state_on_exception():
             await self._max_streams_semaphore.acquire()
-        except BaseException:  # pragma: no cover
-            with AsyncShieldCancellation():
-                async with self._state_lock:
-                    await self._state_housekeeping()
-            raise
 
         try:
             stream_id = self._h2_state.get_next_available_stream_id()
@@ -415,20 +407,29 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
     async def _response_closed(self, stream_id: int) -> None:
         await self._max_streams_semaphore.release()
         del self._events[stream_id]
+        await self._cleanup_state()
+
+    async def _cleanup_state(self) -> None:
         async with self._state_lock:
-            await self._state_housekeeping()
-
-    async def _state_housekeeping(self) -> None:
-        if self._connection_terminated and not self._events:
-            await self.aclose()
-
-        elif self._state == HTTPConnectionState.ACTIVE and not self._events:
-            self._state = HTTPConnectionState.IDLE
-            if self._keepalive_expiry is not None:
-                now = time.monotonic()
-                self._expire_at = now + self._keepalive_expiry
-            if self._used_all_stream_ids:  # pragma: nocover
+            if self._connection_terminated and not self._events:
                 await self.aclose()
+
+            elif self._state == HTTPConnectionState.ACTIVE and not self._events:
+                self._state = HTTPConnectionState.IDLE
+                if self._keepalive_expiry is not None:
+                    now = time.monotonic()
+                    self._expire_at = now + self._keepalive_expiry
+                if self._used_all_stream_ids:  # pragma: nocover
+                    await self.aclose()
+
+    @contextlib.asynccontextmanager
+    async def _cleanup_state_on_exception(self) -> typing.AsyncIterator[None]:
+        try:
+            yield
+        except BaseException:
+            with AsyncShieldCancellation():
+                await self._cleanup_state()
+            raise
 
     async def aclose(self) -> None:
         # Note that this method unilaterally closes the connection, and does
