@@ -22,8 +22,8 @@ logger = logging.getLogger("httpcore.connection")
 
 def exponential_backoff(factor: float) -> Iterator[float]:
     yield 0
-    for n in itertools.count(2):
-        yield factor * (2 ** (n - 2))
+    for n in itertools.count():
+        yield factor * 2**n
 
 
 class HTTPConnection(ConnectionInterface):
