@@ -98,7 +98,7 @@ include = ["httpcore/*", "tests/*"]
 
 [tool.coverage.report]
 exclude_also = [
-    "raise NotImplementedError"
+    "raise NotImplementedError()"
 ]
 
 [tool.ruff]
