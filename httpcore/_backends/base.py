@@ -28,7 +28,7 @@ class NetworkStream:
         raise NotImplementedError()
 
     def get_extra_info(self, info: str) -> typing.Any:
-        return None
+        return None  # pragma: no cover
 
 
 class NetworkBackend:
@@ -51,7 +51,7 @@ class NetworkBackend:
         raise NotImplementedError()
 
     def sleep(self, seconds: float) -> None:
-        time.sleep(seconds)
+        time.sleep(seconds)  # pragma: no cover
 
 
 class AsyncNetworkStream:
