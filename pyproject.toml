@@ -96,6 +96,11 @@ omit = [
 ]
 include = ["httpcore/*", "tests/*"]
 
+[tool.coverage.report]
+exclude_also = [
+    "raise NotImplementedError"
+]
+
 [tool.ruff]
 exclude = [
     "httpcore/_sync",

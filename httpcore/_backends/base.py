@@ -11,13 +11,13 @@ SOCKET_OPTION = typing.Union[
 
 class NetworkStream:
     def read(self, max_bytes: int, timeout: typing.Optional[float] = None) -> bytes:
-        raise NotImplementedError()  # pragma: nocover
+        raise NotImplementedError()
 
     def write(self, buffer: bytes, timeout: typing.Optional[float] = None) -> None:
-        raise NotImplementedError()  # pragma: nocover
+        raise NotImplementedError()
 
     def close(self) -> None:
-        raise NotImplementedError()  # pragma: nocover
+        raise NotImplementedError()
 
     def start_tls(
         self,
@@ -25,10 +25,10 @@ class NetworkStream:
         server_hostname: typing.Optional[str] = None,
         timeout: typing.Optional[float] = None,
     ) -> "NetworkStream":
-        raise NotImplementedError()  # pragma: nocover
+        raise NotImplementedError()
 
     def get_extra_info(self, info: str) -> typing.Any:
-        return None  # pragma: nocover
+        return None
 
 
 class NetworkBackend:
@@ -40,7 +40,7 @@ class NetworkBackend:
         local_address: typing.Optional[str] = None,
         socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> NetworkStream:
-        raise NotImplementedError()  # pragma: nocover
+        raise NotImplementedError()
 
     def connect_unix_socket(
         self,
@@ -48,25 +48,25 @@ class NetworkBackend:
         timeout: typing.Optional[float] = None,
         socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> NetworkStream:
-        raise NotImplementedError()  # pragma: nocover
+        raise NotImplementedError()
 
     def sleep(self, seconds: float) -> None:
-        time.sleep(seconds)  # pragma: nocover
+        time.sleep(seconds)
 
 
 class AsyncNetworkStream:
     async def read(
         self, max_bytes: int, timeout: typing.Optional[float] = None
     ) -> bytes:
-        raise NotImplementedError()  # pragma: nocover
+        raise NotImplementedError()
 
     async def write(
         self, buffer: bytes, timeout: typing.Optional[float] = None
     ) -> None:
-        raise NotImplementedError()  # pragma: nocover
+        raise NotImplementedError()
 
     async def aclose(self) -> None:
-        raise NotImplementedError()  # pragma: nocover
+        raise NotImplementedError()
 
     async def start_tls(
         self,
@@ -74,10 +74,10 @@ class AsyncNetworkStream:
         server_hostname: typing.Optional[str] = None,
         timeout: typing.Optional[float] = None,
     ) -> "AsyncNetworkStream":
-        raise NotImplementedError()  # pragma: nocover
+        raise NotImplementedError()
 
     def get_extra_info(self, info: str) -> typing.Any:
-        return None  # pragma: nocover
+        return None
 
 
 class AsyncNetworkBackend:
@@ -89,7 +89,7 @@ class AsyncNetworkBackend:
         local_address: typing.Optional[str] = None,
         socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:
-        raise NotImplementedError()  # pragma: nocover
+        raise NotImplementedError()
 
     async def connect_unix_socket(
         self,
@@ -97,7 +97,7 @@ class AsyncNetworkBackend:
         timeout: typing.Optional[float] = None,
         socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:
-        raise NotImplementedError()  # pragma: nocover
+        raise NotImplementedError()
 
     async def sleep(self, seconds: float) -> None:
-        raise NotImplementedError()  # pragma: nocover
+        raise NotImplementedError()
