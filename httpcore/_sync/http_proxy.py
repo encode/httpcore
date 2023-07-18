@@ -74,7 +74,7 @@ class HTTPProxy(ConnectionPool):
         uds: Optional[str] = None,
         network_backend: Optional[NetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
-        proxy_mode: ProxyMode = ProxyMode.DEFAULT,
+        proxy_mode: Optional[ProxyMode] = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -137,8 +137,8 @@ class HTTPProxy(ConnectionPool):
             ] + self._proxy_headers
 
     def create_connection(self, origin: Origin) -> ConnectionInterface:
-        if (self._proxy_mode == ProxyMode.FORWARD) or (
-            self._proxy_mode == ProxyMode.DEFAULT and origin.scheme == b"http"
+        if (self._proxy_mode is ProxyMode.FORWARD) or (
+            self._proxy_mode is None and origin.scheme == b"http"
         ):
             return ForwardHTTPConnection(
                 proxy_origin=self._proxy_url.origin,

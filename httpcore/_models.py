@@ -485,6 +485,5 @@ class Response:
 
 
 class ProxyMode(enum.IntEnum):
-    DEFAULT = 0
     FORWARD = 1
     TUNNEL = 2
