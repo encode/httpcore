@@ -73,7 +73,6 @@ proxy = httpcore.HTTPProxy(
 Note that `ProxyMode.FORWARD` will enable forwarding https requests, so they will be visible for proxy server.
 It means handling TLS stuffs like certificate validation would on proxy side.
 
-
 ## Proxy SSL and HTTP Versions
 
 Proxy support currently only allows for HTTP/1.1 connections to the proxy,
