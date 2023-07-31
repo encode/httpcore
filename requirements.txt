@@ -12,17 +12,14 @@ mkdocstrings[python-legacy]==0.22.0
 jinja2==3.1.2
 
 # Packaging
+build==0.10.0
 twine
-wheel
 
 # Tests & Linting
 anyio==3.6.2
-autoflake==1.7.7
 black==23.3.0
-coverage==7.2.7
-flake8==3.9.2  # See: https://github.com/PyCQA/flake8/pull/1438
-isort==5.11.4
-importlib-metadata==4.13.0
+coverage[toml]==7.2.7
+ruff==0.0.277
 mypy==1.2.0
 trio-typing==0.8.0
 types-certifi==2021.10.8.3
