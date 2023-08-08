@@ -220,10 +220,11 @@ async def test_socks5_sni_hostname():
     ) as proxy:
         # Sending an intial request, which once complete will return to the pool, IDLE.
         async with proxy.stream(
-            "GET", "https://93.184.216.34/",
-            headers=[(b'Host', 'example.com')],
-            extensions={'sni_hostname': 'example.com'}
-            ) as response:
+            "GET",
+            "https://93.184.216.34/",
+            headers=[(b"Host", "example.com")],
+            extensions={"sni_hostname": "example.com"},
+        ) as response:
 
             info = [repr(c) for c in proxy.connections]
             assert info == [
