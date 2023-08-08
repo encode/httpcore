@@ -225,7 +225,6 @@ async def test_socks5_sni_hostname():
             headers=[(b"Host", "example.com")],
             extensions={"sni_hostname": "example.com"},
         ) as response:
-
             info = [repr(c) for c in proxy.connections]
             assert info == [
                 "<AsyncSocks5Connection ['https://93.184.216.34:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
