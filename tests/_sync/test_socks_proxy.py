@@ -191,3 +191,66 @@ def test_socks5_request_incorrect_auth():
         assert str(exc_info.value) == "Invalid username/password"
 
         assert not proxy.connections
+
+
+
+def test_socks5_sni_hostname():
+    """
+    Send an HTTP request via a SOCKS proxy utilizing `sni_hostname` extension.
+    """
+    network_backend = httpcore.MockBackend(
+        [
+            # The initial socks CONNECT
+            #   v5 NOAUTH
+            b"\x05\x00",
+            #   v5 SUC RSV IP4 127  .0  .0  .1     :80
+            b"\x05\x00\x00\x01\xff\x00\x00\x01\x00\x50",
+            # The actual response from the remote server
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
+
+    with httpcore.SOCKSProxy(
+        proxy_url="socks5://localhost:8080/",
+        network_backend=network_backend,
+    ) as proxy:
+        # Sending an intial request, which once complete will return to the pool, IDLE.
+        with proxy.stream(
+            "GET",
+            "https://93.184.216.34/",
+            headers=[(b"Host", "example.com")],
+            extensions={"sni_hostname": "example.com"},
+        ) as response:
+            info = [repr(c) for c in proxy.connections]
+            assert info == [
+                "<Socks5Connection ['https://93.184.216.34:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
+            ]
+            response.read()
+
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+        info = [repr(c) for c in proxy.connections]
+        assert info == [
+            "<Socks5Connection ['https://93.184.216.34:443', HTTP/1.1, IDLE, Request Count: 1]>"
+        ]
+        assert proxy.connections[0].is_idle()
+        assert proxy.connections[0].is_available()
+        assert not proxy.connections[0].is_closed()
+
+        # A connection on a tunneled proxy can only handle HTTPS requests to the same origin.
+        assert not proxy.connections[0].can_handle_request(
+            httpcore.Origin(b"http", b"93.184.216.34", 80)
+        )
+        assert not proxy.connections[0].can_handle_request(
+            httpcore.Origin(b"http", b"other.com", 80)
+        )
+        assert proxy.connections[0].can_handle_request(
+            httpcore.Origin(b"https", b"93.184.216.34", 443)
+        )
+        assert not proxy.connections[0].can_handle_request(
+            httpcore.Origin(b"https", b"other.com", 443)
+        )
