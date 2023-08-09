@@ -138,10 +138,16 @@ class HTTP2Connection(ConnectionInterface):
 
         try:
             kwargs = {"request": request, "stream_id": stream_id}
-            with Trace("send_request_headers", logger, request, kwargs):
-                self._send_request_headers(request=request, stream_id=stream_id)
-            with Trace("send_request_body", logger, request, kwargs):
-                self._send_request_body(request=request, stream_id=stream_id)
+            try:
+                with Trace("send_request_headers", logger, request, kwargs):
+                    self._send_request_headers(
+                        request=request, stream_id=stream_id
+                    )
+                with Trace("send_request_body", logger, request, kwargs):
+                    self._send_request_body(request=request, stream_id=stream_id)
+            except h2.exceptions.StreamClosedError:
+                pass
+
             with Trace(
                 "receive_response_headers", logger, request, kwargs
             ) as trace:

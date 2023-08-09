@@ -13,7 +13,6 @@ from httpcore import (
     AsyncNetworkStream,
     ConnectError,
     ConnectionNotAvailable,
-    LocalProtocolError,
     Origin,
     RemoteProtocolError,
     WriteError,
@@ -235,6 +234,7 @@ async def test_write_error_without_response_sent():
         content = b"x" * 10_000_000
         with pytest.raises(RemoteProtocolError) as exc_info:
             await conn.request("POST", "https://example.com/", content=content)
+
         assert str(exc_info.value) == "Server disconnected without sending a response."
 
 
@@ -267,9 +267,12 @@ async def test_write_error_without_response_sent_http2():
         origin=origin, network_backend=network_backend, keepalive_expiry=5.0
     ) as conn:
         content = b"x" * 10_000_000
-        with pytest.raises(LocalProtocolError) as exc_info:
+        with pytest.raises(RemoteProtocolError) as exc_info:
             await conn.request("POST", "https://example.com/", content=content)
-        assert str(exc_info.value) == "1"
+        assert (
+            str(exc_info.value)
+            == "<StreamReset stream_id:1, error_code:ErrorCodes.NO_ERROR, remote_reset:True>"
+        )
 
 
 @pytest.mark.anyio
