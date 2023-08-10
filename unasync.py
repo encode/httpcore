@@ -6,9 +6,7 @@ import sys
 SUBS = [
     ('from .._backends.auto import AutoBackend', 'from .._backends.sync import SyncBackend'),
     ('import trio as concurrency', 'from tests import concurrency'),
-    ('AsyncByteStream', 'SyncByteStream'),
     ('AsyncIterator', 'Iterator'),
-    ('AutoBackend', 'SyncBackend'),
     ('Async([A-Z][A-Za-z0-9_]*)', r'\2'),
     ('async def', 'def'),
     ('async with', 'with'),
@@ -16,8 +14,6 @@ SUBS = [
     ('await ', ''),
     ('handle_async_request', 'handle_request'),
     ('aclose', 'close'),
-    ('aclose_func', 'close_func'),
-    ('aiterator', 'iterator'),
     ('aiter_stream', 'iter_stream'),
     ('aread', 'read'),
     ('asynccontextmanager', 'contextmanager'),
