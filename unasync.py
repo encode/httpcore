@@ -2,6 +2,7 @@
 import os
 import re
 import sys
+from pprint import pprint
 
 SUBS = [
     ('from .._backends.auto import AutoBackend', 'from .._backends.sync import SyncBackend'),
@@ -82,13 +83,8 @@ def main():
     unasync_dir("tests/_async", "tests/_sync", check_only=check_only)
 
     if len(USED_SUBS) != len(SUBS):
-        unused_subs = []
+        unused_subs = [SUBS[i] for i in range(len(SUBS)) if i not in USED_SUBS]
 
-        for i in range(len(SUBS)):
-            if i not in USED_SUBS:
-                unused_subs.append(SUBS[i])
-        
-        from pprint import pprint
         print("These patterns were not used:")
         pprint(unused_subs)
         exit(1)   
