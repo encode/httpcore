@@ -7,7 +7,7 @@ name = "httpcore"
 dynamic = ["readme", "version"]
 description = "A minimal low-level HTTP client."
 license = "BSD-3-Clause"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 authors = [
     { name = "Tom Christie", email = "tom@tomchristie.com" },
 ]
@@ -21,7 +21,6 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
