@@ -2,13 +2,12 @@
 import os
 import re
 import sys
+from pprint import pprint
 
 SUBS = [
     ('from .._backends.auto import AutoBackend', 'from .._backends.sync import SyncBackend'),
     ('import trio as concurrency', 'from tests import concurrency'),
-    ('AsyncByteStream', 'SyncByteStream'),
     ('AsyncIterator', 'Iterator'),
-    ('AutoBackend', 'SyncBackend'),
     ('Async([A-Z][A-Za-z0-9_]*)', r'\2'),
     ('async def', 'def'),
     ('async with', 'with'),
@@ -16,8 +15,6 @@ SUBS = [
     ('await ', ''),
     ('handle_async_request', 'handle_request'),
     ('aclose', 'close'),
-    ('aclose_func', 'close_func'),
-    ('aiterator', 'iterator'),
     ('aiter_stream', 'iter_stream'),
     ('aread', 'read'),
     ('asynccontextmanager', 'contextmanager'),
@@ -33,10 +30,14 @@ COMPILED_SUBS = [
     for regex, repl in SUBS
 ]
 
+USED_SUBS = set()
 
 def unasync_line(line):
-    for regex, repl in COMPILED_SUBS:
+    for index, (regex, repl) in enumerate(COMPILED_SUBS):
+        old_line = line
         line = re.sub(regex, repl, line)
+        if old_line != line:
+            USED_SUBS.add(index)
     return line
 
 
@@ -81,6 +82,13 @@ def main():
     unasync_dir("httpcore/_async", "httpcore/_sync", check_only=check_only)
     unasync_dir("tests/_async", "tests/_sync", check_only=check_only)
 
+    if len(USED_SUBS) != len(SUBS):
+        unused_subs = [SUBS[i] for i in range(len(SUBS)) if i not in USED_SUBS]
+
+        print("These patterns were not used:")
+        pprint(unused_subs)
+        exit(1)   
+        
 
 if __name__ == '__main__':
     main()
