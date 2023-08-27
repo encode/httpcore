@@ -7,8 +7,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Unreleased
 
 - Handle HTTP/1.1 half-closed connections gracefully. (#641)
-- Drop Python 3.7 support. (#727)
-- Added proxy_mode for `HTTPProxy` and `AsyncHTTPProxy`. (#734)
 
 ## 0.17.3 (5th July 2023)
 
