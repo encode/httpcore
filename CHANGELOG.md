@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Ensure that the cancellation of HTTP/2 connections does not break the state. (#757)
 - Change the type of `Extensions` from `Mapping[Str, Any]` to `MutableMapping[Str, Any]`. (#762)
 - Handle HTTP/1.1 half-closed connections gracefully. (#641)
+- Drop Python 3.7 support. (#727)
 
 ## 0.17.3 (July 5th, 2023)
 
@@ -16,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The networking backend interface has [been added to the public API](https://www.encode.io/httpcore/network-backends). Some classes which were previously private implementation detail are now part of the top-level public API. (#699)
 - Graceful handling of HTTP/2 GoAway frames, with requests being transparently retried on a new connection. (#730)
 - Add exceptions when a synchronous `trace callback` is passed to an asynchronous request or an asynchronous `trace callback` is passed to a synchronous request. (#717)
+- Drop Python 3.7 support. (#727)
 
 ## 0.17.2 (May 23th, 2023)
 
