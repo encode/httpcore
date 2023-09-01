@@ -53,8 +53,6 @@ proxy = httpcore.HTTPProxy(
 
 ## Proxy SSL
 
-Proxy support currently only allows for HTTP/1.1 connections to the proxy,
-and does not currently support SSL proxy connections, which require HTTPS-in-HTTPS,
 The `httpcore` package also supports HTTPS proxies for http and https destinations.
 
 HTTPS proxies can be used in the same way that HTTP proxies are.

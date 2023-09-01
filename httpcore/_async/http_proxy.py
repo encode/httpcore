@@ -127,6 +127,15 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         self._ssl_context = ssl_context
         self._proxy_ssl_context = proxy_ssl_context
         self._proxy_url = enforce_url(proxy_url, name="proxy_url")
+        if (
+            self._proxy_url.scheme == b"http" and proxy_ssl_context is not None
+        ):  # pragma: no cover
+            raise RuntimeError(
+                "The `proxy_ssl_context` argument is not allowed for the http scheme"
+            )
+
+        self._ssl_context = ssl_context
+        self._proxy_ssl_context = proxy_ssl_context
         self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
         if proxy_auth is not None:
             username = enforce_bytes(proxy_auth[0], name="proxy_auth")
