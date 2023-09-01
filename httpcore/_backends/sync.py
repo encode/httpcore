@@ -70,7 +70,7 @@ class TLSinTLSStream(NetworkStream):  # pragma: no cover
                 if buf:
                     self._incoming.write(buf)
                 else:
-                    self._incoming.write_eof()  # pragma: no cover
+                    self._incoming.write_eof()
             if errno is None:
                 return ret
 
