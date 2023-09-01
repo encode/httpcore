@@ -73,10 +73,33 @@ proxy = httpcore.HTTPProxy(
 Note that `ProxyMode.FORWARD` will enable forwarding https requests, so they will be visible for proxy server.
 It means handling TLS stuffs like certificate validation would on proxy side.
 
-## Proxy SSL and HTTP Versions
+## Proxy SSL
 
-Proxy support currently only allows for HTTP/1.1 connections to the proxy,
-and does not currently support SSL proxy connections, which require HTTPS-in-HTTPS,
+The `httpcore` package also supports HTTPS proxies for http and https destinations.
+
+HTTPS proxies can be used in the same way that HTTP proxies are.
+
+```python
+proxy = httpcore.HTTPProxy(proxy_url="https://127.0.0.1:8080/")
+```
+
+Also, when using HTTPS proxies, you may need to configure the SSL context, which you can do with the `proxy_ssl_context` argument.
+
+```python
+import ssl
+import httpcore
+
+proxy_ssl_context = ssl.create_default_context()
+proxy_ssl_context.check_hostname = False
+
+proxy = httpcore.HTTPProxy('https://127.0.0.1:8080/', proxy_ssl_context=proxy_ssl_context)
+```
+
+It is important to note that the `ssl_context` argument is always used for the remote connection, and the `proxy_ssl_context` argument is always used for the proxy connection.
+
+## HTTP Versions
+
+If you use proxies, keep in mind that the `httpcore` package only supports proxies to HTTP/1.1 servers.
 
 ## SOCKS proxy support
 
