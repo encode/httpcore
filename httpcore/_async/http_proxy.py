@@ -64,6 +64,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         proxy_auth: Optional[Tuple[Union[bytes, str], Union[bytes, str]]] = None,
         proxy_headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
         ssl_context: Optional[ssl.SSLContext] = None,
+        proxy_ssl_context: Optional[ssl.SSLContext] = None,
         max_connections: Optional[int] = 10,
         max_keepalive_connections: Optional[int] = None,
         keepalive_expiry: Optional[float] = None,
@@ -88,6 +89,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             ssl_context: An SSL context to use for verifying connections.
                 If not specified, the default `httpcore.default_ssl_context()`
                 will be used.
+            proxy_ssl_context: The same as `ssl_context`, but for a proxy server rather than a remote origin.
             max_connections: The maximum number of concurrent HTTP connections that
                 the pool should allow. Any attempt to send a request on a pool that
                 would exceed this amount will block until a connection is available.
@@ -122,8 +124,17 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             uds=uds,
             socket_options=socket_options,
         )
-        self._ssl_context = ssl_context
+
         self._proxy_url = enforce_url(proxy_url, name="proxy_url")
+        if (
+            self._proxy_url.scheme == b"http" and proxy_ssl_context is not None
+        ):  # pragma: no cover
+            raise RuntimeError(
+                "The `proxy_ssl_context` argument is not allowed for the http scheme"
+            )
+
+        self._ssl_context = ssl_context
+        self._proxy_ssl_context = proxy_ssl_context
         self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
         if proxy_auth is not None:
             username = enforce_bytes(proxy_auth[0], name="proxy_auth")
@@ -141,12 +152,14 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 remote_origin=origin,
                 keepalive_expiry=self._keepalive_expiry,
                 network_backend=self._network_backend,
+                proxy_ssl_context=self._proxy_ssl_context,
             )
         return AsyncTunnelHTTPConnection(
             proxy_origin=self._proxy_url.origin,
             proxy_headers=self._proxy_headers,
             remote_origin=origin,
             ssl_context=self._ssl_context,
+            proxy_ssl_context=self._proxy_ssl_context,
             keepalive_expiry=self._keepalive_expiry,
             http1=self._http1,
             http2=self._http2,
@@ -163,12 +176,14 @@ class AsyncForwardHTTPConnection(AsyncConnectionInterface):
         keepalive_expiry: Optional[float] = None,
         network_backend: Optional[AsyncNetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
+        proxy_ssl_context: Optional[ssl.SSLContext] = None,
     ) -> None:
         self._connection = AsyncHTTPConnection(
             origin=proxy_origin,
             keepalive_expiry=keepalive_expiry,
             network_backend=network_backend,
             socket_options=socket_options,
+            ssl_context=proxy_ssl_context,
         )
         self._proxy_origin = proxy_origin
         self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
@@ -222,6 +237,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
         proxy_origin: Origin,
         remote_origin: Origin,
         ssl_context: Optional[ssl.SSLContext] = None,
+        proxy_ssl_context: Optional[ssl.SSLContext] = None,
         proxy_headers: Optional[Sequence[Tuple[bytes, bytes]]] = None,
         keepalive_expiry: Optional[float] = None,
         http1: bool = True,
@@ -234,10 +250,12 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
             keepalive_expiry=keepalive_expiry,
             network_backend=network_backend,
             socket_options=socket_options,
+            ssl_context=proxy_ssl_context,
         )
         self._proxy_origin = proxy_origin
         self._remote_origin = remote_origin
         self._ssl_context = ssl_context
+        self._proxy_ssl_context = proxy_ssl_context
         self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
