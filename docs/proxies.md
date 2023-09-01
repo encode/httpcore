@@ -70,7 +70,7 @@ import httpcore
 proxy_ssl_context = ssl.create_default_context()
 proxy_ssl_context.check_hostname = False
 
-proxy = httpcore.HTTPProxy('http://127.0.0.1:8080/', proxy_ssl_context=proxy_ssl_context)
+proxy = httpcore.HTTPProxy('https://127.0.0.1:8080/', proxy_ssl_context=proxy_ssl_context)
 ```
 
 It is important to note that the `ssl_context` argument is always used for the remote connection, and the `proxy_ssl_context` argument is always used for the proxy connection.
