@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Unreleased
 
 - Add support for HTTPS proxies. Currently only available for async. (#745)
+- Handle `sni_hostname` extension with SOCKS proxy. (#774)
 - Change the type of `Extensions` from `Mapping[Str, Any]` to `MutableMapping[Str, Any]`. (#762)
 - Handle HTTP/1.1 half-closed connections gracefully. (#641)
 - Drop Python 3.7 support. (#727)
