@@ -124,8 +124,6 @@ class HTTPProxy(ConnectionPool):
             uds=uds,
             socket_options=socket_options,
         )
-        self._ssl_context = ssl_context
-        self._proxy_ssl_context = proxy_ssl_context
         self._proxy_url = enforce_url(proxy_url, name="proxy_url")
         if (
             self._proxy_url.scheme == b"http" and proxy_ssl_context is not None
