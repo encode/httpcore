@@ -154,9 +154,11 @@ class AsyncConnectionPool(AsyncRequestInterface):
 
         # If there are queued requests in front of us, then don't acquire a
         # connection. We handle requests strictly in order.
-        waiting = [s for s in self._requests if s.connection is None]
-        if waiting and waiting[0] is not status:
-            return False
+        for s in self._requests:
+            if s.connection is None:
+                if s is not status:
+                    return False
+                break
 
         # Reuse an existing connection if one is currently available.
         for idx, connection in enumerate(self._pool):
