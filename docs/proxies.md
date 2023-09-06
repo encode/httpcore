@@ -59,7 +59,9 @@ There are two types of HTTP proxy:
 2. Tunneling (HTTP [`CONNECT` method](https://tools.ietf.org/html/rfc7231#section-4.3.6))
 
 By default `httpcore` will use forwarding for http requests and tunneling for https requests.
+
 You can change this behavior with `proxy_mode: httpcore.ProxyMode` parameter:
+
 ```py
 import httpcore
 import base64
