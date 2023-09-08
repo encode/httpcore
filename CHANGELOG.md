@@ -6,11 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## 0.18.0 (September 8th, 2023)
 
-- Add support for HTTPS proxies. (#745, # 786)
-- Handle `sni_hostname` extension with SOCKS proxy. (#774)
-- Change the type of `Extensions` from `Mapping[Str, Any]` to `MutableMapping[Str, Any]`. (#762)
-- Handle HTTP/1.1 half-closed connections gracefully. (#641)
+- Add support for HTTPS proxies. (#745, #786)
 - Drop Python 3.7 support. (#727)
+- Handle `sni_hostname` extension with SOCKS proxy. (#774)
+- Handle HTTP/1.1 half-closed connections gracefully. (#641)
+- Change the type of `Extensions` from `Mapping[Str, Any]` to `MutableMapping[Str, Any]`. (#762)
 
 ## 0.17.3 (July 5th, 2023)
 
