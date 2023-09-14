@@ -207,9 +207,7 @@ class HTTPConnection(ConnectionInterface):
         if self._connection is None:
             if self._is_new:
                 return "NEW CONNECTION"
-            return (
-                "CONNECTINION FAILED" if self._connect_failed else "CONNECTINION FAILED"
-            )
+            return "CONNECTINION FAILED" if self._connect_failed else "CONNECTING"
         return self._connection.info()
 
     def __repr__(self) -> str:
