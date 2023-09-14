@@ -63,6 +63,7 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
         self._connect_failed: bool = False
         self._request_lock = AsyncLock()
         self._socket_options = socket_options
+        self._is_new = True
 
     async def handle_async_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
@@ -73,6 +74,7 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
         async with self._request_lock:
             if self._connection is None:
                 try:
+                    self._is_new = False
                     stream = await self._connect(request)
 
                     ssl_object = stream.get_extra_info("ssl_object")
@@ -94,7 +96,7 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                             stream=stream,
                             keepalive_expiry=self._keepalive_expiry,
                         )
-                except Exception as exc:
+                except BaseException as exc:
                     self._connect_failed = True
                     raise exc
             elif not self._connection.is_available():
@@ -174,6 +176,8 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
 
     def is_available(self) -> bool:
         if self._connection is None:
+            if self._is_new:
+                return True
             # If HTTP/2 support is enabled, and the resulting connection could
             # end up as HTTP/2 then we should indicate the connection as being
             # available to service multiple requests.
@@ -185,6 +189,8 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
         return self._connection.is_available()
 
     def has_expired(self) -> bool:
+        if self._connect_failed:
+            return True
         if self._connection is None:
             return self._connect_failed
         return self._connection.has_expired()
@@ -201,7 +207,13 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
 
     def info(self) -> str:
         if self._connection is None:
-            return "CONNECTION FAILED" if self._connect_failed else "CONNECTING"
+            if self._is_new:
+                return "NEW CONNECTION"
+            return (
+                "CONNECTING"
+                if not (self._is_new or self._connect_failed)
+                else "CONNECTINION FAILED"
+            )
         return self._connection.info()
 
     def __repr__(self) -> str:
