@@ -189,8 +189,6 @@ class HTTPConnection(ConnectionInterface):
         return self._connection.is_available()
 
     def has_expired(self) -> bool:
-        if self._connect_failed:
-            return True
         if self._connection is None:
             return self._connect_failed
         return self._connection.has_expired()
@@ -210,9 +208,7 @@ class HTTPConnection(ConnectionInterface):
             if self._is_new:
                 return "NEW CONNECTION"
             return (
-                "CONNECTING"
-                if not (self._is_new or self._connect_failed)
-                else "CONNECTINION FAILED"
+                "CONNECTINION FAILED" if self._connect_failed else "CONNECTINION FAILED"
             )
         return self._connection.info()
 
