@@ -181,7 +181,7 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
             # If HTTP/2 support is enabled, and the resulting connection could
             # end up as HTTP/2 then we should indicate the connection as being
             # available to service multiple requests.
-            return (
+            return (  # pragma: no cover
                 self._http2
                 and (self._origin.scheme == b"https" or not self._http1)
                 and not self._connect_failed
@@ -207,7 +207,9 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
         if self._connection is None:
             if self._is_new:
                 return "NEW CONNECTION"
-            return "CONNECTION FAILED" if self._connect_failed else "CONNECTING"
+            return (
+                "CONNECTION FAILED" if self._connect_failed else "CONNECTING"
+            )  # pragma: no cover
         return self._connection.info()
 
     def __repr__(self) -> str:
