@@ -25,7 +25,9 @@ from .._exceptions import (
 )
 from .._models import Origin, Request, Response
 from .._synchronization import (
-    AsyncLock, AsyncShieldCancellation, get_cancelled_exc_class
+    AsyncLock,
+    AsyncShieldCancellation,
+    get_cancelled_exc_class,
 )
 from .._trace import Trace
 from .interfaces import AsyncConnectionInterface

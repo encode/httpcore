@@ -18,7 +18,10 @@ from .._exceptions import (
 )
 from .._models import Origin, Request, Response
 from .._synchronization import (
-    AsyncLock, AsyncSemaphore, AsyncShieldCancellation, get_cancelled_exc_class
+    AsyncLock,
+    AsyncSemaphore,
+    AsyncShieldCancellation,
+    get_cancelled_exc_class,
 )
 from .._trace import Trace
 from .interfaces import AsyncConnectionInterface

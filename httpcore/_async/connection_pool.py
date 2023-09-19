@@ -8,7 +8,10 @@ from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend
 from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
 from .._models import Origin, Request, Response
 from .._synchronization import (
-    AsyncEvent, AsyncLock, AsyncShieldCancellation, get_cancelled_exc_class
+    AsyncEvent,
+    AsyncLock,
+    AsyncShieldCancellation,
+    get_cancelled_exc_class,
 )
 from .connection import AsyncHTTPConnection
 from .interfaces import AsyncConnectionInterface, AsyncRequestInterface
