@@ -223,7 +223,7 @@ class AsyncShieldCancellation:
 def get_cancelled_exc_class() -> BaseException:
     """
     Detect if we're running under 'asyncio' or 'trio' and return
-    cannelled exception class of it. 
+    cannelled exception class of it.
     """
     backend = sniffio.current_async_library()
     if backend == "trio":
