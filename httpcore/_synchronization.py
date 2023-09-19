@@ -220,6 +220,26 @@ class AsyncShieldCancellation:
             self._anyio_shield.__exit__(exc_type, exc_value, traceback)
 
 
+def get_cancelled_exc_class():
+    """
+    Detect if we're running under 'asyncio' or 'trio' and create
+    a lock with the correct implementation.
+    """
+    backend = sniffio.current_async_library()
+    if backend == "trio":
+        if trio is None:  # pragma: nocover
+            raise RuntimeError(
+                "Running under trio, requires the 'trio' package to be installed."
+            )
+        return trio.Cancelled
+
+    if anyio is None:  # pragma: nocover
+        raise RuntimeError(
+            "Running under asyncio requires the 'anyio' package to be installed."
+        )
+    return anyio.get_cancelled_exc_class()
+
+
 # Our thread-based synchronization primitives...
 
 

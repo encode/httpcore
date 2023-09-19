@@ -24,7 +24,9 @@ from .._exceptions import (
     map_exceptions,
 )
 from .._models import Origin, Request, Response
-from .._synchronization import AsyncLock, AsyncShieldCancellation
+from .._synchronization import (
+    AsyncLock, AsyncShieldCancellation, get_cancelled_exc_class
+)
 from .._trace import Trace
 from .interfaces import AsyncConnectionInterface
 
@@ -67,6 +69,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
             our_role=h11.CLIENT,
             max_incomplete_event_size=self.MAX_INCOMPLETE_EVENT_SIZE,
         )
+        self._cancelled_exc = get_cancelled_exc_class()
 
     async def handle_async_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
@@ -126,7 +129,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
                     "network_stream": self._network_stream,
                 },
             )
-        except BaseException as exc:
+        except (Exception, self._cancelled_exc) as exc:
             with AsyncShieldCancellation():
                 async with Trace("response_closed", logger, request) as trace:
                     await self._response_closed()
@@ -321,6 +324,7 @@ class HTTP11ConnectionByteStream:
         self._connection = connection
         self._request = request
         self._closed = False
+        self._cancelled_exc = get_cancelled_exc_class()
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
         kwargs = {"request": self._request}
@@ -328,7 +332,7 @@ class HTTP11ConnectionByteStream:
             async with Trace("receive_response_body", logger, self._request, kwargs):
                 async for chunk in self._connection._receive_response_body(**kwargs):
                     yield chunk
-        except BaseException as exc:
+        except (Exception, self._cancelled_exc) as exc:
             # If we get an exception while streaming the response,
             # we want to close the response (and possibly the connection)
             # before raising that exception.

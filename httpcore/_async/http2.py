@@ -17,7 +17,9 @@ from .._exceptions import (
     RemoteProtocolError,
 )
 from .._models import Origin, Request, Response
-from .._synchronization import AsyncLock, AsyncSemaphore, AsyncShieldCancellation
+from .._synchronization import (
+    AsyncLock, AsyncSemaphore, AsyncShieldCancellation, get_cancelled_exc_class
+)
 from .._trace import Trace
 from .interfaces import AsyncConnectionInterface
 
@@ -81,6 +83,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
         self._read_exception: typing.Optional[Exception] = None
         self._write_exception: typing.Optional[Exception] = None
+        self._cancelled_exc = get_cancelled_exc_class()
 
     async def handle_async_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
@@ -107,7 +110,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                     kwargs = {"request": request}
                     async with Trace("send_connection_init", logger, request, kwargs):
                         await self._send_connection_init(**kwargs)
-                except BaseException as exc:
+                except (Exception, self._cancelled_exc) as exc:
                     with AsyncShieldCancellation():
                         await self.aclose()
                     raise exc
@@ -160,7 +163,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                     "stream_id": stream_id,
                 },
             )
-        except BaseException as exc:  # noqa: PIE786
+        except (Exception, self._cancelled_exc) as exc:  # noqa: PIE786
             with AsyncShieldCancellation():
                 kwargs = {"stream_id": stream_id}
                 async with Trace("response_closed", logger, request, kwargs):
@@ -564,6 +567,7 @@ class HTTP2ConnectionByteStream:
         self._request = request
         self._stream_id = stream_id
         self._closed = False
+        self._cancelled_exc = get_cancelled_exc_class()
 
     async def __aiter__(self) -> typing.AsyncIterator[bytes]:
         kwargs = {"request": self._request, "stream_id": self._stream_id}
@@ -573,7 +577,7 @@ class HTTP2ConnectionByteStream:
                     request=self._request, stream_id=self._stream_id
                 ):
                     yield chunk
-        except BaseException as exc:
+        except (Exception, self._cancelled_exc) as exc:
             # If we get an exception while streaming the response,
             # we want to close the response (and possibly the connection)
             # before raising that exception.
