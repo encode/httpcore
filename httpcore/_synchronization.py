@@ -220,7 +220,7 @@ class AsyncShieldCancellation:
             self._anyio_shield.__exit__(exc_type, exc_value, traceback)
 
 
-def get_cancelled_exc_class() -> BaseException:
+def get_cancelled_exc_class() -> Type[BaseException]:
     """
     Detect if we're running under 'asyncio' or 'trio' and return
     cannelled exception class of it.
