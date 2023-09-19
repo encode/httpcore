@@ -2,8 +2,6 @@ import threading
 from types import TracebackType
 from typing import Optional, Type
 
-import sniffio
-
 from ._exceptions import ExceptionMapping, PoolTimeout, map_exceptions
 
 # Our async synchronization primatives use either 'anyio' or 'trio' depending
@@ -17,6 +15,12 @@ except ImportError:  # pragma: nocover
 try:
     import anyio
 except ImportError:  # pragma: nocover
+    anyio = None  # type: ignore
+
+try:
+    import sniffio
+except ImportError:  # pragma: nocover
+    trio = None  # type: ignore
     anyio = None  # type: ignore
 
 
