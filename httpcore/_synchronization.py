@@ -6,7 +6,6 @@ import sniffio
 
 from ._exceptions import ExceptionMapping, PoolTimeout, map_exceptions
 
-
 EXCEPTION_OR_CANCELLED = (Exception,)
 
 # Our async synchronization primatives use either 'anyio' or 'trio' depending
