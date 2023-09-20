@@ -13,14 +13,17 @@ EXCEPTION_OR_CANCELLED = (Exception,)
 
 try:
     import trio
+
     EXCEPTION_OR_CANCELLED += (trio.Cancelled,)
 except ImportError:  # pragma: nocover
     trio = None  # type: ignore
 
 try:
     import anyio
+
     try:
         import asyncio
+
         EXCEPTION_OR_CANCELLED += (asyncio.CancelledError,)
     except ImportError:
         pass
