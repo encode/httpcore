@@ -1,6 +1,6 @@
 import threading
 from types import TracebackType
-from typing import Optional, Tuple, Type, Union
+from typing import Optional, Tuple, Type
 
 import sniffio
 
