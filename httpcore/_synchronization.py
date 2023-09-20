@@ -1,12 +1,17 @@
 import threading
 from types import TracebackType
-from typing import Optional, Tuple, Type
+from typing import Optional, Tuple, Type, Union
 
 import sniffio
 
 from ._exceptions import ExceptionMapping, PoolTimeout, map_exceptions
 
-EXCEPTION_OR_CANCELLED: Tuple[Type[BaseException]] = (Exception,)
+
+EXCEPTION_OR_CANCELLED: Union[
+    Tuple[Type[BaseException]],
+    Tuple[Type[BaseException], Type[BaseException]],
+    Tuple[Type[BaseException], Type[BaseException], Type[BaseException]],
+] = (Exception,)
 
 # Our async synchronization primatives use either 'anyio' or 'trio' depending
 # on if they're running under asyncio or trio.
