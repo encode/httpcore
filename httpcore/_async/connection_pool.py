@@ -11,7 +11,7 @@ from .._synchronization import (
     AsyncEvent,
     AsyncLock,
     AsyncShieldCancellation,
-    get_cancelled_exc_class,
+    EXCEPTION_OR_CANCELLED,
 )
 from .connection import AsyncHTTPConnection
 from .interfaces import AsyncConnectionInterface, AsyncRequestInterface
@@ -118,7 +118,6 @@ class AsyncConnectionPool(AsyncRequestInterface):
             AutoBackend() if network_backend is None else network_backend
         )
         self._socket_options = socket_options
-        self._cancelled_exc = get_cancelled_exc_class()
 
     def create_connection(self, origin: Origin) -> AsyncConnectionInterface:
         return AsyncHTTPConnection(
@@ -237,7 +236,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
             timeout = timeouts.get("pool", None)
             try:
                 connection = await status.wait_for_connection(timeout=timeout)
-            except (Exception, self._cancelled_exc) as exc:
+            except EXCEPTION_OR_CANCELLED as exc:
                 # If we timeout here, or if the task is cancelled, then make
                 # sure to remove the request from the queue before bubbling
                 # up the exception.
@@ -262,7 +261,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
                     # status so that the request becomes queued again.
                     status.unset_connection()
                     await self._attempt_to_acquire_connection(status)
-            except (Exception, self._cancelled_exc) as exc:
+            except EXCEPTION_OR_CANCELLED as exc:
                 with AsyncShieldCancellation():
                     await self.response_closed(status)
                 raise exc

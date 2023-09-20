@@ -6,16 +6,25 @@ import sniffio
 
 from ._exceptions import ExceptionMapping, PoolTimeout, map_exceptions
 
+
+EXCEPTION_OR_CANCELLED = (Exception,)
+
 # Our async synchronization primatives use either 'anyio' or 'trio' depending
 # on if they're running under asyncio or trio.
 
 try:
     import trio
+    EXCEPTION_OR_CANCELLED += (trio.Cancelled,)
 except ImportError:  # pragma: nocover
     trio = None  # type: ignore
 
 try:
     import anyio
+    try:
+        import asyncio
+        EXCEPTION_OR_CANCELLED += (asyncio.CancelledError,)
+    except ImportError:
+        pass
 except ImportError:  # pragma: nocover
     anyio = None  # type: ignore
 
@@ -218,26 +227,6 @@ class AsyncShieldCancellation:
             self._trio_shield.__exit__(exc_type, exc_value, traceback)
         else:
             self._anyio_shield.__exit__(exc_type, exc_value, traceback)
-
-
-def get_cancelled_exc_class() -> Type[BaseException]:
-    """
-    Detect if we're running under 'asyncio' or 'trio' and return
-    cannelled exception class of it.
-    """
-    backend = sniffio.current_async_library()
-    if backend == "trio":
-        if trio is None:  # pragma: nocover
-            raise RuntimeError(
-                "Running under trio, requires the 'trio' package to be installed."
-            )
-        return trio.Cancelled
-
-    if anyio is None:  # pragma: nocover
-        raise RuntimeError(
-            "Running under asyncio requires the 'anyio' package to be installed."
-        )
-    return anyio.get_cancelled_exc_class()
 
 
 # Our thread-based synchronization primitives...
