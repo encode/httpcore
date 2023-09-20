@@ -6,7 +6,6 @@ import sniffio
 
 from ._exceptions import ExceptionMapping, PoolTimeout, map_exceptions
 
-
 EXCEPTION_OR_CANCELLED: Union[
     Tuple[Type[BaseException]],
     Tuple[Type[BaseException], Type[BaseException]],
