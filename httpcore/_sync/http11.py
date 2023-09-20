@@ -25,9 +25,9 @@ from .._exceptions import (
 )
 from .._models import Origin, Request, Response
 from .._synchronization import (
+    EXCEPTION_OR_CANCELLED,
     Lock,
     ShieldCancellation,
-    EXCEPTION_OR_CANCELLED,
 )
 from .._trace import Trace
 from .interfaces import ConnectionInterface

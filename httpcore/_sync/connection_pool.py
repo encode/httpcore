@@ -8,10 +8,10 @@ from .._backends.base import SOCKET_OPTION, NetworkBackend
 from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
 from .._models import Origin, Request, Response
 from .._synchronization import (
+    EXCEPTION_OR_CANCELLED,
     Event,
     Lock,
     ShieldCancellation,
-    EXCEPTION_OR_CANCELLED,
 )
 from .connection import HTTPConnection
 from .interfaces import ConnectionInterface, RequestInterface
