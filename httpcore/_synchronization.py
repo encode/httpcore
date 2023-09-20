@@ -25,7 +25,7 @@ try:
         import asyncio
 
         EXCEPTION_OR_CANCELLED += (asyncio.CancelledError,)
-    except ImportError:
+    except ImportError:  # pragma: nocover
         pass
 except ImportError:  # pragma: nocover
     anyio = None  # type: ignore
