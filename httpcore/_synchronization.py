@@ -37,13 +37,13 @@ class AsyncLock:
         if self._backend == "trio":
             if trio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under trio, requires the 'trio' package to be installed."
+                    "Running with trio requires installation of 'httpcore[trio]'."
                 )
             self._trio_lock = trio.Lock()
         else:
             if anyio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under asyncio requires the 'anyio' package to be installed."
+                    "Running with asyncio requires installation of 'httpcore[asyncio]'."
                 )
             self._anyio_lock = anyio.Lock()
 
@@ -83,13 +83,13 @@ class AsyncEvent:
         if self._backend == "trio":
             if trio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under trio requires the 'trio' package to be installed."
+                    "Running with trio requires installation of 'httpcore[trio]'."
                 )
             self._trio_event = trio.Event()
         else:
             if anyio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under asyncio requires the 'anyio' package to be installed."
+                    "Running with asyncio requires installation of 'httpcore[asyncio]'."
                 )
             self._anyio_event = anyio.Event()
 
@@ -109,7 +109,7 @@ class AsyncEvent:
         if self._backend == "trio":
             if trio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under trio requires the 'trio' package to be installed."
+                    "Running with trio requires installation of 'httpcore[trio]'."
                 )
 
             trio_exc_map: ExceptionMapping = {trio.TooSlowError: PoolTimeout}
@@ -120,7 +120,7 @@ class AsyncEvent:
         else:
             if anyio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under asyncio requires the 'anyio' package to be installed."
+                    "Running with asyncio requires installation of 'httpcore[asyncio]'."
                 )
 
             anyio_exc_map: ExceptionMapping = {TimeoutError: PoolTimeout}
@@ -143,7 +143,7 @@ class AsyncSemaphore:
         if self._backend == "trio":
             if trio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under trio requires the 'trio' package to be installed."
+                    "Running with trio requires installation of 'httpcore[trio]'."
                 )
 
             self._trio_semaphore = trio.Semaphore(
@@ -152,7 +152,7 @@ class AsyncSemaphore:
         else:
             if anyio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under asyncio requires the 'anyio' package to be installed."
+                    "Running with asyncio requires installation of 'httpcore[asyncio]'."
                 )
 
             self._anyio_semaphore = anyio.Semaphore(
@@ -193,14 +193,14 @@ class AsyncShieldCancellation:
         if self._backend == "trio":
             if trio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under trio requires the 'trio' package to be installed."
+                    "Running with trio requires installation of 'httpcore[trio]'."
                 )
 
             self._trio_shield = trio.CancelScope(shield=True)
         else:
             if anyio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under asyncio requires the 'anyio' package to be installed."
+                    "Running with asyncio requires installation of 'httpcore[asyncio]'."
                 )
 
             self._anyio_shield = anyio.CancelScope(shield=True)
