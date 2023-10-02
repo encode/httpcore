@@ -138,10 +138,16 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
         try:
             kwargs = {"request": request, "stream_id": stream_id}
-            async with Trace("send_request_headers", logger, request, kwargs):
-                await self._send_request_headers(request=request, stream_id=stream_id)
-            async with Trace("send_request_body", logger, request, kwargs):
-                await self._send_request_body(request=request, stream_id=stream_id)
+            try:
+                async with Trace("send_request_headers", logger, request, kwargs):
+                    await self._send_request_headers(
+                        request=request, stream_id=stream_id
+                    )
+                async with Trace("send_request_body", logger, request, kwargs):
+                    await self._send_request_body(request=request, stream_id=stream_id)
+            except h2.exceptions.StreamClosedError:
+                pass
+
             async with Trace(
                 "receive_response_headers", logger, request, kwargs
             ) as trace:

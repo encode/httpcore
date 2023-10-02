@@ -141,6 +141,56 @@ async def test_write_error_with_response_sent():
         assert response.content == b"Request body exceeded 1,000,000 bytes"
 
 
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
+@pytest.mark.anyio
+async def test_write_error_with_response_sent_http2():
+    """
+    If a server half-closes the connection while the client is sending
+    the request, it may still send a response. In this case the client
+    should successfully read and return the response.
+
+    See also the `test_write_error_without_response_sent_http2` test above.
+    """
+
+    origin = Origin(b"https", b"example.com", 443)
+    network_backend = AsyncMockBackend(
+        [
+            hyperframe.frame.SettingsFrame().serialize(),
+            hyperframe.frame.WindowUpdateFrame(
+                stream_id=0, window_increment=2147418112
+            ).serialize()
+            + hyperframe.frame.WindowUpdateFrame(
+                stream_id=1, window_increment=2147418112
+            ).serialize()
+            + hyperframe.frame.HeadersFrame(
+                stream_id=1,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"413"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize()
+            + hyperframe.frame.DataFrame(
+                stream_id=1,
+                data=b"Request body exceeded 1,000,000 bytes",
+                flags=["END_STREAM"],
+            ).serialize()
+            + hyperframe.frame.RstStreamFrame(stream_id=1, error_code=0).serialize(),
+        ],
+        http2=True,
+    )
+
+    async with AsyncHTTPConnection(
+        origin=origin, network_backend=network_backend, keepalive_expiry=5.0
+    ) as conn:
+        content = b"x" * 10_000_000
+        response = await conn.request("POST", "https://example.com/", content=content)
+        assert response.status == 413
+        assert response.content == b"Request body exceeded 1,000,000 bytes"
+
+
 @pytest.mark.anyio
 @pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 async def test_write_error_without_response_sent():
@@ -184,7 +234,45 @@ async def test_write_error_without_response_sent():
         content = b"x" * 10_000_000
         with pytest.raises(RemoteProtocolError) as exc_info:
             await conn.request("POST", "https://example.com/", content=content)
+
         assert str(exc_info.value) == "Server disconnected without sending a response."
+
+
+@pytest.mark.anyio
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
+async def test_write_error_without_response_sent_http2():
+    """
+    If a server fully closes the connection while the client is sending
+    the request, then client should raise an error.
+
+    See also the `test_write_error_with_response_sent_http2` test above.
+    """
+
+    origin = Origin(b"https", b"example.com", 443)
+    network_backend = AsyncMockBackend(
+        [
+            hyperframe.frame.SettingsFrame().serialize(),
+            hyperframe.frame.WindowUpdateFrame(
+                stream_id=0, window_increment=2147418112
+            ).serialize()
+            + hyperframe.frame.WindowUpdateFrame(
+                stream_id=1, window_increment=2147418112
+            ).serialize()
+            + hyperframe.frame.RstStreamFrame(stream_id=1, error_code=0).serialize(),
+        ],
+        http2=True,
+    )
+
+    async with AsyncHTTPConnection(
+        origin=origin, network_backend=network_backend, keepalive_expiry=5.0
+    ) as conn:
+        content = b"x" * 10_000_000
+        with pytest.raises(RemoteProtocolError) as exc_info:
+            await conn.request("POST", "https://example.com/", content=content)
+        assert str(exc_info.value) in [
+            "<StreamReset stream_id:1, error_code:ErrorCodes.NO_ERROR, remote_reset:True>",
+            "<StreamReset stream_id:1, error_code:0, remote_reset:True>",
+        ]
 
 
 @pytest.mark.anyio
