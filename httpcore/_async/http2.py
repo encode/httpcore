@@ -123,10 +123,21 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 )
                 self._max_streams_semaphore = AsyncSemaphore(local_settings_max_streams)
 
-                for _ in range(local_settings_max_streams - self._max_streams):
-                    await self._max_streams_semaphore.acquire()
-
-        await self._max_streams_semaphore.acquire()
+                try:
+                    for _ in range(local_settings_max_streams - self._max_streams):
+                        await self._max_streams_semaphore.acquire()
+                except BaseException:
+                    with AsyncShieldCancellation():
+                        async with self._state_lock:
+                            await self._state_housekeeping()
+                    raise
+        try:
+            await self._max_streams_semaphore.acquire()
+        except BaseException:  # pragma: no cover
+            with AsyncShieldCancellation():
+                async with self._state_lock:
+                    await self._state_housekeeping()
+            raise
 
         try:
             stream_id = self._h2_state.get_next_available_stream_id()
@@ -405,16 +416,19 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         await self._max_streams_semaphore.release()
         del self._events[stream_id]
         async with self._state_lock:
-            if self._connection_terminated and not self._events:
-                await self.aclose()
+            await self._state_housekeeping()
 
-            elif self._state == HTTPConnectionState.ACTIVE and not self._events:
-                self._state = HTTPConnectionState.IDLE
-                if self._keepalive_expiry is not None:
-                    now = time.monotonic()
-                    self._expire_at = now + self._keepalive_expiry
-                if self._used_all_stream_ids:  # pragma: nocover
-                    await self.aclose()
+    async def _state_housekeeping(self) -> None:
+        if self._connection_terminated and not self._events:
+            await self.aclose()
+
+        elif self._state == HTTPConnectionState.ACTIVE and not self._events:
+            self._state = HTTPConnectionState.IDLE
+            if self._keepalive_expiry is not None:
+                now = time.monotonic()
+                self._expire_at = now + self._keepalive_expiry
+            if self._used_all_stream_ids:  # pragma: nocover
+                await self.aclose()
 
     async def aclose(self) -> None:
         # Note that this method unilaterally closes the connection, and does

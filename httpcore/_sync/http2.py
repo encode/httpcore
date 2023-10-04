@@ -123,10 +123,21 @@ class HTTP2Connection(ConnectionInterface):
                 )
                 self._max_streams_semaphore = Semaphore(local_settings_max_streams)
 
-                for _ in range(local_settings_max_streams - self._max_streams):
-                    self._max_streams_semaphore.acquire()
-
-        self._max_streams_semaphore.acquire()
+                try:
+                    for _ in range(local_settings_max_streams - self._max_streams):
+                        self._max_streams_semaphore.acquire()
+                except BaseException:
+                    with ShieldCancellation():
+                        with self._state_lock:
+                            self._state_housekeeping()
+                    raise
+        try:
+            self._max_streams_semaphore.acquire()
+        except BaseException:  # pragma: no cover
+            with ShieldCancellation():
+                with self._state_lock:
+                    self._state_housekeeping()
+            raise
 
         try:
             stream_id = self._h2_state.get_next_available_stream_id()
@@ -405,16 +416,19 @@ class HTTP2Connection(ConnectionInterface):
         self._max_streams_semaphore.release()
         del self._events[stream_id]
         with self._state_lock:
-            if self._connection_terminated and not self._events:
-                self.close()
+            self._state_housekeeping()
 
-            elif self._state == HTTPConnectionState.ACTIVE and not self._events:
-                self._state = HTTPConnectionState.IDLE
-                if self._keepalive_expiry is not None:
-                    now = time.monotonic()
-                    self._expire_at = now + self._keepalive_expiry
-                if self._used_all_stream_ids:  # pragma: nocover
-                    self.close()
+    def _state_housekeeping(self) -> None:
+        if self._connection_terminated and not self._events:
+            self.close()
+
+        elif self._state == HTTPConnectionState.ACTIVE and not self._events:
+            self._state = HTTPConnectionState.IDLE
+            if self._keepalive_expiry is not None:
+                now = time.monotonic()
+                self._expire_at = now + self._keepalive_expiry
+            if self._used_all_stream_ids:  # pragma: nocover
+                self.close()
 
     def close(self) -> None:
         # Note that this method unilaterally closes the connection, and does

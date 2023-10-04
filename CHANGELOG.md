@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+- Ensure that the cancellation of HTTP/2 connections does not break the state. (#757)
 - Add support for Python 3.12. (#807)
 
 ## 0.18.0 (September 8th, 2023)
