@@ -16,7 +16,7 @@ build==1.0.3
 twine
 
 # Tests & Linting
-anyio==3.7.1
+anyio==4.0.0
 black==23.7.0
 coverage[toml]==7.3.0
 ruff==0.0.291
