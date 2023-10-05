@@ -41,11 +41,11 @@ socks = [
     "socksio==1.*",
 ]
 trio = [
-    "trio>=0.21.0,<0.22.0",
+    "trio>=0.22.0,<0.23.0",
     "sniffio==1.*",
 ]
 asyncio = [
-    "anyio>=3.0,<5.0",
+    "anyio>=4.0,<5.0",
     "sniffio==1.*",
 ]
 
