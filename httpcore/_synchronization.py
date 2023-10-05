@@ -17,11 +17,21 @@ try:
 except ImportError:  # pragma: nocover
     anyio = None  # type: ignore
 
-try:
-    import sniffio
-except ImportError:  # pragma: nocover
-    trio = None  # type: ignore
-    anyio = None  # type: ignore
+
+def current_async_library() -> str:
+    # Determine if we're running under trio or asyncio.
+    # See https://sniffio.readthedocs.io/en/latest/
+    try:
+        import sniffio
+    except ImportError:  # pragma: nocover
+        return "asyncio"
+
+    environment = sniffio.current_async_library()
+
+    if environment not in ("asyncio", "trio"):  # pragma: nocover
+        raise RuntimeError("Running under an unsupported async environment.")
+
+    return environment
 
 
 class AsyncLock:
@@ -33,7 +43,7 @@ class AsyncLock:
         Detect if we're running under 'asyncio' or 'trio' and create
         a lock with the correct implementation.
         """
-        self._backend = sniffio.current_async_library()
+        self._backend = current_async_library()
         if self._backend == "trio":
             if trio is None:  # pragma: nocover
                 raise RuntimeError(
@@ -79,7 +89,7 @@ class AsyncEvent:
         Detect if we're running under 'asyncio' or 'trio' and create
         a lock with the correct implementation.
         """
-        self._backend = sniffio.current_async_library()
+        self._backend = current_async_library()
         if self._backend == "trio":
             if trio is None:  # pragma: nocover
                 raise RuntimeError(
@@ -139,7 +149,7 @@ class AsyncSemaphore:
         Detect if we're running under 'asyncio' or 'trio' and create
         a semaphore with the correct implementation.
         """
-        self._backend = sniffio.current_async_library()
+        self._backend = current_async_library()
         if self._backend == "trio":
             if trio is None:  # pragma: nocover
                 raise RuntimeError(
@@ -188,7 +198,7 @@ class AsyncShieldCancellation:
         Detect if we're running under 'asyncio' or 'trio' and create
         a shielded scope with the correct implementation.
         """
-        self._backend = sniffio.current_async_library()
+        self._backend = current_async_library()
 
         if self._backend == "trio":
             if trio is None:  # pragma: nocover

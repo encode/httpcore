@@ -93,8 +93,8 @@ The `httpcore` package has the following dependencies...
 
 And the following optional extras...
 
-* `anyio`, `sniffio` - Required by `pip install httpcore['asyncio']`.
-* `trio`, `sniffio` - Required by `pip install httpcore['trio']`.
+* `anyio` - Required by `pip install httpcore['asyncio']`.
+* `trio` - Required by `pip install httpcore['trio']`.
 * `h2` - Required by `pip install httpcore['http2']`.
 * `socksio` - Required by `pip install httpcore['socks']`.
 

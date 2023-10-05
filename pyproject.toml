@@ -42,11 +42,9 @@ socks = [
 ]
 trio = [
     "trio>=0.22.0,<0.23.0",
-    "sniffio==1.*",
 ]
 asyncio = [
     "anyio>=4.0,<5.0",
-    "sniffio==1.*",
 ]
 
 [project.urls]
