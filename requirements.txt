@@ -1,21 +1,21 @@
 -e .[asyncio,trio,http2,socks]
 
 # Docs
-mkdocs==1.4.2
+mkdocs==1.5.3
 mkdocs-autorefs==0.5.0
-mkdocs-material==9.1.15
-mkdocs-material-extensions==1.1.1
+mkdocs-material==9.4.2
+mkdocs-material-extensions==1.2
 mkdocstrings[python-legacy]==0.22.0
 jinja2==3.1.2
 
 # Packaging
-build==0.10.0
+build==1.0.3
 twine
 
 # Tests & Linting
 black==23.7.0
 coverage[toml]==7.3.0
-ruff==0.0.277
+ruff==0.0.291
 mypy==1.5.1
 trio-typing==0.8.0
 types-certifi==2021.10.8.3
