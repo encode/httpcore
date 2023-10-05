@@ -20,10 +20,11 @@ from .._exceptions import (
     ConnectionNotAvailable,
     LocalProtocolError,
     RemoteProtocolError,
+    WriteError,
     map_exceptions,
 )
 from .._models import Origin, Request, Response
-from .._synchronization import Lock
+from .._synchronization import Lock, ShieldCancellation
 from .._trace import Trace
 from .interfaces import ConnectionInterface
 
@@ -84,10 +85,21 @@ class HTTP11Connection(ConnectionInterface):
 
         try:
             kwargs = {"request": request}
-            with Trace("send_request_headers", logger, request, kwargs) as trace:
-                self._send_request_headers(**kwargs)
-            with Trace("send_request_body", logger, request, kwargs) as trace:
-                self._send_request_body(**kwargs)
+            try:
+                with Trace(
+                    "send_request_headers", logger, request, kwargs
+                ) as trace:
+                    self._send_request_headers(**kwargs)
+                with Trace("send_request_body", logger, request, kwargs) as trace:
+                    self._send_request_body(**kwargs)
+            except WriteError:
+                # If we get a write error while we're writing the request,
+                # then we supress this error and move on to attempting to
+                # read the response. Servers can sometimes close the request
+                # pre-emptively and then respond with a well formed HTTP
+                # error response.
+                pass
+
             with Trace(
                 "receive_response_headers", logger, request, kwargs
             ) as trace:
@@ -115,8 +127,9 @@ class HTTP11Connection(ConnectionInterface):
                 },
             )
         except BaseException as exc:
-            with Trace("response_closed", logger, request) as trace:
-                self._response_closed()
+            with ShieldCancellation():
+                with Trace("response_closed", logger, request) as trace:
+                    self._response_closed()
             raise exc
 
     # Sending the request...
@@ -319,7 +332,8 @@ class HTTP11ConnectionByteStream:
             # If we get an exception while streaming the response,
             # we want to close the response (and possibly the connection)
             # before raising that exception.
-            self.close()
+            with ShieldCancellation():
+                self.close()
             raise exc
 
     def close(self) -> None:

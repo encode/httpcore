@@ -9,10 +9,13 @@ from httpcore import (
     SOCKET_OPTION,
     AsyncHTTPConnection,
     AsyncMockBackend,
+    AsyncMockStream,
     AsyncNetworkStream,
     ConnectError,
     ConnectionNotAvailable,
     Origin,
+    RemoteProtocolError,
+    WriteError,
 )
 
 
@@ -83,7 +86,109 @@ async def test_concurrent_requests_not_available_on_http11_connections():
                 await conn.request("GET", "https://example.com/")
 
 
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 @pytest.mark.anyio
+async def test_write_error_with_response_sent():
+    """
+    If a server half-closes the connection while the client is sending
+    the request, it may still send a response. In this case the client
+    should successfully read and return the response.
+
+    See also the `test_write_error_without_response_sent` test above.
+    """
+
+    class ErrorOnRequestTooLargeStream(AsyncMockStream):
+        def __init__(self, buffer: typing.List[bytes], http2: bool = False) -> None:
+            super().__init__(buffer, http2)
+            self.count = 0
+
+        async def write(
+            self, buffer: bytes, timeout: typing.Optional[float] = None
+        ) -> None:
+            self.count += len(buffer)
+
+            if self.count > 1_000_000:
+                raise WriteError()
+
+    class ErrorOnRequestTooLarge(AsyncMockBackend):
+        async def connect_tcp(
+            self,
+            host: str,
+            port: int,
+            timeout: typing.Optional[float] = None,
+            local_address: typing.Optional[str] = None,
+            socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
+        ) -> AsyncMockStream:
+            return ErrorOnRequestTooLargeStream(list(self._buffer), http2=self._http2)
+
+    origin = Origin(b"https", b"example.com", 443)
+    network_backend = ErrorOnRequestTooLarge(
+        [
+            b"HTTP/1.1 413 Payload Too Large\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 37\r\n",
+            b"\r\n",
+            b"Request body exceeded 1,000,000 bytes",
+        ]
+    )
+
+    async with AsyncHTTPConnection(
+        origin=origin, network_backend=network_backend, keepalive_expiry=5.0
+    ) as conn:
+        content = b"x" * 10_000_000
+        response = await conn.request("POST", "https://example.com/", content=content)
+        assert response.status == 413
+        assert response.content == b"Request body exceeded 1,000,000 bytes"
+
+
+@pytest.mark.anyio
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
+async def test_write_error_without_response_sent():
+    """
+    If a server fully closes the connection while the client is sending
+    the request, then client should raise an error.
+
+    See also the `test_write_error_with_response_sent` test above.
+    """
+
+    class ErrorOnRequestTooLargeStream(AsyncMockStream):
+        def __init__(self, buffer: typing.List[bytes], http2: bool = False) -> None:
+            super().__init__(buffer, http2)
+            self.count = 0
+
+        async def write(
+            self, buffer: bytes, timeout: typing.Optional[float] = None
+        ) -> None:
+            self.count += len(buffer)
+
+            if self.count > 1_000_000:
+                raise WriteError()
+
+    class ErrorOnRequestTooLarge(AsyncMockBackend):
+        async def connect_tcp(
+            self,
+            host: str,
+            port: int,
+            timeout: typing.Optional[float] = None,
+            local_address: typing.Optional[str] = None,
+            socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
+        ) -> AsyncMockStream:
+            return ErrorOnRequestTooLargeStream(list(self._buffer), http2=self._http2)
+
+    origin = Origin(b"https", b"example.com", 443)
+    network_backend = ErrorOnRequestTooLarge([])
+
+    async with AsyncHTTPConnection(
+        origin=origin, network_backend=network_backend, keepalive_expiry=5.0
+    ) as conn:
+        content = b"x" * 10_000_000
+        with pytest.raises(RemoteProtocolError) as exc_info:
+            await conn.request("POST", "https://example.com/", content=content)
+        assert str(exc_info.value) == "Server disconnected without sending a response."
+
+
+@pytest.mark.anyio
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 async def test_http2_connection():
     origin = Origin(b"https", b"example.com", 443)
     network_backend = AsyncMockBackend(

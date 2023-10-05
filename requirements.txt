@@ -4,26 +4,23 @@
 trio==0.21.0
 
 # Docs
-mkdocs==1.4.2
-mkdocs-autorefs==0.3.1
-mkdocs-material==9.1.15
-mkdocs-material-extensions==1.1.1
+mkdocs==1.5.3
+mkdocs-autorefs==0.5.0
+mkdocs-material==9.4.2
+mkdocs-material-extensions==1.2
 mkdocstrings[python-legacy]==0.22.0
 jinja2==3.1.2
 
 # Packaging
+build==1.0.3
 twine
-wheel
 
 # Tests & Linting
-anyio==3.6.2
-autoflake==1.7.7
-black==23.3.0
-coverage==7.2.7
-flake8==3.9.2  # See: https://github.com/PyCQA/flake8/pull/1438
-isort==5.11.4
-importlib-metadata==4.13.0
-mypy==1.2.0
+anyio==4.0.0
+black==23.7.0
+coverage[toml]==7.3.0
+ruff==0.0.291
+mypy==1.5.1
 trio-typing==0.8.0
 types-certifi==2021.10.8.3
 pytest==7.4.0
