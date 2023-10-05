@@ -60,6 +60,7 @@ include = [
     "/httpcore",
     "/CHANGELOG.md",
     "/README.md",
+    "/tests"
 ]
 
 [tool.hatch.metadata.hooks.fancy-pypi-readme]
