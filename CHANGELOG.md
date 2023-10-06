@@ -4,14 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## 1.0.0 (November 6th, 2023)
 
-- Add support for HTTPS proxies. (#745, # 786)
-- Handle `sni_hostname` extension with SOCKS proxy. (#774)
-- Change the type of `Extensions` from `Mapping[Str, Any]` to `MutableMapping[Str, Any]`. (#762)
-- Handle HTTP/1.1 half-closed connections gracefully. (#641)
+From version 1.0 our async support is now optional, as the package has minimal dependencies by default.
+
+For async support use either `pip install 'httpcore[asyncio]'` or `pip install 'httpcore[trio]'`.
+
+The project versioning policy is now explicitly governed by SEMVER. See https://semver.org/.
+
+- Async support becomes fully optional. (#809)
+- Add support for Python 3.12. (#807)
+
+## 0.18.0 (September 8th, 2023)
+
+- Add support for HTTPS proxies. (#745, #786)
 - Drop Python 3.7 support. (#727)
-- Added `httpcore.ProxyMode` to make HTTP proxy mode configurable. You can now force proxy connection to be TUNNEL or FORWARD. 
+- Handle `sni_hostname` extension with SOCKS proxy. (#774)
+- Handle HTTP/1.1 half-closed connections gracefully. (#641)
+- Change the type of `Extensions` from `Mapping[Str, Any]` to `MutableMapping[Str, Any]`. (#762)
 
 ## 0.17.3 (July 5th, 2023)
 

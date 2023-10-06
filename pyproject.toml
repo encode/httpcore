@@ -25,13 +25,12 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Internet :: WWW/HTTP",
 ]
 dependencies = [
-    "anyio>=3.0,<5.0",
     "certifi",
     "h11>=0.13,<0.15",
-    "sniffio==1.*",
 ]
 
 [project.optional-dependencies]
@@ -40,6 +39,12 @@ http2 = [
 ]
 socks = [
     "socksio==1.*",
+]
+trio = [
+    "trio>=0.22.0,<0.23.0",
+]
+asyncio = [
+    "anyio>=4.0,<5.0",
 ]
 
 [project.urls]
@@ -55,6 +60,7 @@ include = [
     "/httpcore",
     "/CHANGELOG.md",
     "/README.md",
+    "/tests"
 ]
 
 [tool.hatch.metadata.hooks.fancy-pypi-readme]
