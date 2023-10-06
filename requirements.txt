@@ -1,7 +1,4 @@
--e .[http2,socks]
-
-# Optionals
-trio==0.21.0
+-e .[asyncio,trio,http2,socks]
 
 # Docs
 mkdocs==1.5.3
@@ -12,11 +9,10 @@ mkdocstrings[python-legacy]==0.22.0
 jinja2==3.1.2
 
 # Packaging
-build==0.10.0
+build==1.0.3
 twine
 
 # Tests & Linting
-anyio==3.7.1
 black==23.7.0
 coverage[toml]==7.3.0
 ruff==0.0.291
