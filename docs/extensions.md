@@ -147,6 +147,8 @@ The following event types are currently exposed...
 * `"http2.receive_response_body"`
 * `"http2.response_closed"`
 
+The exact set of trace events may be subject to change across different versions of `httpcore`. If you need to rely on a particular set of events it is recommended that you pin installation of the package to a fixed version.
+
 ### `"sni_hostname"`
 
 The server's hostname, which is used to confirm the hostname supplied by the SSL certificate.

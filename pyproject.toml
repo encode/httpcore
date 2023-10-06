@@ -29,10 +29,8 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP",
 ]
 dependencies = [
-    "anyio>=3.0,<5.0",
     "certifi",
     "h11>=0.13,<0.15",
-    "sniffio==1.*",
 ]
 
 [project.optional-dependencies]
@@ -41,6 +39,12 @@ http2 = [
 ]
 socks = [
     "socksio==1.*",
+]
+trio = [
+    "trio>=0.22.0,<0.23.0",
+]
+asyncio = [
+    "anyio>=4.0,<5.0",
 ]
 
 [project.urls]
