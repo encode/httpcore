@@ -4,9 +4,10 @@ import typing
 import hpack
 import hyperframe.frame
 import pytest
-from tests import concurrency
 
 import httpcore
+from tests.concurrency import sync_open_nursery as open_nursery
+from tests.current_time import sync_current_time as current_time, sync_sleep as sleep
 
 
 
@@ -515,7 +516,7 @@ def test_connection_pool_concurrency():
         max_connections=1, network_backend=network_backend
     ) as pool:
         info_list: typing.List[str] = []
-        with concurrency.open_nursery() as nursery:
+        with open_nursery() as nursery:
             for domain in ["a.com", "b.com", "c.com", "d.com", "e.com"]:
                 nursery.start_soon(fetch, pool, domain, info_list)
 
@@ -561,7 +562,7 @@ def test_connection_pool_concurrency_same_domain_closing():
         max_connections=1, network_backend=network_backend, http2=True
     ) as pool:
         info_list: typing.List[str] = []
-        with concurrency.open_nursery() as nursery:
+        with open_nursery() as nursery:
             for domain in ["a.com", "a.com", "a.com", "a.com", "a.com"]:
                 nursery.start_soon(fetch, pool, domain, info_list)
 
@@ -603,7 +604,7 @@ def test_connection_pool_concurrency_same_domain_keepalive():
         max_connections=1, network_backend=network_backend, http2=True
     ) as pool:
         info_list: typing.List[str] = []
-        with concurrency.open_nursery() as nursery:
+        with open_nursery() as nursery:
             for domain in ["a.com", "a.com", "a.com", "a.com", "a.com"]:
                 nursery.start_soon(fetch, pool, domain, info_list)
 
@@ -662,7 +663,14 @@ def test_connection_pool_closed_while_request_in_flight():
 def test_connection_pool_timeout():
     """
     Ensure that exceeding max_connections can cause a request to timeout.
+
+    100 concurrent requests will be sent with a limit of 1 connection.
+    The request time is fixed to 6ms, and there is a pool timeout of 50ms.
+
+    Less than 9 requests will succeed and the rest won't have a chance to get
+    a connection before 50ms, PoolTimeout will be raised instead.
     """
+
     network_backend = httpcore.MockBackend(
         [
             b"HTTP/1.1 200 OK\r\n",
@@ -671,18 +679,41 @@ def test_connection_pool_timeout():
             b"\r\n",
             b"Hello, world!",
         ]
+        * 100
     )
+
+    successes: int = 0
+    max_wait: float = 0
+
+    def fetch(pool):
+        nonlocal successes, max_wait
+
+        start_time = current_time()
+        extensions = {"timeout": {"pool": 0.05}}
+
+        try:
+            with pool.stream(
+                "GET", "https://example.com/", extensions=extensions
+            ) as response:
+                sleep(0.006)  # we block the connection for that time
+                response.read()
+                successes += 1
+        except httpcore.PoolTimeout:
+            pass
+        finally:
+            max_wait = max(current_time() - start_time, max_wait)
 
     with httpcore.ConnectionPool(
         network_backend=network_backend, max_connections=1
     ) as pool:
-        # Send a request to a pool that is configured to only support a single
-        # connection, and then ensure that a second concurrent request
-        # fails with a timeout.
-        with pool.stream("GET", "https://example.com/"):
-            with pytest.raises(httpcore.PoolTimeout):
-                extensions = {"timeout": {"pool": 0.0001}}
-                pool.request("GET", "https://example.com/", extensions=extensions)
+        with open_nursery() as nursery:
+            for _ in range(100):
+                nursery.start_soon(fetch, pool)
+
+    assert 1 <= successes < 9, "less than 9 requests should succeed"
+
+    # Theoretically, the whole operation should take 50ms + 6ms; we should stay within that range
+    assert max_wait <= 0.2
 
 
 
