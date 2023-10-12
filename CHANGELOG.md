@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased
+
+- Fix pool timeout to account for the total time spent retrying. (#823)
+
 ## 1.0.0 (November 6th, 2023)
 
 From version 1.0 our async support is now optional, as the package has minimal dependencies by default.
