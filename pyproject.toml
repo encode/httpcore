@@ -92,10 +92,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 addopts = ["-rxXs", "--strict-config", "--strict-markers"]
 markers = ["copied_from(source, changes=None): mark test as copied from somewhere else, along with a description of changes made to accodomate e.g. our test setup"]
-filterwarnings = [
-    "error",
-    "ignore::trio.TrioDeprecationWarning",  # due to trio.MultiError deprecation
-]
+filterwarnings = ["error"]
 
 [tool.coverage.run]
 omit = [

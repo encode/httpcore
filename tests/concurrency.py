@@ -12,9 +12,6 @@ import threading
 from types import TracebackType
 from typing import Any, Callable, List, Optional, Type
 
-from anyio import create_task_group
-from anyio.abc import TaskGroup
-
 
 class Nursery:
     def __init__(self) -> None:
@@ -39,9 +36,5 @@ class Nursery:
         self._threads.append(thread)
 
 
-def sync_open_nursery() -> Nursery:
+def open_nursery() -> Nursery:
     return Nursery()
-
-
-def async_open_nursery() -> TaskGroup:
-    return create_task_group()

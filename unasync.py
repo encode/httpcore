@@ -6,14 +6,7 @@ from pprint import pprint
 
 SUBS = [
     ('from .._backends.auto import AutoBackend', 'from .._backends.sync import SyncBackend'),
-    (
-        'from tests.current_time import async_current_time as current_time, async_sleep as sleep',
-        'from tests.current_time import sync_current_time as current_time, sync_sleep as sleep',
-    ),
-    (
-        'from tests.concurrency import async_open_nursery as open_nursery',
-        'from tests.concurrency import sync_open_nursery as open_nursery',
-    ),
+    ('import trio as concurrency', 'from tests import concurrency'),
     ('AsyncIterator', 'Iterator'),
     ('Async([A-Z][A-Za-z0-9_]*)', r'\2'),
     ('async def', 'def'),
