@@ -271,7 +271,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
 
             timeout = deadline - time.monotonic()
             if timeout < 0:
-                raise PoolTimeout
+                raise PoolTimeout  # pragma: nocover
 
         # When we return the response, we wrap the stream in a special class
         # that handles notifying the connection pool once the response
