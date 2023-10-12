@@ -2,8 +2,6 @@ import threading
 from types import TracebackType
 from typing import Optional, Type
 
-import sniffio
-
 from ._exceptions import ExceptionMapping, PoolTimeout, map_exceptions
 
 # Our async synchronization primatives use either 'anyio' or 'trio' depending
@@ -20,6 +18,22 @@ except ImportError:  # pragma: nocover
     anyio = None  # type: ignore
 
 
+def current_async_library() -> str:
+    # Determine if we're running under trio or asyncio.
+    # See https://sniffio.readthedocs.io/en/latest/
+    try:
+        import sniffio
+    except ImportError:  # pragma: nocover
+        return "asyncio"
+
+    environment = sniffio.current_async_library()
+
+    if environment not in ("asyncio", "trio"):  # pragma: nocover
+        raise RuntimeError("Running under an unsupported async environment.")
+
+    return environment
+
+
 class AsyncLock:
     def __init__(self) -> None:
         self._backend = ""
@@ -29,17 +43,17 @@ class AsyncLock:
         Detect if we're running under 'asyncio' or 'trio' and create
         a lock with the correct implementation.
         """
-        self._backend = sniffio.current_async_library()
+        self._backend = current_async_library()
         if self._backend == "trio":
             if trio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under trio, requires the 'trio' package to be installed."
+                    "Running with trio requires installation of 'httpcore[trio]'."
                 )
             self._trio_lock = trio.Lock()
         else:
             if anyio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under asyncio requires the 'anyio' package to be installed."
+                    "Running with asyncio requires installation of 'httpcore[asyncio]'."
                 )
             self._anyio_lock = anyio.Lock()
 
@@ -75,17 +89,17 @@ class AsyncEvent:
         Detect if we're running under 'asyncio' or 'trio' and create
         a lock with the correct implementation.
         """
-        self._backend = sniffio.current_async_library()
+        self._backend = current_async_library()
         if self._backend == "trio":
             if trio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under trio requires the 'trio' package to be installed."
+                    "Running with trio requires installation of 'httpcore[trio]'."
                 )
             self._trio_event = trio.Event()
         else:
             if anyio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under asyncio requires the 'anyio' package to be installed."
+                    "Running with asyncio requires installation of 'httpcore[asyncio]'."
                 )
             self._anyio_event = anyio.Event()
 
@@ -105,7 +119,7 @@ class AsyncEvent:
         if self._backend == "trio":
             if trio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under trio requires the 'trio' package to be installed."
+                    "Running with trio requires installation of 'httpcore[trio]'."
                 )
 
             trio_exc_map: ExceptionMapping = {trio.TooSlowError: PoolTimeout}
@@ -116,7 +130,7 @@ class AsyncEvent:
         else:
             if anyio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under asyncio requires the 'anyio' package to be installed."
+                    "Running with asyncio requires installation of 'httpcore[asyncio]'."
                 )
 
             anyio_exc_map: ExceptionMapping = {TimeoutError: PoolTimeout}
@@ -135,11 +149,11 @@ class AsyncSemaphore:
         Detect if we're running under 'asyncio' or 'trio' and create
         a semaphore with the correct implementation.
         """
-        self._backend = sniffio.current_async_library()
+        self._backend = current_async_library()
         if self._backend == "trio":
             if trio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under trio requires the 'trio' package to be installed."
+                    "Running with trio requires installation of 'httpcore[trio]'."
                 )
 
             self._trio_semaphore = trio.Semaphore(
@@ -148,7 +162,7 @@ class AsyncSemaphore:
         else:
             if anyio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under asyncio requires the 'anyio' package to be installed."
+                    "Running with asyncio requires installation of 'httpcore[asyncio]'."
                 )
 
             self._anyio_semaphore = anyio.Semaphore(
@@ -184,19 +198,19 @@ class AsyncShieldCancellation:
         Detect if we're running under 'asyncio' or 'trio' and create
         a shielded scope with the correct implementation.
         """
-        self._backend = sniffio.current_async_library()
+        self._backend = current_async_library()
 
         if self._backend == "trio":
             if trio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under trio requires the 'trio' package to be installed."
+                    "Running with trio requires installation of 'httpcore[trio]'."
                 )
 
             self._trio_shield = trio.CancelScope(shield=True)
         else:
             if anyio is None:  # pragma: nocover
                 raise RuntimeError(
-                    "Running under asyncio requires the 'anyio' package to be installed."
+                    "Running with asyncio requires installation of 'httpcore[asyncio]'."
                 )
 
             self._anyio_shield = anyio.CancelScope(shield=True)
