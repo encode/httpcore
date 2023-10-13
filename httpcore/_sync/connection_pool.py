@@ -326,6 +326,8 @@ class ConnectionPool(RequestInterface):
             self._requests = []
 
     def __enter__(self) -> "ConnectionPool":
+        with self._pool_lock:
+            pass
         return self
 
     def __exit__(
