@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+- Fix pool timeout to account for the total time spent retrying. (#823)
+
+## 1.0.0 (October 6th, 2023)
+
+From version 1.0 our async support is now optional, as the package has minimal dependencies by default.
+
+For async support use either `pip install 'httpcore[asyncio]'` or `pip install 'httpcore[trio]'`.
+
+The project versioning policy is now explicitly governed by SEMVER. See https://semver.org/.
+
+- Async support becomes fully optional. (#809)
 - Add support for Python 3.12. (#807)
 
 ## 0.18.0 (September 8th, 2023)
