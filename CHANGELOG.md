@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fix pool timeout to account for the total time spent retrying. (#823)
 - Raise a neater RuntimeError when the correct async deps are not installed. (#826)
 
-## 1.0.0 (November 6th, 2023)
+## 1.0.0 (October 6th, 2023)
 
 From version 1.0 our async support is now optional, as the package has minimal dependencies by default.
 
