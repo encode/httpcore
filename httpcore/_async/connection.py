@@ -81,7 +81,6 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                         from .http3 import AsyncHTTP3Connection
 
                         stream = await self._connect_http3(request)
-                        self._ssl_context
                         self._connection = AsyncHTTP3Connection(
                             origin=self._origin,
                             stream=stream,

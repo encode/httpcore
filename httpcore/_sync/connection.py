@@ -81,7 +81,6 @@ class HTTPConnection(ConnectionInterface):
                         from .http3 import HTTP3Connection
 
                         stream = self._connect_http3(request)
-                        self._ssl_context
                         self._connection = HTTP3Connection(
                             origin=self._origin,
                             stream=stream,
