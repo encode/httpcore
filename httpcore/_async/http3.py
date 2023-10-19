@@ -1,11 +1,11 @@
 import enum
 import logging
-import ssl
 import time
 import types
 import typing
 from time import monotonic
 
+import certifi
 from aioquic.h3 import events as h3_events, exceptions as h3_exceptions
 from aioquic.h3.connection import H3Connection
 from aioquic.quic import events as quic_events
@@ -48,16 +48,17 @@ class AsyncHTTP3Connection(AsyncConnectionInterface):
         stream: AsyncNetworkStream,
         keepalive_expiry: typing.Optional[float] = None,
     ):
+        quic_configuration = QuicConfiguration(
+            alpn_protocols=["h3", "h3-32", "h3-31", "h3-30", "h3-29"],
+            is_client=True,
+        )
+        quic_configuration.server_name = origin.host.decode("ascii")
+        quic_configuration.cafile = certifi.where()
+
         self._origin = origin
         self._network_stream = stream
         self._keepalive_expiry: typing.Optional[float] = keepalive_expiry
-        CONFIG = QuicConfiguration(
-            alpn_protocols=["h3", "h3-32", "h3-31", "h3-30", "h3-29"],
-            is_client=True,
-            verify_mode=ssl.CERT_NONE,
-        )
-        CONFIG.server_name = origin.host.decode()
-        self._quic_conn = QuicConnection(configuration=CONFIG)
+        self._quic_conn = QuicConnection(configuration=quic_configuration)
         self._h3_state = H3Connection(quic=self._quic_conn)
         self._state = HTTPConnectionState.IDLE
         self._expire_at: typing.Optional[float] = None

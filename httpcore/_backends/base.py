@@ -100,9 +100,7 @@ class AsyncNetworkBackend:
         self,
         host: str,
         port: int,
-        timeout: typing.Optional[float] = None,
-        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
-    ) -> NetworkStream:
+    ) -> AsyncNetworkStream:
         raise NotImplementedError()  # pragma: nocover
 
     async def connect_unix_socket(
