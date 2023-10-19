@@ -37,6 +37,11 @@ dependencies = [
 http2 = [
     "h2>=3,<5",
 ]
+
+http3 = [
+    "aioquic>=0.9.21",
+]
+
 socks = [
     "socksio==1.*",
 ]
@@ -73,6 +78,7 @@ path = "README.md"
 path = "CHANGELOG.md"
 
 [tool.mypy]
+exclude = ['httpcore/_async/http3', 'httpcore/_sync/http3']
 strict = true
 show_error_codes = true
 
@@ -97,7 +103,10 @@ filterwarnings = ["error"]
 [tool.coverage.run]
 omit = [
     "venv/*", 
-    "httpcore/_sync/*"
+    "httpcore/_sync/*",
+    "httpcore/_async/http3.py",
+    "httpcore/_backends/sync.py",
+
 ]
 include = ["httpcore/*", "tests/*"]
 
