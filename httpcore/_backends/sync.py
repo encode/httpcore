@@ -1,4 +1,3 @@
-import ipaddress
 import socket
 import ssl
 import sys
@@ -275,16 +274,15 @@ class SyncBackend(NetworkBackend):
         host: str,
         port: int,
     ) -> NetworkStream:
-        addr: typing.Any
+        infos = socket.getaddrinfo(host, port, type=socket.SOCK_DGRAM)
+        addr: typing.Any = infos[0][4]
 
-        try:
-            if ipaddress.ip_address(host):
-                addr = (host, port)
-        except ValueError:
-            infos = socket.getaddrinfo(host, port, type=socket.SOCK_DGRAM)
-            addr = infos[0][4]
+        if len(addr) == 2:
+            addr = ("::ffff:" + addr[0], addr[1], 0, 0)
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        sock.bind(("::", 0, 0, 0))
 
         return SyncUDPStream(sock=sock, addr=addr)
 
