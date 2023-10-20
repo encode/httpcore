@@ -293,10 +293,7 @@ class HTTP3Connection(ConnectionInterface):
 
             # This conditional is a bit icky. We don't want to block reading if we've
             # actually got an event to return for a given stream. We need to do that
-            # check *within* the atomic read lock. Though it also need to be optional,
-            # because when we call it from `_wait_for_outgoing_flow` we *do* want to
-            # block until we've available flow control, event when we have events
-            # pending for the stream ID we're attempting to send on.
+            # check *within* the atomic read lock.
             if stream_id is None or not self._events.get(stream_id):
                 events = self._read_incoming_data(request)
                 for event in events:
