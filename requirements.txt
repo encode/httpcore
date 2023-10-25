@@ -13,9 +13,8 @@ build==1.0.3
 twine
 
 # Tests & Linting
-black==23.7.0
 coverage[toml]==7.3.0
-ruff==0.0.291
+ruff==0.1.2
 mypy==1.5.1
 trio-typing==0.8.0
 types-certifi==2021.10.8.3

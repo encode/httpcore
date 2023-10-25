@@ -16,7 +16,6 @@ from urllib.parse import urlparse
 
 # Functions for typechecking...
 
-
 HeadersAsSequence = Sequence[Tuple[Union[bytes, str], Union[bytes, str]]]
 HeadersAsMapping = Mapping[Union[bytes, str], Union[bytes, str]]
 HeaderTypes = Union[HeadersAsSequence, HeadersAsMapping, None]

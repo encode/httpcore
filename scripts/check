@@ -5,10 +5,11 @@ if [ -d 'venv' ] ; then
     export PREFIX="venv/bin/"
 fi
 export SOURCE_FILES="httpcore tests"
+SOURCE_FILES_WITHOUT_SYNC=$(find httpcore tests -maxdepth 1 -not -path "*/_sync*" -type d)
 
 set -x
 
 ${PREFIX}ruff check --show-source $SOURCE_FILES
-${PREFIX}black --exclude '/(_sync|sync_tests)/' --check --diff $SOURCE_FILES
+${PREFIX}ruff format $SOURCE_FILES_WITHOUT_SYNC --check
 ${PREFIX}mypy $SOURCE_FILES
 scripts/unasync --check

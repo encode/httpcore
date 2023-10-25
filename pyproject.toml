@@ -106,7 +106,7 @@ exclude = [
     "httpcore/_sync",
     "tests/_sync",
 ]
-line-length = 120
+line-length = 88
 select = [
     "E",
     "F",
@@ -114,5 +114,6 @@ select = [
     "I"
 ]
 
+ignore = ["E501"]
 [tool.ruff.isort]
 combine-as-imports = true
