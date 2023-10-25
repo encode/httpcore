@@ -10,6 +10,6 @@ SOURCE_FILES_WITHOUT_SYNC=$(find httpcore tests -maxdepth 1 -not -path "*/_sync*
 set -x
 
 ${PREFIX}ruff check --show-source $SOURCE_FILES
-${PREFIX}ruff format $SOURCE_FILES_WITHOUT_SYNC --check
+${PREFIX}ruff format $SOURCE_FILES_WITHOUT_SYNC --diff
 ${PREFIX}mypy $SOURCE_FILES
 scripts/unasync --check
