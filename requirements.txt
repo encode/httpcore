@@ -17,7 +17,7 @@ black==23.10.1
 coverage[toml]==7.3.0
 ruff==0.0.291
 mypy==1.5.1
-trio-typing==0.8.0
+trio-typing==0.9.0
 types-certifi==2021.10.8.3
 pytest==7.4.3
 pytest-httpbin==2.0.0
