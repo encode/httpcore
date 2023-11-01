@@ -13,7 +13,7 @@ build==1.0.3
 twine
 
 # Tests & Linting
-black==23.7.0
+black==23.10.1
 coverage[toml]==7.3.0
 ruff==0.0.291
 mypy==1.5.1
