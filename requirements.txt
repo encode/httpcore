@@ -19,7 +19,7 @@ ruff==0.0.291
 mypy==1.5.1
 trio-typing==0.8.0
 types-certifi==2021.10.8.3
-pytest==7.4.0
+pytest==7.4.3
 pytest-httpbin==2.0.0
 pytest-trio==0.7.0
 werkzeug<2.1  # See: https://github.com/postmanlabs/httpbin/issues/673
