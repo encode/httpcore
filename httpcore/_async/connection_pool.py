@@ -331,6 +331,10 @@ class AsyncConnectionPool(AsyncRequestInterface):
             self._requests = []
 
     async def __aenter__(self) -> "AsyncConnectionPool":
+        # Acquiring the pool lock here ensures that we have the
+        # correct dependencies installed as early as possible.
+        async with self._pool_lock:
+            pass
         return self
 
     async def __aexit__(
