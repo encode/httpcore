@@ -3,8 +3,8 @@
 # Docs
 mkdocs==1.5.3
 mkdocs-autorefs==0.5.0
-mkdocs-material==9.4.2
-mkdocs-material-extensions==1.2
+mkdocs-material==9.4.7
+mkdocs-material-extensions==1.3
 mkdocstrings[python-legacy]==0.22.0
 jinja2==3.1.2
 
@@ -13,13 +13,13 @@ build==1.0.3
 twine
 
 # Tests & Linting
-black==23.7.0
+black==23.10.1
 coverage[toml]==7.3.0
 ruff==0.0.291
 mypy==1.5.1
-trio-typing==0.8.0
+trio-typing==0.9.0
 types-certifi==2021.10.8.3
-pytest==7.4.0
+pytest==7.4.3
 pytest-httpbin==2.0.0
 pytest-trio==0.7.0
 werkzeug<2.1  # See: https://github.com/postmanlabs/httpbin/issues/673
