@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Unreleased
 
 - Fix pool timeout to account for the total time spent retrying. (#823)
+- Fix synchronous TLS-in-TLS streams. (#840)
 
 ## 1.0.0 (October 6th, 2023)
 
