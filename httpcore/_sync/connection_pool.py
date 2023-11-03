@@ -326,6 +326,10 @@ class ConnectionPool(RequestInterface):
             self._requests = []
 
     def __enter__(self) -> "ConnectionPool":
+        # Acquiring the pool lock here ensures that we have the
+        # correct dependencies installed as early as possible.
+        with self._pool_lock:
+            pass
         return self
 
     def __exit__(
