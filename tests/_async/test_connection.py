@@ -37,9 +37,9 @@ async def test_http_connection():
     ) as conn:
         assert not conn.is_idle()
         assert not conn.is_closed()
-        assert not conn.is_available()
+        assert conn.is_available()
         assert not conn.has_expired()
-        assert repr(conn) == "<AsyncHTTPConnection [CONNECTING]>"
+        assert repr(conn) == "<AsyncHTTPConnection [NEW CONNECTION]>"
 
         async with conn.stream("GET", "https://example.com/") as response:
             assert (
