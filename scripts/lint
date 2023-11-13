@@ -7,10 +7,9 @@ fi
 export SOURCE_FILES="httpcore tests"
 
 set -x
-SOURCE_FILES_WITHOUT_SYNC=$(find httpcore tests -maxdepth 1 -not -path "*/_sync*" -type d)
 
 ${PREFIX}ruff --fix $SOURCE_FILES
-${PREFIX}ruff format $SOURCE_FILES_WITHOUT_SYNC
+${PREFIX}ruff format $SOURCE_FILES
 
 # Run unasync last because its `--check` mode is not aware of code formatters.
 # (This means sync code isn't prettified, and that's mostly okay.)
