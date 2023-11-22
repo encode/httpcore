@@ -4,7 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## 1.0.2 (November 10th, 2023) 
+## 1.0.3 (November 22th, 2023)
+
+- Fix copy paste bug with socks proxy and tracing. (#849)
+
+## 1.0.2 (November 10th, 2023)
 
 - Fix `float("inf")` timeouts in `Event.wait` function. (#846)
 
