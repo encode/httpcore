@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## 1.0.3 (November 22th, 2023)
+## Unreleased
 
 - Fix copy paste bug with socks proxy and tracing. (#849)
 
