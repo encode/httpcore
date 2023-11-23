@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
-- Fix copy paste bug with socks proxy and tracing. (#849)
+- Fix trace extension when used with socks proxy. (#849)
 
 ## 1.0.2 (November 10th, 2023)
 
