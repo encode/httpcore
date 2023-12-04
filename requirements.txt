@@ -3,9 +3,9 @@
 # Docs
 mkdocs==1.5.3
 mkdocs-autorefs==0.5.0
-mkdocs-material==9.4.7
+mkdocs-material==9.4.14
 mkdocs-material-extensions==1.3
-mkdocstrings[python-legacy]==0.22.0
+mkdocstrings[python-legacy]==0.24.0
 jinja2==3.1.2
 
 # Packaging
@@ -13,9 +13,9 @@ build==1.0.3
 twine
 
 # Tests & Linting
-coverage[toml]==7.3.0
+coverage[toml]==7.3.2
 ruff==0.1.3
-mypy==1.5.1
+mypy==1.7.1
 trio-typing==0.9.0
 types-certifi==2021.10.8.3
 pytest==7.4.3
