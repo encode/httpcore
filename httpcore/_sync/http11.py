@@ -230,7 +230,9 @@ class HTTP11Connection(ConnectionInterface):
             else:
                 # mypy fails to narrow the type in the above if statement above
                 if TYPE_CHECKING:  # pragma: no cover
-                    event = cast(Union[h11.Event, Type[h11.PAUSED]], event)  # pragma: no cover
+                    event = cast(  # pragma: no cover
+                        Union[h11.Event, Type[h11.PAUSED]], event
+                    )
                 return event
 
     def _response_closed(self) -> None:
