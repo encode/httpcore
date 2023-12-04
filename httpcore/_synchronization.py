@@ -226,6 +226,8 @@ class Event:
         self._event.set()
 
     def wait(self, timeout: Optional[float] = None) -> None:
+        if timeout == float("inf"):  # pragma: no cover
+            timeout = None
         if not self._event.wait(timeout=timeout):
             raise PoolTimeout()  # pragma: nocover
 

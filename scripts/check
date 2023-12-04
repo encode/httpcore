@@ -9,6 +9,6 @@ export SOURCE_FILES="httpcore tests"
 set -x
 
 ${PREFIX}ruff check --show-source $SOURCE_FILES
-${PREFIX}black --exclude '/(_sync|sync_tests)/' --check --diff $SOURCE_FILES
+${PREFIX}ruff format $SOURCE_FILES --diff
 ${PREFIX}mypy $SOURCE_FILES
 scripts/unasync --check
