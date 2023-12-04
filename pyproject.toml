@@ -7,7 +7,7 @@ name = "httpcore"
 dynamic = ["readme", "version"]
 description = "A minimal low-level HTTP client."
 license = "BSD-3-Clause"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 authors = [
     { name = "Tom Christie", email = "tom@tomchristie.com" },
 ]
@@ -21,18 +21,16 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Internet :: WWW/HTTP",
 ]
 dependencies = [
-    "anyio>=3.0,<5.0",
     "certifi",
     "h11>=0.13,<0.15",
-    "sniffio==1.*",
 ]
 
 [project.optional-dependencies]
@@ -41,6 +39,12 @@ http2 = [
 ]
 socks = [
     "socksio==1.*",
+]
+trio = [
+    "trio>=0.22.0,<0.23.0",
+]
+asyncio = [
+    "anyio>=4.0,<5.0",
 ]
 
 [project.urls]
@@ -56,6 +60,7 @@ include = [
     "/httpcore",
     "/CHANGELOG.md",
     "/README.md",
+    "/tests"
 ]
 
 [tool.hatch.metadata.hooks.fancy-pypi-readme]
@@ -101,13 +106,16 @@ exclude = [
     "httpcore/_sync",
     "tests/_sync",
 ]
-line-length = 120
+line-length = 88
 select = [
     "E",
     "F",
     "W",
     "I"
 ]
+
+[tool.ruff.pycodestyle]
+max-line-length = 120
 
 [tool.ruff.isort]
 combine-as-imports = true

@@ -9,7 +9,7 @@ export SOURCE_FILES="httpcore tests"
 set -x
 
 ${PREFIX}ruff --fix $SOURCE_FILES
-${PREFIX}black --target-version=py37 --exclude '/(_sync|sync_tests)/' $SOURCE_FILES
+${PREFIX}ruff format $SOURCE_FILES
 
 # Run unasync last because its `--check` mode is not aware of code formatters.
 # (This means sync code isn't prettified, and that's mostly okay.)

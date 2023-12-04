@@ -216,6 +216,7 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
 
     async def handle_async_request(self, request: Request) -> Response:
         timeouts = request.extensions.get("timeout", {})
+        sni_hostname = request.extensions.get("sni_hostname", None)
         timeout = timeouts.get("connect", None)
 
         async with self._connect_lock:
@@ -227,7 +228,7 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
                         "port": self._proxy_origin.port,
                         "timeout": timeout,
                     }
-                    with Trace("connect_tcp", logger, request, kwargs) as trace:
+                    async with Trace("connect_tcp", logger, request, kwargs) as trace:
                         stream = await self._network_backend.connect_tcp(**kwargs)
                         trace.return_value = stream
 
@@ -238,7 +239,7 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
                         "port": self._remote_origin.port,
                         "auth": self._proxy_auth,
                     }
-                    with Trace(
+                    async with Trace(
                         "setup_socks5_connection", logger, request, kwargs
                     ) as trace:
                         await _init_socks5_connection(**kwargs)
@@ -258,7 +259,8 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
 
                         kwargs = {
                             "ssl_context": ssl_context,
-                            "server_hostname": self._remote_origin.host.decode("ascii"),
+                            "server_hostname": sni_hostname
+                            or self._remote_origin.host.decode("ascii"),
                             "timeout": timeout,
                         }
                         async with Trace("start_tls", logger, request, kwargs) as trace:

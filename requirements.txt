@@ -1,29 +1,24 @@
--e .[http2,socks]
-
-# Optionals
-trio==0.21.0
+-e .[asyncio,trio,http2,socks]
 
 # Docs
-mkdocs==1.4.2
-mkdocs-autorefs==0.3.1
-mkdocs-material==9.1.15
-mkdocs-material-extensions==1.1.1
-mkdocstrings[python-legacy]==0.22.0
+mkdocs==1.5.3
+mkdocs-autorefs==0.5.0
+mkdocs-material==9.4.14
+mkdocs-material-extensions==1.3
+mkdocstrings[python-legacy]==0.24.0
 jinja2==3.1.2
 
 # Packaging
-build==0.10.0
+build==1.0.3
 twine
 
 # Tests & Linting
-anyio==3.6.2
-black==23.3.0
-coverage[toml]==7.2.7
-ruff==0.0.277
-mypy==1.2.0
-trio-typing==0.8.0
+coverage[toml]==7.3.2
+ruff==0.1.3
+mypy==1.7.1
+trio-typing==0.9.0
 types-certifi==2021.10.8.3
-pytest==7.4.0
+pytest==7.4.3
 pytest-httpbin==2.0.0
 pytest-trio==0.7.0
 werkzeug<2.1  # See: https://github.com/postmanlabs/httpbin/issues/673

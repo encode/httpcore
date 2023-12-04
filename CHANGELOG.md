@@ -6,15 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
-- Change the type of `Extensions` from `Mapping[Str, Any]` to `MutableMapping[Str, Any]`. (#762)
-- Handle HTTP/1.1 half-closed connections gracefully. (#641)
+- Fix trace extension when used with socks proxy. (#849)
 
-## 0.17.3 (5th July 2023)
+## 1.0.2 (November 10th, 2023)
+
+- Fix `float("inf")` timeouts in `Event.wait` function. (#846)
+
+## 1.0.1 (November 3rd, 2023)
+
+- Fix pool timeout to account for the total time spent retrying. (#823)
+- Raise a neater RuntimeError when the correct async deps are not installed. (#826)
+- Add support for synchronous TLS-in-TLS streams. (#840)
+
+## 1.0.0 (October 6th, 2023)
+
+From version 1.0 our async support is now optional, as the package has minimal dependencies by default.
+
+For async support use either `pip install 'httpcore[asyncio]'` or `pip install 'httpcore[trio]'`.
+
+The project versioning policy is now explicitly governed by SEMVER. See https://semver.org/.
+
+- Async support becomes fully optional. (#809)
+- Add support for Python 3.12. (#807)
+
+## 0.18.0 (September 8th, 2023)
+
+- Add support for HTTPS proxies. (#745, #786)
+- Drop Python 3.7 support. (#727)
+- Handle `sni_hostname` extension with SOCKS proxy. (#774)
+- Handle HTTP/1.1 half-closed connections gracefully. (#641)
+- Change the type of `Extensions` from `Mapping[Str, Any]` to `MutableMapping[Str, Any]`. (#762)
+
+## 0.17.3 (July 5th, 2023)
 
 - Support async cancellations, ensuring that the connection pool is left in a clean state when cancellations occur. (#726)
 - The networking backend interface has [been added to the public API](https://www.encode.io/httpcore/network-backends). Some classes which were previously private implementation detail are now part of the top-level public API. (#699)
 - Graceful handling of HTTP/2 GoAway frames, with requests being transparently retried on a new connection. (#730)
 - Add exceptions when a synchronous `trace callback` is passed to an asynchronous request or an asynchronous `trace callback` is passed to a synchronous request. (#717)
+- Drop Python 3.7 support. (#727)
 
 ## 0.17.2 (May 23th, 2023)
 
