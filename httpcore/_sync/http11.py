@@ -5,7 +5,7 @@ from types import TracebackType
 from typing import (
     TYPE_CHECKING,
     Iterable,
-    Iterator,    
+    Iterator,
     List,
     Optional,
     Tuple,
