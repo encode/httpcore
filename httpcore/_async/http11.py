@@ -229,8 +229,8 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
                 self._h11_state.receive_data(data)
             else:
                 # mypy fails to narrow the type in the above if statement above
-                if TYPE_CHECKING:
-                    event = cast(Union[h11.Event, Type[h11.PAUSED]], event)
+                if TYPE_CHECKING:  # pragma: no cover
+                    event = cast(Union[h11.Event, Type[h11.PAUSED]], event)  # pragma: no cover
                 return event
 
     async def _response_closed(self) -> None:

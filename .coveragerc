@@ -1,4 +1,0 @@
-[report]
-exclude_lines =
-    # TYPE_CHECKING blocks are never executed during pytest run
-    if TYPE_CHECKING:
