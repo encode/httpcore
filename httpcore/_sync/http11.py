@@ -3,7 +3,6 @@ import logging
 import time
 from types import TracebackType
 from typing import (
-    TYPE_CHECKING,
     Iterable,
     Iterator,
     List,
@@ -11,7 +10,6 @@ from typing import (
     Tuple,
     Type,
     Union,
-    cast,
 )
 
 import h11
