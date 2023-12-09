@@ -252,7 +252,7 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
                         }
                         async with Trace(
                             "connect_tcp", logger, request, kwargs
-                            ) as trace:
+                        ) as trace:
                             stream = await self._network_backend.connect_tcp(**kwargs)
                             trace.return_value = stream
                     else:
