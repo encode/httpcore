@@ -193,6 +193,7 @@ async def test_socks5_request_incorrect_auth():
         assert not proxy.connections
 
 
+
 @pytest.mark.anyio
 async def test_uds_connections():
     # We're not actually testing Unix Domain Sockets here, because we're just
