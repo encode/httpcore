@@ -191,3 +191,31 @@ def test_socks5_request_incorrect_auth():
         assert str(exc_info.value) == "Invalid username/password"
 
         assert not proxy.connections
+
+
+@pytest.mark.anyio
+async def test_uds_connections():
+    # We're not actually testing Unix Domain Sockets here, because we're just
+    # using a mock backend, but at least we're covering the UDS codepath
+    # in `connection.py` which we may as well do.
+    network_backend = httpcore.AsyncMockBackend(
+        [
+            # The initial socks CONNECT
+            #   v5 NOAUTH
+            b"\x05\x00",
+            #   v5 SUC RSV IP4 127  .0  .0  .1     :80
+            b"\x05\x00\x00\x01\xff\x00\x00\x01\x00\x50",
+            # The actual response from the remote server
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
+
+    with httpcore.AsyncSOCKSProxy(
+        network_backend=network_backend, uds="/mock/example"
+    ) as proxy:
+        response = proxy.request("GET", "https://example.com/")
+        assert response.status == 200
