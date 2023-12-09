@@ -188,7 +188,7 @@ class ForwardHTTPConnection(ConnectionInterface):
         uds: Optional[str] = None,
         local_address: Optional[str] = None,
         retries: int = 0,
-        network_backend: Optional[AsyncNetworkBackend] = None,
+        network_backend: Optional[NetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
     ) -> None:
         self._connection = HTTPConnection(
@@ -261,7 +261,7 @@ class TunnelHTTPConnection(ConnectionInterface):
         uds: Optional[str] = None,
         local_address: Optional[str] = None,
         retries: int = 0,
-        network_backend: Optional[AsyncNetworkBackend] = None,
+        network_backend: Optional[NetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
     ) -> None:
         self._connection: ConnectionInterface = HTTPConnection(
