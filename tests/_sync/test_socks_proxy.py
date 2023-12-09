@@ -198,7 +198,7 @@ async def test_uds_connections():
     # We're not actually testing Unix Domain Sockets here, because we're just
     # using a mock backend, but at least we're covering the UDS codepath
     # in `connection.py` which we may as well do.
-    network_backend = httpcore.AsyncMockBackend(
+    network_backend = httpcore.MockBackend(
         [
             # The initial socks CONNECT
             #   v5 NOAUTH
@@ -214,8 +214,8 @@ async def test_uds_connections():
         ]
     )
 
-    with httpcore.AsyncSOCKSProxy(
-        network_backend=network_backend, uds="/mock/example"
+    with httpcore.SOCKSProxy(
+        proxy_url="", network_backend=network_backend, uds="/mock/example"
     ) as proxy:
         response = proxy.request("GET", "https://example.com/")
         assert response.status == 200
