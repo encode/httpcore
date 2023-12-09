@@ -5,7 +5,7 @@ import typing
 from socksio import socks5
 
 from .._backends.auto import AutoBackend
-from .._backends.base import AsyncNetworkBackend, AsyncNetworkStream
+from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
 from .._exceptions import ConnectionNotAvailable, ProxyError
 from .._models import URL, Origin, Request, Response, enforce_bytes, enforce_url
 from .._ssl import default_ssl_context
@@ -118,11 +118,11 @@ class AsyncSOCKSProxy(AsyncConnectionPool):
         keepalive_expiry: typing.Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
-        uds: Optional[str] = None,
+        uds: typing.Optional[str] = None,
         local_address: typing.Optional[str] = None,
         retries: int = 0,
         network_backend: typing.Optional[AsyncNetworkBackend] = None,
-        socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -208,7 +208,11 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
         keepalive_expiry: typing.Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
+        uds: typing.Optional[str] = None,
+        local_address: typing.Optional[str] = None,
+        retries: int = 0,
         network_backend: typing.Optional[AsyncNetworkBackend] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> None:
         self._proxy_origin = proxy_origin
         self._remote_origin = remote_origin
@@ -217,9 +221,10 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
         self._http2 = http2
-        self._retries = retries
-        self._local_address = local_address
         self._uds = uds
+        self._local_address = local_address
+        self._retries = retries
+        self._socket_options = socket_options
 
         self._network_backend: AsyncNetworkBackend = (
             AutoBackend() if network_backend is None else network_backend
