@@ -250,7 +250,9 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
                             "local_address": self._local_address,
                             "socket_options": self._socket_options,
                         }
-                        async with Trace("connect_tcp", logger, request, kwargs) as trace:
+                        async with Trace(
+                            "connect_tcp", logger, request, kwargs
+                            ) as trace:
                             stream = await self._network_backend.connect_tcp(**kwargs)
                             trace.return_value = stream
                     else:
@@ -259,8 +261,12 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
                             "timeout": timeout,
                             "socket_options": self._socket_options,
                         }
-                        async with Trace("connect_unix_socket", logger, request, kwargs) as trace:
-                            stream = await self._network_backend.connect_unix_socket(**kwargs)
+                        async with Trace(
+                            "connect_unix_socket", logger, request, kwargs
+                        ) as trace:
+                            stream = await self._network_backend.connect_unix_socket(
+                                **kwargs
+                            )
                             trace.return_value = stream
 
                     # Connect to the remote host using socks5
