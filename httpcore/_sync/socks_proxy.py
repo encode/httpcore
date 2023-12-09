@@ -5,7 +5,7 @@ import typing
 from socksio import socks5
 
 from .._backends.sync import SyncBackend
-from .._backends.base import NetworkBackend, NetworkStream
+from .._backends.base import SOCKET_OPTION, NetworkBackend, NetworkStream
 from .._exceptions import ConnectionNotAvailable, ProxyError
 from .._models import URL, Origin, Request, Response, enforce_bytes, enforce_url
 from .._ssl import default_ssl_context
@@ -121,7 +121,7 @@ class SOCKSProxy(ConnectionPool):
         uds: typing.Optional[str] = None,
         local_address: typing.Optional[str] = None,
         retries: int = 0,
-        network_backend: typing.Optional[AsyncNetworkBackend] = None,
+        network_backend: typing.Optional[NetworkBackend] = None,
         socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> None:
         """
@@ -211,7 +211,11 @@ class Socks5Connection(ConnectionInterface):
         keepalive_expiry: typing.Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
+        uds: typing.Optional[str] = None,
+        local_address: typing.Optional[str] = None,
+        retries: int = 0,
         network_backend: typing.Optional[NetworkBackend] = None,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> None:
         self._proxy_origin = proxy_origin
         self._remote_origin = remote_origin
@@ -220,6 +224,10 @@ class Socks5Connection(ConnectionInterface):
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
         self._http2 = http2
+        self._uds = uds
+        self._local_address = local_address
+        self._retries = retries
+        self._socket_options = socket_options
 
         self._network_backend: NetworkBackend = (
             SyncBackend() if network_backend is None else network_backend
