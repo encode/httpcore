@@ -51,9 +51,9 @@ class ConnectionPool(RequestInterface):
         keepalive_expiry: Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
-        retries: int = 0,
-        local_address: Optional[str] = None,
         uds: Optional[str] = None,
+        local_address: Optional[str] = None,
+        retries: int = 0,
         network_backend: Optional[NetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
     ) -> None:
@@ -75,13 +75,13 @@ class ConnectionPool(RequestInterface):
                 by the connection pool. Defaults to True.
             http2: A boolean indicating if HTTP/2 requests should be supported by
                 the connection pool. Defaults to False.
-            retries: The maximum number of retries when trying to establish a
-                connection.
+            uds: Path to a Unix Domain Socket to use instead of TCP sockets.
             local_address: Local address to connect from. Can also be used to connect
                 using a particular address family. Using `local_address="0.0.0.0"`
                 will connect using an `AF_INET` address (IPv4), while using
                 `local_address="::"` will connect using an `AF_INET6` address (IPv6).
-            uds: Path to a Unix Domain Socket to use instead of TCP sockets.
+            retries: The maximum number of retries when trying to establish a
+                connection.
             network_backend: A backend instance to use for handling network I/O.
             socket_options: Socket options that have to be included
              in the TCP socket when the connection was established.
@@ -103,9 +103,9 @@ class ConnectionPool(RequestInterface):
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
         self._http2 = http2
-        self._retries = retries
-        self._local_address = local_address
         self._uds = uds
+        self._local_address = local_address
+        self._retries = retries
 
         self._pool: List[ConnectionInterface] = []
         self._requests: List[RequestStatus] = []
@@ -122,9 +122,9 @@ class ConnectionPool(RequestInterface):
             keepalive_expiry=self._keepalive_expiry,
             http1=self._http1,
             http2=self._http2,
-            retries=self._retries,
-            local_address=self._local_address,
             uds=self._uds,
+            local_address=self._local_address,
+            retries=self._retries,
             network_backend=self._network_backend,
             socket_options=self._socket_options,
         )

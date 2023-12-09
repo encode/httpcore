@@ -120,10 +120,10 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             keepalive_expiry=keepalive_expiry,
             http1=http1,
             http2=http2,
-            network_backend=network_backend,
             uds=uds,
             local_address=local_address,
             retries=retries,
+            network_backend=network_backend,
             socket_options=socket_options,
         )
 
@@ -157,8 +157,8 @@ class AsyncHTTPProxy(AsyncConnectionPool):
                 uds=self._uds,
                 local_address=self._local_address,
                 retries=self._retries,
-                socket_options=self._socket_options,
                 network_backend=self._network_backend,
+                socket_options=self._socket_options,
             )
         return AsyncTunnelHTTPConnection(
             proxy_origin=self._proxy_url.origin,
@@ -172,8 +172,8 @@ class AsyncHTTPProxy(AsyncConnectionPool):
             uds=self._uds,
             local_address=self._local_address,
             retries=self._retries,
-            socket_options=self._socket_options,
             network_backend=self._network_backend,
+            socket_options=self._socket_options,
         )
 
 

@@ -165,8 +165,11 @@ class AsyncSOCKSProxy(AsyncConnectionPool):
             keepalive_expiry=keepalive_expiry,
             http1=http1,
             http2=http2,
-            network_backend=network_backend,
+            uds=uds,
+            local_address=local_address,
             retries=retries,
+            network_backend=network_backend,
+            socket_options=socket_options,
         )
         self._ssl_context = ssl_context
         self._proxy_url = enforce_url(proxy_url, name="proxy_url")

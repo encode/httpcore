@@ -103,9 +103,9 @@ class AsyncConnectionPool(AsyncRequestInterface):
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
         self._http2 = http2
-        self._retries = retries
-        self._local_address = local_address
         self._uds = uds
+        self._local_address = local_address
+        self._retries = retries
 
         self._pool: List[AsyncConnectionInterface] = []
         self._requests: List[RequestStatus] = []
@@ -122,9 +122,9 @@ class AsyncConnectionPool(AsyncRequestInterface):
             keepalive_expiry=self._keepalive_expiry,
             http1=self._http1,
             http2=self._http2,
-            retries=self._retries,
-            local_address=self._local_address,
             uds=self._uds,
+            local_address=self._local_address,
+            retries=self._retries,
             network_backend=self._network_backend,
             socket_options=self._socket_options,
         )
