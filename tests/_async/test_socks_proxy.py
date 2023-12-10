@@ -215,7 +215,7 @@ async def test_uds_connections():
     )
 
     async with httpcore.AsyncSOCKSProxy(
-        proxy_url="", network_backend=network_backend, uds="/mock/example"
+        proxy_url="socks5://localhost:8080/", network_backend=network_backend, uds="/mock/example"
     ) as proxy:
         response = await proxy.request("GET", "https://example.com/")
         assert response.status == 200
