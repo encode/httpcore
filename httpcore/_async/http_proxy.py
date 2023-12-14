@@ -202,8 +202,8 @@ class AsyncForwardHTTPConnection(AsyncConnectionInterface):
             socket_options=socket_options,
         )
         self._proxy_origin = proxy_origin
-        self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
         self._remote_origin = remote_origin
+        self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
 
     async def handle_async_request(self, request: Request) -> Response:
         headers = merge_headers(self._proxy_headers, request.headers)
@@ -276,9 +276,9 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
         )
         self._proxy_origin = proxy_origin
         self._remote_origin = remote_origin
+        self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
         self._ssl_context = ssl_context
         self._proxy_ssl_context = proxy_ssl_context
-        self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
         self._http2 = http2
