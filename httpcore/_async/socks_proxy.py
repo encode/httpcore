@@ -5,7 +5,7 @@ import typing
 from socksio import socks5
 
 from .._backends.auto import AutoBackend
-from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
+from .._backends.base import AsyncNetworkBackend, AsyncNetworkStream
 from .._exceptions import ConnectionNotAvailable, ProxyError
 from .._models import URL, Origin, Request, Response, enforce_bytes, enforce_url
 from .._ssl import default_ssl_context
@@ -118,11 +118,8 @@ class AsyncSOCKSProxy(AsyncConnectionPool):
         keepalive_expiry: typing.Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
-        uds: typing.Optional[str] = None,
-        local_address: typing.Optional[str] = None,
         retries: int = 0,
         network_backend: typing.Optional[AsyncNetworkBackend] = None,
-        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -130,8 +127,6 @@ class AsyncSOCKSProxy(AsyncConnectionPool):
         Parameters:
             proxy_url: The URL to use when connecting to the proxy server.
                 For example `"http://127.0.0.1:8080/"`.
-            proxy_auth: Any proxy authentication as a two-tuple of
-                (username, password). May be either bytes or ascii-only str.
             ssl_context: An SSL context to use for verifying connections.
                 If not specified, the default `httpcore.default_ssl_context()`
                 will be used.
@@ -146,17 +141,15 @@ class AsyncSOCKSProxy(AsyncConnectionPool):
                 by the connection pool. Defaults to True.
             http2: A boolean indicating if HTTP/2 requests should be supported by
                 the connection pool. Defaults to False.
-            uds: Path to a Unix Domain Socket to use instead of TCP sockets.
+            retries: The maximum number of retries when trying to establish
+                a connection.
             local_address: Local address to connect from. Can also be used to
                 connect using a particular address family. Using
                 `local_address="0.0.0.0"` will connect using an `AF_INET` address
                 (IPv4), while using `local_address="::"` will connect using an
                 `AF_INET6` address (IPv6).
-            retries: The maximum number of retries when trying to establish
-                a connection.
+            uds: Path to a Unix Domain Socket to use instead of TCP sockets.
             network_backend: A backend instance to use for handling network I/O.
-            socket_options: Socket options that have to be included
-             in the TCP socket when the connection was established.
         """
         super().__init__(
             ssl_context=ssl_context,
@@ -165,11 +158,8 @@ class AsyncSOCKSProxy(AsyncConnectionPool):
             keepalive_expiry=keepalive_expiry,
             http1=http1,
             http2=http2,
-            uds=uds,
-            local_address=local_address,
             retries=retries,
             network_backend=network_backend,
-            socket_options=socket_options,
         )
         self._ssl_context = ssl_context
         self._proxy_url = enforce_url(proxy_url, name="proxy_url")
@@ -193,11 +183,7 @@ class AsyncSOCKSProxy(AsyncConnectionPool):
             keepalive_expiry=self._keepalive_expiry,
             http1=self._http1,
             http2=self._http2,
-            uds=self._uds,
-            local_address=self._local_address,
-            retries=self._retries,
             network_backend=self._network_backend,
-            socket_options=self._socket_options,
         )
 
 
@@ -211,11 +197,7 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
         keepalive_expiry: typing.Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
-        uds: typing.Optional[str] = None,
-        local_address: typing.Optional[str] = None,
-        retries: int = 0,
         network_backend: typing.Optional[AsyncNetworkBackend] = None,
-        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> None:
         self._proxy_origin = proxy_origin
         self._remote_origin = remote_origin
@@ -224,10 +206,6 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
         self._http2 = http2
-        self._uds = uds
-        self._local_address = local_address
-        self._retries = retries
-        self._socket_options = socket_options
 
         self._network_backend: AsyncNetworkBackend = (
             AutoBackend() if network_backend is None else network_backend
@@ -245,32 +223,14 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
             if self._connection is None:
                 try:
                     # Connect to the proxy
-                    if self._uds is None:
-                        kwargs = {
-                            "host": self._proxy_origin.host.decode("ascii"),
-                            "port": self._proxy_origin.port,
-                            "timeout": timeout,
-                            "local_address": self._local_address,
-                            "socket_options": self._socket_options,
-                        }
-                        async with Trace(
-                            "connect_tcp", logger, request, kwargs
-                        ) as trace:
-                            stream = await self._network_backend.connect_tcp(**kwargs)
-                            trace.return_value = stream
-                    else:
-                        kwargs = {
-                            "path": self._uds,
-                            "timeout": timeout,
-                            "socket_options": self._socket_options,
-                        }
-                        async with Trace(
-                            "connect_unix_socket", logger, request, kwargs
-                        ) as trace:
-                            stream = await self._network_backend.connect_unix_socket(
-                                **kwargs
-                            )
-                            trace.return_value = stream
+                    kwargs = {
+                        "host": self._proxy_origin.host.decode("ascii"),
+                        "port": self._proxy_origin.port,
+                        "timeout": timeout,
+                    }
+                    async with Trace("connect_tcp", logger, request, kwargs) as trace:
+                        stream = await self._network_backend.connect_tcp(**kwargs)
+                        trace.return_value = stream
 
                     # Connect to the remote host using socks5
                     kwargs = {

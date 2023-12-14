@@ -51,9 +51,9 @@ class AsyncConnectionPool(AsyncRequestInterface):
         keepalive_expiry: Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
-        uds: Optional[str] = None,
-        local_address: Optional[str] = None,
         retries: int = 0,
+        local_address: Optional[str] = None,
+        uds: Optional[str] = None,
         network_backend: Optional[AsyncNetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
     ) -> None:
@@ -75,13 +75,13 @@ class AsyncConnectionPool(AsyncRequestInterface):
                 by the connection pool. Defaults to True.
             http2: A boolean indicating if HTTP/2 requests should be supported by
                 the connection pool. Defaults to False.
-            uds: Path to a Unix Domain Socket to use instead of TCP sockets.
+            retries: The maximum number of retries when trying to establish a
+                connection.
             local_address: Local address to connect from. Can also be used to connect
                 using a particular address family. Using `local_address="0.0.0.0"`
                 will connect using an `AF_INET` address (IPv4), while using
                 `local_address="::"` will connect using an `AF_INET6` address (IPv6).
-            retries: The maximum number of retries when trying to establish a
-                connection.
+            uds: Path to a Unix Domain Socket to use instead of TCP sockets.
             network_backend: A backend instance to use for handling network I/O.
             socket_options: Socket options that have to be included
              in the TCP socket when the connection was established.
@@ -103,9 +103,9 @@ class AsyncConnectionPool(AsyncRequestInterface):
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
         self._http2 = http2
-        self._uds = uds
-        self._local_address = local_address
         self._retries = retries
+        self._local_address = local_address
+        self._uds = uds
 
         self._pool: List[AsyncConnectionInterface] = []
         self._requests: List[RequestStatus] = []
@@ -122,9 +122,9 @@ class AsyncConnectionPool(AsyncRequestInterface):
             keepalive_expiry=self._keepalive_expiry,
             http1=self._http1,
             http2=self._http2,
-            uds=self._uds,
-            local_address=self._local_address,
             retries=self._retries,
+            local_address=self._local_address,
+            uds=self._uds,
             network_backend=self._network_backend,
             socket_options=self._socket_options,
         )

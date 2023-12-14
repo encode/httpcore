@@ -70,9 +70,9 @@ class HTTPProxy(ConnectionPool):
         keepalive_expiry: Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
-        uds: Optional[str] = None,
-        local_address: Optional[str] = None,
         retries: int = 0,
+        local_address: Optional[str] = None,
+        uds: Optional[str] = None,
         network_backend: Optional[NetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
     ) -> None:
@@ -101,14 +101,14 @@ class HTTPProxy(ConnectionPool):
                 by the connection pool. Defaults to True.
             http2: A boolean indicating if HTTP/2 requests should be supported by
                 the connection pool. Defaults to False.
-            uds: Path to a Unix Domain Socket to use instead of TCP sockets.
+            retries: The maximum number of retries when trying to establish
+                a connection.
             local_address: Local address to connect from. Can also be used to
                 connect using a particular address family. Using
                 `local_address="0.0.0.0"` will connect using an `AF_INET` address
                 (IPv4), while using `local_address="::"` will connect using an
                 `AF_INET6` address (IPv6).
-            retries: The maximum number of retries when trying to establish
-                a connection.
+            uds: Path to a Unix Domain Socket to use instead of TCP sockets.
             network_backend: A backend instance to use for handling network I/O.
             socket_options: Socket options that have to be included
              in the TCP socket when the connection was established.
@@ -120,9 +120,9 @@ class HTTPProxy(ConnectionPool):
             keepalive_expiry=keepalive_expiry,
             http1=http1,
             http2=http2,
-            uds=uds,
-            local_address=local_address,
             retries=retries,
+            local_address=local_address,
+            uds=uds,
             network_backend=network_backend,
             socket_options=socket_options,
         )
@@ -154,9 +154,9 @@ class HTTPProxy(ConnectionPool):
                 proxy_ssl_context=self._proxy_ssl_context,
                 proxy_headers=self._proxy_headers,
                 keepalive_expiry=self._keepalive_expiry,
-                uds=self._uds,
-                local_address=self._local_address,
                 retries=self._retries,
+                local_address=self._local_address,
+                uds=self._uds,
                 network_backend=self._network_backend,
                 socket_options=self._socket_options,
             )
@@ -169,9 +169,9 @@ class HTTPProxy(ConnectionPool):
             keepalive_expiry=self._keepalive_expiry,
             http1=self._http1,
             http2=self._http2,
-            uds=self._uds,
-            local_address=self._local_address,
             retries=self._retries,
+            local_address=self._local_address,
+            uds=self._uds,
             network_backend=self._network_backend,
             socket_options=self._socket_options,
         )
@@ -185,9 +185,9 @@ class ForwardHTTPConnection(ConnectionInterface):
         proxy_ssl_context: Optional[ssl.SSLContext] = None,
         proxy_headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
         keepalive_expiry: Optional[float] = None,
-        uds: Optional[str] = None,
-        local_address: Optional[str] = None,
         retries: int = 0,
+        local_address: Optional[str] = None,
+        uds: Optional[str] = None,
         network_backend: Optional[NetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
     ) -> None:
@@ -195,9 +195,9 @@ class ForwardHTTPConnection(ConnectionInterface):
             origin=proxy_origin,
             ssl_context=proxy_ssl_context,
             keepalive_expiry=keepalive_expiry,
-            uds=uds,
-            local_address=local_address,
             retries=retries,
+            local_address=local_address,
+            uds=uds,
             network_backend=network_backend,
             socket_options=socket_options,
         )
@@ -258,9 +258,9 @@ class TunnelHTTPConnection(ConnectionInterface):
         keepalive_expiry: Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
-        uds: Optional[str] = None,
-        local_address: Optional[str] = None,
         retries: int = 0,
+        local_address: Optional[str] = None,
+        uds: Optional[str] = None,
         network_backend: Optional[NetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
     ) -> None:
@@ -268,9 +268,9 @@ class TunnelHTTPConnection(ConnectionInterface):
             origin=proxy_origin,
             ssl_context=proxy_ssl_context,
             keepalive_expiry=keepalive_expiry,
-            uds=uds,
-            local_address=local_address,
             retries=retries,
+            local_address=local_address,
+            uds=uds,
             network_backend=network_backend,
             socket_options=socket_options,
         )
