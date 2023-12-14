@@ -182,7 +182,7 @@ class AsyncForwardHTTPConnection(AsyncConnectionInterface):
         self,
         proxy_origin: Origin,
         remote_origin: Origin,
-        ssl_context: Optional[ssl.SSLContext] = None,
+        proxy_ssl_context: Optional[ssl.SSLContext] = None,
         proxy_headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
         keepalive_expiry: Optional[float] = None,
         retries: int = 0,
@@ -193,7 +193,7 @@ class AsyncForwardHTTPConnection(AsyncConnectionInterface):
     ) -> None:
         self._connection = AsyncHTTPConnection(
             origin=proxy_origin,
-            ssl_context=ssl_context,
+            ssl_context=proxy_ssl_context,
             keepalive_expiry=keepalive_expiry,
             retries=retries,
             local_address=local_address,
