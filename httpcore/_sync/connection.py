@@ -41,9 +41,9 @@ class HTTPConnection(ConnectionInterface):
         keepalive_expiry: Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
-        uds: Optional[str] = None,
-        local_address: Optional[str] = None,
         retries: int = 0,
+        local_address: Optional[str] = None,
+        uds: Optional[str] = None,
         network_backend: Optional[NetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
     ) -> None:
@@ -52,9 +52,9 @@ class HTTPConnection(ConnectionInterface):
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
         self._http2 = http2
-        self._uds = uds
-        self._local_address = local_address
         self._retries = retries
+        self._local_address = local_address
+        self._uds = uds
 
         self._network_backend: NetworkBackend = (
             SyncBackend() if network_backend is None else network_backend
