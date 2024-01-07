@@ -767,6 +767,12 @@ def test_http11_upgrade_connection():
             b"...",
         ]
     )
+
+    called = []
+
+    def trace(name, kwargs):
+        called.append(name)
+
     with httpcore.ConnectionPool(
         network_backend=network_backend, max_connections=1
     ) as pool:
@@ -774,8 +780,24 @@ def test_http11_upgrade_connection():
             "GET",
             "wss://example.com/",
             headers={"Connection": "upgrade", "Upgrade": "custom"},
+            extensions={"trace": trace},
         ) as response:
             assert response.status == 101
             network_stream = response.extensions["network_stream"]
             content = network_stream.read(max_bytes=1024)
             assert content == b"..."
+
+    assert called == [
+        "connection.connect_tcp.started",
+        "connection.connect_tcp.complete",
+        "connection.start_tls.started",
+        "connection.start_tls.complete",
+        "http11.send_request_headers.started",
+        "http11.send_request_headers.complete",
+        "http11.send_request_body.started",
+        "http11.send_request_body.complete",
+        "http11.receive_response_headers.started",
+        "http11.receive_response_headers.complete",
+        "http11.response_closed.started",
+        "http11.response_closed.complete",
+    ]
