@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Unreleased
 
 - Fix trace extension when used with socks proxy. (#849)
+- Fix SSL stream for connections using the "wss" scheme (#869)
 
 ## 1.0.2 (November 10th, 2023)
 
