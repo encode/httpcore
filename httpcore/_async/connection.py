@@ -137,7 +137,7 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                         )
                         trace.return_value = stream
 
-                if self._origin.scheme == b"https":
+                if self._origin.scheme in (b"https", b"wss"):
                     ssl_context = (
                         default_ssl_context()
                         if self._ssl_context is None
