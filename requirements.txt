@@ -14,7 +14,7 @@ twine
 
 # Tests & Linting
 coverage[toml]==7.3.2
-ruff==0.1.9
+ruff==0.1.15
 mypy==1.8.0
 trio-typing==0.10.0
 types-certifi==2021.10.8.3
