@@ -191,11 +191,11 @@ class ConnectionPool(RequestInterface):
         timeout = timeouts.get("pool", None)
 
         pool_request = PoolRequest(request)
+        self._requests.append(pool_request)
         try:
             while True:
                 with ShieldCancellation():
                     with self._pool_lock:
-                        self._requests.append(pool_request)
                         closing = self._assign_requests_to_connections()
                 self._close_connections(closing)
                 connection = pool_request.wait_for_connection(timeout=timeout)
@@ -248,7 +248,9 @@ class ConnectionPool(RequestInterface):
                 self._connections.remove(connection)
                 closing_connections.append(connection)
             elif (
-                connection.is_idle() and len(self._connections) > self._max_connections
+                connection.is_idle()
+                and len([connection.is_idle() for connection in self._connections])
+                > self._max_keepalive_connections
             ):
                 # log: "closing idle connection"
                 self._connections.remove(connection)

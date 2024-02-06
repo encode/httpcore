@@ -205,16 +205,11 @@ def test_connection_pool_with_http2_goaway():
         http2=True,
     )
 
-    def debug(*args, **kwargs):
-        print(*args, **kwargs)
-
     with httpcore.ConnectionPool(
         network_backend=network_backend,
     ) as pool:
         # Sending an intial request, which once complete will return to the pool, IDLE.
-        response = pool.request(
-            "GET", "https://example.com/", exensions={"trace": debug}
-        )
+        response = pool.request("GET", "https://example.com/")
         assert response.status == 200
         assert response.content == b"Hello, world!"
 
@@ -224,13 +219,13 @@ def test_connection_pool_with_http2_goaway():
         ]
 
         # Sending a second request to the same origin will require a new connection.
+        # The original connection has now been closed.
         response = pool.request("GET", "https://example.com/")
         assert response.status == 200
         assert response.content == b"Hello, world!"
 
         info = [repr(c) for c in pool.connections]
         assert info == [
-            "<HTTPConnection ['https://example.com:443', HTTP/2, CLOSED, Request Count: 1]>",
             "<HTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 1]>",
         ]
 
