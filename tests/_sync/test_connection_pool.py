@@ -66,8 +66,8 @@ def test_connection_pool_with_keepalive():
         with pool.stream("GET", "http://example.com/") as response:
             info = [repr(c) for c in pool.connections]
             assert info == [
-                "<HTTPConnection ['http://example.com:80', HTTP/1.1, ACTIVE, Request Count: 1]>",
                 "<HTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 2]>",
+                "<HTTPConnection ['http://example.com:80', HTTP/1.1, ACTIVE, Request Count: 1]>",
             ]
             response.read()
 
@@ -75,8 +75,8 @@ def test_connection_pool_with_keepalive():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in pool.connections]
         assert info == [
-            "<HTTPConnection ['http://example.com:80', HTTP/1.1, IDLE, Request Count: 1]>",
             "<HTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 2]>",
+            "<HTTPConnection ['http://example.com:80', HTTP/1.1, IDLE, Request Count: 1]>",
         ]
 
 
@@ -205,11 +205,16 @@ def test_connection_pool_with_http2_goaway():
         http2=True,
     )
 
+    def debug(*args, **kwargs):
+        print(*args, **kwargs)
+
     with httpcore.ConnectionPool(
         network_backend=network_backend,
     ) as pool:
         # Sending an intial request, which once complete will return to the pool, IDLE.
-        response = pool.request("GET", "https://example.com/")
+        response = pool.request(
+            "GET", "https://example.com/", exensions={"trace": debug}
+        )
         assert response.status == 200
         assert response.content == b"Hello, world!"
 
@@ -225,8 +230,8 @@ def test_connection_pool_with_http2_goaway():
 
         info = [repr(c) for c in pool.connections]
         assert info == [
-            "<HTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 1]>",
             "<HTTPConnection ['https://example.com:443', HTTP/2, CLOSED, Request Count: 1]>",
+            "<HTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 1]>",
         ]
 
 

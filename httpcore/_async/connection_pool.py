@@ -7,7 +7,7 @@ from .._backends.auto import AutoBackend
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend
 from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
 from .._models import Origin, Request, Response
-from .._synchronization import AsyncEvent, AsyncLock
+from .._synchronization import AsyncEvent, AsyncLock, AsyncShieldCancellation
 from .connection import AsyncHTTPConnection
 from .interfaces import AsyncConnectionInterface, AsyncRequestInterface
 
@@ -193,9 +193,10 @@ class AsyncConnectionPool(AsyncRequestInterface):
         pool_request = AsyncPoolRequest(request)
         try:
             while True:
-                async with self._pool_lock:
-                    self._requests.append(pool_request)
-                    closing = self._assign_requests_to_connections()
+                with AsyncShieldCancellation():
+                    async with self._pool_lock:
+                        self._requests.append(pool_request)
+                        closing = self._assign_requests_to_connections()
                 await self._close_connections(closing)
                 connection = await pool_request.wait_for_connection(timeout=timeout)
 
@@ -209,9 +210,10 @@ class AsyncConnectionPool(AsyncRequestInterface):
                     break
 
         except BaseException as exc:
-            async with self._pool_lock:
-                self._requests.remove(pool_request)
-                closing = self._assign_requests_to_connections()
+            with AsyncShieldCancellation():
+                async with self._pool_lock:
+                    self._requests.remove(pool_request)
+                    closing = self._assign_requests_to_connections()
             await self._close_connections(closing)
             raise exc from None
 
@@ -225,17 +227,6 @@ class AsyncConnectionPool(AsyncRequestInterface):
             extensions=response.extensions,
         )
 
-    async def _request_closed(self, request: AsyncPoolRequest) -> None:
-        """
-        Once a request completes we remove it from the pool,
-        and determine if we can now assign any queued requests
-        to a connection.
-        """
-        async with self._pool_lock:
-            self._requests.remove(request)
-            closing = self._assign_requests_to_connections()
-        await self._close_connections(closing)
-
     def _assign_requests_to_connections(self) -> List[AsyncConnectionInterface]:
         """
         Manage the state of the connection pool, assigning incoming
@@ -248,10 +239,18 @@ class AsyncConnectionPool(AsyncRequestInterface):
         """
         closing_connections = []
 
-        # Close any expired connections.
         for connection in list(self._connections):
-            if connection.has_expired():
+            if connection.is_closed():
+                # log: "removing closed connection"
+                self._connections.remove(connection)
+            elif connection.has_expired():
                 # log: "closing expired connection"
+                self._connections.remove(connection)
+                closing_connections.append(connection)
+            elif (
+                connection.is_idle() and len(self._connections) > self._max_connections
+            ):
+                # log: "closing idle connection"
                 self._connections.remove(connection)
                 closing_connections.append(connection)
 
@@ -266,6 +265,9 @@ class AsyncConnectionPool(AsyncRequestInterface):
                 for connection in self._connections
                 if connection.can_handle_request(origin) and connection.is_available()
             ]
+            idle_connections = [
+                connection for connection in self._connections if connection.is_idle()
+            ]
             if avilable_connections:
                 # log: "reusing existing connection"
                 connection = avilable_connections[0]
@@ -275,12 +277,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
                 connection = self.create_connection(origin)
                 self._connections.append(connection)
                 pool_request.assign_to_connection(connection)
-            else:
-                idle_connections = [
-                    connection
-                    for connection in self._connections
-                    if connection.is_idle()
-                ]
+            elif idle_connections:
                 # log: "closing idle connection"
                 connection = idle_connections[0]
                 self._connections.remove(connection)
@@ -300,10 +297,9 @@ class AsyncConnectionPool(AsyncRequestInterface):
             await connection.aclose()
 
     async def aclose(self) -> None:
-        closing = list(self._connections)
-        self._requests = []
+        closing_connections = list(self._connections)
         self._connections = []
-        await self._close_connections(closing)
+        await self._close_connections(closing_connections)
 
     async def __aenter__(self) -> "AsyncConnectionPool":
         # Acquiring the pool lock here ensures that we have the
@@ -331,19 +327,23 @@ class PoolByteStream:
         self._stream = stream
         self._pool_request = pool_request
         self._pool = pool
+        self._closed = False
+        assert self._pool_request in self._pool._requests
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
         try:
             async for part in self._stream:
                 yield part
         except BaseException:
-            async with self._pool._pool_lock:
-                self._pool._requests.remove(self._pool_request)
-                closing = self._pool._assign_requests_to_connections()
-            await self._pool._close_connections(closing)
+            await self.aclose()
 
     async def aclose(self) -> None:
-        async with self._pool._pool_lock:
-            self._pool._requests.remove(self._pool_request)
-            closing = self._pool._assign_requests_to_connections()
-        await self._pool._close_connections(closing)
+        if not self._closed:
+            self._closed = True
+            with AsyncShieldCancellation():
+                if hasattr(self._stream, "aclose"):
+                    await self._stream.aclose()
+                async with self._pool._pool_lock:
+                    self._pool._requests.remove(self._pool_request)
+                    closing = self._pool._assign_requests_to_connections()
+            await self._pool._close_connections(closing)
