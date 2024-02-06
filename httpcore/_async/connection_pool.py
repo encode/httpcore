@@ -208,11 +208,12 @@ class AsyncConnectionPool(AsyncRequestInterface):
                 else:
                     break
 
-        except BaseException:
+        except BaseException as exc:
             async with self._pool_lock:
                 self._requests.remove(pool_request)
                 closing = self._assign_requests_to_connections()
             await self._close_connections(closing)
+            raise exc from None
 
         assert isinstance(response.stream, AsyncIterable)
         return Response(
@@ -258,8 +259,8 @@ class AsyncConnectionPool(AsyncRequestInterface):
         queued_requests = [
             request for request in self._requests if request.connection is None
         ]
-        for request in queued_requests:
-            origin = request.url.origin
+        for pool_request in queued_requests:
+            origin = pool_request.request.url.origin
             avilable_connections = [
                 connection
                 for connection in self._connections
@@ -268,12 +269,12 @@ class AsyncConnectionPool(AsyncRequestInterface):
             if avilable_connections:
                 # log: "reusing existing connection"
                 connection = avilable_connections[0]
-                request.assign_to_connection(connection)
+                pool_request.assign_to_connection(connection)
             elif len(self._connections) < self._max_connections:
                 # log: "creating new connection"
                 connection = self.create_connection(origin)
                 self._connections.append(connection)
-                request.assign_to_connection(connection)
+                pool_request.assign_to_connection(connection)
             else:
                 idle_connections = [
                     connection
@@ -287,7 +288,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
                 # log: "creating new connection"
                 connection = self.create_connection(origin)
                 self._connections.append(connection)
-                request.assign_to_connection(connection)
+                pool_request.assign_to_connection(connection)
 
         return closing_connections
 
