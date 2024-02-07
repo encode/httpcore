@@ -240,7 +240,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
         closing_connections = []
 
         # First we handle cleaning up any connections that are closed,
-        # have expired their keep-alive, or surplus idle connections.
+        # have expired their keep-alive, or surplus idle connections.
         for connection in list(self._connections):
             if connection.is_closed():
                 # log: "removing closed connection"
