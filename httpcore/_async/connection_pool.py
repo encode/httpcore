@@ -12,31 +12,6 @@ from .connection import AsyncHTTPConnection
 from .interfaces import AsyncConnectionInterface, AsyncRequestInterface
 
 
-class RequestStatus:
-    def __init__(self, request: Request):
-        self.request = request
-        self.connection: Optional[AsyncConnectionInterface] = None
-        self._connection_acquired = AsyncEvent()
-
-    def set_connection(self, connection: AsyncConnectionInterface) -> None:
-        assert self.connection is None
-        self.connection = connection
-        self._connection_acquired.set()
-
-    def unset_connection(self) -> None:
-        assert self.connection is not None
-        self.connection = None
-        self._connection_acquired = AsyncEvent()
-
-    async def wait_for_connection(
-        self, timeout: Optional[float] = None
-    ) -> AsyncConnectionInterface:
-        if self.connection is None:
-            await self._connection_acquired.wait(timeout=timeout)
-        assert self.connection is not None
-        return self.connection
-
-
 class AsyncPoolRequest(Request):
     def __init__(self, request: Request) -> None:
         self.request = request
@@ -337,22 +312,22 @@ class PoolByteStream:
         self._pool_request = pool_request
         self._pool = pool
         self._closed = False
-        assert self._pool_request in self._pool._requests
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
         try:
             async for part in self._stream:
                 yield part
-        except BaseException:
+        except BaseException as exc:
             await self.aclose()
+            raise exc from None
 
     async def aclose(self) -> None:
         if not self._closed:
             self._closed = True
-            if hasattr(self._stream, "aclose"):
-                await self._stream.aclose()
-
             with AsyncShieldCancellation():
+                if hasattr(self._stream, "aclose"):
+                    await self._stream.aclose()
+
                 self._pool._requests.remove(self._pool_request)
                 closing = self._pool._assign_requests_to_connections()
 

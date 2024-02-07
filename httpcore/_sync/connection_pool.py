@@ -12,31 +12,6 @@ from .connection import HTTPConnection
 from .interfaces import ConnectionInterface, RequestInterface
 
 
-class RequestStatus:
-    def __init__(self, request: Request):
-        self.request = request
-        self.connection: Optional[ConnectionInterface] = None
-        self._connection_acquired = Event()
-
-    def set_connection(self, connection: ConnectionInterface) -> None:
-        assert self.connection is None
-        self.connection = connection
-        self._connection_acquired.set()
-
-    def unset_connection(self) -> None:
-        assert self.connection is not None
-        self.connection = None
-        self._connection_acquired = Event()
-
-    def wait_for_connection(
-        self, timeout: Optional[float] = None
-    ) -> ConnectionInterface:
-        if self.connection is None:
-            self._connection_acquired.wait(timeout=timeout)
-        assert self.connection is not None
-        return self.connection
-
-
 class PoolRequest(Request):
     def __init__(self, request: Request) -> None:
         self.request = request
@@ -337,22 +312,22 @@ class PoolByteStream:
         self._pool_request = pool_request
         self._pool = pool
         self._closed = False
-        assert self._pool_request in self._pool._requests
 
     def __iter__(self) -> Iterator[bytes]:
         try:
             for part in self._stream:
                 yield part
-        except BaseException:
+        except BaseException as exc:
             self.close()
+            raise exc from None
 
     def close(self) -> None:
         if not self._closed:
             self._closed = True
-            if hasattr(self._stream, "close"):
-                self._stream.close()
-
             with ShieldCancellation():
+                if hasattr(self._stream, "close"):
+                    self._stream.close()
+
                 self._pool._requests.remove(self._pool_request)
                 closing = self._pool._assign_requests_to_connections()
 
