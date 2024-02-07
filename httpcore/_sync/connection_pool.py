@@ -200,7 +200,7 @@ class ConnectionPool(RequestInterface):
                     # In this case we clear the connection and try again.
                     pool_request.clear_connection()
                 else:
-                    break
+                    break  # pragma: nocover
 
         except BaseException as exc:
             with self._optional_thread_lock:
