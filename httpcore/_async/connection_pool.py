@@ -239,6 +239,8 @@ class AsyncConnectionPool(AsyncRequestInterface):
         """
         closing_connections = []
 
+        # First we handle cleaning up any connections that are closed,
+        # have expired their keep-alive, or surplus idle connections.
         for connection in list(self._connections):
             if connection.is_closed():
                 # log: "removing closed connection"
@@ -270,6 +272,13 @@ class AsyncConnectionPool(AsyncRequestInterface):
             idle_connections = [
                 connection for connection in self._connections if connection.is_idle()
             ]
+
+            # There are three cases for how we may be able to handle the request:
+            #
+            # 1. There is an existing connection that can handle the request.
+            # 2. We can create a new connection to handle the request.
+            # 3. We can close an idle connection and then create a new connection
+            #    to handle the request.
             if avilable_connections:
                 # log: "reusing existing connection"
                 connection = avilable_connections[0]
