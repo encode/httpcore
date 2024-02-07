@@ -195,8 +195,7 @@ class ConnectionPool(RequestInterface):
         try:
             while True:
                 with ShieldCancellation():
-                    with self._pool_lock:
-                        closing = self._assign_requests_to_connections()
+                    closing = self._assign_requests_to_connections()
                 self._close_connections(closing)
                 connection = pool_request.wait_for_connection(timeout=timeout)
 
@@ -211,9 +210,8 @@ class ConnectionPool(RequestInterface):
 
         except BaseException as exc:
             with ShieldCancellation():
-                with self._pool_lock:
-                    self._requests.remove(pool_request)
-                    closing = self._assign_requests_to_connections()
+                self._requests.remove(pool_request)
+                closing = self._assign_requests_to_connections()
             self._close_connections(closing)
             raise exc from None
 
@@ -351,10 +349,11 @@ class PoolByteStream:
     def close(self) -> None:
         if not self._closed:
             self._closed = True
+            if hasattr(self._stream, "close"):
+                self._stream.close()
+
             with ShieldCancellation():
-                if hasattr(self._stream, "close"):
-                    self._stream.close()
-                with self._pool._pool_lock:
-                    self._pool._requests.remove(self._pool_request)
-                    closing = self._pool._assign_requests_to_connections()
+                self._pool._requests.remove(self._pool_request)
+                closing = self._pool._assign_requests_to_connections()
+
             self._pool._close_connections(closing)

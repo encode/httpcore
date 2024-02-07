@@ -195,8 +195,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
         try:
             while True:
                 with AsyncShieldCancellation():
-                    async with self._pool_lock:
-                        closing = self._assign_requests_to_connections()
+                    closing = self._assign_requests_to_connections()
                 await self._close_connections(closing)
                 connection = await pool_request.wait_for_connection(timeout=timeout)
 
@@ -211,9 +210,8 @@ class AsyncConnectionPool(AsyncRequestInterface):
 
         except BaseException as exc:
             with AsyncShieldCancellation():
-                async with self._pool_lock:
-                    self._requests.remove(pool_request)
-                    closing = self._assign_requests_to_connections()
+                self._requests.remove(pool_request)
+                closing = self._assign_requests_to_connections()
             await self._close_connections(closing)
             raise exc from None
 
@@ -351,10 +349,11 @@ class PoolByteStream:
     async def aclose(self) -> None:
         if not self._closed:
             self._closed = True
+            if hasattr(self._stream, "aclose"):
+                await self._stream.aclose()
+
             with AsyncShieldCancellation():
-                if hasattr(self._stream, "aclose"):
-                    await self._stream.aclose()
-                async with self._pool._pool_lock:
-                    self._pool._requests.remove(self._pool_request)
-                    closing = self._pool._assign_requests_to_connections()
+                self._pool._requests.remove(self._pool_request)
+                closing = self._pool._assign_requests_to_connections()
+
             await self._pool._close_connections(closing)
