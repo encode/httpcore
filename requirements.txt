@@ -1,4 +1,4 @@
--e .[asyncio,trio,http2,socks]
+-e .[asyncio,trio,http2,http3,socks]
 
 # Docs
 mkdocs==1.5.3

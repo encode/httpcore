@@ -3,6 +3,7 @@ from ._async import (
     AsyncConnectionInterface,
     AsyncConnectionPool,
     AsyncHTTP2Connection,
+    AsyncHTTP3Connection,
     AsyncHTTP11Connection,
     AsyncHTTPConnection,
     AsyncHTTPProxy,
@@ -40,6 +41,7 @@ from ._sync import (
     ConnectionInterface,
     ConnectionPool,
     HTTP2Connection,
+    HTTP3Connection,
     HTTP11Connection,
     HTTPConnection,
     HTTPProxy,
@@ -85,6 +87,7 @@ __all__ = [
     "AsyncHTTPProxy",
     "AsyncHTTP11Connection",
     "AsyncHTTP2Connection",
+    "AsyncHTTP3Connection",
     "AsyncConnectionInterface",
     "AsyncSOCKSProxy",
     # sync
@@ -93,6 +96,7 @@ __all__ = [
     "HTTPProxy",
     "HTTP11Connection",
     "HTTP2Connection",
+    "HTTP3Connection",
     "ConnectionInterface",
     "SOCKSProxy",
     # network backends, implementations

@@ -51,6 +51,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
         keepalive_expiry: Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
+        http3: bool = False,
         retries: int = 0,
         local_address: Optional[str] = None,
         uds: Optional[str] = None,
@@ -74,6 +75,8 @@ class AsyncConnectionPool(AsyncRequestInterface):
             http1: A boolean indicating if HTTP/1.1 requests should be supported
                 by the connection pool. Defaults to True.
             http2: A boolean indicating if HTTP/2 requests should be supported by
+                the connection pool. Defaults to False.
+            http3: A boolean indicating if HTTP/3 requests should be supported by
                 the connection pool. Defaults to False.
             retries: The maximum number of retries when trying to establish a
                 connection.
@@ -103,6 +106,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
         self._http2 = http2
+        self._http3 = http3
         self._retries = retries
         self._local_address = local_address
         self._uds = uds
@@ -122,6 +126,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
             keepalive_expiry=self._keepalive_expiry,
             http1=self._http1,
             http2=self._http2,
+            http3=self._http3,
             retries=self._retries,
             local_address=self._local_address,
             uds=self._uds,
