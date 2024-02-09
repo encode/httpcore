@@ -12,7 +12,7 @@ from .connection import AsyncHTTPConnection
 from .interfaces import AsyncConnectionInterface, AsyncRequestInterface
 
 
-class AsyncPoolRequest(Request):
+class AsyncPoolRequest:
     def __init__(self, request: Request) -> None:
         self.request = request
         self.connection: Optional[AsyncConnectionInterface] = None
@@ -35,6 +35,9 @@ class AsyncPoolRequest(Request):
             await self._connection_acquired.wait(timeout=timeout)
         assert self.connection is not None
         return self.connection
+
+    def is_queued(self) -> bool:
+        return self.connection is None
 
 
 class AsyncConnectionPool(AsyncRequestInterface):
@@ -256,9 +259,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
                 closing_connections.append(connection)
 
         # Assign queued requests to connections.
-        queued_requests = [
-            request for request in self._requests if request.connection is None
-        ]
+        queued_requests = [request for request in self._requests if request.is_queued()]
         for pool_request in queued_requests:
             origin = pool_request.request.url.origin
             avilable_connections = [
@@ -321,6 +322,28 @@ class AsyncConnectionPool(AsyncRequestInterface):
         traceback: Optional[TracebackType] = None,
     ) -> None:
         await self.aclose()
+
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        with self._optional_thread_lock:
+            request_is_queued = [request.is_queued() for request in self._requests]
+            connection_is_idle = [
+                connection.is_idle() for connection in self._connections
+            ]
+
+            num_active_requests = request_is_queued.count(False)
+            num_queued_requests = request_is_queued.count(True)
+            num_active_connections = connection_is_idle.count(False)
+            num_idle_connections = connection_is_idle.count(True)
+
+        requests_info = (
+            f"Requests: {num_active_requests} active, {num_queued_requests} queued"
+        )
+        connection_info = (
+            f"Connections: {num_active_connections} active, {num_idle_connections} idle"
+        )
+
+        return f"<{class_name} [{requests_info} | {connection_info}]>"
 
 
 class PoolByteStream:
