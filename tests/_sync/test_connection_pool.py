@@ -255,6 +255,9 @@ def test_trace_request():
         pool.request("GET", "https://example.com/", extensions={"trace": trace})
 
     assert called == [
+        "connection_pool.add_request",
+        "connection_pool.add_connection",
+        "connection_pool.assign_request_to_connection",
         "connection.connect_tcp.started",
         "connection.connect_tcp.complete",
         "connection.start_tls.started",
@@ -269,6 +272,7 @@ def test_trace_request():
         "http11.receive_response_body.complete",
         "http11.response_closed.started",
         "http11.response_closed.complete",
+        "connection_pool.remove_request",
     ]
 
 
@@ -295,9 +299,26 @@ def test_debug_request(caplog):
 
     assert caplog.record_tuples == [
         (
+            "httpcore.connection_pool",
+            logging.DEBUG,
+            "add_request request=<Request [b'GET']>",
+        ),
+        (
+            "httpcore.connection_pool",
+            logging.DEBUG,
+            "add_connection connection=<HTTPConnection [CONNECTING]>",
+        ),
+        (
+            "httpcore.connection_pool",
+            logging.DEBUG,
+            "assign_request_to_connection request=<Request [b'GET']> "
+            "connection=<HTTPConnection [CONNECTING]>",
+        ),
+        (
             "httpcore.connection",
             logging.DEBUG,
-            "connect_tcp.started host='example.com' port=80 local_address=None timeout=None socket_options=None",
+            "connect_tcp.started host='example.com' port=80 local_address=None "
+            "timeout=None socket_options=None",
         ),
         (
             "httpcore.connection",
@@ -324,8 +345,8 @@ def test_debug_request(caplog):
         (
             "httpcore.http11",
             logging.DEBUG,
-            "receive_response_headers.complete return_value="
-            "(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'plain/text'), (b'Content-Length', b'13')])",
+            "receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', "
+            "[(b'Content-Type', b'plain/text'), (b'Content-Length', b'13')])",
         ),
         (
             "httpcore.http11",
@@ -335,6 +356,11 @@ def test_debug_request(caplog):
         ("httpcore.http11", logging.DEBUG, "receive_response_body.complete"),
         ("httpcore.http11", logging.DEBUG, "response_closed.started"),
         ("httpcore.http11", logging.DEBUG, "response_closed.complete"),
+        (
+            "httpcore.connection_pool",
+            logging.DEBUG,
+            "remove_request request=<Request [b'GET']>",
+        ),
         ("httpcore.connection", logging.DEBUG, "close.started"),
         ("httpcore.connection", logging.DEBUG, "close.complete"),
     ]
@@ -364,6 +390,9 @@ def test_connection_pool_with_http_exception():
         assert info == []
 
     assert called == [
+        "connection_pool.add_request",
+        "connection_pool.add_connection",
+        "connection_pool.assign_request_to_connection",
         "connection.connect_tcp.started",
         "connection.connect_tcp.complete",
         "connection.start_tls.started",
@@ -376,6 +405,7 @@ def test_connection_pool_with_http_exception():
         "http11.receive_response_headers.failed",
         "http11.response_closed.started",
         "http11.response_closed.complete",
+        "connection_pool.remove_request",
     ]
 
 
@@ -417,8 +447,12 @@ def test_connection_pool_with_connect_exception():
         assert info == []
 
     assert called == [
+        "connection_pool.add_request",
+        "connection_pool.add_connection",
+        "connection_pool.assign_request_to_connection",
         "connection.connect_tcp.started",
         "connection.connect_tcp.failed",
+        "connection_pool.remove_request",
     ]
 
 

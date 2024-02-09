@@ -6,6 +6,56 @@ from typing import Any, Dict, Optional, Type
 from ._models import Request
 
 
+def trace(
+    name: str,
+    logger: logging.Logger,
+    request: Optional[Request] = None,
+    kwargs: Optional[Dict[str, Any]] = None,
+) -> None:
+    trace_extension = None if request is None else request.extensions.get("trace")
+    prefix = logger.name.split(".")[-1]
+    info = kwargs or {}
+    debug = logger.isEnabledFor(logging.DEBUG)
+
+    if debug or trace_extension:
+        if trace_extension is not None:
+            prefix_and_name = f"{prefix}.{name}"
+            trace_extension(prefix_and_name, info)
+
+        if debug:
+            if not info:  # pragma: no cover
+                message = name
+            else:
+                args = " ".join([f"{key}={value!r}" for key, value in info.items()])
+                message = f"{name} {args}"
+            logger.debug(message)
+
+
+async def atrace(
+    name: str,
+    logger: logging.Logger,
+    request: Optional[Request] = None,
+    kwargs: Optional[Dict[str, Any]] = None,
+) -> None:
+    trace_extension = None if request is None else request.extensions.get("trace")
+    prefix = logger.name.split(".")[-1]
+    info = kwargs or {}
+    debug = logger.isEnabledFor(logging.DEBUG)
+
+    if debug or trace_extension:
+        if trace_extension is not None:
+            prefix_and_name = f"{prefix}.{name}"
+            await trace_extension(prefix_and_name, info)
+
+        if debug:
+            if not info:  # pragma: no cover
+                message = name
+            else:
+                args = " ".join([f"{key}={value!r}" for key, value in info.items()])
+                message = f"{name} {args}"
+            logger.debug(message)
+
+
 class Trace:
     def __init__(
         self,

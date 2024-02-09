@@ -1,3 +1,4 @@
+import logging
 import ssl
 import sys
 import time
@@ -9,8 +10,11 @@ from .._backends.base import SOCKET_OPTION, NetworkBackend
 from .._exceptions import ConnectionNotAvailable, PoolTimeout, UnsupportedProtocol
 from .._models import Origin, Request, Response
 from .._synchronization import Event, Lock, ShieldCancellation
+from .._trace import trace
 from .connection import HTTPConnection
 from .interfaces import ConnectionInterface, RequestInterface
+
+logger = logging.getLogger("httpcore.connection_pool")
 
 
 class RequestStatus:
@@ -162,8 +166,14 @@ class ConnectionPool(RequestInterface):
         # Reuse an existing connection if one is currently available.
         for idx, connection in enumerate(self._pool):
             if connection.can_handle_request(origin) and connection.is_available():
+                kwargs = {"connection": connection, "request": status.request}
+                trace("reuse_connection", logger, status.request, kwargs)
                 self._pool.pop(idx)
                 self._pool.insert(0, connection)
+                kwargs = {"request": status.request, "connection": connection}
+                trace(
+                    "assign_request_to_connection", logger, status.request, kwargs
+                )
                 status.set_connection(connection)
                 return True
 
@@ -172,6 +182,12 @@ class ConnectionPool(RequestInterface):
             for idx, connection in reversed(list(enumerate(self._pool))):
                 if connection.is_idle():
                     connection.close()
+                    trace(
+                        "remove_connection",
+                        logger,
+                        None,
+                        kwargs={"connection": connection},
+                    )
                     self._pool.pop(idx)
                     break
 
@@ -181,7 +197,12 @@ class ConnectionPool(RequestInterface):
 
         # Otherwise create a new connection.
         connection = self.create_connection(origin)
+        trace(
+            "add_connection", logger, status.request, kwargs={"connection": connection}
+        )
         self._pool.insert(0, connection)
+        kwargs = {"request": status.request, "connection": connection}
+        trace("assign_request_to_connection", logger, status.request, kwargs)
         status.set_connection(connection)
         return True
 
@@ -193,6 +214,9 @@ class ConnectionPool(RequestInterface):
         for idx, connection in reversed(list(enumerate(self._pool))):
             if connection.has_expired():
                 connection.close()
+                trace(
+                    "remove_connection", logger, None, kwargs={"connection": connection}
+                )
                 self._pool.pop(idx)
 
         # If the pool size exceeds the maximum number of allowed keep-alive connections,
@@ -201,6 +225,9 @@ class ConnectionPool(RequestInterface):
         for idx, connection in reversed(list(enumerate(self._pool))):
             if connection.is_idle() and pool_size > self._max_keepalive_connections:
                 connection.close()
+                trace(
+                    "remove_connection", logger, None, kwargs={"connection": connection}
+                )
                 self._pool.pop(idx)
                 pool_size -= 1
 
@@ -230,6 +257,7 @@ class ConnectionPool(RequestInterface):
             deadline = float("inf")
 
         with self._pool_lock:
+            trace("add_request", logger, request, {"request": status.request})
             self._requests.append(status)
             self._close_expired_connections()
             self._attempt_to_acquire_connection(status)
@@ -241,9 +269,22 @@ class ConnectionPool(RequestInterface):
                 # If we timeout here, or if the task is cancelled, then make
                 # sure to remove the request from the queue before bubbling
                 # up the exception.
+                if isinstance(exc, PoolTimeout):
+                    trace(
+                        "timeout_waiting_for_connection",
+                        logger,
+                        status.request,
+                        {"request": status.request},
+                    )
                 with self._pool_lock:
                     # Ensure only remove when task exists.
                     if status in self._requests:
+                        trace(
+                            "remove_request",
+                            logger,
+                            status.request,
+                            {"request": status.request},
+                        )
                         self._requests.remove(status)
                     raise exc
 
@@ -260,6 +301,13 @@ class ConnectionPool(RequestInterface):
                 with self._pool_lock:
                     # Maintain our position in the request queue, but reset the
                     # status so that the request becomes queued again.
+                    kwargs = {"request": status.request, "connection": connection}
+                    trace(
+                        "unassign_request_from_connection",
+                        logger,
+                        status.request,
+                        kwargs,
+                    )
                     status.unset_connection()
                     self._attempt_to_acquire_connection(status)
             except BaseException as exc:
@@ -296,9 +344,21 @@ class ConnectionPool(RequestInterface):
         with self._pool_lock:
             # Update the state of the connection pool.
             if status in self._requests:
+                trace(
+                    "remove_request",
+                    logger,
+                    status.request,
+                    {"request": status.request},
+                )
                 self._requests.remove(status)
 
             if connection.is_closed() and connection in self._pool:
+                trace(
+                    "remove_connection",
+                    logger,
+                    None,
+                    kwargs={"connection": connection},
+                )
                 self._pool.remove(connection)
 
             # Since we've had a response closed, it's possible we'll now be able
