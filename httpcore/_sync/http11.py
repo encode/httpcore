@@ -115,6 +115,12 @@ class HTTP11Connection(ConnectionInterface):
                     headers,
                 )
 
+            # FIXME: encode/httpcore#872
+            if (status == 101) or (
+                (request.method == b"CONNECT") and (200 <= status < 300)
+            ):
+                raise AssertionError("protocol switches")
+
             return Response(
                 status=status,
                 headers=headers,
