@@ -20,5 +20,5 @@ trio-typing==0.10.0
 types-certifi==2021.10.8.3
 pytest==8.0.0
 pytest-httpbin==2.0.0
-pytest-trio==0.7.0
+pytest-trio==0.8.0
 werkzeug<2.1  # See: https://github.com/postmanlabs/httpbin/issues/673
