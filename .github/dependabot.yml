@@ -8,3 +8,5 @@ updates:
       python-packages:
         patterns:
           - "*"
+        exclude-patterns:
+          - "werkzeug"
