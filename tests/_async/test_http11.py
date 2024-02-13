@@ -29,7 +29,7 @@ async def test_http11_connection():
         assert repr(conn) == (
             "<AsyncHTTP11Connection ['https://example.com:443', IDLE,"
             " Request Count: 1]>"
-        )
+        )  # fmt: skip
 
 
 @pytest.mark.anyio

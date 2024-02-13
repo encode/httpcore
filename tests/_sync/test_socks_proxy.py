@@ -3,6 +3,7 @@ import pytest
 import httpcore
 
 
+# unasync anyio
 def test_socks5_request():
     """
     Send an HTTP request via a SOCKS proxy.
@@ -63,6 +64,7 @@ def test_socks5_request():
         )
 
 
+# unasync anyio
 def test_authenticated_socks5_request():
     """
     Send an HTTP request via a SOCKS proxy.
@@ -111,6 +113,7 @@ def test_authenticated_socks5_request():
         assert not proxy.connections[0].is_closed()
 
 
+# unasync anyio
 def test_socks5_request_connect_failed():
     """
     Attempt to send an HTTP request via a SOCKS proxy, resulting in a connect failure.
@@ -139,6 +142,7 @@ def test_socks5_request_connect_failed():
         assert not proxy.connections
 
 
+# unasync anyio
 def test_socks5_request_failed_to_provide_auth():
     """
     Attempt to send an HTTP request via an authenticated SOCKS proxy,
@@ -166,6 +170,7 @@ def test_socks5_request_failed_to_provide_auth():
         assert not proxy.connections
 
 
+# unasync anyio
 def test_socks5_request_incorrect_auth():
     """
     Attempt to send an HTTP request via an authenticated SOCKS proxy,

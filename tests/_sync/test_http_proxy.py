@@ -16,6 +16,7 @@ from httpcore import (
 )
 
 
+# unasync anyio
 def test_proxy_forwarding():
     """
     Send an HTTP request via a proxy.
@@ -71,6 +72,7 @@ def test_proxy_forwarding():
         )
 
 
+# unasync anyio
 def test_proxy_tunneling():
     """
     Send an HTTPS request via a proxy.
@@ -155,6 +157,7 @@ class HTTP1ThenHTTP2Backend(MockBackend):
         return HTTP1ThenHTTP2Stream(list(self._buffer))
 
 
+# unasync anyio
 def test_proxy_tunneling_http2():
     """
     Send an HTTP/2 request via a proxy.
@@ -222,6 +225,7 @@ def test_proxy_tunneling_http2():
         )
 
 
+# unasync anyio
 def test_proxy_tunneling_with_403():
     """
     Send an HTTPS request via a proxy.
@@ -242,6 +246,7 @@ def test_proxy_tunneling_with_403():
         assert not proxy.connections
 
 
+# unasync anyio
 def test_proxy_tunneling_with_auth():
     """
     Send an authenticated HTTPS request via a proxy.

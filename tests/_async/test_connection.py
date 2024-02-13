@@ -86,8 +86,8 @@ async def test_concurrent_requests_not_available_on_http11_connections():
                 await conn.request("GET", "https://example.com/")
 
 
-@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 @pytest.mark.anyio
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 async def test_write_error_with_response_sent():
     """
     If a server half-closes the connection while the client is sending
@@ -103,7 +103,9 @@ async def test_write_error_with_response_sent():
             self.count = 0
 
         async def write(
-            self, buffer: bytes, timeout: typing.Optional[float] = None
+            self,
+            buffer: bytes,
+            timeout: typing.Optional[float] = None,
         ) -> None:
             self.count += len(buffer)
 
@@ -157,7 +159,9 @@ async def test_write_error_without_response_sent():
             self.count = 0
 
         async def write(
-            self, buffer: bytes, timeout: typing.Optional[float] = None
+            self,
+            buffer: bytes,
+            timeout: typing.Optional[float] = None,
         ) -> None:
             self.count += len(buffer)
 
@@ -212,7 +216,9 @@ async def test_http2_connection():
     )
 
     async with AsyncHTTPConnection(
-        origin=origin, network_backend=network_backend, http2=True
+        origin=origin,
+        network_backend=network_backend,
+        http2=True,
     ) as conn:
         response = await conn.request("GET", "https://example.com/")
 
@@ -229,7 +235,8 @@ async def test_request_to_incorrect_origin():
     origin = Origin(b"https", b"example.com", 443)
     network_backend = AsyncMockBackend([])
     async with AsyncHTTPConnection(
-        origin=origin, network_backend=network_backend
+        origin=origin,
+        network_backend=network_backend,
     ) as conn:
         with pytest.raises(RuntimeError):
             await conn.request("GET", "https://other.com/")
@@ -266,18 +273,24 @@ class NeedsRetryBackend(AsyncMockBackend):
 
     class _NeedsRetryAsyncNetworkStream(AsyncNetworkStream):
         def __init__(
-            self, backend: "NeedsRetryBackend", stream: AsyncNetworkStream
+            self,
+            backend: "NeedsRetryBackend",
+            stream: AsyncNetworkStream,
         ) -> None:
             self._backend = backend
             self._stream = stream
 
         async def read(
-            self, max_bytes: int, timeout: typing.Optional[float] = None
+            self,
+            max_bytes: int,
+            timeout: typing.Optional[float] = None,
         ) -> bytes:
             return await self._stream.read(max_bytes, timeout)
 
         async def write(
-            self, buffer: bytes, timeout: typing.Optional[float] = None
+            self,
+            buffer: bytes,
+            timeout: typing.Optional[float] = None,
         ) -> None:
             await self._stream.write(buffer, timeout)
 

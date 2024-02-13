@@ -399,7 +399,9 @@ async def test_connection_pool_with_http_exception():
         # Sending an initial request, which once complete will not return to the pool.
         with pytest.raises(Exception):
             await pool.request(
-                "GET", "https://example.com/", extensions={"trace": trace}
+                "GET",
+                "https://example.com/",
+                extensions={"trace": trace},
             )
 
         info = [repr(c) for c in pool.connections]
@@ -452,7 +454,9 @@ async def test_connection_pool_with_connect_exception():
         # Sending an initial request, which once complete will not return to the pool.
         with pytest.raises(Exception):
             await pool.request(
-                "GET", "https://example.com/", extensions={"trace": trace}
+                "GET",
+                "https://example.com/",
+                extensions={"trace": trace},
             )
 
         info = [repr(c) for c in pool.connections]
@@ -775,13 +779,17 @@ async def test_connection_pool_timeout_zero():
         # Two consecutive requests with a pool timeout of zero.
         # Both succeed without raising a timeout.
         response = await pool.request(
-            "GET", "https://example.com/", extensions=extensions
+            "GET",
+            "https://example.com/",
+            extensions=extensions,
         )
         assert response.status == 200
         assert response.content == b"Hello, world!"
 
         response = await pool.request(
-            "GET", "https://example.com/", extensions=extensions
+            "GET",
+            "https://example.com/",
+            extensions=extensions,
         )
         assert response.status == 200
         assert response.content == b"Hello, world!"

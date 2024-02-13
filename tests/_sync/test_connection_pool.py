@@ -9,6 +9,7 @@ from tests import concurrency
 import httpcore
 
 
+# unasync anyio
 def test_connection_pool_with_keepalive():
     """
     By default HTTP/1.1 requests should be returned to the connection pool.
@@ -113,6 +114,7 @@ def test_connection_pool_with_keepalive():
         )
 
 
+# unasync anyio
 def test_connection_pool_with_close():
     """
     HTTP/1.1 requests that include a 'Connection: Close' header should
@@ -146,6 +148,7 @@ def test_connection_pool_with_close():
         assert info == []
 
 
+# unasync anyio
 def test_connection_pool_with_http2():
     """
     Test a connection pool with HTTP/2 requests.
@@ -210,6 +213,7 @@ def test_connection_pool_with_http2():
         ]
 
 
+# unasync anyio
 def test_connection_pool_with_http2_goaway():
     """
     Test a connection pool with HTTP/2 requests, that cleanly disconnects
@@ -266,6 +270,7 @@ def test_connection_pool_with_http2_goaway():
         ]
 
 
+# unasync anyio
 def test_trace_request():
     """
     The 'trace' request extension allows for a callback function to inspect the
@@ -307,6 +312,7 @@ def test_trace_request():
     ]
 
 
+# unasync anyio
 def test_debug_request(caplog):
     """
     The 'trace' request extension allows for a callback function to inspect the
@@ -376,6 +382,7 @@ def test_debug_request(caplog):
     ]
 
 
+# unasync anyio
 def test_connection_pool_with_http_exception():
     """
     HTTP/1.1 requests that result in an exception during the connection should
@@ -391,7 +398,11 @@ def test_connection_pool_with_http_exception():
     with httpcore.ConnectionPool(network_backend=network_backend) as pool:
         # Sending an initial request, which once complete will not return to the pool.
         with pytest.raises(Exception):
-            pool.request("GET", "https://example.com/", extensions={"trace": trace})
+            pool.request(
+                "GET",
+                "https://example.com/",
+                extensions={"trace": trace},
+            )
 
         info = [repr(c) for c in pool.connections]
         assert info == []
@@ -412,6 +423,7 @@ def test_connection_pool_with_http_exception():
     ]
 
 
+# unasync anyio
 def test_connection_pool_with_connect_exception():
     """
     HTTP/1.1 requests that result in an exception during connection should not
@@ -441,7 +453,11 @@ def test_connection_pool_with_connect_exception():
     with httpcore.ConnectionPool(network_backend=network_backend) as pool:
         # Sending an initial request, which once complete will not return to the pool.
         with pytest.raises(Exception):
-            pool.request("GET", "https://example.com/", extensions={"trace": trace})
+            pool.request(
+                "GET",
+                "https://example.com/",
+                extensions={"trace": trace},
+            )
 
         info = [repr(c) for c in pool.connections]
         assert info == []
@@ -452,6 +468,7 @@ def test_connection_pool_with_connect_exception():
     ]
 
 
+# unasync anyio
 def test_connection_pool_with_immediate_expiry():
     """
     Connection pools with keepalive_expiry=0.0 should immediately expire
@@ -486,6 +503,7 @@ def test_connection_pool_with_immediate_expiry():
         assert info == []
 
 
+# unasync anyio
 def test_connection_pool_with_no_keepalive_connections_allowed():
     """
     When 'max_keepalive_connections=0' is used, IDLE connections should not
@@ -519,6 +537,7 @@ def test_connection_pool_with_no_keepalive_connections_allowed():
         assert info == []
 
 
+# unasync trio
 def test_connection_pool_concurrency():
     """
     HTTP/1.1 requests made in concurrency must not ever exceed the maximum number
@@ -568,6 +587,7 @@ def test_connection_pool_concurrency():
             ]
 
 
+# unasync trio
 def test_connection_pool_concurrency_same_domain_closing():
     """
     HTTP/1.1 requests made in concurrency must not ever exceed the maximum number
@@ -609,6 +629,7 @@ def test_connection_pool_concurrency_same_domain_closing():
             )
 
 
+# unasync trio
 def test_connection_pool_concurrency_same_domain_keepalive():
     """
     HTTP/1.1 requests made in concurrency must not ever exceed the maximum number
@@ -663,6 +684,7 @@ def test_connection_pool_concurrency_same_domain_keepalive():
     )
 
 
+# unasync anyio
 def test_unsupported_protocol():
     with httpcore.ConnectionPool() as pool:
         with pytest.raises(httpcore.UnsupportedProtocol):
@@ -672,6 +694,7 @@ def test_unsupported_protocol():
             pool.request("GET", "://www.example.com/")
 
 
+# unasync anyio
 def test_connection_pool_closed_while_request_in_flight():
     """
     Closing a connection pool while a request/response is still in-flight
@@ -698,6 +721,7 @@ def test_connection_pool_closed_while_request_in_flight():
                 response.read()
 
 
+# unasync anyio
 def test_connection_pool_timeout():
     """
     Ensure that exceeding max_connections can cause a request to timeout.
@@ -724,6 +748,7 @@ def test_connection_pool_timeout():
                 pool.request("GET", "https://example.com/", extensions=extensions)
 
 
+# unasync anyio
 def test_connection_pool_timeout_zero():
     """
     A pool timeout of 0 shouldn't raise a PoolTimeout if there's
@@ -753,11 +778,19 @@ def test_connection_pool_timeout_zero():
     ) as pool:
         # Two consecutive requests with a pool timeout of zero.
         # Both succeed without raising a timeout.
-        response = pool.request("GET", "https://example.com/", extensions=extensions)
+        response = pool.request(
+            "GET",
+            "https://example.com/",
+            extensions=extensions,
+        )
         assert response.status == 200
         assert response.content == b"Hello, world!"
 
-        response = pool.request("GET", "https://example.com/", extensions=extensions)
+        response = pool.request(
+            "GET",
+            "https://example.com/",
+            extensions=extensions,
+        )
         assert response.status == 200
         assert response.content == b"Hello, world!"
 
@@ -781,6 +814,7 @@ def test_connection_pool_timeout_zero():
         assert response.content == b"Hello, world!"
 
 
+# unasync anyio
 def test_http11_upgrade_connection():
     """
     HTTP "101 Switching Protocols" indicates an upgraded connection.

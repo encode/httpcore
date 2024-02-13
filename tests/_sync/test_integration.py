@@ -5,12 +5,14 @@ import pytest  # noqa: F401
 import httpcore
 
 
+# unasync anyio
 def test_request(httpbin):
     with httpcore.ConnectionPool() as pool:
         response = pool.request("GET", httpbin.url)
         assert response.status == 200
 
 
+# unasync anyio
 def test_ssl_request(httpbin_secure):
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
@@ -20,6 +22,7 @@ def test_ssl_request(httpbin_secure):
         assert response.status == 200
 
 
+# unasync anyio
 def test_extra_info(httpbin_secure):
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False

@@ -24,8 +24,8 @@ SUBS = [
     ("__aenter__", "__enter__"),
     ("__aexit__", "__exit__"),
     ("__aiter__", "__iter__"),
-    ("@pytest.mark.anyio", ""),
-    ("@pytest.mark.trio", ""),
+    ("@pytest.mark.anyio", "# unasync anyio"),
+    ("@pytest.mark.trio", "# unasync trio"),
     ("AutoBackend", "SyncBackend"),
 ]
 COMPILED_SUBS = [
