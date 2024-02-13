@@ -1,7 +1,14 @@
 import ssl
 import sys
 from types import TracebackType
-from typing import AsyncIterable, AsyncIterator, Iterable, List, Optional, Type
+from typing import (  # noqa: F811
+    AsyncIterable,
+    AsyncIterator,
+    Iterable,
+    List,
+    Optional,
+    Type,
+)
 
 from .._backends.auto import AutoBackend
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend

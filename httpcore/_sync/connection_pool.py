@@ -1,7 +1,14 @@
 import ssl
 import sys
 from types import TracebackType
-from typing import Iterable, Iterator, Iterable, List, Optional, Type
+from typing import (  # noqa: F811
+    Iterable,
+    Iterator,
+    Iterable,
+    List,
+    Optional,
+    Type,
+)
 
 from .._backends.sync import SyncBackend
 from .._backends.base import SOCKET_OPTION, NetworkBackend
