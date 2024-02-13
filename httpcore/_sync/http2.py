@@ -142,7 +142,12 @@ class HTTP2Connection(ConnectionInterface):
                 self._send_request_headers(request=request, stream_id=stream_id)
             with Trace("send_request_body", logger, request, kwargs):
                 self._send_request_body(request=request, stream_id=stream_id)
-            with Trace("receive_response_headers", logger, request, kwargs) as trace:
+            with Trace(
+                "receive_response_headers",
+                logger,
+                request,
+                kwargs,
+            ) as trace:
                 status, headers = self._receive_response(
                     request=request, stream_id=stream_id
                 )
@@ -258,7 +263,12 @@ class HTTP2Connection(ConnectionInterface):
             self._send_stream_data(request, stream_id, data)
         self._send_end_stream(request, stream_id)
 
-    def _send_stream_data(self, request: Request, stream_id: int, data: bytes) -> None:
+    def _send_stream_data(
+        self,
+        request: Request,
+        stream_id: int,
+        data: bytes,
+    ) -> None:
         """
         Send a single chunk of data in one or more data frames.
         """
@@ -357,7 +367,11 @@ class HTTP2Connection(ConnectionInterface):
                 events = self._read_incoming_data(request)
                 for event in events:
                     if isinstance(event, h2.events.RemoteSettingsChanged):
-                        with Trace("receive_remote_settings", logger, request) as trace:
+                        with Trace(
+                            "receive_remote_settings",
+                            logger,
+                            request,
+                        ) as trace:
                             self._receive_remote_settings_change(event)
                             trace.return_value = event
 
@@ -419,7 +433,10 @@ class HTTP2Connection(ConnectionInterface):
 
     # Wrappers around network read/write operations...
 
-    def _read_incoming_data(self, request: Request) -> typing.List[h2.events.Event]:
+    def _read_incoming_data(
+        self,
+        request: Request,
+    ) -> typing.List[h2.events.Event]:
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("read", None)
 

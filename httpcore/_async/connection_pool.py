@@ -26,7 +26,8 @@ class AsyncPoolRequest:
         self._connection_acquired = AsyncEvent()
 
     def assign_to_connection(
-        self, connection: Optional[AsyncConnectionInterface]
+        self,
+        connection: Optional[AsyncConnectionInterface],
     ) -> None:
         self.connection = connection
         self._connection_acquired.set()
@@ -205,7 +206,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
                 try:
                     # Send the request on the assigned connection.
                     response = await connection.handle_async_request(
-                        pool_request.request
+                        pool_request.request,
                     )
                 except ConnectionNotAvailable:
                     # In some cases a connection may initially be available to

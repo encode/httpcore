@@ -119,7 +119,12 @@ class HTTPConnection(ConnectionInterface):
                         "timeout": timeout,
                         "socket_options": self._socket_options,
                     }
-                    with Trace("connect_tcp", logger, request, kwargs) as trace:
+                    with Trace(
+                        "connect_tcp",
+                        logger,
+                        request,
+                        kwargs,
+                    ) as trace:
                         stream = self._network_backend.connect_tcp(**kwargs)
                         trace.return_value = stream
                 else:
@@ -128,8 +133,15 @@ class HTTPConnection(ConnectionInterface):
                         "timeout": timeout,
                         "socket_options": self._socket_options,
                     }
-                    with Trace("connect_unix_socket", logger, request, kwargs) as trace:
-                        stream = self._network_backend.connect_unix_socket(**kwargs)
+                    with Trace(
+                        "connect_unix_socket",
+                        logger,
+                        request,
+                        kwargs,
+                    ) as trace:
+                        stream = self._network_backend.connect_unix_socket(
+                            **kwargs,
+                        )
                         trace.return_value = stream
 
                 if self._origin.scheme in (b"https", b"wss"):

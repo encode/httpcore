@@ -288,7 +288,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
                     extensions=request.extensions,
                 )
                 connect_response = await self._connection.handle_async_request(
-                    connect_request
+                    connect_request,
                 )
 
                 if connect_response.status < 200 or connect_response.status > 299:
