@@ -5,12 +5,10 @@ import pytest  # noqa: F401
 import httpcore
 
 
-
 def test_request(httpbin):
     with httpcore.ConnectionPool() as pool:
         response = pool.request("GET", httpbin.url)
         assert response.status == 200
-
 
 
 def test_ssl_request(httpbin_secure):
@@ -20,7 +18,6 @@ def test_ssl_request(httpbin_secure):
     with httpcore.ConnectionPool(ssl_context=ssl_context) as pool:
         response = pool.request("GET", httpbin_secure.url)
         assert response.status == 200
-
 
 
 def test_extra_info(httpbin_secure):

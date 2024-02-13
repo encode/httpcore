@@ -9,7 +9,6 @@ from tests import concurrency
 import httpcore
 
 
-
 def test_connection_pool_with_keepalive():
     """
     By default HTTP/1.1 requests should be returned to the connection pool.
@@ -114,7 +113,6 @@ def test_connection_pool_with_keepalive():
         )
 
 
-
 def test_connection_pool_with_close():
     """
     HTTP/1.1 requests that include a 'Connection: Close' header should
@@ -146,7 +144,6 @@ def test_connection_pool_with_close():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in pool.connections]
         assert info == []
-
 
 
 def test_connection_pool_with_http2():
@@ -213,7 +210,6 @@ def test_connection_pool_with_http2():
         ]
 
 
-
 def test_connection_pool_with_http2_goaway():
     """
     Test a connection pool with HTTP/2 requests, that cleanly disconnects
@@ -270,7 +266,6 @@ def test_connection_pool_with_http2_goaway():
         ]
 
 
-
 def test_trace_request():
     """
     The 'trace' request extension allows for a callback function to inspect the
@@ -310,7 +305,6 @@ def test_trace_request():
         "http11.response_closed.started",
         "http11.response_closed.complete",
     ]
-
 
 
 def test_debug_request(caplog):
@@ -382,7 +376,6 @@ def test_debug_request(caplog):
     ]
 
 
-
 def test_connection_pool_with_http_exception():
     """
     HTTP/1.1 requests that result in an exception during the connection should
@@ -398,9 +391,7 @@ def test_connection_pool_with_http_exception():
     with httpcore.ConnectionPool(network_backend=network_backend) as pool:
         # Sending an initial request, which once complete will not return to the pool.
         with pytest.raises(Exception):
-            pool.request(
-                "GET", "https://example.com/", extensions={"trace": trace}
-            )
+            pool.request("GET", "https://example.com/", extensions={"trace": trace})
 
         info = [repr(c) for c in pool.connections]
         assert info == []
@@ -419,7 +410,6 @@ def test_connection_pool_with_http_exception():
         "http11.response_closed.started",
         "http11.response_closed.complete",
     ]
-
 
 
 def test_connection_pool_with_connect_exception():
@@ -451,9 +441,7 @@ def test_connection_pool_with_connect_exception():
     with httpcore.ConnectionPool(network_backend=network_backend) as pool:
         # Sending an initial request, which once complete will not return to the pool.
         with pytest.raises(Exception):
-            pool.request(
-                "GET", "https://example.com/", extensions={"trace": trace}
-            )
+            pool.request("GET", "https://example.com/", extensions={"trace": trace})
 
         info = [repr(c) for c in pool.connections]
         assert info == []
@@ -462,7 +450,6 @@ def test_connection_pool_with_connect_exception():
         "connection.connect_tcp.started",
         "connection.connect_tcp.failed",
     ]
-
 
 
 def test_connection_pool_with_immediate_expiry():
@@ -499,7 +486,6 @@ def test_connection_pool_with_immediate_expiry():
         assert info == []
 
 
-
 def test_connection_pool_with_no_keepalive_connections_allowed():
     """
     When 'max_keepalive_connections=0' is used, IDLE connections should not
@@ -531,7 +517,6 @@ def test_connection_pool_with_no_keepalive_connections_allowed():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in pool.connections]
         assert info == []
-
 
 
 def test_connection_pool_concurrency():
@@ -583,7 +568,6 @@ def test_connection_pool_concurrency():
             ]
 
 
-
 def test_connection_pool_concurrency_same_domain_closing():
     """
     HTTP/1.1 requests made in concurrency must not ever exceed the maximum number
@@ -623,7 +607,6 @@ def test_connection_pool_concurrency_same_domain_closing():
                 "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE,"
                 " Request Count: 1]>"
             )
-
 
 
 def test_connection_pool_concurrency_same_domain_keepalive():
@@ -680,7 +663,6 @@ def test_connection_pool_concurrency_same_domain_keepalive():
     )
 
 
-
 def test_unsupported_protocol():
     with httpcore.ConnectionPool() as pool:
         with pytest.raises(httpcore.UnsupportedProtocol):
@@ -688,7 +670,6 @@ def test_unsupported_protocol():
 
         with pytest.raises(httpcore.UnsupportedProtocol):
             pool.request("GET", "://www.example.com/")
-
 
 
 def test_connection_pool_closed_while_request_in_flight():
@@ -717,7 +698,6 @@ def test_connection_pool_closed_while_request_in_flight():
                 response.read()
 
 
-
 def test_connection_pool_timeout():
     """
     Ensure that exceeding max_connections can cause a request to timeout.
@@ -742,7 +722,6 @@ def test_connection_pool_timeout():
             with pytest.raises(httpcore.PoolTimeout):
                 extensions = {"timeout": {"pool": 0.0001}}
                 pool.request("GET", "https://example.com/", extensions=extensions)
-
 
 
 def test_connection_pool_timeout_zero():
@@ -774,15 +753,11 @@ def test_connection_pool_timeout_zero():
     ) as pool:
         # Two consecutive requests with a pool timeout of zero.
         # Both succeed without raising a timeout.
-        response = pool.request(
-            "GET", "https://example.com/", extensions=extensions
-        )
+        response = pool.request("GET", "https://example.com/", extensions=extensions)
         assert response.status == 200
         assert response.content == b"Hello, world!"
 
-        response = pool.request(
-            "GET", "https://example.com/", extensions=extensions
-        )
+        response = pool.request("GET", "https://example.com/", extensions=extensions)
         assert response.status == 200
         assert response.content == b"Hello, world!"
 
@@ -804,7 +779,6 @@ def test_connection_pool_timeout_zero():
 
         assert response.status == 200
         assert response.content == b"Hello, world!"
-
 
 
 def test_http11_upgrade_connection():

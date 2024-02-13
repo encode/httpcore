@@ -16,7 +16,6 @@ from httpcore import (
 )
 
 
-
 def test_proxy_forwarding():
     """
     Send an HTTP request via a proxy.
@@ -70,7 +69,6 @@ def test_proxy_forwarding():
         assert not proxy.connections[0].can_handle_request(
             Origin(b"https", b"other.com", 443)
         )
-
 
 
 def test_proxy_tunneling():
@@ -157,7 +155,6 @@ class HTTP1ThenHTTP2Backend(MockBackend):
         return HTTP1ThenHTTP2Stream(list(self._buffer))
 
 
-
 def test_proxy_tunneling_http2():
     """
     Send an HTTP/2 request via a proxy.
@@ -225,7 +222,6 @@ def test_proxy_tunneling_http2():
         )
 
 
-
 def test_proxy_tunneling_with_403():
     """
     Send an HTTPS request via a proxy.
@@ -244,7 +240,6 @@ def test_proxy_tunneling_with_403():
             proxy.request("GET", "https://example.com/")
         assert str(exc_info.value) == "403 Permission Denied"
         assert not proxy.connections
-
 
 
 def test_proxy_tunneling_with_auth():

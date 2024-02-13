@@ -3,7 +3,6 @@ import pytest
 import httpcore
 
 
-
 def test_http11_connection():
     origin = httpcore.Origin(b"https", b"example.com", 443)
     stream = httpcore.MockStream(
@@ -27,10 +26,8 @@ def test_http11_connection():
         assert conn.is_available()
         assert not conn.has_expired()
         assert repr(conn) == (
-            "<HTTP11Connection ['https://example.com:443', IDLE,"
-            " Request Count: 1]>"
+            "<HTTP11Connection ['https://example.com:443', IDLE," " Request Count: 1]>"
         )
-
 
 
 def test_http11_connection_unread_response():
@@ -62,7 +59,6 @@ def test_http11_connection_unread_response():
         )
 
 
-
 def test_http11_connection_with_remote_protocol_error():
     """
     If a remote protocol error occurs, then no response will be returned,
@@ -82,7 +78,6 @@ def test_http11_connection_with_remote_protocol_error():
             "<HTTP11Connection ['https://example.com:443', CLOSED,"
             " Request Count: 1]>"
         )
-
 
 
 def test_http11_connection_with_incomplete_response():
@@ -111,7 +106,6 @@ def test_http11_connection_with_incomplete_response():
             "<HTTP11Connection ['https://example.com:443', CLOSED,"
             " Request Count: 1]>"
         )
-
 
 
 def test_http11_connection_with_local_protocol_error():
@@ -145,7 +139,6 @@ def test_http11_connection_with_local_protocol_error():
         )
 
 
-
 def test_http11_connection_handles_one_active_request():
     """
     Attempting to send a request while one is already in-flight will raise
@@ -165,7 +158,6 @@ def test_http11_connection_handles_one_active_request():
         with conn.stream("GET", "https://example.com/"):
             with pytest.raises(httpcore.ConnectionNotAvailable):
                 conn.request("GET", "https://example.com/")
-
 
 
 def test_http11_connection_attempt_close():
@@ -189,7 +181,6 @@ def test_http11_connection_attempt_close():
             assert response.content == b"Hello, world!"
 
 
-
 def test_http11_request_to_incorrect_origin():
     """
     A connection can only send requests to whichever origin it is connected to.
@@ -199,7 +190,6 @@ def test_http11_request_to_incorrect_origin():
     with httpcore.HTTP11Connection(origin=origin, stream=stream) as conn:
         with pytest.raises(RuntimeError):
             conn.request("GET", "https://other.com/")
-
 
 
 def test_http11_expect_continue():
@@ -232,7 +222,6 @@ def test_http11_expect_continue():
         )
         assert response.status == 200
         assert response.content == b"Hello, world!"
-
 
 
 def test_http11_upgrade_connection():
@@ -269,7 +258,6 @@ def test_http11_upgrade_connection():
             assert content == b"..."
 
 
-
 def test_http11_early_hints():
     """
     HTTP "103 Early Hints" is an interim response.
@@ -303,7 +291,6 @@ def test_http11_early_hints():
         )
         assert response.status == 200
         assert response.content == b"<html>Hello, world! ...</html>"
-
 
 
 def test_http11_header_sub_100kb():

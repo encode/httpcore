@@ -287,9 +287,7 @@ class TunnelHTTPConnection(ConnectionInterface):
                     headers=connect_headers,
                     extensions=request.extensions,
                 )
-                connect_response = self._connection.handle_request(
-                    connect_request
-                )
+                connect_response = self._connection.handle_request(connect_request)
 
                 if connect_response.status < 200 or connect_response.status > 299:
                     reason_bytes = connect_response.extensions.get("reason_phrase", b"")

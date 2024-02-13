@@ -25,9 +25,7 @@ class PoolRequest:
         self.connection: Optional[ConnectionInterface] = None
         self._connection_acquired = Event()
 
-    def assign_to_connection(
-        self, connection: Optional[ConnectionInterface]
-    ) -> None:
+    def assign_to_connection(self, connection: Optional[ConnectionInterface]) -> None:
         self.connection = connection
         self._connection_acquired.set()
 
@@ -204,9 +202,7 @@ class ConnectionPool(RequestInterface):
 
                 try:
                     # Send the request on the assigned connection.
-                    response = connection.handle_request(
-                        pool_request.request
-                    )
+                    response = connection.handle_request(pool_request.request)
                 except ConnectionNotAvailable:
                     # In some cases a connection may initially be available to
                     # handle a request, but then become unavailable.
