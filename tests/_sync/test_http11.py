@@ -270,6 +270,46 @@ def test_http11_upgrade_connection():
 
 
 
+def test_http11_upgrade_with_trailing_data():
+    """
+    HTTP "101 Switching Protocols" indicates an upgraded connection.
+
+    For `CONNECT` and `Upgrade:` requests, we need to handover the trailing data
+    in the response.
+
+    https://h11.readthedocs.io/en/latest/api.html#switching-protocols
+
+    This mock network stream replicates networking where response headers and body are
+    received at once.
+    """
+    origin = httpcore.Origin(b"wss", b"example.com", 443)
+    stream = httpcore.MockStream(
+        [
+            (
+                b"HTTP/1.1 101 Switching Protocols\r\n"
+                b"Connection: upgrade\r\n"
+                b"Upgrade: custom\r\n"
+                b"\r\n"
+                b"..."
+            )
+        ]
+    )
+    with httpcore.HTTP11Connection(
+        origin=origin, stream=stream, keepalive_expiry=5.0
+    ) as conn:
+        with pytest.raises(AssertionError) as excinfo:
+            with conn.stream(
+                "GET",
+                "wss://example.com/",
+                headers={"Connection": "upgrade", "Upgrade": "custom"},
+            ):
+                pass
+
+        assert excinfo.value.args[0] == "protocol switches"
+        assert excinfo.value.args[1] == b"..."
+
+
+
 def test_http11_early_hints():
     """
     HTTP "103 Early Hints" is an interim response.

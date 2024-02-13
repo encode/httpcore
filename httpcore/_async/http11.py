@@ -107,6 +107,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
                     status,
                     reason_phrase,
                     headers,
+                    trailing_data,
                 ) = await self._receive_response_headers(**kwargs)
                 trace.return_value = (
                     http_version,
@@ -119,7 +120,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
             if (status == 101) or (
                 (request.method == b"CONNECT") and (200 <= status < 300)
             ):
-                raise AssertionError("protocol switches")
+                raise AssertionError("protocol switches", trailing_data)
 
             return Response(
                 status=status,
@@ -173,7 +174,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
 
     async def _receive_response_headers(
         self, request: Request
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]]]:
+    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], bytes]:
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("read", None)
 
@@ -193,7 +194,9 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
         # raw header casing, rather than the enforced lowercase headers.
         headers = event.headers.raw_items()
 
-        return http_version, event.status_code, event.reason, headers
+        trailing_data, _ = self._h11_state.trailing_data
+
+        return http_version, event.status_code, event.reason, headers, trailing_data
 
     async def _receive_response_body(self, request: Request) -> AsyncIterator[bytes]:
         timeouts = request.extensions.get("timeout", {})
