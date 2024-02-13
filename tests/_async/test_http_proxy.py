@@ -40,7 +40,8 @@ async def test_proxy_forwarding():
         async with proxy.stream("GET", "http://example.com/") as response:
             info = [repr(c) for c in proxy.connections]
             assert info == [
-                "<AsyncForwardHTTPConnection ['http://localhost:8080', HTTP/1.1, ACTIVE, Request Count: 1]>"
+                "<AsyncForwardHTTPConnection ['http://localhost:8080', HTTP/1.1,"
+                " ACTIVE, Request Count: 1]>"
             ]
             await response.aread()
 
@@ -48,13 +49,15 @@ async def test_proxy_forwarding():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in proxy.connections]
         assert info == [
-            "<AsyncForwardHTTPConnection ['http://localhost:8080', HTTP/1.1, IDLE, Request Count: 1]>"
+            "<AsyncForwardHTTPConnection ['http://localhost:8080', HTTP/1.1, IDLE,"
+            " Request Count: 1]>"
         ]
         assert proxy.connections[0].is_idle()
         assert proxy.connections[0].is_available()
         assert not proxy.connections[0].is_closed()
 
-        # A connection on a forwarding proxy can only handle HTTP requests to the same origin.
+        # A connection on a forwarding proxy can only
+        # handle HTTP requests to the same origin.
         assert proxy.connections[0].can_handle_request(
             Origin(b"http", b"example.com", 80)
         )
@@ -95,7 +98,8 @@ async def test_proxy_tunneling():
         async with proxy.stream("GET", "https://example.com/") as response:
             info = [repr(c) for c in proxy.connections]
             assert info == [
-                "<AsyncTunnelHTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
+                "<AsyncTunnelHTTPConnection ['https://example.com:443', HTTP/1.1,"
+                " ACTIVE, Request Count: 1]>"
             ]
             await response.aread()
 
@@ -103,13 +107,15 @@ async def test_proxy_tunneling():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in proxy.connections]
         assert info == [
-            "<AsyncTunnelHTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 1]>"
+            "<AsyncTunnelHTTPConnection ['https://example.com:443', HTTP/1.1, IDLE,"
+            " Request Count: 1]>"
         ]
         assert proxy.connections[0].is_idle()
         assert proxy.connections[0].is_available()
         assert not proxy.connections[0].is_closed()
 
-        # A connection on a tunneled proxy can only handle HTTPS requests to the same origin.
+        # A connection on a tunneled proxy can only
+        # handle HTTPS requests to the same origin.
         assert not proxy.connections[0].can_handle_request(
             Origin(b"http", b"example.com", 80)
         )
@@ -187,7 +193,8 @@ async def test_proxy_tunneling_http2():
         async with proxy.stream("GET", "https://example.com/") as response:
             info = [repr(c) for c in proxy.connections]
             assert info == [
-                "<AsyncTunnelHTTPConnection ['https://example.com:443', HTTP/2, ACTIVE, Request Count: 1]>"
+                "<AsyncTunnelHTTPConnection ['https://example.com:443', HTTP/2,"
+                " ACTIVE, Request Count: 1]>"
             ]
             await response.aread()
 
@@ -195,13 +202,15 @@ async def test_proxy_tunneling_http2():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in proxy.connections]
         assert info == [
-            "<AsyncTunnelHTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 1]>"
+            "<AsyncTunnelHTTPConnection ['https://example.com:443', HTTP/2, IDLE,"
+            " Request Count: 1]>"
         ]
         assert proxy.connections[0].is_idle()
         assert proxy.connections[0].is_available()
         assert not proxy.connections[0].is_closed()
 
-        # A connection on a tunneled proxy can only handle HTTPS requests to the same origin.
+        # A connection on a tunneled proxy can only
+        # handle HTTPS requests to the same origin.
         assert not proxy.connections[0].can_handle_request(
             Origin(b"http", b"example.com", 80)
         )

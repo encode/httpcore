@@ -67,7 +67,8 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
     async def handle_async_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
             raise RuntimeError(
-                f"Attempted to send request to {request.url.origin} on connection to {self._origin}"
+                f"Attempted to send request to {request.url.origin}"
+                f" on connection to {self._origin}"
             )
 
         try:

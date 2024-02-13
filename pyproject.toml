@@ -60,7 +60,7 @@ include = [
     "/httpcore",
     "/CHANGELOG.md",
     "/README.md",
-    "/tests"
+    "/tests",
 ]
 
 [tool.hatch.metadata.hooks.fancy-pypi-readme]
@@ -96,26 +96,27 @@ filterwarnings = ["error"]
 
 [tool.coverage.run]
 omit = [
-    "venv/*", 
-    "httpcore/_sync/*"
+    "venv/*",
+    "httpcore/_sync/*",
 ]
-include = ["httpcore/*", "tests/*"]
+include = [
+    "httpcore/*",
+    "tests/*",
+]
 
 [tool.ruff]
 exclude = [
     "httpcore/_sync",
     "tests/_sync",
 ]
-line-length = 88
+
+[tool.ruff.lint]
 select = [
     "E",
     "F",
     "W",
-    "I"
+    "I",
 ]
 
-[tool.ruff.pycodestyle]
-max-line-length = 120
-
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 combine-as-imports = true

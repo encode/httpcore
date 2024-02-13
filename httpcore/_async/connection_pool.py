@@ -119,9 +119,10 @@ class AsyncConnectionPool(AsyncRequestInterface):
         self._connections: List[AsyncConnectionInterface] = []
         self._requests: List[AsyncPoolRequest] = []
 
-        # We only mutate the state of the connection pool within an 'optional_thread_lock'
-        # context. This holds a threading lock unless we're running in async mode,
-        # in which case it is a no-op.
+        # We only mutate the state of the connection pool
+        # within an 'optional_thread_lock' context.
+        # This holds a threading lock unless we're running in
+        # async mode, in which case it is a no-op.
         self._optional_thread_lock = AsyncThreadLock()
 
     def create_connection(self, origin: Origin) -> AsyncConnectionInterface:
@@ -148,9 +149,12 @@ class AsyncConnectionPool(AsyncRequestInterface):
         ```python
         >>> pool.connections
         [
-            <AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 6]>,
-            <AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 9]> ,
-            <AsyncHTTPConnection ['http://example.com:80', HTTP/1.1, IDLE, Request Count: 1]>,
+            <AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE,
+         Request Count: 6]>,
+            <AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, IDLE,
+         Request Count: 9]>,
+            <AsyncHTTPConnection ['http://example.com:80', HTTP/1.1, IDLE,
+         Request Count: 1]>,
         ]
         ```
         """
@@ -160,7 +164,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
         """
         Send an HTTP request, and return an HTTP response.
 
-        This is the core implementation that is called into by `.request()` or `.stream()`.
+        The core implementation that is called into by `.request()` or `.stream()`.
         """
         scheme = request.url.scheme.decode()
         if scheme == "":

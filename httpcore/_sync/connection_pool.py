@@ -119,9 +119,10 @@ class ConnectionPool(RequestInterface):
         self._connections: List[ConnectionInterface] = []
         self._requests: List[PoolRequest] = []
 
-        # We only mutate the state of the connection pool within an 'optional_thread_lock'
-        # context. This holds a threading lock unless we're running in async mode,
-        # in which case it is a no-op.
+        # We only mutate the state of the connection pool
+        # within an 'optional_thread_lock' context.
+        # This holds a threading lock unless we're running in
+        # async mode, in which case it is a no-op.
         self._optional_thread_lock = ThreadLock()
 
     def create_connection(self, origin: Origin) -> ConnectionInterface:
@@ -148,9 +149,12 @@ class ConnectionPool(RequestInterface):
         ```python
         >>> pool.connections
         [
-            <HTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 6]>,
-            <HTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 9]> ,
-            <HTTPConnection ['http://example.com:80', HTTP/1.1, IDLE, Request Count: 1]>,
+            <HTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE,
+         Request Count: 6]>,
+            <HTTPConnection ['https://example.com:443', HTTP/1.1, IDLE,
+         Request Count: 9]>,
+            <HTTPConnection ['http://example.com:80', HTTP/1.1, IDLE,
+         Request Count: 1]>,
         ]
         ```
         """
@@ -160,7 +164,7 @@ class ConnectionPool(RequestInterface):
         """
         Send an HTTP request, and return an HTTP response.
 
-        This is the core implementation that is called into by `.request()` or `.stream()`.
+        The core implementation that is called into by `.request()` or `.stream()`.
         """
         scheme = request.url.scheme.decode()
         if scheme == "":

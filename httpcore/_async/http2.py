@@ -470,10 +470,10 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
             except Exception as exc:  # pragma: nocover
                 # If we get a network error we should:
                 #
-                # 1. Save the exception and just raise it immediately on any future write.
-                #    (For example, this means that a single write timeout or disconnect will
-                #    immediately close all pending streams. Without requiring multiple
-                #    sequential timeouts.)
+                # 1. Save the exception and just raise it immediately on any
+                #    future write. (For example, this means that a single write timeout
+                #    or disconnect will immediately close all pending streams,
+                #    without requiring multiple sequential timeouts.)
                 # 2. Mark the connection as errored, so that we don't accept any other
                 #    incoming requests.
                 self._write_exception = exc

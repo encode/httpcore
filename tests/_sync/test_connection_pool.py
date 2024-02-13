@@ -36,11 +36,12 @@ def test_connection_pool_with_keepalive():
         with pool.stream("GET", "https://example.com/") as response:
             info = [repr(c) for c in pool.connections]
             assert info == [
-                "<HTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
+                "<HTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE,"
+                " Request Count: 1]>"
             ]
-            assert (
-                repr(pool)
-                == "<ConnectionPool [Requests: 1 active, 0 queued | Connections: 1 active, 0 idle]>"
+            assert repr(pool) == (
+                "<ConnectionPool [Requests: 1 active, 0 queued |"
+                " Connections: 1 active, 0 idle]>"
             )
             response.read()
 
@@ -48,22 +49,25 @@ def test_connection_pool_with_keepalive():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in pool.connections]
         assert info == [
-            "<HTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 1]>"
+            "<HTTPConnection ['https://example.com:443', HTTP/1.1, IDLE,"
+            " Request Count: 1]>"
         ]
-        assert (
-            repr(pool)
-            == "<ConnectionPool [Requests: 0 active, 0 queued | Connections: 0 active, 1 idle]>"
+        assert repr(pool) == (
+            "<ConnectionPool [Requests: 0 active, 0 queued |"
+            " Connections: 0 active, 1 idle]>"
         )
 
-        # Sending a second request to the same origin will reuse the existing IDLE connection.
+        # Sending a second request to the same origin will
+        # reuse the existing IDLE connection.
         with pool.stream("GET", "https://example.com/") as response:
             info = [repr(c) for c in pool.connections]
             assert info == [
-                "<HTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 2]>"
+                "<HTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE,"
+                " Request Count: 2]>"
             ]
-            assert (
-                repr(pool)
-                == "<ConnectionPool [Requests: 1 active, 0 queued | Connections: 1 active, 0 idle]>"
+            assert repr(pool) == (
+                "<ConnectionPool [Requests: 1 active, 0 queued |"
+                " Connections: 1 active, 0 idle]>"
             )
             response.read()
 
@@ -71,23 +75,27 @@ def test_connection_pool_with_keepalive():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in pool.connections]
         assert info == [
-            "<HTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 2]>"
+            "<HTTPConnection ['https://example.com:443', HTTP/1.1, IDLE,"
+            " Request Count: 2]>"
         ]
-        assert (
-            repr(pool)
-            == "<ConnectionPool [Requests: 0 active, 0 queued | Connections: 0 active, 1 idle]>"
+        assert repr(pool) == (
+            "<ConnectionPool [Requests: 0 active, 0 queued |"
+            " Connections: 0 active, 1 idle]>"
         )
 
-        # Sending a request to a different origin will not reuse the existing IDLE connection.
+        # Sending a request to a different origin will not
+        # reuse the existing IDLE connection.
         with pool.stream("GET", "http://example.com/") as response:
             info = [repr(c) for c in pool.connections]
             assert info == [
-                "<HTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 2]>",
-                "<HTTPConnection ['http://example.com:80', HTTP/1.1, ACTIVE, Request Count: 1]>",
+                "<HTTPConnection ['https://example.com:443', HTTP/1.1, IDLE,"
+                " Request Count: 2]>",
+                "<HTTPConnection ['http://example.com:80', HTTP/1.1, ACTIVE,"
+                " Request Count: 1]>",
             ]
-            assert (
-                repr(pool)
-                == "<ConnectionPool [Requests: 1 active, 0 queued | Connections: 1 active, 1 idle]>"
+            assert repr(pool) == (
+                "<ConnectionPool [Requests: 1 active, 0 queued |"
+                " Connections: 1 active, 1 idle]>"
             )
             response.read()
 
@@ -95,12 +103,14 @@ def test_connection_pool_with_keepalive():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in pool.connections]
         assert info == [
-            "<HTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 2]>",
-            "<HTTPConnection ['http://example.com:80', HTTP/1.1, IDLE, Request Count: 1]>",
+            "<HTTPConnection ['https://example.com:443', HTTP/1.1, IDLE,"
+            " Request Count: 2]>",
+            "<HTTPConnection ['http://example.com:80', HTTP/1.1, IDLE,"
+            " Request Count: 1]>",
         ]
-        assert (
-            repr(pool)
-            == "<ConnectionPool [Requests: 0 active, 0 queued | Connections: 0 active, 2 idle]>"
+        assert repr(pool) == (
+            "<ConnectionPool [Requests: 0 active, 0 queued |"
+            " Connections: 0 active, 2 idle]>"
         )
 
 
@@ -127,7 +137,8 @@ def test_connection_pool_with_close():
         ) as response:
             info = [repr(c) for c in pool.connections]
             assert info == [
-                "<HTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
+                "<HTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE,"
+                " Request Count: 1]>"
             ]
             response.read()
 
@@ -185,17 +196,20 @@ def test_connection_pool_with_http2():
 
         info = [repr(c) for c in pool.connections]
         assert info == [
-            "<HTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 1]>"
+            "<HTTPConnection ['https://example.com:443', HTTP/2, IDLE,"
+            " Request Count: 1]>"
         ]
 
-        # Sending a second request to the same origin will reuse the existing IDLE connection.
+        # Sending a second request to the same origin will
+        # reuse the existing IDLE connection.
         response = pool.request("GET", "https://example.com/")
         assert response.status == 200
         assert response.content == b"Hello, world!"
 
         info = [repr(c) for c in pool.connections]
         assert info == [
-            "<HTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 2]>"
+            "<HTTPConnection ['https://example.com:443', HTTP/2, IDLE,"
+            " Request Count: 2]>"
         ]
 
 
@@ -239,7 +253,8 @@ def test_connection_pool_with_http2_goaway():
 
         info = [repr(c) for c in pool.connections]
         assert info == [
-            "<HTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 1]>"
+            "<HTTPConnection ['https://example.com:443', HTTP/2, IDLE,"
+            " Request Count: 1]>"
         ]
 
         # Sending a second request to the same origin will require a new connection.
@@ -250,7 +265,8 @@ def test_connection_pool_with_http2_goaway():
 
         info = [repr(c) for c in pool.connections]
         assert info == [
-            "<HTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 1]>",
+            "<HTTPConnection ['https://example.com:443', HTTP/2, IDLE,"
+            " Request Count: 1]>",
         ]
 
 
@@ -321,7 +337,8 @@ def test_debug_request(caplog):
         (
             "httpcore.connection",
             logging.DEBUG,
-            "connect_tcp.started host='example.com' port=80 local_address=None timeout=None socket_options=None",
+            "connect_tcp.started host='example.com' port=80 local_address=None"
+            " timeout=None socket_options=None",
         ),
         (
             "httpcore.connection",
@@ -349,7 +366,8 @@ def test_debug_request(caplog):
             "httpcore.http11",
             logging.DEBUG,
             "receive_response_headers.complete return_value="
-            "(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'plain/text'), (b'Content-Length', b'13')])",
+            "(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'plain/text'),"
+            " (b'Content-Length', b'13')])",
         ),
         (
             "httpcore.http11",
@@ -470,7 +488,8 @@ def test_connection_pool_with_immediate_expiry():
         with pool.stream("GET", "https://example.com/") as response:
             info = [repr(c) for c in pool.connections]
             assert info == [
-                "<HTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
+                "<HTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE,"
+                " Request Count: 1]>"
             ]
             response.read()
 
@@ -503,7 +522,8 @@ def test_connection_pool_with_no_keepalive_connections_allowed():
         with pool.stream("GET", "https://example.com/") as response:
             info = [repr(c) for c in pool.connections]
             assert info == [
-                "<HTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
+                "<HTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE,"
+                " Request Count: 1]>"
             ]
             response.read()
 
@@ -550,11 +570,16 @@ def test_connection_pool_concurrency():
             # Each connection was to a different host, and only sent a single
             # request on that connection.
             assert item[0] in [
-                "<HTTPConnection ['http://a.com:80', HTTP/1.1, ACTIVE, Request Count: 1]>",
-                "<HTTPConnection ['http://b.com:80', HTTP/1.1, ACTIVE, Request Count: 1]>",
-                "<HTTPConnection ['http://c.com:80', HTTP/1.1, ACTIVE, Request Count: 1]>",
-                "<HTTPConnection ['http://d.com:80', HTTP/1.1, ACTIVE, Request Count: 1]>",
-                "<HTTPConnection ['http://e.com:80', HTTP/1.1, ACTIVE, Request Count: 1]>",
+                "<HTTPConnection ['http://a.com:80', HTTP/1.1, ACTIVE,"
+                " Request Count: 1]>",
+                "<HTTPConnection ['http://b.com:80', HTTP/1.1, ACTIVE,"
+                " Request Count: 1]>",
+                "<HTTPConnection ['http://c.com:80', HTTP/1.1, ACTIVE,"
+                " Request Count: 1]>",
+                "<HTTPConnection ['http://d.com:80', HTTP/1.1, ACTIVE,"
+                " Request Count: 1]>",
+                "<HTTPConnection ['http://e.com:80', HTTP/1.1, ACTIVE,"
+                " Request Count: 1]>",
             ]
 
 
@@ -594,9 +619,9 @@ def test_connection_pool_concurrency_same_domain_closing():
             # single connection was established at any one time.
             assert len(item) == 1
             # Only a single request was sent on each connection.
-            assert (
-                item[0]
-                == "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
+            assert item[0] == (
+                "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE,"
+                " Request Count: 1]>"
             )
 
 
@@ -637,16 +662,21 @@ def test_connection_pool_concurrency_same_domain_keepalive():
             assert len(item) == 1
             # The connection sent multiple requests.
             assert item[0] in [
-                "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>",
-                "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE, Request Count: 2]>",
-                "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE, Request Count: 3]>",
-                "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE, Request Count: 4]>",
-                "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE, Request Count: 5]>",
+                "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE,"
+                " Request Count: 1]>",
+                "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE,"
+                " Request Count: 2]>",
+                "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE,"
+                " Request Count: 3]>",
+                "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE,"
+                " Request Count: 4]>",
+                "<HTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE,"
+                " Request Count: 5]>",
             ]
 
-    assert (
-        repr(pool)
-        == "<ConnectionPool [Requests: 0 active, 0 queued | Connections: 0 active, 0 idle]>"
+    assert repr(pool) == (
+        "<ConnectionPool [Requests: 0 active, 0 queued |"
+        " Connections: 0 active, 0 idle]>"
     )
 
 

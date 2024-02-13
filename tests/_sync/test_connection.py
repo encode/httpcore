@@ -42,9 +42,9 @@ def test_http_connection():
         assert repr(conn) == "<HTTPConnection [CONNECTING]>"
 
         with conn.stream("GET", "https://example.com/") as response:
-            assert (
-                repr(conn)
-                == "<HTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
+            assert repr(conn) == (
+                "<HTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE,"
+                " Request Count: 1]>"
             )
             response.read()
 
@@ -55,9 +55,9 @@ def test_http_connection():
         assert not conn.is_closed()
         assert conn.is_available()
         assert not conn.has_expired()
-        assert (
-            repr(conn)
-            == "<HTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 1]>"
+        assert repr(conn) == (
+            "<HTTPConnection ['https://example.com:443', HTTP/1.1, IDLE,"
+            " Request Count: 1]>"
         )
 
 
