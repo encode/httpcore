@@ -38,6 +38,10 @@ async def test_connection_pool_with_keepalive():
             assert info == [
                 "<AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
             ]
+            assert (
+                repr(pool)
+                == "<AsyncConnectionPool [Requests: 1 active, 0 queued | Connections: 1 active, 0 idle]>"
+            )
             await response.aread()
 
         assert response.status == 200
@@ -46,6 +50,10 @@ async def test_connection_pool_with_keepalive():
         assert info == [
             "<AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 1]>"
         ]
+        assert (
+            repr(pool)
+            == "<AsyncConnectionPool [Requests: 0 active, 0 queued | Connections: 0 active, 1 idle]>"
+        )
 
         # Sending a second request to the same origin will reuse the existing IDLE connection.
         async with pool.stream("GET", "https://example.com/") as response:
@@ -53,6 +61,10 @@ async def test_connection_pool_with_keepalive():
             assert info == [
                 "<AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 2]>"
             ]
+            assert (
+                repr(pool)
+                == "<AsyncConnectionPool [Requests: 1 active, 0 queued | Connections: 1 active, 0 idle]>"
+            )
             await response.aread()
 
         assert response.status == 200
@@ -61,23 +73,35 @@ async def test_connection_pool_with_keepalive():
         assert info == [
             "<AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 2]>"
         ]
+        assert (
+            repr(pool)
+            == "<AsyncConnectionPool [Requests: 0 active, 0 queued | Connections: 0 active, 1 idle]>"
+        )
 
         # Sending a request to a different origin will not reuse the existing IDLE connection.
         async with pool.stream("GET", "http://example.com/") as response:
             info = [repr(c) for c in pool.connections]
             assert info == [
-                "<AsyncHTTPConnection ['http://example.com:80', HTTP/1.1, ACTIVE, Request Count: 1]>",
                 "<AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 2]>",
+                "<AsyncHTTPConnection ['http://example.com:80', HTTP/1.1, ACTIVE, Request Count: 1]>",
             ]
+            assert (
+                repr(pool)
+                == "<AsyncConnectionPool [Requests: 1 active, 0 queued | Connections: 1 active, 1 idle]>"
+            )
             await response.aread()
 
         assert response.status == 200
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in pool.connections]
         assert info == [
-            "<AsyncHTTPConnection ['http://example.com:80', HTTP/1.1, IDLE, Request Count: 1]>",
             "<AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 2]>",
+            "<AsyncHTTPConnection ['http://example.com:80', HTTP/1.1, IDLE, Request Count: 1]>",
         ]
+        assert (
+            repr(pool)
+            == "<AsyncConnectionPool [Requests: 0 active, 0 queued | Connections: 0 active, 2 idle]>"
+        )
 
 
 @pytest.mark.anyio
@@ -219,6 +243,7 @@ async def test_connection_pool_with_http2_goaway():
         ]
 
         # Sending a second request to the same origin will require a new connection.
+        # The original connection has now been closed.
         response = await pool.request("GET", "https://example.com/")
         assert response.status == 200
         assert response.content == b"Hello, world!"
@@ -226,7 +251,6 @@ async def test_connection_pool_with_http2_goaway():
         info = [repr(c) for c in pool.connections]
         assert info == [
             "<AsyncHTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 1]>",
-            "<AsyncHTTPConnection ['https://example.com:443', HTTP/2, CLOSED, Request Count: 1]>",
         ]
 
 
@@ -619,6 +643,11 @@ async def test_connection_pool_concurrency_same_domain_keepalive():
                 "<AsyncHTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE, Request Count: 4]>",
                 "<AsyncHTTPConnection ['https://a.com:443', HTTP/1.1, ACTIVE, Request Count: 5]>",
             ]
+
+    assert (
+        repr(pool)
+        == "<AsyncConnectionPool [Requests: 0 active, 0 queued | Connections: 0 active, 0 idle]>"
+    )
 
 
 @pytest.mark.anyio
