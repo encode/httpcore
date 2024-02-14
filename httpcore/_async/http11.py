@@ -124,7 +124,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
             if (status == 101) or (
                 (request.method == b"CONNECT") and (200 <= status < 300)
             ):
-                network_stream = HTTP11UpgradeStream(network_stream, trailing_data)
+                network_stream = AsyncHTTP11UpgradeStream(network_stream, trailing_data)
 
             return Response(
                 status=status,
@@ -355,7 +355,7 @@ class HTTP11ConnectionByteStream:
                 await self._connection._response_closed()
 
 
-class HTTP11UpgradeStream(AsyncNetworkStream):
+class AsyncHTTP11UpgradeStream(AsyncNetworkStream):
     def __init__(self, stream: AsyncNetworkStream, leading_data: bytes) -> None:
         self._stream = stream
         self._leading_data = leading_data
