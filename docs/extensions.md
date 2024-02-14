@@ -166,6 +166,22 @@ response = httpcore.request(
 )
 ```
 
+### `"target"`
+
+The target that is used as the HTTP target instead of the URL path.
+
+For example:
+
+```python
+extensions = {"target": b"www.encode.io:443"}
+response = httpcore.request(
+    "CONNECT",
+    "http://your-tunnel-proxy.com",
+    headers=headers,
+    extensions=extensions
+)
+```
+
 ## Response Extensions
 
 ### `"http_version"`

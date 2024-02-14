@@ -136,11 +136,12 @@ class HTTP11Connection(ConnectionInterface):
     def _send_request_headers(self, request: Request) -> None:
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("write", None)
+        target = request.extensions.get("target", None) or request.url.target
 
         with map_exceptions({h11.LocalProtocolError: LocalProtocolError}):
             event = h11.Request(
                 method=request.method,
-                target=request.url.target,
+                target=target,
                 headers=request.headers,
             )
         self._send_event(event, timeout=timeout)

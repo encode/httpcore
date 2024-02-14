@@ -228,12 +228,13 @@ class HTTP2Connection(ConnectionInterface):
         # HTTP/1.1 style headers, and map them appropriately if we end up on
         # an HTTP/2 connection.
         authority = [v for k, v in request.headers if k.lower() == b"host"][0]
+        target = request.extensions.get("target", None) or request.url.target
 
         headers = [
             (b":method", request.method),
             (b":authority", authority),
             (b":scheme", request.url.scheme),
-            (b":path", request.url.target),
+            (b":path", target),
         ] + [
             (k.lower(), v)
             for k, v in request.headers
