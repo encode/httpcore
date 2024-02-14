@@ -1,8 +1,10 @@
 import enum
 import logging
+import ssl
 import time
 from types import TracebackType
 from typing import (
+    Any,
     Iterable,
     Iterator,
     List,
@@ -116,11 +118,13 @@ class HTTP11Connection(ConnectionInterface):
                     headers,
                 )
 
-            # FIXME: encode/httpcore#872
+            network_stream = self._network_stream
+
+            # CONNECT or Upgrade request
             if (status == 101) or (
                 (request.method == b"CONNECT") and (200 <= status < 300)
             ):
-                raise AssertionError("protocol switches", trailing_data)
+                network_stream = HTTP11UpgradeStream(network_stream, trailing_data)
 
             return Response(
                 status=status,
@@ -129,7 +133,7 @@ class HTTP11Connection(ConnectionInterface):
                 extensions={
                     "http_version": http_version,
                     "reason_phrase": reason_phrase,
-                    "network_stream": self._network_stream,
+                    "network_stream": network_stream,
                 },
             )
         except BaseException as exc:
@@ -349,3 +353,34 @@ class HTTP11ConnectionByteStream:
             self._closed = True
             with Trace("response_closed", logger, self._request):
                 self._connection._response_closed()
+
+
+class HTTP11UpgradeStream(NetworkStream):
+    def __init__(self, stream: NetworkStream, leading_data: bytes) -> None:
+        self._stream = stream
+        self._leading_data = leading_data
+
+    def read(self, max_bytes: int, timeout: Optional[float] = None) -> bytes:
+        if self._leading_data:
+            buffer = self._leading_data[:max_bytes]
+            self._leading_data = self._leading_data[max_bytes:]
+            return buffer
+        else:
+            return self._stream.read(max_bytes, timeout)
+
+    def write(self, buffer: bytes, timeout: Optional[float] = None) -> None:
+        self._stream.write(buffer, timeout)
+
+    def close(self) -> None:
+        self._stream.close()
+
+    def start_tls(
+        self,
+        ssl_context: ssl.SSLContext,
+        server_hostname: Optional[str] = None,
+        timeout: Optional[float] = None,
+    ) -> NetworkStream:
+        return self._stream.start_tls(ssl_context, server_hostname, timeout)
+
+    def get_extra_info(self, info: str) -> Any:
+        return self._stream.get_extra_info(info)

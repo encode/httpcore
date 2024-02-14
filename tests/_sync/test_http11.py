@@ -265,6 +265,7 @@ def test_http11_upgrade_connection():
         ) as response:
             assert response.status == 101
             network_stream = response.extensions["network_stream"]
+            assert network_stream._leading_data == b""
             content = network_stream.read(max_bytes=1024)
             assert content == b"..."
 
@@ -274,39 +275,53 @@ def test_http11_upgrade_with_trailing_data():
     """
     HTTP "101 Switching Protocols" indicates an upgraded connection.
 
-    For `CONNECT` and `Upgrade:` requests, we need to handover the trailing data
-    in the response.
+    In `CONNECT` and `Upgrade:` requests, we need to handover the trailing data
+    in the h11.Connection object.
 
     https://h11.readthedocs.io/en/latest/api.html#switching-protocols
-
-    This mock network stream replicates networking where response headers and body are
-    received at once.
     """
     origin = httpcore.Origin(b"wss", b"example.com", 443)
     stream = httpcore.MockStream(
+        # The first element of this mock network stream buffer simulates networking
+        # in which response headers and data are received at once.
+        # This means that "foobar" becomes trailing data.
         [
             (
                 b"HTTP/1.1 101 Switching Protocols\r\n"
                 b"Connection: upgrade\r\n"
                 b"Upgrade: custom\r\n"
                 b"\r\n"
-                b"..."
-            )
+                b"foobar"
+            ),
+            b"baz",
         ]
     )
     with httpcore.HTTP11Connection(
         origin=origin, stream=stream, keepalive_expiry=5.0
     ) as conn:
-        with pytest.raises(AssertionError) as excinfo:
-            with conn.stream(
-                "GET",
-                "wss://example.com/",
-                headers={"Connection": "upgrade", "Upgrade": "custom"},
-            ):
-                pass
+        with conn.stream(
+            "GET",
+            "wss://example.com/",
+            headers={"Connection": "upgrade", "Upgrade": "custom"},
+        ) as response:
+            assert response.status == 101
+            network_stream = response.extensions["network_stream"]
 
-        assert excinfo.value.args[0] == "protocol switches"
-        assert excinfo.value.args[1] == b"..."
+            assert network_stream._leading_data != b""
+            content = network_stream.read(max_bytes=3)
+            assert content == b"foo"
+            content = network_stream.read(max_bytes=3)
+            assert content == b"bar"
+
+            assert network_stream._leading_data == b""
+            content = network_stream.read(max_bytes=3)
+            assert content == b"baz"
+
+            # Lazy tests for HTTP11UpgradeStream
+            network_stream.write(b"spam")
+            invalid = network_stream.get_extra_info("invalid")
+            assert invalid is None
+            network_stream.close()
 
 
 
