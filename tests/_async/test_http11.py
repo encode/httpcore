@@ -265,7 +265,6 @@ async def test_http11_upgrade_connection():
         ) as response:
             assert response.status == 101
             network_stream = response.extensions["network_stream"]
-            assert network_stream._leading_data == b""
             content = await network_stream.read(max_bytes=1024)
             assert content == b"..."
 
@@ -307,13 +306,10 @@ async def test_http11_upgrade_with_trailing_data():
             assert response.status == 101
             network_stream = response.extensions["network_stream"]
 
-            assert network_stream._leading_data != b""
             content = await network_stream.read(max_bytes=3)
             assert content == b"foo"
             content = await network_stream.read(max_bytes=3)
             assert content == b"bar"
-
-            assert network_stream._leading_data == b""
             content = await network_stream.read(max_bytes=3)
             assert content == b"baz"
 
