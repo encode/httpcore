@@ -313,7 +313,7 @@ async def test_http11_upgrade_with_trailing_data():
             content = await network_stream.read(max_bytes=3)
             assert content == b"baz"
 
-            # Lazy tests for HTTP11UpgradeStream
+            # Lazy tests for AsyncHTTP11UpgradeStream
             await network_stream.write(b"spam")
             invalid = network_stream.get_extra_info("invalid")
             assert invalid is None
