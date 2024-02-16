@@ -136,12 +136,11 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
     async def _send_request_headers(self, request: Request) -> None:
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("write", None)
-        target = request.extensions.get("target", None) or request.url.target
 
         with map_exceptions({h11.LocalProtocolError: LocalProtocolError}):
             event = h11.Request(
                 method=request.method,
-                target=target,
+                target=request.url.target,
                 headers=request.headers,
             )
         await self._send_event(event, timeout=timeout)
