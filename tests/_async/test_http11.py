@@ -270,6 +270,57 @@ async def test_http11_upgrade_connection():
 
 
 @pytest.mark.anyio
+async def test_http11_upgrade_with_trailing_data():
+    """
+    HTTP "101 Switching Protocols" indicates an upgraded connection.
+
+    In `CONNECT` and `Upgrade:` requests, we need to handover the trailing data
+    in the h11.Connection object.
+
+    https://h11.readthedocs.io/en/latest/api.html#switching-protocols
+    """
+    origin = httpcore.Origin(b"wss", b"example.com", 443)
+    stream = httpcore.AsyncMockStream(
+        # The first element of this mock network stream buffer simulates networking
+        # in which response headers and data are received at once.
+        # This means that "foobar" becomes trailing data.
+        [
+            (
+                b"HTTP/1.1 101 Switching Protocols\r\n"
+                b"Connection: upgrade\r\n"
+                b"Upgrade: custom\r\n"
+                b"\r\n"
+                b"foobar"
+            ),
+            b"baz",
+        ]
+    )
+    async with httpcore.AsyncHTTP11Connection(
+        origin=origin, stream=stream, keepalive_expiry=5.0
+    ) as conn:
+        async with conn.stream(
+            "GET",
+            "wss://example.com/",
+            headers={"Connection": "upgrade", "Upgrade": "custom"},
+        ) as response:
+            assert response.status == 101
+            network_stream = response.extensions["network_stream"]
+
+            content = await network_stream.read(max_bytes=3)
+            assert content == b"foo"
+            content = await network_stream.read(max_bytes=3)
+            assert content == b"bar"
+            content = await network_stream.read(max_bytes=3)
+            assert content == b"baz"
+
+            # Lazy tests for AsyncHTTP11UpgradeStream
+            await network_stream.write(b"spam")
+            invalid = network_stream.get_extra_info("invalid")
+            assert invalid is None
+            await network_stream.aclose()
+
+
+@pytest.mark.anyio
 async def test_http11_early_hints():
     """
     HTTP "103 Early Hints" is an interim response.
