@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Unreleased
 
 - Add `target` request extension. (#888)
+- Fix support for connection `Upgrade` and `CONNECT` when some data in the stream has been read. (#882)
 
 ## 1.0.3 (February 13th, 2024)
 
