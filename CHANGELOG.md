@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+- Fix support for connection Upgrade and CONNECT when some data in the stream has been read. (#882)
+
+## 1.0.3 (February 13th, 2024)
+
 - Fix support for async cancellations. (#880)
 - Fix trace extension when used with socks proxy. (#849)
 - Fix SSL context for connections using the "wss" scheme (#869)
