@@ -6,9 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
-- Fix pool timeout to account for the total time spent retrying. (#823)
+- Fix support for connection Upgrade and CONNECT when some data in the stream has been read. (#882)
 
-## 1.0.0 (November 6th, 2023)
+## 1.0.3 (February 13th, 2024)
+
+- Fix support for async cancellations. (#880)
+- Fix trace extension when used with socks proxy. (#849)
+- Fix SSL context for connections using the "wss" scheme (#869)
+
+## 1.0.2 (November 10th, 2023)
+
+- Fix `float("inf")` timeouts in `Event.wait` function. (#846)
+
+## 1.0.1 (November 3rd, 2023)
+
+- Fix pool timeout to account for the total time spent retrying. (#823)
+- Raise a neater RuntimeError when the correct async deps are not installed. (#826)
+- Add support for synchronous TLS-in-TLS streams. (#840)
+
+## 1.0.0 (October 6th, 2023)
 
 From version 1.0 our async support is now optional, as the package has minimal dependencies by default.
 
