@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## 1.0.3 (February 13th, 2024)
 
 - Fix support for async cancellations. (#880)
 - Fix trace extension when used with socks proxy. (#849)
