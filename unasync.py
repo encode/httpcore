@@ -5,10 +5,7 @@ import sys
 from pprint import pprint
 
 SUBS = [
-    (
-        "from .._backends.auto import AutoBackend",
-        "from .._backends.sync import SyncBackend",
-    ),
+    ('from .._backends.auto import AutoBackend', 'from .._backends.sync import SyncBackend'),
     ("import trio as concurrency", "from tests import concurrency"),
     ("AsyncIterator", "Iterator"),
     ("Async([A-Z][A-Za-z0-9_]*)", r"\2"),
