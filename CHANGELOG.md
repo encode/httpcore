@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## 1.0.4 (February 21st, 2024)
 
 - Add `target` request extension. (#888)
 - Fix support for connection `Upgrade` and `CONNECT` when some data in the stream has been read. (#882)
