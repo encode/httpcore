@@ -236,9 +236,9 @@ A proxy CONNECT request using the network stream:
 # This will establish a connection to 127.0.0.1:8080, and then send the following...
 #
 # CONNECT http://www.example.com HTTP/1.1
-# Host: 127.0.0.1:8080
-url = httpcore.URL(b"http", b"127.0.0.1", 8080, b"http://www.example.com")
-with httpcore.stream("CONNECT", url) as response:
+url = "http://127.0.0.1:8080"
+extensions = {"target: "http://www.example.com"}
+with httpcore.stream("CONNECT", url, extensions=extensions) as response:
     network_stream = response.extensions["network_stream"]
 
     # Upgrade to an SSL stream...
