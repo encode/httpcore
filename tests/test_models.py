@@ -58,6 +58,20 @@ def test_request():
     assert repr(request.stream) == "<ByteStream [0 bytes]>"
 
 
+def test_request_with_target_extension():
+    extensions = {"target": b"/another_path"}
+    request = httpcore.Request(
+        "GET", "https://www.example.com/path", extensions=extensions
+    )
+    assert request.url.target == b"/another_path"
+
+    extensions = {"target": b"/unescaped|path"}
+    request = httpcore.Request(
+        "GET", "https://www.example.com/path", extensions=extensions
+    )
+    assert request.url.target == b"/unescaped|path"
+
+
 def test_request_with_invalid_method():
     with pytest.raises(TypeError) as exc_info:
         httpcore.Request(123, "https://www.example.com/")  # type: ignore
