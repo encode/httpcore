@@ -106,16 +106,12 @@ exclude = [
     "httpcore/_sync",
     "tests/_sync",
 ]
-line-length = 88
-select = [
-    "E",
-    "F",
-    "W",
-    "I"
-]
 
-[tool.ruff.pycodestyle]
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.ruff.lint.pycodestyle]
 max-line-length = 120
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 combine-as-imports = true
