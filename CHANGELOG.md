@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased
+
+- Handle `EndOfStream` Exception for anyio backend. (#899)
+
 ## 1.0.4 (February 21st, 2024)
 
 - Add `target` request extension. (#888)
