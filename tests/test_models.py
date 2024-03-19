@@ -38,7 +38,7 @@ def test_url_cannot_include_unicode_strings():
         httpcore.URL("https://www.example.com/☺")
     assert str(exc_info.value) == "url strings may not include unicode characters."
 
-    httpcore.URL(scheme=b"https", host=b"www.example.com", target="/☺".encode("utf-8"))
+    httpcore.URL(scheme=b"https", host=b"www.example.com", target="/☺".encode())
 
 
 # Request
@@ -113,8 +113,7 @@ class ByteIterator:
         self._chunks = chunks
 
     def __iter__(self) -> typing.Iterator[bytes]:
-        for chunk in self._chunks:
-            yield chunk
+        yield from self._chunks
 
 
 def test_response_sync_read():

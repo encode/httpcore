@@ -360,8 +360,7 @@ class PoolByteStream:
 
     def __iter__(self) -> Iterator[bytes]:
         try:
-            for part in self._stream:
-                yield part
+            yield from self._stream
         except BaseException as exc:
             self.close()
             raise exc from None

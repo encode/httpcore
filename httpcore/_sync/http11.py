@@ -338,8 +338,7 @@ class HTTP11ConnectionByteStream:
         kwargs = {"request": self._request}
         try:
             with Trace("receive_response_body", logger, self._request, kwargs):
-                for chunk in self._connection._receive_response_body(**kwargs):
-                    yield chunk
+                yield from self._connection._receive_response_body(**kwargs)
         except BaseException as exc:
             # If we get an exception while streaming the response,
             # we want to close the response (and possibly the connection)

@@ -118,7 +118,7 @@ def include_request_headers(
     url: "URL",
     content: Union[None, bytes, Iterable[bytes], AsyncIterable[bytes]],
 ) -> List[Tuple[bytes, bytes]]:
-    headers_set = set(k.lower() for k, v in headers)
+    headers_set = {k.lower() for k, v in headers}
 
     if b"host" not in headers_set:
         default_port = DEFAULT_PORTS.get(url.scheme)
@@ -440,8 +440,7 @@ class Response:
                 "Attempted to call 'for ... in response.iter_stream()' more than once."
             )
         self._stream_consumed = True
-        for chunk in self.stream:
-            yield chunk
+        yield from self.stream
 
     def close(self) -> None:
         if not isinstance(self.stream, Iterable):  # pragma: nocover
