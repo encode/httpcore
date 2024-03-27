@@ -8,6 +8,7 @@ from .._exceptions import ProxyError
 from .._models import (
     URL,
     Origin,
+    ProxyMode,
     Request,
     Response,
     enforce_bytes,
@@ -24,7 +25,6 @@ from .interfaces import ConnectionInterface
 
 HeadersAsSequence = Sequence[Tuple[Union[bytes, str], Union[bytes, str]]]
 HeadersAsMapping = Mapping[Union[bytes, str], Union[bytes, str]]
-
 
 logger = logging.getLogger("httpcore.proxy")
 
@@ -75,6 +75,7 @@ class HTTPProxy(ConnectionPool):
         uds: Optional[str] = None,
         network_backend: Optional[NetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
+        proxy_mode: Optional[ProxyMode] = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -110,6 +111,7 @@ class HTTPProxy(ConnectionPool):
                 `AF_INET6` address (IPv6).
             uds: Path to a Unix Domain Socket to use instead of TCP sockets.
             network_backend: A backend instance to use for handling network I/O.
+            proxy_mode: Allow HTTP connection be tunnelable and HTTPS be forwardable.
         """
         super().__init__(
             ssl_context=ssl_context,
@@ -136,6 +138,7 @@ class HTTPProxy(ConnectionPool):
         self._ssl_context = ssl_context
         self._proxy_ssl_context = proxy_ssl_context
         self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
+        self._proxy_mode = proxy_mode
         if proxy_auth is not None:
             username = enforce_bytes(proxy_auth[0], name="proxy_auth")
             password = enforce_bytes(proxy_auth[1], name="proxy_auth")
@@ -145,7 +148,9 @@ class HTTPProxy(ConnectionPool):
             ] + self._proxy_headers
 
     def create_connection(self, origin: Origin) -> ConnectionInterface:
-        if origin.scheme == b"http":
+        if (self._proxy_mode is ProxyMode.FORWARD) or (
+            self._proxy_mode is None and origin.scheme == b"http"
+        ):
             return ForwardHTTPConnection(
                 proxy_origin=self._proxy_url.origin,
                 proxy_headers=self._proxy_headers,
@@ -298,31 +303,33 @@ class TunnelHTTPConnection(ConnectionInterface):
                     raise ProxyError(msg)
 
                 stream = connect_response.extensions["network_stream"]
+                http2_negotiated = False
 
-                # Upgrade the stream to SSL
-                ssl_context = (
-                    default_ssl_context()
-                    if self._ssl_context is None
-                    else self._ssl_context
-                )
-                alpn_protocols = ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
-                ssl_context.set_alpn_protocols(alpn_protocols)
+                if self._remote_origin.scheme == b"https":
+                    # Upgrade the stream to SSL
+                    ssl_context = (
+                        default_ssl_context()
+                        if self._ssl_context is None
+                        else self._ssl_context
+                    )
+                    alpn_protocols = ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
+                    ssl_context.set_alpn_protocols(alpn_protocols)
 
-                kwargs = {
-                    "ssl_context": ssl_context,
-                    "server_hostname": self._remote_origin.host.decode("ascii"),
-                    "timeout": timeout,
-                }
-                with Trace("start_tls", logger, request, kwargs) as trace:
-                    stream = stream.start_tls(**kwargs)
-                    trace.return_value = stream
+                    kwargs = {
+                        "ssl_context": ssl_context,
+                        "server_hostname": self._remote_origin.host.decode("ascii"),
+                        "timeout": timeout,
+                    }
+                    with Trace("start_tls", logger, request, kwargs) as trace:
+                        stream = stream.start_tls(**kwargs)
+                        trace.return_value = stream
 
-                # Determine if we should be using HTTP/1.1 or HTTP/2
-                ssl_object = stream.get_extra_info("ssl_object")
-                http2_negotiated = (
-                    ssl_object is not None
-                    and ssl_object.selected_alpn_protocol() == "h2"
-                )
+                    # Determine if we should be using HTTP/1.1 or HTTP/2
+                    ssl_object = stream.get_extra_info("ssl_object")
+                    http2_negotiated = (
+                        ssl_object is not None
+                        and ssl_object.selected_alpn_protocol() == "h2"
+                    )
 
                 # Create the HTTP/1.1 or HTTP/2 connection
                 if http2_negotiated or (self._http2 and not self._http1):
