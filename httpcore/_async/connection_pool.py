@@ -7,7 +7,12 @@ from .._backends.auto import AutoBackend
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend
 from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
 from .._models import Origin, Request, Response
-from .._synchronization import AsyncEvent, AsyncShieldCancellation, AsyncThreadLock
+from .._synchronization import (
+    EXCEPTION_OR_CANCELLED,
+    AsyncEvent,
+    AsyncShieldCancellation,
+    AsyncThreadLock,
+)
 from .connection import AsyncHTTPConnection
 from .interfaces import AsyncConnectionInterface, AsyncRequestInterface
 
@@ -205,7 +210,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
                 else:
                     break  # pragma: nocover
 
-        except BaseException as exc:
+        except EXCEPTION_OR_CANCELLED as exc:
             with self._optional_thread_lock:
                 # For any exception or cancellation we remove the request from
                 # the queue, and then re-assign requests to connections.
