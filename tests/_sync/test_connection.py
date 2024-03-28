@@ -19,7 +19,7 @@ from httpcore import (
 )
 
 
-
+# unasync anyio
 def test_http_connection():
     origin = Origin(b"https", b"example.com", 443)
     network_backend = MockBackend(
@@ -42,9 +42,9 @@ def test_http_connection():
         assert repr(conn) == "<HTTPConnection [CONNECTING]>"
 
         with conn.stream("GET", "https://example.com/") as response:
-            assert (
-                repr(conn)
-                == "<HTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
+            assert repr(conn) == (
+                "<HTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE,"
+                " Request Count: 1]>"
             )
             response.read()
 
@@ -55,13 +55,13 @@ def test_http_connection():
         assert not conn.is_closed()
         assert conn.is_available()
         assert not conn.has_expired()
-        assert (
-            repr(conn)
-            == "<HTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 1]>"
+        assert repr(conn) == (
+            "<HTTPConnection ['https://example.com:443', HTTP/1.1, IDLE,"
+            " Request Count: 1]>"
         )
 
 
-
+# unasync anyio
 def test_concurrent_requests_not_available_on_http11_connections():
     """
     Attempting to issue a request against an already active HTTP/1.1 connection
@@ -86,8 +86,8 @@ def test_concurrent_requests_not_available_on_http11_connections():
                 conn.request("GET", "https://example.com/")
 
 
+# unasync anyio
 @pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
-
 def test_write_error_with_response_sent():
     """
     If a server half-closes the connection while the client is sending
@@ -103,7 +103,9 @@ def test_write_error_with_response_sent():
             self.count = 0
 
         def write(
-            self, buffer: bytes, timeout: typing.Optional[float] = None
+            self,
+            buffer: bytes,
+            timeout: typing.Optional[float] = None,
         ) -> None:
             self.count += len(buffer)
 
@@ -141,7 +143,7 @@ def test_write_error_with_response_sent():
         assert response.content == b"Request body exceeded 1,000,000 bytes"
 
 
-
+# unasync anyio
 @pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 def test_write_error_without_response_sent():
     """
@@ -157,7 +159,9 @@ def test_write_error_without_response_sent():
             self.count = 0
 
         def write(
-            self, buffer: bytes, timeout: typing.Optional[float] = None
+            self,
+            buffer: bytes,
+            timeout: typing.Optional[float] = None,
         ) -> None:
             self.count += len(buffer)
 
@@ -187,7 +191,7 @@ def test_write_error_without_response_sent():
         assert str(exc_info.value) == "Server disconnected without sending a response."
 
 
-
+# unasync anyio
 @pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 def test_http2_connection():
     origin = Origin(b"https", b"example.com", 443)
@@ -212,7 +216,9 @@ def test_http2_connection():
     )
 
     with HTTPConnection(
-        origin=origin, network_backend=network_backend, http2=True
+        origin=origin,
+        network_backend=network_backend,
+        http2=True,
     ) as conn:
         response = conn.request("GET", "https://example.com/")
 
@@ -221,7 +227,7 @@ def test_http2_connection():
         assert response.extensions["http_version"] == b"HTTP/2"
 
 
-
+# unasync anyio
 def test_request_to_incorrect_origin():
     """
     A connection can only send requests whichever origin it is connected to.
@@ -229,7 +235,8 @@ def test_request_to_incorrect_origin():
     origin = Origin(b"https", b"example.com", 443)
     network_backend = MockBackend([])
     with HTTPConnection(
-        origin=origin, network_backend=network_backend
+        origin=origin,
+        network_backend=network_backend,
     ) as conn:
         with pytest.raises(RuntimeError):
             conn.request("GET", "https://other.com/")
@@ -266,18 +273,24 @@ class NeedsRetryBackend(MockBackend):
 
     class _NeedsRetryAsyncNetworkStream(NetworkStream):
         def __init__(
-            self, backend: "NeedsRetryBackend", stream: NetworkStream
+            self,
+            backend: "NeedsRetryBackend",
+            stream: NetworkStream,
         ) -> None:
             self._backend = backend
             self._stream = stream
 
         def read(
-            self, max_bytes: int, timeout: typing.Optional[float] = None
+            self,
+            max_bytes: int,
+            timeout: typing.Optional[float] = None,
         ) -> bytes:
             return self._stream.read(max_bytes, timeout)
 
         def write(
-            self, buffer: bytes, timeout: typing.Optional[float] = None
+            self,
+            buffer: bytes,
+            timeout: typing.Optional[float] = None,
         ) -> None:
             self._stream.write(buffer, timeout)
 
@@ -301,7 +314,7 @@ class NeedsRetryBackend(MockBackend):
             return self._stream.get_extra_info(info)
 
 
-
+# unasync anyio
 def test_connection_retries():
     origin = Origin(b"https", b"example.com", 443)
     content = [
@@ -328,7 +341,7 @@ def test_connection_retries():
             conn.request("GET", "https://example.com/")
 
 
-
+# unasync anyio
 def test_connection_retries_tls():
     origin = Origin(b"https", b"example.com", 443)
     content = [
@@ -359,7 +372,7 @@ def test_connection_retries_tls():
             conn.request("GET", "https://example.com/")
 
 
-
+# unasync anyio
 def test_uds_connections():
     # We're not actually testing Unix Domain Sockets here, because we're just
     # using a mock backend, but at least we're covering the UDS codepath
