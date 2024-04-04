@@ -131,7 +131,7 @@ __all__ = [
     "WriteError",
 ]
 
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 
 
 __locals = locals()
