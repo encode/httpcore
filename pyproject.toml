@@ -101,7 +101,6 @@ omit = [
 ]
 include = [
     "httpcore/*",
-    "scripts/*",
     "tests/*",
 ]
 

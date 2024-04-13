@@ -5,7 +5,10 @@ import sys
 from pprint import pprint
 
 SUBS = [
-    ('from .._backends.auto import AutoBackend', 'from .._backends.sync import SyncBackend'),
+    (
+        "from .._backends.auto import AutoBackend",
+        "from .._backends.sync import SyncBackend",
+    ),
     ("import trio as concurrency", "from tests import concurrency"),
     ("AsyncIterator", "Iterator"),
     ("Async([A-Z][A-Za-z0-9_]*)", r"\2"),
@@ -32,7 +35,7 @@ COMPILED_SUBS = [
 USED_SUBS = set()
 
 
-def unasync_line(line):
+def unasync_line(line: str) -> str:
     for index, (regex, repl) in enumerate(COMPILED_SUBS):
         old_line = line
         line = re.sub(regex, repl, line)
@@ -41,7 +44,7 @@ def unasync_line(line):
     return line
 
 
-def unasync_file(in_path, out_path):
+def unasync_file(in_path: str, out_path: str) -> None:
     with open(in_path, "r") as in_file:
         with open(out_path, "w", newline="") as out_file:
             for line in in_file.readlines():
@@ -49,7 +52,7 @@ def unasync_file(in_path, out_path):
                 out_file.write(line)
 
 
-def unasync_file_check(in_path, out_path):
+def unasync_file_check(in_path: str, out_path: str) -> None:
     with open(in_path, "r") as in_file:
         with open(out_path, "r") as out_file:
             for in_line, out_line in zip(in_file.readlines(), out_file.readlines()):
@@ -62,7 +65,7 @@ def unasync_file_check(in_path, out_path):
                     sys.exit(1)
 
 
-def unasync_dir(in_dir, out_dir, check_only=False):
+def unasync_dir(in_dir: str, out_dir: str, check_only: bool = False) -> None:
     for dirpath, dirnames, filenames in os.walk(in_dir):
         for filename in filenames:
             if not filename.endswith(".py"):
@@ -77,7 +80,7 @@ def unasync_dir(in_dir, out_dir, check_only=False):
                 unasync_file(in_path, out_path)
 
 
-def main():
+def main() -> None:
     check_only = "--check" in sys.argv
     unasync_dir("httpcore/_async", "httpcore/_sync", check_only=check_only)
     unasync_dir("tests/_async", "tests/_sync", check_only=check_only)
