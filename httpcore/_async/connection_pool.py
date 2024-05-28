@@ -205,7 +205,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
                 else:
                     break  # pragma: nocover
 
-        except BaseException as exc:
+        except BaseException:
             with self._optional_thread_lock:
                 # For any exception or cancellation we remove the request from
                 # the queue, and then re-assign requests to connections.
@@ -362,7 +362,7 @@ class PoolByteStream:
         try:
             async for part in self._stream:
                 yield part
-        except BaseException as exc:
+        except BaseException:
             await self.aclose()
             raise
 

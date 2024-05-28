@@ -410,6 +410,8 @@ async def test_connection_pool_with_connect_exception():
     be returned to the connection pool.
     """
 
+    cause_exception = Exception("cause")
+
     class FailedConnectBackend(httpcore.AsyncMockBackend):
         async def connect_tcp(
             self,
@@ -421,7 +423,7 @@ async def test_connection_pool_with_connect_exception():
                 typing.Iterable[httpcore.SOCKET_OPTION]
             ] = None,
         ) -> httpcore.AsyncNetworkStream:
-            raise httpcore.ConnectError("Could not connect")
+            raise httpcore.ConnectError("Could not connect") from cause_exception
 
     network_backend = FailedConnectBackend([])
 
@@ -432,10 +434,12 @@ async def test_connection_pool_with_connect_exception():
 
     async with httpcore.AsyncConnectionPool(network_backend=network_backend) as pool:
         # Sending an initial request, which once complete will not return to the pool.
-        with pytest.raises(Exception):
+        with pytest.raises(Exception) as exc_info:
             await pool.request(
                 "GET", "https://example.com/", extensions={"trace": trace}
             )
+
+        assert exc_info.value.__cause__ is cause_exception
 
         info = [repr(c) for c in pool.connections]
         assert info == []
