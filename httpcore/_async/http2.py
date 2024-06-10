@@ -17,7 +17,7 @@ from .._exceptions import (
     RemoteProtocolError,
 )
 from .._models import Origin, Request, Response
-from .._synchronization import AsyncLock, AsyncSemaphore, AsyncShieldCancellation
+from .._synchronization import AsyncLock, AsyncSemaphore, async_cancel_shield
 from .._trace import Trace
 from .interfaces import AsyncConnectionInterface
 
@@ -108,8 +108,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                     async with Trace("send_connection_init", logger, request, kwargs):
                         await self._send_connection_init(**kwargs)
                 except BaseException as exc:
-                    with AsyncShieldCancellation():
-                        await self.aclose()
+                    await async_cancel_shield(self.aclose)
                     raise exc
 
                 self._sent_connection_init = True
@@ -160,11 +159,12 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                     "stream_id": stream_id,
                 },
             )
-        except BaseException as exc:  # noqa: PIE786
-            with AsyncShieldCancellation():
-                kwargs = {"stream_id": stream_id}
-                async with Trace("response_closed", logger, request, kwargs):
-                    await self._response_closed(stream_id=stream_id)
+        except BaseException as exc:
+            kwargs = {"stream_id": stream_id}
+            async with Trace("response_closed", logger, request, kwargs):
+                await async_cancel_shield(
+                    lambda: self._response_closed(stream_id=stream_id)
+                )
 
             if isinstance(exc, h2.exceptions.ProtocolError):
                 # One case where h2 can raise a protocol error is when a
@@ -577,8 +577,7 @@ class HTTP2ConnectionByteStream:
             # If we get an exception while streaming the response,
             # we want to close the response (and possibly the connection)
             # before raising that exception.
-            with AsyncShieldCancellation():
-                await self.aclose()
+            await async_cancel_shield(self.aclose)
             raise exc
 
     async def aclose(self) -> None:

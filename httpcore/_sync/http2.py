@@ -17,7 +17,7 @@ from .._exceptions import (
     RemoteProtocolError,
 )
 from .._models import Origin, Request, Response
-from .._synchronization import Lock, Semaphore, ShieldCancellation
+from .._synchronization import Lock, Semaphore, sync_cancel_shield
 from .._trace import Trace
 from .interfaces import ConnectionInterface
 
@@ -108,8 +108,7 @@ class HTTP2Connection(ConnectionInterface):
                     with Trace("send_connection_init", logger, request, kwargs):
                         self._send_connection_init(**kwargs)
                 except BaseException as exc:
-                    with ShieldCancellation():
-                        self.close()
+                    sync_cancel_shield(self.close)
                     raise exc
 
                 self._sent_connection_init = True
@@ -160,11 +159,12 @@ class HTTP2Connection(ConnectionInterface):
                     "stream_id": stream_id,
                 },
             )
-        except BaseException as exc:  # noqa: PIE786
-            with ShieldCancellation():
-                kwargs = {"stream_id": stream_id}
-                with Trace("response_closed", logger, request, kwargs):
-                    self._response_closed(stream_id=stream_id)
+        except BaseException as exc:
+            kwargs = {"stream_id": stream_id}
+            with Trace("response_closed", logger, request, kwargs):
+                sync_cancel_shield(
+                    lambda: self._response_closed(stream_id=stream_id)
+                )
 
             if isinstance(exc, h2.exceptions.ProtocolError):
                 # One case where h2 can raise a protocol error is when a
@@ -577,8 +577,7 @@ class HTTP2ConnectionByteStream:
             # If we get an exception while streaming the response,
             # we want to close the response (and possibly the connection)
             # before raising that exception.
-            with ShieldCancellation():
-                self.close()
+            sync_cancel_shield(self.close)
             raise exc
 
     def close(self) -> None:
