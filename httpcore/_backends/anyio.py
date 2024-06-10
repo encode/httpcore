@@ -64,6 +64,7 @@ class AnyIOStream(AsyncNetworkStream):
             TimeoutError: ConnectTimeout,
             anyio.BrokenResourceError: ConnectError,
             anyio.EndOfStream: ConnectError,
+            ssl.SSLError: ConnectError,
         }
         with map_exceptions(exc_map):
             try:

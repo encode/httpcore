@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased
+
+- Handle `SSLError` exception. (#918)
+
 ## 1.0.5 (March 27th, 2024)
 
 - Handle `EndOfStream` exception for anyio backend. (#899)
