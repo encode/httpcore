@@ -1,5 +1,6 @@
 import enum
 import logging
+import random
 import ssl
 import time
 from types import TracebackType
@@ -56,10 +57,12 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
         origin: Origin,
         stream: AsyncNetworkStream,
         keepalive_expiry: Optional[float] = None,
+        socket_poll_interval_between: Tuple[float, float] = (1, 3),
     ) -> None:
         self._origin = origin
         self._network_stream = stream
-        self._keepalive_expiry: Optional[float] = keepalive_expiry
+        self._keepalive_expiry = keepalive_expiry
+        self._socket_poll_interval_between = socket_poll_interval_between
         self._expire_at: Optional[float] = None
         self._state = HTTPConnectionState.NEW
         self._state_lock = AsyncLock()
@@ -68,6 +71,8 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
             our_role=h11.CLIENT,
             max_incomplete_event_size=self.MAX_INCOMPLETE_EVENT_SIZE,
         )
+        # Assuming we were just connected
+        self._network_stream_used_at = time.monotonic()
 
     async def handle_async_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
@@ -173,6 +178,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
         bytes_to_send = self._h11_state.send(event)
         if bytes_to_send is not None:
             await self._network_stream.write(bytes_to_send, timeout=timeout)
+            self._network_stream_used_at = time.monotonic()
 
     # Receiving the response...
 
@@ -224,6 +230,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
                 data = await self._network_stream.read(
                     self.READ_NUM_BYTES, timeout=timeout
                 )
+                self._network_stream_used_at = time.monotonic()
 
                 # If we feed this case through h11 we'll raise an exception like:
                 #
@@ -281,16 +288,28 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
     def has_expired(self) -> bool:
         now = time.monotonic()
         keepalive_expired = self._expire_at is not None and now > self._expire_at
+        if keepalive_expired:
+            return True
 
         # If the HTTP connection is idle but the socket is readable, then the
         # only valid state is that the socket is about to return b"", indicating
         # a server-initiated disconnect.
-        server_disconnected = (
-            self._state == HTTPConnectionState.IDLE
-            and self._network_stream.get_extra_info("is_readable")
-        )
+        # Checking the readable status is relatively expensive so check it at a lower frequency.
+        if (now - self._network_stream_used_at) > self._socket_poll_interval():
+            self._network_stream_used_at = now
+            server_disconnected = (
+                self._state == HTTPConnectionState.IDLE
+                and self._network_stream.get_extra_info("is_readable")
+            )
+            if server_disconnected:
+                return True
 
-        return keepalive_expired or server_disconnected
+        return False
+
+    def _socket_poll_interval(self) -> float:
+        # Randomize to avoid polling for all the connections at once
+        low, high = self._socket_poll_interval_between
+        return random.uniform(low, high)
 
     def is_idle(self) -> bool:
         return self._state == HTTPConnectionState.IDLE

@@ -238,6 +238,7 @@ class ConnectionPool(RequestInterface):
         those connections to be handled seperately.
         """
         closing_connections = []
+        idling_count = 0
 
         # First we handle cleaning up any connections that are closed,
         # have expired their keep-alive, or surplus idle connections.
@@ -249,26 +250,24 @@ class ConnectionPool(RequestInterface):
                 # log: "closing expired connection"
                 self._connections.remove(connection)
                 closing_connections.append(connection)
-            elif (
-                connection.is_idle()
-                and len([connection.is_idle() for connection in self._connections])
-                > self._max_keepalive_connections
-            ):
+            elif connection.is_idle():
+                if idling_count < self._max_keepalive_connections:
+                    idling_count += 1
+                    continue
                 # log: "closing idle connection"
                 self._connections.remove(connection)
                 closing_connections.append(connection)
 
         # Assign queued requests to connections.
-        queued_requests = [request for request in self._requests if request.is_queued()]
-        for pool_request in queued_requests:
+        for pool_request in list(self._requests):
+            if not pool_request.is_queued():
+                continue
+
             origin = pool_request.request.url.origin
             available_connections = [
                 connection
                 for connection in self._connections
                 if connection.can_handle_request(origin) and connection.is_available()
-            ]
-            idle_connections = [
-                connection for connection in self._connections if connection.is_idle()
             ]
 
             # There are three cases for how we may be able to handle the request:
@@ -286,15 +285,18 @@ class ConnectionPool(RequestInterface):
                 connection = self.create_connection(origin)
                 self._connections.append(connection)
                 pool_request.assign_to_connection(connection)
-            elif idle_connections:
-                # log: "closing idle connection"
-                connection = idle_connections[0]
-                self._connections.remove(connection)
-                closing_connections.append(connection)
-                # log: "creating new connection"
-                connection = self.create_connection(origin)
-                self._connections.append(connection)
-                pool_request.assign_to_connection(connection)
+            else:
+                idling_connection = next(
+                    (c for c in self._connections if c.is_idle()), None
+                )
+                if idling_connection is not None:
+                    # log: "closing idle connection"
+                    self._connections.remove(idling_connection)
+                    closing_connections.append(idling_connection)
+                    # log: "creating new connection"
+                    new_connection = self.create_connection(origin)
+                    self._connections.append(new_connection)
+                    pool_request.assign_to_connection(new_connection)
 
         return closing_connections
 

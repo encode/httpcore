@@ -1,3 +1,5 @@
+from typing import Any, List
+
 import pytest
 
 import httpcore
@@ -16,7 +18,10 @@ def test_http11_connection():
         ]
     )
     with httpcore.HTTP11Connection(
-        origin=origin, stream=stream, keepalive_expiry=5.0
+        origin=origin,
+        stream=stream,
+        keepalive_expiry=5.0,
+        socket_poll_interval_between=(0, 0),
     ) as conn:
         response = conn.request("GET", "https://example.com/")
         assert response.status == 200
@@ -48,7 +53,9 @@ def test_http11_connection_unread_response():
             b"Hello, world!",
         ]
     )
-    with httpcore.HTTP11Connection(origin=origin, stream=stream) as conn:
+    with httpcore.HTTP11Connection(
+        origin=origin, stream=stream, socket_poll_interval_between=(0, 0)
+    ) as conn:
         with conn.stream("GET", "https://example.com/") as response:
             assert response.status == 200
 
@@ -70,7 +77,9 @@ def test_http11_connection_with_remote_protocol_error():
     """
     origin = httpcore.Origin(b"https", b"example.com", 443)
     stream = httpcore.MockStream([b"Wait, this isn't valid HTTP!", b""])
-    with httpcore.HTTP11Connection(origin=origin, stream=stream) as conn:
+    with httpcore.HTTP11Connection(
+        origin=origin, stream=stream, socket_poll_interval_between=(0, 0)
+    ) as conn:
         with pytest.raises(httpcore.RemoteProtocolError):
             conn.request("GET", "https://example.com/")
 
@@ -99,7 +108,9 @@ def test_http11_connection_with_incomplete_response():
             b"Hello, wor",
         ]
     )
-    with httpcore.HTTP11Connection(origin=origin, stream=stream) as conn:
+    with httpcore.HTTP11Connection(
+        origin=origin, stream=stream, socket_poll_interval_between=(0, 0)
+    ) as conn:
         with pytest.raises(httpcore.RemoteProtocolError):
             conn.request("GET", "https://example.com/")
 
@@ -129,7 +140,9 @@ def test_http11_connection_with_local_protocol_error():
             b"Hello, world!",
         ]
     )
-    with httpcore.HTTP11Connection(origin=origin, stream=stream) as conn:
+    with httpcore.HTTP11Connection(
+        origin=origin, stream=stream, socket_poll_interval_between=(0, 0)
+    ) as conn:
         with pytest.raises(httpcore.LocalProtocolError) as exc_info:
             conn.request("GET", "https://example.com/", headers={"Host": "\0"})
 
@@ -142,6 +155,85 @@ def test_http11_connection_with_local_protocol_error():
         assert (
             repr(conn)
             == "<HTTP11Connection ['https://example.com:443', CLOSED, Request Count: 1]>"
+        )
+
+
+
+def test_http11_has_expired_checks_readable_status():
+    class MockStreamReadable(httpcore.MockStream):
+        def __init__(self, buffer: List[bytes]) -> None:
+            super().__init__(buffer)
+            self.is_readable = False
+            self.checks = 0
+
+        def get_extra_info(self, info: str) -> Any:
+            if info == "is_readable":
+                self.checks += 1
+                return self.is_readable
+            return super().get_extra_info(info)  # pragma: nocover
+
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = MockStreamReadable(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
+    with httpcore.HTTP11Connection(
+        origin=origin, stream=stream, socket_poll_interval_between=(0, 0)
+    ) as conn:
+        response = conn.request("GET", "https://example.com/")
+        assert response.status == 200
+
+        assert stream.checks == 0
+        assert not conn.has_expired()
+        stream.is_readable = True
+        assert conn.has_expired()
+        assert stream.checks == 2
+
+
+
+@pytest.mark.parametrize("should_check", [True, False])
+def test_http11_has_expired_checks_readable_status_by_interval(
+    monkeypatch, should_check
+):
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.MockStream(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
+    with httpcore.HTTP11Connection(
+        origin=origin,
+        stream=stream,
+        keepalive_expiry=5.0,
+        socket_poll_interval_between=(0, 0) if should_check else (999, 999),
+    ) as conn:
+        orig = conn._network_stream.get_extra_info
+        calls = []
+
+        def patch_get_extra_info(attr_name: str) -> Any:
+            calls.append(attr_name)
+            return orig(attr_name)
+
+        monkeypatch.setattr(
+            conn._network_stream, "get_extra_info", patch_get_extra_info
+        )
+
+        response = conn.request("GET", "https://example.com/")
+        assert response.status == 200
+
+        assert "is_readable" not in calls
+        assert not conn.has_expired()
+        assert (
+            ("is_readable" in calls) if should_check else ("is_readable" not in calls)
         )
 
 
