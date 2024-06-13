@@ -62,7 +62,9 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
         self._keepalive_expiry: Optional[float] = keepalive_expiry
         self._expire_at: Optional[float] = None
         self._state = HTTPConnectionState.NEW
-        self._state_thread_lock = AsyncThreadLock()  # thread-lock for sync, no-op for async
+        self._state_thread_lock = (
+            AsyncThreadLock()
+        )  # thread-lock for sync, no-op for async
         self._request_count = 0
         self._h11_state = h11.Connection(
             our_role=h11.CLIENT,
