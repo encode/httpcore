@@ -93,13 +93,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 f"to {self._origin}"
             )
 
-        async with self._state_lock:
-            if self._state in (HTTPConnectionState.ACTIVE, HTTPConnectionState.IDLE):
-                self._request_count += 1
-                self._expire_at = None
-                self._state = HTTPConnectionState.ACTIVE
-            else:
-                raise ConnectionNotAvailable()
+        await self._update_state()
 
         async with self._init_lock:
             if not self._sent_connection_init:
@@ -183,6 +177,15 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 raise LocalProtocolError(exc)  # pragma: nocover
 
             raise exc
+
+    async def _update_state(self) -> None:
+        async with self._state_lock:
+            if self._state in (HTTPConnectionState.ACTIVE, HTTPConnectionState.IDLE):
+                self._request_count += 1
+                self._expire_at = None
+                self._state = HTTPConnectionState.ACTIVE
+            else:
+                raise ConnectionNotAvailable()
 
     async def _send_connection_init(self, request: Request) -> None:
         """
