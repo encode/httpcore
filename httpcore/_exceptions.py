@@ -73,6 +73,10 @@ class ConnectError(NetworkError):
     pass
 
 
+class BrokenSocketError(ConnectError):
+    pass
+
+
 class ReadError(NetworkError):
     pass
 

@@ -4,6 +4,7 @@ import typing
 import anyio
 
 from .._exceptions import (
+    BrokenSocketError,
     ConnectError,
     ConnectTimeout,
     ReadError,
@@ -82,6 +83,9 @@ class AnyIOStream(AsyncNetworkStream):
         return AnyIOStream(ssl_stream)
 
     def get_extra_info(self, info: str) -> typing.Any:
+        if info == "is_readable":
+            sock = self._stream.extra(anyio.abc.SocketAttribute.raw_socket, None)
+            return is_socket_readable(sock)
         if info == "ssl_object":
             return self._stream.extra(anyio.streams.tls.TLSAttribute.ssl_object, None)
         if info == "client_addr":
@@ -90,9 +94,6 @@ class AnyIOStream(AsyncNetworkStream):
             return self._stream.extra(anyio.abc.SocketAttribute.remote_address, None)
         if info == "socket":
             return self._stream.extra(anyio.abc.SocketAttribute.raw_socket, None)
-        if info == "is_readable":
-            sock = self._stream.extra(anyio.abc.SocketAttribute.raw_socket, None)
-            return is_socket_readable(sock)
         return None
 
 
@@ -105,8 +106,6 @@ class AnyIOBackend(AsyncNetworkBackend):
         local_address: typing.Optional[str] = None,
         socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
     ) -> AsyncNetworkStream:
-        if socket_options is None:
-            socket_options = []  # pragma: no cover
         exc_map = {
             TimeoutError: ConnectTimeout,
             OSError: ConnectError,
@@ -120,8 +119,7 @@ class AnyIOBackend(AsyncNetworkBackend):
                     local_host=local_address,
                 )
                 # By default TCP sockets opened in `asyncio` include TCP_NODELAY.
-                for option in socket_options:
-                    stream._raw_socket.setsockopt(*option)  # type: ignore[attr-defined] # pragma: no cover
+                self._set_socket_options(stream, socket_options)
         return AnyIOStream(stream)
 
     async def connect_unix_socket(
@@ -129,9 +127,7 @@ class AnyIOBackend(AsyncNetworkBackend):
         path: str,
         timeout: typing.Optional[float] = None,
         socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
-    ) -> AsyncNetworkStream:  # pragma: nocover
-        if socket_options is None:
-            socket_options = []
+    ) -> AsyncNetworkStream:
         exc_map = {
             TimeoutError: ConnectTimeout,
             OSError: ConnectError,
@@ -140,9 +136,23 @@ class AnyIOBackend(AsyncNetworkBackend):
         with map_exceptions(exc_map):
             with anyio.fail_after(timeout):
                 stream: anyio.abc.ByteStream = await anyio.connect_unix(path)
-                for option in socket_options:
-                    stream._raw_socket.setsockopt(*option)  # type: ignore[attr-defined] # pragma: no cover
+                self._set_socket_options(stream, socket_options)
         return AnyIOStream(stream)
 
     async def sleep(self, seconds: float) -> None:
         await anyio.sleep(seconds)  # pragma: nocover
+
+    def _set_socket_options(
+        self,
+        stream: anyio.abc.ByteStream,
+        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
+    ) -> None:
+        if not socket_options:
+            return
+
+        sock = stream.extra(anyio.abc.SocketAttribute.raw_socket, None)
+        if sock is None:
+            raise BrokenSocketError()  # pragma: nocover
+
+        for option in socket_options:
+            sock.setsockopt(*option)

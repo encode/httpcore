@@ -1,8 +1,13 @@
+import os
+import socket
 import ssl
+from tempfile import gettempdir
 
 import pytest
+import uvicorn
 
 import httpcore
+from tests.conftest import Server
 
 
 
@@ -49,3 +54,82 @@ def test_extra_info(httpbin_secure):
             assert invalid is None
 
             stream.get_extra_info("is_readable")
+
+
+
+@pytest.mark.parametrize("keep_alive_enabled", [True, False])
+def test_socket_options(
+    server: Server, server_url: str, keep_alive_enabled: bool
+) -> None:
+    socket_options = [(socket.SOL_SOCKET, socket.SO_KEEPALIVE, int(keep_alive_enabled))]
+    with httpcore.ConnectionPool(socket_options=socket_options) as pool:
+        response = pool.request("GET", server_url)
+        assert response.status == 200
+
+        stream = response.extensions["network_stream"]
+        sock = stream.get_extra_info("socket")
+        opt = sock.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE)
+        assert bool(opt) is keep_alive_enabled
+
+
+
+def test_socket_no_nagle(server: Server, server_url: str) -> None:
+    with httpcore.ConnectionPool() as pool:
+        response = pool.request("GET", server_url)
+        assert response.status == 200
+
+        stream = response.extensions["network_stream"]
+        sock = stream.get_extra_info("socket")
+        opt = sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY)
+        assert bool(opt) is True
+
+
+
+def test_pool_recovers_from_connection_breakage(
+    server_config: uvicorn.Config, server_url: str
+) -> None:
+    with httpcore.ConnectionPool(
+        max_connections=1, max_keepalive_connections=1, keepalive_expiry=10
+    ) as pool:
+        with Server(server_config).run_in_thread():
+            response = pool.request("GET", server_url)
+            assert response.status == 200
+
+            assert len(pool.connections) == 1
+            conn = pool.connections[0]
+
+            stream = response.extensions["network_stream"]
+            assert stream.get_extra_info("is_readable") is False
+
+        assert (
+            stream.get_extra_info("is_readable") is True
+        ), "Should break by coming readable"
+
+        with Server(server_config).run_in_thread():
+            assert len(pool.connections) == 1
+            assert pool.connections[0] is conn, "Should be the broken connection"
+
+            response = pool.request("GET", server_url)
+            assert response.status == 200
+
+            assert len(pool.connections) == 1
+            assert pool.connections[0] is not conn, "Should be a new connection"
+
+
+
+def test_unix_domain_socket(server_port, server_config, server_url):
+    uds = f"{gettempdir()}/test_httpcore_app.sock"
+    if os.path.exists(uds):
+        os.remove(uds)  # pragma: nocover
+
+    uds_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        uds_sock.bind(uds)
+
+        with Server(server_config).run_in_thread(sockets=[uds_sock]):
+            with httpcore.ConnectionPool(uds=uds) as pool:
+                response = pool.request("GET", server_url)
+                assert response.status == 200
+    finally:
+        uds_sock.close()
+        os.remove(uds)

@@ -8,6 +8,8 @@ from ._async import (
     AsyncHTTPProxy,
     AsyncSOCKSProxy,
 )
+from ._backends.asyncio import AsyncioBackend
+from ._backends.auto import AutoBackend
 from ._backends.base import (
     SOCKET_OPTION,
     AsyncNetworkBackend,
@@ -18,6 +20,7 @@ from ._backends.base import (
 from ._backends.mock import AsyncMockBackend, AsyncMockStream, MockBackend, MockStream
 from ._backends.sync import SyncBackend
 from ._exceptions import (
+    BrokenSocketError,
     ConnectError,
     ConnectionNotAvailable,
     ConnectTimeout,
@@ -97,6 +100,8 @@ __all__ = [
     "SOCKSProxy",
     # network backends, implementations
     "SyncBackend",
+    "AutoBackend",
+    "AsyncioBackend",
     "AnyIOBackend",
     "TrioBackend",
     # network backends, mock implementations
@@ -126,6 +131,7 @@ __all__ = [
     "WriteTimeout",
     "NetworkError",
     "ConnectError",
+    "BrokenSocketError",
     "ReadError",
     "WriteError",
 ]

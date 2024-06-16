@@ -1,6 +1,6 @@
 import threading
 from types import TracebackType
-from typing import Optional, Type
+from typing import Literal, Optional, Type
 
 from ._exceptions import ExceptionMapping, PoolTimeout, map_exceptions
 
@@ -18,30 +18,28 @@ except ImportError:  # pragma: nocover
     anyio = None  # type: ignore
 
 
-def current_async_library() -> str:
+AsyncBackend = Literal["asyncio", "trio"]
+
+
+def current_async_backend() -> AsyncBackend:
     # Determine if we're running under trio or asyncio.
     # See https://sniffio.readthedocs.io/en/latest/
     try:
         import sniffio
     except ImportError:  # pragma: nocover
-        environment = "asyncio"
+        backend: AsyncBackend = "asyncio"
     else:
-        environment = sniffio.current_async_library()
+        backend = sniffio.current_async_library()  # type: ignore[assignment]
 
-    if environment not in ("asyncio", "trio"):  # pragma: nocover
+    if backend not in ("asyncio", "trio"):  # pragma: nocover
         raise RuntimeError("Running under an unsupported async environment.")
 
-    if environment == "asyncio" and anyio is None:  # pragma: nocover
-        raise RuntimeError(
-            "Running with asyncio requires installation of 'httpcore[asyncio]'."
-        )
-
-    if environment == "trio" and trio is None:  # pragma: nocover
+    if backend == "trio" and trio is None:  # pragma: nocover
         raise RuntimeError(
             "Running with trio requires installation of 'httpcore[trio]'."
         )
 
-    return environment
+    return backend
 
 
 class AsyncLock:
@@ -60,7 +58,7 @@ class AsyncLock:
         Detect if we're running under 'asyncio' or 'trio' and create
         a lock with the correct implementation.
         """
-        self._backend = current_async_library()
+        self._backend = current_async_backend()
         if self._backend == "trio":
             self._trio_lock = trio.Lock()
         elif self._backend == "asyncio":
@@ -118,7 +116,7 @@ class AsyncEvent:
         Detect if we're running under 'asyncio' or 'trio' and create
         a lock with the correct implementation.
         """
-        self._backend = current_async_library()
+        self._backend = current_async_backend()
         if self._backend == "trio":
             self._trio_event = trio.Event()
         elif self._backend == "asyncio":
@@ -160,7 +158,7 @@ class AsyncSemaphore:
         Detect if we're running under 'asyncio' or 'trio' and create
         a semaphore with the correct implementation.
         """
-        self._backend = current_async_library()
+        self._backend = current_async_backend()
         if self._backend == "trio":
             self._trio_semaphore = trio.Semaphore(
                 initial_value=self._bound, max_value=self._bound
@@ -199,7 +197,7 @@ class AsyncShieldCancellation:
         Detect if we're running under 'asyncio' or 'trio' and create
         a shielded scope with the correct implementation.
         """
-        self._backend = current_async_library()
+        self._backend = current_async_backend()
 
         if self._backend == "trio":
             self._trio_shield = trio.CancelScope(shield=True)

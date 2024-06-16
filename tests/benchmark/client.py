@@ -1,5 +1,4 @@
 import asyncio
-import os
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -21,7 +20,8 @@ REQUESTS = 500
 CONCURRENCY = 20
 POOL_LIMIT = 100
 PROFILE = False
-os.environ["HTTPCORE_PREFER_ANYIO"] = "0"
+httpcore.AutoBackend.set_default_backend(httpcore.AsyncioBackend)
+# httpcore.AutoBackend.set_default_backend(httpcore.AnyIOBackend)
 
 
 def duration(start: float) -> int:
