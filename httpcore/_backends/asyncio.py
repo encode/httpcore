@@ -4,7 +4,6 @@ import ssl
 from typing import Any, Dict, Iterable, Optional, Type
 
 from .._exceptions import (
-    BrokenSocketError,
     ConnectError,
     ConnectTimeout,
     ReadError,
@@ -144,8 +143,9 @@ class AsyncIOStream(AsyncNetworkStream):
             return self._sslobj
         if info in ("client_addr", "server_addr"):
             sock = self._raw_socket
-            if sock is None:
-                raise BrokenSocketError()  # pragma: nocover
+            if sock is None:  # pragma: nocover
+                # TODO replace with an explicit error such as BrokenSocketError
+                raise ConnectError()
             return sock.getsockname() if info == "client_addr" else sock.getpeername()
         if info == "socket":
             return self._raw_socket
@@ -220,8 +220,9 @@ class AsyncioBackend(AsyncNetworkBackend):
             return
 
         sock = stream.get_extra_info("socket")
-        if sock is None:
-            raise BrokenSocketError()  # pragma: nocover
+        if sock is None:  # pragma: nocover
+            # TODO replace with an explicit error such as BrokenSocketError
+            raise ConnectError()
 
         for option in socket_options:
             sock.setsockopt(*option)

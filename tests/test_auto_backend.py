@@ -1,16 +1,10 @@
 from typing import Generator, List
 
 import pytest
+from sniffio import current_async_library
 
-import httpcore
-from httpcore import (
-    AnyIOBackend,
-    AsyncioBackend,
-    AsyncNetworkBackend,
-    AutoBackend,
-    TrioBackend,
-)
-from httpcore._synchronization import current_async_backend
+from httpcore import AnyIOBackend, AsyncioBackend, AsyncNetworkBackend, TrioBackend
+from httpcore._backends.auto import AutoBackend
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -34,16 +28,14 @@ async def test_init_backend(check_tested_backends: List[AsyncNetworkBackend]) ->
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize("has_anyio", [False, True])
-async def test_auto_backend_asyncio(monkeypatch, has_anyio):
-    if current_async_backend() == "trio":
-        return
-
-    AutoBackend.set_default_backend(None)
-
-    monkeypatch.setattr(httpcore._backends.auto, "HAS_ANYIO", has_anyio)
-
+@pytest.mark.no_auto_backend_patch
+async def test_auto_backend_uses_expected_backend(monkeypatch):
     auto = AutoBackend()
     await auto._init_backend()
     assert auto._backend is not None
-    assert isinstance(auto._backend, AnyIOBackend if has_anyio else AsyncioBackend)
+
+    if current_async_library() == "trio":
+        assert isinstance(auto._backend, TrioBackend)
+    else:
+        # TODO add support for choosing the AsyncioBackend in AutoBackend
+        assert isinstance(auto._backend, AnyIOBackend)

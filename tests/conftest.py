@@ -7,7 +7,8 @@ from typing import Any, Awaitable, Callable, Generator, Iterator, List, Optional
 import pytest
 import uvicorn
 
-from httpcore import AnyIOBackend, AsyncioBackend, AutoBackend
+from httpcore import AnyIOBackend, AsyncioBackend
+from httpcore._backends.auto import AutoBackend
 
 
 @pytest.fixture(
@@ -20,12 +21,21 @@ from httpcore import AnyIOBackend, AsyncioBackend, AutoBackend
 def anyio_backend(request, monkeypatch):
     backend_name, options = request.param
     options = {**options}
+    use_anyio = options.pop("httpcore_use_anyio", False)
 
-    if backend_name == "trio":
-        AutoBackend.set_default_backend(None)
-    else:
-        use_anyio = options.pop("httpcore_use_anyio", False)
-        AutoBackend.set_default_backend(AnyIOBackend if use_anyio else AsyncioBackend)
+    # TODO remove this marker once we have a way to define the asyncio backend in AutoBackend
+    no_auto_backend_patch = bool(
+        request.node.get_closest_marker("no_auto_backend_patch")
+    )
+
+    if backend_name != "trio" and not no_auto_backend_patch:
+        # TODO replace with a proper interface in AutoBackend to setup either the AnyIO or asyncio backend
+        async def patch_init_backend(auto_backend: AutoBackend) -> None:
+            if hasattr(auto_backend, "_backend"):
+                return
+            auto_backend._backend = AnyIOBackend() if use_anyio else AsyncioBackend()
+
+        monkeypatch.setattr(AutoBackend, "_init_backend", patch_init_backend)
 
     return backend_name, options
 

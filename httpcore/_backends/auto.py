@@ -1,41 +1,22 @@
 import typing
-from importlib.util import find_spec
-from typing import Optional, Type
+from typing import Optional
 
-from .._synchronization import current_async_backend
+from .._synchronization import current_async_library
 from .base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
-
-HAS_ANYIO = find_spec("anyio") is not None
 
 
 class AutoBackend(AsyncNetworkBackend):
-    @staticmethod
-    def set_default_backend(backend_class: Optional[Type[AsyncNetworkBackend]]) -> None:
-        setattr(AutoBackend, "_default_backend_class", backend_class)
-
     async def _init_backend(self) -> None:
-        if hasattr(self, "_backend"):
-            return
+        if not (hasattr(self, "_backend")):
+            backend = current_async_library()
+            if backend == "trio":
+                from .trio import TrioBackend
 
-        default_backend_class: Optional[Type[AsyncNetworkBackend]] = getattr(
-            AutoBackend, "_default_backend_class", None
-        )
-        if default_backend_class is not None:
-            self._backend = default_backend_class()
-            return
+                self._backend: AsyncNetworkBackend = TrioBackend()
+            else:
+                from .anyio import AnyIOBackend
 
-        if current_async_backend() == "trio":
-            from .trio import TrioBackend
-
-            self._backend = TrioBackend()
-        elif HAS_ANYIO:
-            from .anyio import AnyIOBackend
-
-            self._backend = AnyIOBackend()
-        else:
-            from .asyncio import AsyncioBackend
-
-            self._backend = AsyncioBackend()
+                self._backend = AnyIOBackend()
 
     async def connect_tcp(
         self,
