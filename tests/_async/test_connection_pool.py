@@ -830,3 +830,33 @@ async def test_http11_upgrade_connection():
         "http11.response_closed.started",
         "http11.response_closed.complete",
     ]
+
+
+@pytest.mark.anyio
+async def test_connection_pool_with_idle_connections():
+    """
+    When the max_keepalive_connections is not set, we can get 10 idle connections after 10 requests,
+    if max_keepalive_connections is set to 5, we only get 5 idle connections after 10 requests.
+    """
+    network_backend = httpcore.AsyncMockBackend(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+        * 10
+    )
+
+    async with httpcore.AsyncConnectionPool(network_backend=network_backend) as pool:
+        for i in range(10):
+            async with pool.stream("GET", f"https://example{i}.com/") as response:
+                await response.aread()
+
+        assert 10 == len([c for c in pool.connections if c.is_idle()])
+        pool._max_keepalive_connections = 5
+        for i in range(10):
+            async with pool.stream("GET", f"https://example{i}.com/") as response:
+                await response.aread()
+        assert 5 == len([c for c in pool.connections if c.is_idle()])
