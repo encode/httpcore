@@ -26,10 +26,10 @@ async def test_http11_connection():
         assert not conn.is_closed()
         assert conn.is_available()
         assert not conn.has_expired()
-        assert (
-            repr(conn)
-            == "<AsyncHTTP11Connection ['https://example.com:443', IDLE, Request Count: 1]>"
-        )
+        assert repr(conn) == (
+            "<AsyncHTTP11Connection ['https://example.com:443', IDLE,"
+            " Request Count: 1]>"
+        )  # fmt: skip
 
 
 @pytest.mark.anyio
@@ -56,9 +56,9 @@ async def test_http11_connection_unread_response():
         assert conn.is_closed()
         assert not conn.is_available()
         assert not conn.has_expired()
-        assert (
-            repr(conn)
-            == "<AsyncHTTP11Connection ['https://example.com:443', CLOSED, Request Count: 1]>"
+        assert repr(conn) == (
+            "<AsyncHTTP11Connection ['https://example.com:443', CLOSED,"
+            " Request Count: 1]>"
         )
 
 
@@ -78,9 +78,9 @@ async def test_http11_connection_with_remote_protocol_error():
         assert conn.is_closed()
         assert not conn.is_available()
         assert not conn.has_expired()
-        assert (
-            repr(conn)
-            == "<AsyncHTTP11Connection ['https://example.com:443', CLOSED, Request Count: 1]>"
+        assert repr(conn) == (
+            "<AsyncHTTP11Connection ['https://example.com:443', CLOSED,"
+            " Request Count: 1]>"
         )
 
 
@@ -107,9 +107,9 @@ async def test_http11_connection_with_incomplete_response():
         assert conn.is_closed()
         assert not conn.is_available()
         assert not conn.has_expired()
-        assert (
-            repr(conn)
-            == "<AsyncHTTP11Connection ['https://example.com:443', CLOSED, Request Count: 1]>"
+        assert repr(conn) == (
+            "<AsyncHTTP11Connection ['https://example.com:443', CLOSED,"
+            " Request Count: 1]>"
         )
 
 
@@ -139,9 +139,9 @@ async def test_http11_connection_with_local_protocol_error():
         assert conn.is_closed()
         assert not conn.is_available()
         assert not conn.has_expired()
-        assert (
-            repr(conn)
-            == "<AsyncHTTP11Connection ['https://example.com:443', CLOSED, Request Count: 1]>"
+        assert repr(conn) == (
+            "<AsyncHTTP11Connection ['https://example.com:443', CLOSED,"
+            " Request Count: 1]>"
         )
 
 

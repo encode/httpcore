@@ -5,7 +5,7 @@ import pytest
 import httpcore
 
 
-
+# unasync anyio
 def test_http2_connection():
     origin = httpcore.Origin(b"https", b"example.com", 443)
     stream = httpcore.MockStream(
@@ -40,13 +40,12 @@ def test_http2_connection():
         assert (
             conn.info() == "'https://example.com:443', HTTP/2, IDLE, Request Count: 1"
         )
-        assert (
-            repr(conn)
-            == "<HTTP2Connection ['https://example.com:443', IDLE, Request Count: 1]>"
+        assert repr(conn) == (
+            "<HTTP2Connection ['https://example.com:443', IDLE, Request Count: 1]>"
         )
 
 
-
+# unasync anyio
 def test_http2_connection_closed():
     origin = httpcore.Origin(b"https", b"example.com", 443)
     stream = httpcore.MockStream(
@@ -82,7 +81,7 @@ def test_http2_connection_closed():
         assert not conn.is_available()
 
 
-
+# unasync anyio
 def test_http2_connection_post_request():
     origin = httpcore.Origin(b"https", b"example.com", 443)
     stream = httpcore.MockStream(
@@ -114,7 +113,7 @@ def test_http2_connection_post_request():
         assert response.content == b"Hello, world!"
 
 
-
+# unasync anyio
 def test_http2_connection_with_remote_protocol_error():
     """
     If a remote protocol error occurs, then no response will be returned,
@@ -127,7 +126,7 @@ def test_http2_connection_with_remote_protocol_error():
             conn.request("GET", "https://example.com/")
 
 
-
+# unasync anyio
 def test_http2_connection_with_rst_stream():
     """
     If a stream reset occurs, then no response will be returned,
@@ -173,7 +172,7 @@ def test_http2_connection_with_rst_stream():
         assert response.status == 200
 
 
-
+# unasync anyio
 def test_http2_connection_with_goaway():
     """
     If a GoAway frame occurs, then no response will be returned,
@@ -223,7 +222,7 @@ def test_http2_connection_with_goaway():
             conn.request("GET", "https://example.com/")
 
 
-
+# unasync anyio
 def test_http2_connection_with_flow_control():
     origin = httpcore.Origin(b"https", b"example.com", 443)
     stream = httpcore.MockStream(
@@ -283,7 +282,7 @@ def test_http2_connection_with_flow_control():
         assert response.content == b"100,000 bytes received"
 
 
-
+# unasync anyio
 def test_http2_connection_attempt_close():
     """
     A connection can only be closed when it is idle.
@@ -318,7 +317,7 @@ def test_http2_connection_attempt_close():
             conn.request("GET", "https://example.com/")
 
 
-
+# unasync anyio
 def test_http2_request_to_incorrect_origin():
     """
     A connection can only send requests to whichever origin it is connected to.
@@ -330,7 +329,7 @@ def test_http2_request_to_incorrect_origin():
             conn.request("GET", "https://other.com/")
 
 
-
+# unasync anyio
 def test_http2_remote_max_streams_update():
     """
     If the remote server updates the maximum concurrent streams value, we should
