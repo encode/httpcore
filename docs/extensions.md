@@ -120,7 +120,7 @@ The `event_name` and `info` arguments here will be one of the following:
 * `{event_type}.{event_name}.complete`, `{"return_value": <...>}`
 * `{event_type}.{event_name}.failed`, `{"exception": <...>}`
 
-The `context` argument here is the dictionary that contains the context of the concrete trace. You can store the data there and access it through the started, complete, or failed events.
+The `context` argument here is the dictionary that contains the context of the concrete trace. You can store the data there and access it through the `started`, `complete`, or `failed` stages.
 
 For example, you can track how much time a particular event took, like so:
 
