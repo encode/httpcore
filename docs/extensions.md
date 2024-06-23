@@ -94,7 +94,7 @@ flow of events within `httpcore`. The simplest way to explain this is with an ex
 ```python
 import httpcore
 
-def log(event_name, info):
+def log(event_name, info, context):
     print(event_name, info)
 
 r = httpcore.request("GET", "https://www.example.com/", extensions={"trace": log})
@@ -119,6 +119,28 @@ The `event_name` and `info` arguments here will be one of the following:
 * `{event_type}.{event_name}.started`, `<dictionary of keyword arguments>`
 * `{event_type}.{event_name}.complete`, `{"return_value": <...>}`
 * `{event_type}.{event_name}.failed`, `{"exception": <...>}`
+
+The `context` argument here is the dictionary that contains the context of the concrete trace. You can store the data there and access it through the started, complete, or failed events.
+
+For example, you can track how much time a particular event took, like so:
+
+```python
+import httpcore
+import time
+
+
+def log(event_name, info, context):
+    _, event_name, stage = event_name.split(".")
+    if event_name == "start_tls":
+        if stage == "started":
+            context["start_time"] = time.monotonic()
+        elif stage == "complete":
+            elapsed = time.monotonic() - context["start_time"]
+            print(f"TLS handshake took {elapsed:.2f} seconds")
+
+
+r = httpcore.request("GET", "https://www.encode.io/", extensions={"trace": log})
+```
 
 Note that when using the async variant of `httpcore` the handler function passed to `"trace"` must be an `async def ...` function.
 
