@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Unreleased
 
 - Handle `SSLError` exception. (#918)
+- Add context to trace functions. (#932)
 
 ## 1.0.5 (March 27th, 2024)
 
