@@ -7,7 +7,7 @@ from .._backends.sync import SyncBackend
 from .._backends.base import SOCKET_OPTION, NetworkBackend
 from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
 from .._models import Origin, Request, Response
-from .._synchronization import Event, ShieldCancellation, ThreadLock
+from .._synchronization import Event, ThreadLock, sync_cancel_shield
 from .connection import HTTPConnection
 from .interfaces import ConnectionInterface, RequestInterface
 
@@ -299,10 +299,15 @@ class ConnectionPool(RequestInterface):
         return closing_connections
 
     def _close_connections(self, closing: List[ConnectionInterface]) -> None:
+        if not closing:
+            return
+
         # Close connections which have been removed from the pool.
-        with ShieldCancellation():
+        def close() -> None:
             for connection in closing:
                 connection.close()
+
+        sync_cancel_shield(close)
 
     def close(self) -> None:
         # Explicitly close the connection pool.
@@ -369,9 +374,9 @@ class PoolByteStream:
     def close(self) -> None:
         if not self._closed:
             self._closed = True
-            with ShieldCancellation():
-                if hasattr(self._stream, "close"):
-                    self._stream.close()
+
+            if hasattr(self._stream, "close"):
+                sync_cancel_shield(self._stream.close)
 
             with self._pool._optional_thread_lock:
                 self._pool._requests.remove(self._pool_request)

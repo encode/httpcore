@@ -24,6 +24,7 @@ SUBS = [
     ('@pytest.mark.anyio', ''),
     ('@pytest.mark.trio', ''),
     ('AutoBackend', 'SyncBackend'),
+    ('async_cancel_shield', 'sync_cancel_shield'),
 ]
 COMPILED_SUBS = [
     (re.compile(r'(^|\b)' + regex + r'($|\b)'), repl)
