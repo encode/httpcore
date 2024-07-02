@@ -16,7 +16,17 @@ def map_exceptions(map: ExceptionMapping) -> Iterator[None]:
 
 
 class ConnectionNotAvailable(Exception):
-    pass
+    """
+    This error is handled by the connection pool.
+    Users should not see this error directly when using connection pool.
+    """
+
+
+class ServerDisconnectedError(ConnectionNotAvailable):
+    """
+    This error is handled by the connection pool.
+    Users should not see this error directly when using connection pool.
+    """
 
 
 class ProxyError(Exception):

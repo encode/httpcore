@@ -1,3 +1,5 @@
+import typing
+
 import pytest
 
 import httpcore
@@ -165,6 +167,43 @@ def test_http11_connection_handles_one_active_request():
         with conn.stream("GET", "https://example.com/"):
             with pytest.raises(httpcore.ConnectionNotAvailable):
                 conn.request("GET", "https://example.com/")
+
+
+
+def test_http11_idle_connection_checks_readable_state():
+    """
+    Idle connection can not be readable when requesting.
+    """
+
+    class MockStream(httpcore.MockStream):
+        def __init__(self, buffer: typing.List[bytes]):
+            super().__init__(buffer)
+            self.mock_is_readable = False
+
+        def get_extra_info(self, info: str) -> typing.Any:
+            if info == "is_readable":
+                return self.mock_is_readable
+            return super().get_extra_info(info)  # pragma: nocover
+
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = MockStream(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
+    with httpcore.HTTP11Connection(origin=origin, stream=stream) as conn:
+        conn.request("GET", "https://example.com/")
+
+        assert conn.is_idle() and not conn.has_expired()
+        stream.mock_is_readable = True  # Simulate connection breakage
+
+        with pytest.raises(httpcore.ServerDisconnectedError):
+            conn.request("GET", "https://example.com/")
+        assert conn.has_expired() and not conn.is_idle()
 
 
 

@@ -21,6 +21,7 @@ from .._exceptions import (
     ConnectionNotAvailable,
     LocalProtocolError,
     RemoteProtocolError,
+    ServerDisconnectedError,
     WriteError,
     map_exceptions,
 )
@@ -45,6 +46,7 @@ class HTTPConnectionState(enum.IntEnum):
     ACTIVE = 1
     IDLE = 2
     CLOSED = 3
+    SERVER_DISCONNECTED = 4
 
 
 class AsyncHTTP11Connection(AsyncConnectionInterface):
@@ -59,7 +61,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
     ) -> None:
         self._origin = origin
         self._network_stream = stream
-        self._keepalive_expiry: Optional[float] = keepalive_expiry
+        self._keepalive_expiry = keepalive_expiry
         self._expire_at: Optional[float] = None
         self._state = HTTPConnectionState.NEW
         self._state_lock = AsyncLock()
@@ -76,13 +78,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
                 f"to {self._origin}"
             )
 
-        async with self._state_lock:
-            if self._state in (HTTPConnectionState.NEW, HTTPConnectionState.IDLE):
-                self._request_count += 1
-                self._state = HTTPConnectionState.ACTIVE
-                self._expire_at = None
-            else:
-                raise ConnectionNotAvailable()
+        await self._update_state()
 
         try:
             kwargs = {"request": request}
@@ -141,6 +137,29 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
                 async with Trace("response_closed", logger, request) as trace:
                     await self._response_closed()
             raise exc
+
+    async def _update_state(self) -> None:
+        async with self._state_lock:
+            # If the HTTP connection is idle but the socket is readable, then the
+            # only valid state is that the socket is about to return b"", indicating
+            # a server-initiated disconnect.
+            server_disconnected = (
+                self._state == HTTPConnectionState.IDLE
+                and self._network_stream.get_extra_info("is_readable")
+            )
+            if (
+                server_disconnected
+                or self._state == HTTPConnectionState.SERVER_DISCONNECTED
+            ):
+                self._state = HTTPConnectionState.SERVER_DISCONNECTED
+                raise ServerDisconnectedError()
+
+            if self._state in (HTTPConnectionState.NEW, HTTPConnectionState.IDLE):
+                self._request_count += 1
+                self._state = HTTPConnectionState.ACTIVE
+                self._expire_at = None
+            else:
+                raise ConnectionNotAvailable()
 
     # Sending the request...
 
@@ -279,18 +298,13 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
         return self._state == HTTPConnectionState.IDLE
 
     def has_expired(self) -> bool:
+        if self._state == HTTPConnectionState.SERVER_DISCONNECTED:
+            # Connection that is disconnected by the server is considered expired.
+            # Pool then cleans up this connection by closing it.
+            return True
+
         now = time.monotonic()
-        keepalive_expired = self._expire_at is not None and now > self._expire_at
-
-        # If the HTTP connection is idle but the socket is readable, then the
-        # only valid state is that the socket is about to return b"", indicating
-        # a server-initiated disconnect.
-        server_disconnected = (
-            self._state == HTTPConnectionState.IDLE
-            and self._network_stream.get_extra_info("is_readable")
-        )
-
-        return keepalive_expired or server_disconnected
+        return self._expire_at is not None and now > self._expire_at
 
     def is_idle(self) -> bool:
         return self._state == HTTPConnectionState.IDLE
