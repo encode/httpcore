@@ -17,7 +17,12 @@ from .._exceptions import (
     RemoteProtocolError,
 )
 from .._models import Origin, Request, Response
-from .._synchronization import Lock, Semaphore, ShieldCancellation
+from .._synchronization import (
+    EXCEPTION_OR_CANCELLED,
+    Lock,
+    Semaphore,
+    ShieldCancellation,
+)
 from .._trace import Trace
 from .interfaces import ConnectionInterface
 
@@ -107,7 +112,7 @@ class HTTP2Connection(ConnectionInterface):
                     kwargs = {"request": request}
                     with Trace("send_connection_init", logger, request, kwargs):
                         self._send_connection_init(**kwargs)
-                except BaseException as exc:
+                except EXCEPTION_OR_CANCELLED as exc:
                     with ShieldCancellation():
                         self.close()
                     raise exc
@@ -160,7 +165,7 @@ class HTTP2Connection(ConnectionInterface):
                     "stream_id": stream_id,
                 },
             )
-        except BaseException as exc:  # noqa: PIE786
+        except EXCEPTION_OR_CANCELLED as exc:  # noqa: PIE786
             with ShieldCancellation():
                 kwargs = {"stream_id": stream_id}
                 with Trace("response_closed", logger, request, kwargs):
@@ -573,7 +578,7 @@ class HTTP2ConnectionByteStream:
                     request=self._request, stream_id=self._stream_id
                 ):
                     yield chunk
-        except BaseException as exc:
+        except EXCEPTION_OR_CANCELLED as exc:
             # If we get an exception while streaming the response,
             # we want to close the response (and possibly the connection)
             # before raising that exception.
