@@ -88,7 +88,10 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
             kwargs = {"request": request}
             try:
                 async with Trace(
-                    "send_request_headers", logger, request, kwargs
+                    "send_request_headers",
+                    logger,
+                    request,
+                    kwargs,
                 ) as trace:
                     await self._send_request_headers(**kwargs)
                 async with Trace("send_request_body", logger, request, kwargs) as trace:
@@ -102,7 +105,10 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
                 pass
 
             async with Trace(
-                "receive_response_headers", logger, request, kwargs
+                "receive_response_headers",
+                logger,
+                request,
+                kwargs,
             ) as trace:
                 (
                     http_version,
@@ -168,7 +174,9 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
         await self._send_event(h11.EndOfMessage(), timeout=timeout)
 
     async def _send_event(
-        self, event: h11.Event, timeout: Optional[float] = None
+        self,
+        event: h11.Event,
+        timeout: Optional[float] = None,
     ) -> None:
         bytes_to_send = self._h11_state.send(event)
         if bytes_to_send is not None:
@@ -222,7 +230,8 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
 
             if event is h11.NEED_DATA:
                 data = await self._network_stream.read(
-                    self.READ_NUM_BYTES, timeout=timeout
+                    self.READ_NUM_BYTES,
+                    timeout=timeout,
                 )
 
                 # If we feed this case through h11 we'll raise an exception like:

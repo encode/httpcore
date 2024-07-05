@@ -143,7 +143,10 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
             async with Trace("send_request_body", logger, request, kwargs):
                 await self._send_request_body(request=request, stream_id=stream_id)
             async with Trace(
-                "receive_response_headers", logger, request, kwargs
+                "receive_response_headers",
+                logger,
+                request,
+                kwargs,
             ) as trace:
                 status, headers = await self._receive_response(
                     request=request, stream_id=stream_id
@@ -261,7 +264,10 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         await self._send_end_stream(request, stream_id)
 
     async def _send_stream_data(
-        self, request: Request, stream_id: int, data: bytes
+        self,
+        request: Request,
+        stream_id: int,
+        data: bytes,
     ) -> None:
         """
         Send a single chunk of data in one or more data frames.
@@ -362,7 +368,9 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 for event in events:
                     if isinstance(event, h2.events.RemoteSettingsChanged):
                         async with Trace(
-                            "receive_remote_settings", logger, request
+                            "receive_remote_settings",
+                            logger,
+                            request,
                         ) as trace:
                             await self._receive_remote_settings_change(event)
                             trace.return_value = event
@@ -426,7 +434,8 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
     # Wrappers around network read/write operations...
 
     async def _read_incoming_data(
-        self, request: Request
+        self,
+        request: Request,
     ) -> typing.List[h2.events.Event]:
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("read", None)
@@ -470,10 +479,10 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
             except Exception as exc:  # pragma: nocover
                 # If we get a network error we should:
                 #
-                # 1. Save the exception and just raise it immediately on any future write.
-                #    (For example, this means that a single write timeout or disconnect will
-                #    immediately close all pending streams. Without requiring multiple
-                #    sequential timeouts.)
+                # 1. Save the exception and just raise it immediately on any
+                #    future write. (For example, this means that a single write timeout
+                #    or disconnect will immediately close all pending streams,
+                #    without requiring multiple sequential timeouts.)
                 # 2. Mark the connection as errored, so that we don't accept any other
                 #    incoming requests.
                 self._write_exception = exc

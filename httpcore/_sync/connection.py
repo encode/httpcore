@@ -67,7 +67,8 @@ class HTTPConnection(ConnectionInterface):
     def handle_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
             raise RuntimeError(
-                f"Attempted to send request to {request.url.origin} on connection to {self._origin}"
+                f"Attempted to send request to {request.url.origin}"
+                f" on connection to {self._origin}"
             )
 
         try:
@@ -118,7 +119,12 @@ class HTTPConnection(ConnectionInterface):
                         "timeout": timeout,
                         "socket_options": self._socket_options,
                     }
-                    with Trace("connect_tcp", logger, request, kwargs) as trace:
+                    with Trace(
+                        "connect_tcp",
+                        logger,
+                        request,
+                        kwargs,
+                    ) as trace:
                         stream = self._network_backend.connect_tcp(**kwargs)
                         trace.return_value = stream
                 else:
@@ -128,10 +134,13 @@ class HTTPConnection(ConnectionInterface):
                         "socket_options": self._socket_options,
                     }
                     with Trace(
-                        "connect_unix_socket", logger, request, kwargs
+                        "connect_unix_socket",
+                        logger,
+                        request,
+                        kwargs,
                     ) as trace:
                         stream = self._network_backend.connect_unix_socket(
-                            **kwargs
+                            **kwargs,
                         )
                         trace.return_value = stream
 

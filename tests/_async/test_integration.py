@@ -1,6 +1,6 @@
 import ssl
 
-import pytest
+import pytest  # noqa: F401
 
 import httpcore
 
