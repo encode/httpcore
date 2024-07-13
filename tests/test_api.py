@@ -24,4 +24,6 @@ def test_request_with_content(httpbin):
 
 def test_total_timeout(httpbin):
     with pytest.raises(Exception):
-        httpcore.request("GET", httpbin.url + "/delay/1", timeout=0.1)
+        httpcore.request(
+            "GET", httpbin.url + "/delay/1", extensions={"timeout": {"total": 0.1}}
+        )

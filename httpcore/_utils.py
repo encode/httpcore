@@ -1,7 +1,34 @@
 import select
 import socket
 import sys
+import time
+import types
 import typing
+
+
+class OverallTimeoutHandler:
+    def __init__(self, timeouts: typing.Dict[str, typing.Any]) -> None:
+        self.timeouts = timeouts
+
+    def __enter__(self) -> None:
+        self.start_time = time.monotonic()
+
+    def __exit__(
+        self,
+        exc_type: typing.Optional[typing.Type[BaseException]],
+        exc_value: typing.Optional[BaseException],
+        traceback: typing.Optional[types.TracebackType],
+    ) -> None:
+        elapsed_time = time.monotonic() - self.start_time
+        if self.timeouts.get("total") is not None:
+            self.timeouts["total"] -= elapsed_time
+
+    def get_minimum_timeout(self, timeout: typing.Optional[float]) -> typing.Any:
+        if self.timeouts.get("total") is None:
+            return timeout
+        if timeout is None:
+            return self.timeouts["total"]
+        return min(timeout, self.timeouts["total"])  # pragma: nocover
 
 
 def is_socket_readable(sock: typing.Optional[socket.socket]) -> bool:

@@ -4,6 +4,8 @@ import ssl
 from types import TracebackType
 from typing import Iterable, Iterator, Optional, Type
 
+from httpcore._utils import OverallTimeoutHandler
+
 from .._backends.auto import AutoBackend
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
 from .._exceptions import ConnectError, ConnectTimeout
@@ -105,6 +107,8 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
         sni_hostname = request.extensions.get("sni_hostname", None)
         timeout = timeouts.get("connect", None)
 
+        overall_timeout = OverallTimeoutHandler(timeouts)
+
         retries_left = self._retries
         delays = exponential_backoff(factor=RETRIES_BACKOFF_FACTOR)
 
@@ -115,11 +119,12 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                         "host": self._origin.host.decode("ascii"),
                         "port": self._origin.port,
                         "local_address": self._local_address,
-                        "timeout": timeout,
+                        "timeout": overall_timeout.get_minimum_timeout(timeout),
                         "socket_options": self._socket_options,
                     }
                     async with Trace("connect_tcp", logger, request, kwargs) as trace:
-                        stream = await self._network_backend.connect_tcp(**kwargs)
+                        with overall_timeout:
+                            stream = await self._network_backend.connect_tcp(**kwargs)
                         trace.return_value = stream
                 else:
                     kwargs = {

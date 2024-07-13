@@ -10,6 +10,8 @@ import h2.events
 import h2.exceptions
 import h2.settings
 
+from httpcore._utils import OverallTimeoutHandler
+
 from .._backends.base import NetworkStream
 from .._exceptions import (
     ConnectionNotAvailable,
@@ -430,12 +432,16 @@ class HTTP2Connection(ConnectionInterface):
     ) -> typing.List[h2.events.Event]:
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("read", None)
+        overall_timeout = OverallTimeoutHandler(timeouts)
 
         if self._read_exception is not None:
             raise self._read_exception  # pragma: nocover
 
         try:
-            data = self._network_stream.read(self.READ_NUM_BYTES, timeout)
+            with overall_timeout:
+                data = self._network_stream.read(
+                    self.READ_NUM_BYTES, overall_timeout.get_minimum_timeout(timeout)
+                )
             if data == b"":
                 raise RemoteProtocolError("Server disconnected")
         except Exception as exc:
@@ -458,6 +464,7 @@ class HTTP2Connection(ConnectionInterface):
     def _write_outgoing_data(self, request: Request) -> None:
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("write", None)
+        overall_timeout = OverallTimeoutHandler(timeouts)
 
         with self._write_lock:
             data_to_send = self._h2_state.data_to_send()
@@ -466,7 +473,8 @@ class HTTP2Connection(ConnectionInterface):
                 raise self._write_exception  # pragma: nocover
 
             try:
-                self._network_stream.write(data_to_send, timeout)
+                with overall_timeout:
+                    self._network_stream.write(data_to_send, timeout)
             except Exception as exc:  # pragma: nocover
                 # If we get a network error we should:
                 #
