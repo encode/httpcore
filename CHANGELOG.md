@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Unreleased
 
 - Handle `SSLError` exception. (#918)
+- Add overall timeout support. (#936)
 
 ## 1.0.5 (March 27th, 2024)
 
