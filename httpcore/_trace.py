@@ -24,11 +24,12 @@ class Trace:
         self.return_value: Any = None
         self.should_trace = self.debug or self.trace_extension is not None
         self.prefix = self.logger.name.split(".")[-1]
+        self.context: Dict[str, Any] = {}
 
     def trace(self, name: str, info: Dict[str, Any]) -> None:
         if self.trace_extension is not None:
             prefix_and_name = f"{self.prefix}.{name}"
-            ret = self.trace_extension(prefix_and_name, info)
+            ret = self.trace_extension(prefix_and_name, info, self.context)
             if inspect.iscoroutine(ret):  # pragma: no cover
                 raise TypeError(
                     "If you are using a synchronous interface, "
@@ -67,7 +68,7 @@ class Trace:
     async def atrace(self, name: str, info: Dict[str, Any]) -> None:
         if self.trace_extension is not None:
             prefix_and_name = f"{self.prefix}.{name}"
-            coro = self.trace_extension(prefix_and_name, info)
+            coro = self.trace_extension(prefix_and_name, info, self.context)
             if not inspect.iscoroutine(coro):  # pragma: no cover
                 raise TypeError(
                     "If you're using an asynchronous interface, "
