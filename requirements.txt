@@ -20,7 +20,7 @@ trio-typing==0.10.0
 pytest==8.2.2
 pytest-httpbin==2.0.0
 pytest-trio==0.8.0
-werkzeug<2.1  # See: https://github.com/psf/httpbin/issues/35
+werkzeug<3.1  # See: https://github.com/psf/httpbin/issues/35
 
 # Benchmarking and profiling
 uvicorn==0.30.1
