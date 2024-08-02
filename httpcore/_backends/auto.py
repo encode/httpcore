@@ -1,14 +1,14 @@
 import typing
 from typing import Optional
 
-from .._synchronization import current_async_library
+from .._synchronization import current_async_backend
 from .base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
 
 
 class AutoBackend(AsyncNetworkBackend):
     async def _init_backend(self) -> None:
         if not (hasattr(self, "_backend")):
-            backend = current_async_library()
+            backend = current_async_backend()
             if backend == "trio":
                 from .trio import TrioBackend
 

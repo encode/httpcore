@@ -31,6 +31,7 @@ classifiers = [
 dependencies = [
     "certifi",
     "h11>=0.13,<0.15",
+    "async-timeout==4.*; python_version < '3.11'",
 ]
 
 [project.optional-dependencies]
