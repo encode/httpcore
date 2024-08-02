@@ -93,13 +93,7 @@ class HTTP2Connection(ConnectionInterface):
                 f"to {self._origin}"
             )
 
-        with self._state_lock:
-            if self._state in (HTTPConnectionState.ACTIVE, HTTPConnectionState.IDLE):
-                self._request_count += 1
-                self._expire_at = None
-                self._state = HTTPConnectionState.ACTIVE
-            else:
-                raise ConnectionNotAvailable()
+        self._update_state()
 
         with self._init_lock:
             if not self._sent_connection_init:
@@ -183,6 +177,15 @@ class HTTP2Connection(ConnectionInterface):
                 raise LocalProtocolError(exc)  # pragma: nocover
 
             raise exc
+
+    def _update_state(self) -> None:
+        with self._state_lock:
+            if self._state in (HTTPConnectionState.ACTIVE, HTTPConnectionState.IDLE):
+                self._request_count += 1
+                self._expire_at = None
+                self._state = HTTPConnectionState.ACTIVE
+            else:
+                raise ConnectionNotAvailable()
 
     def _send_connection_init(self, request: Request) -> None:
         """

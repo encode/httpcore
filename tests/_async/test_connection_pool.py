@@ -688,6 +688,82 @@ async def test_connection_pool_closed_while_request_in_flight():
 
 
 @pytest.mark.anyio
+async def test_connection_pool_with_idle_broken_connection():
+    """
+    Pool gives a new connection when an idle connection gets readable (ie broken) while in the pool.
+    """
+
+    class MockStream(httpcore.AsyncMockStream):
+        def __init__(self, buffer: typing.List[bytes]):
+            super().__init__(buffer)
+            self.mock_is_readable = False
+
+        def get_extra_info(self, info: str) -> typing.Any:
+            if info == "is_readable":
+                return self.mock_is_readable
+            return super().get_extra_info(info)  # pragma: nocover
+
+    streams = [
+        MockStream(
+            [
+                b"HTTP/1.1 200 OK\r\n",
+                b"Content-Type: plain/text\r\n",
+                b"Content-Length: 15\r\n",
+                b"\r\n",
+                b"Hello, world 1!",
+                b"HTTP/1.1 200 OK\r\n",
+                b"Content-Type: plain/text\r\n",
+                b"Content-Length: 15\r\n",
+                b"\r\n",
+                b"Hello, world 2!",
+            ]
+        ),
+        MockStream(
+            [
+                b"HTTP/1.1 200 OK\r\n",
+                b"Content-Type: plain/text\r\n",
+                b"Content-Length: 29\r\n",
+                b"\r\n",
+                b"Hello, world from new stream!",
+            ]
+        ),
+    ]
+
+    class MockBackend(httpcore.AsyncMockBackend):
+        async def connect_tcp(
+            self, *args: typing.Any, **kwargs: typing.Any
+        ) -> MockStream:
+            return streams.pop(0)
+
+    async with httpcore.AsyncConnectionPool(
+        network_backend=MockBackend([]), max_connections=1
+    ) as pool:
+        res = await pool.request("GET", "https://example.com/")
+        assert (await res.aread()) == b"Hello, world 1!"
+
+        assert len(pool.connections) == 1
+        conn = pool.connections[0]
+
+        res = await pool.request("GET", "https://example.com/")
+        assert (await res.aread()) == b"Hello, world 2!"
+
+        assert len(pool.connections) == 1
+        assert conn is pool.connections[0], "Should reuse connection"
+
+        # Simulate network breakage
+        assert conn.is_idle()
+        conn._connection._network_stream.mock_is_readable = True  # type: ignore[attr-defined]
+
+        res = await pool.request("GET", "https://example.com/")
+        assert (await res.aread()) == b"Hello, world from new stream!"
+
+        assert len(pool.connections) == 1
+        new_conn = pool.connections[0]
+        assert new_conn is not conn, "Should be a new connection"
+        assert not new_conn._connection._network_stream.mock_is_readable  # type: ignore[attr-defined]
+
+
+@pytest.mark.anyio
 async def test_connection_pool_timeout():
     """
     Ensure that exceeding max_connections can cause a request to timeout.
