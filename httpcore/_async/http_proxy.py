@@ -3,6 +3,8 @@ import ssl
 from base64 import b64encode
 from typing import Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
+from httpcore._utils import OverallTimeoutHandler
+
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend
 from .._exceptions import ProxyError
 from .._models import (
@@ -266,6 +268,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
     async def handle_async_request(self, request: Request) -> Response:
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("connect", None)
+        overall_timeout = OverallTimeoutHandler(timeouts)
 
         async with self._connect_lock:
             if not self._connected:
@@ -311,10 +314,11 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
                 kwargs = {
                     "ssl_context": ssl_context,
                     "server_hostname": self._remote_origin.host.decode("ascii"),
-                    "timeout": timeout,
+                    "timeout": overall_timeout.get_minimum_timeout(timeout),
                 }
                 async with Trace("start_tls", logger, request, kwargs) as trace:
-                    stream = await stream.start_tls(**kwargs)
+                    with overall_timeout:
+                        stream = await stream.start_tls(**kwargs)
                     trace.return_value = stream
 
                 # Determine if we should be using HTTP/1.1 or HTTP/2

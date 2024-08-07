@@ -4,6 +4,8 @@ import typing
 
 from socksio import socks5
 
+from httpcore._utils import OverallTimeoutHandler
+
 from .._backends.auto import AutoBackend
 from .._backends.base import AsyncNetworkBackend, AsyncNetworkStream
 from .._exceptions import ConnectionNotAvailable, ProxyError
@@ -218,6 +220,7 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
         timeouts = request.extensions.get("timeout", {})
         sni_hostname = request.extensions.get("sni_hostname", None)
         timeout = timeouts.get("connect", None)
+        overall_timeout = OverallTimeoutHandler(timeouts)
 
         async with self._connect_lock:
             if self._connection is None:
@@ -226,10 +229,11 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
                     kwargs = {
                         "host": self._proxy_origin.host.decode("ascii"),
                         "port": self._proxy_origin.port,
-                        "timeout": timeout,
+                        "timeout": overall_timeout.get_minimum_timeout(timeout),
                     }
                     async with Trace("connect_tcp", logger, request, kwargs) as trace:
-                        stream = await self._network_backend.connect_tcp(**kwargs)
+                        with overall_timeout:
+                            stream = await self._network_backend.connect_tcp(**kwargs)
                         trace.return_value = stream
 
                     # Connect to the remote host using socks5

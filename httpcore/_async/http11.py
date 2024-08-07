@@ -16,6 +16,8 @@ from typing import (
 
 import h11
 
+from httpcore._utils import OverallTimeoutHandler
+
 from .._backends.base import AsyncNetworkStream
 from .._exceptions import (
     ConnectionNotAvailable,
@@ -147,6 +149,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
     async def _send_request_headers(self, request: Request) -> None:
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("write", None)
+        overall_timeout = OverallTimeoutHandler(timeouts)
 
         with map_exceptions({h11.LocalProtocolError: LocalProtocolError}):
             event = h11.Request(
@@ -154,18 +157,29 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
                 target=request.url.target,
                 headers=request.headers,
             )
-        await self._send_event(event, timeout=timeout)
+        with overall_timeout:
+            await self._send_event(
+                event, timeout=overall_timeout.get_minimum_timeout(timeout)
+            )
 
     async def _send_request_body(self, request: Request) -> None:
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("write", None)
+        overall_timeout = OverallTimeoutHandler(timeouts)
 
         assert isinstance(request.stream, AsyncIterable)
         async for chunk in request.stream:
             event = h11.Data(data=chunk)
-            await self._send_event(event, timeout=timeout)
 
-        await self._send_event(h11.EndOfMessage(), timeout=timeout)
+            with overall_timeout:
+                await self._send_event(
+                    event, timeout=overall_timeout.get_minimum_timeout(timeout)
+                )
+
+        with overall_timeout:
+            await self._send_event(
+                h11.EndOfMessage(), timeout=overall_timeout.get_minimum_timeout(timeout)
+            )
 
     async def _send_event(
         self, event: h11.Event, timeout: Optional[float] = None
@@ -181,9 +195,13 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
     ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], bytes]:
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("read", None)
+        overall_timeout = OverallTimeoutHandler(timeouts)
 
         while True:
-            event = await self._receive_event(timeout=timeout)
+            with overall_timeout:
+                event = await self._receive_event(
+                    timeout=overall_timeout.get_minimum_timeout(timeout)
+                )
             if isinstance(event, h11.Response):
                 break
             if (
@@ -205,9 +223,12 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
     async def _receive_response_body(self, request: Request) -> AsyncIterator[bytes]:
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("read", None)
+        overall_timeout = OverallTimeoutHandler(timeouts)
 
         while True:
-            event = await self._receive_event(timeout=timeout)
+            event = await self._receive_event(
+                timeout=overall_timeout.get_minimum_timeout(timeout)
+            )
             if isinstance(event, h11.Data):
                 yield bytes(event.data)
             elif isinstance(event, (h11.EndOfMessage, h11.PAUSED)):

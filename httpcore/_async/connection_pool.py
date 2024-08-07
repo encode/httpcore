@@ -3,6 +3,8 @@ import sys
 from types import TracebackType
 from typing import AsyncIterable, AsyncIterator, Iterable, List, Optional, Type
 
+from httpcore._utils import OverallTimeoutHandler
+
 from .._backends.auto import AutoBackend
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend
 from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
@@ -174,6 +176,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
 
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("pool", None)
+        overall_timeout = OverallTimeoutHandler(timeouts)
 
         with self._optional_thread_lock:
             # Add the incoming request to our request queue.
@@ -188,8 +191,11 @@ class AsyncConnectionPool(AsyncRequestInterface):
                     closing = self._assign_requests_to_connections()
                 await self._close_connections(closing)
 
-                # Wait until this request has an assigned connection.
-                connection = await pool_request.wait_for_connection(timeout=timeout)
+                with overall_timeout:
+                    # Wait until this request has an assigned connection.
+                    connection = await pool_request.wait_for_connection(
+                        timeout=overall_timeout.get_minimum_timeout(timeout)
+                    )
 
                 try:
                     # Send the request on the assigned connection.
