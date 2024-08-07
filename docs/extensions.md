@@ -72,7 +72,7 @@ print(r.extensions["http_version"])
 
 A dictionary of `str: Optional[float]` timeout values.
 
-May include values for `'connect'`, `'read'`, `'write'`, `'pool'` or `'total'`.
+May include values for `'connect'`, `'read'`, `'write'`, `'pool'`, or `'total'`.
 
 For example:
 
