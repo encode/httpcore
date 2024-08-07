@@ -72,7 +72,7 @@ print(r.extensions["http_version"])
 
 A dictionary of `str: Optional[float]` timeout values.
 
-May include values for `'connect'`, `'read'`, `'write'`, or `'pool'`.
+May include values for `'connect'`, `'read'`, `'write'`, `'pool'` or `'total'`.
 
 For example:
 
@@ -83,6 +83,18 @@ r = httpcore.request(
     "GET",
     "https://www.example.com",
     extensions={"timeout": {"connect": 5.0, "pool": 10.0}}
+)
+```
+
+or
+
+```python
+# Timeout if we are blocked waiting for the connection read for more
+# than a second, or if the total time of the request exceeds 10 seconds.
+r = httpcore.request(
+    "GET",
+    "https://www.example.com",
+    extensions={"timeout": {"read": 1.0, "total": 10.0}}
 )
 ```
 
