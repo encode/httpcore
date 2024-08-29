@@ -387,6 +387,7 @@ def test_http2_remote_max_streams_update():
 
 
 
+@pytest.mark.xfail(reason="https://github.com/encode/httpx/discussions/3278")
 def test_slow_overlapping_requests():
     fetches = []
 
