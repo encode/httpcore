@@ -272,7 +272,7 @@ def test_trace_request():
 
     called = []
 
-    def trace(name, kwargs):
+    def trace(name, kwargs, context):
         called.append(name)
 
     with httpcore.ConnectionPool(network_backend=network_backend) as pool:
@@ -374,7 +374,7 @@ def test_connection_pool_with_http_exception():
 
     called = []
 
-    def trace(name, kwargs):
+    def trace(name, kwargs, context):
         called.append(name)
 
     with httpcore.ConnectionPool(network_backend=network_backend) as pool:
@@ -427,7 +427,7 @@ def test_connection_pool_with_connect_exception():
 
     called = []
 
-    def trace(name, kwargs):
+    def trace(name, kwargs, context):
         called.append(name)
 
     with httpcore.ConnectionPool(network_backend=network_backend) as pool:
@@ -799,7 +799,7 @@ def test_http11_upgrade_connection():
 
     called = []
 
-    def trace(name, kwargs):
+    def trace(name, kwargs, context):
         called.append(name)
 
     with httpcore.ConnectionPool(
