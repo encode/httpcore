@@ -69,7 +69,7 @@ class HTTP2Server:
         while True:
             try:
                 handle(self.sock.accept()[0])
-            except socket.timeout:
+            except socket.timeout:  # pragma: no cover
                 pass
             except OSError:
                 break
@@ -87,7 +87,7 @@ def run(**kwargs):
         thr.join()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     logging.basicConfig(
         format="%(relativeCreated)5i <%(threadName)s> %(filename)s:%(lineno)s] %(message)s",
         level=logging.INFO,
