@@ -3,28 +3,28 @@
 # Docs
 mkdocs==1.6.0
 mkdocs-autorefs==1.0.1
-mkdocs-material==9.5.25
+mkdocs-material==9.5.27
 mkdocs-material-extensions==1.3.1
 mkdocstrings[python-legacy]==0.25.1
 jinja2==3.1.4
 
 # Packaging
 build==1.2.1
-twine==5.1.0
+twine==5.1.1
 
 # Tests & Linting
-coverage[toml]==7.5.3
-ruff==0.4.7
-mypy==1.10.0
+coverage[toml]==7.5.4
+ruff==0.5.0
+mypy==1.10.1
 trio-typing==0.10.0
-pytest==8.2.1
+pytest==8.2.2
 pytest-httpbin==2.0.0
 pytest-trio==0.8.0
-werkzeug<2.1  # See: https://github.com/psf/httpbin/issues/35
+werkzeug<3.1  # See: https://github.com/psf/httpbin/issues/35
 
 # Benchmarking and profiling
 uvicorn==0.30.1
-aiohttp==3.9.5
-urllib3==2.2.1
+aiohttp==3.10.2
+urllib3==2.2.2
 matplotlib==3.7.5
 pyinstrument==4.6.2
