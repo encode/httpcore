@@ -1,5 +1,4 @@
 import contextlib
-import functools
 import logging
 import socket
 import threading
@@ -49,9 +48,7 @@ def handle(sock: socket.socket) -> None:
         events = conn.receive_data(data)
         for event in events:
             if isinstance(event, h2.events.RequestReceived):
-                threading.Thread(
-                    target=functools.partial(send_response, sock, conn, event)
-                ).start()
+                threading.Thread(target=send_response, args=(sock, conn, event)).start()
 
 
 class HTTP2Server:
