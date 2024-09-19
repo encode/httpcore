@@ -6,7 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+- Handle `SSLError` exception. (#918)
+
+## 1.0.5 (March 27th, 2024)
+
+- Handle `EndOfStream` exception for anyio backend. (#899)
+- Allow trio `0.25.*` series in package dependancies. (#903)
+
+## 1.0.4 (February 21st, 2024)
+
+- Add `target` request extension. (#888)
+- Fix support for connection `Upgrade` and `CONNECT` when some data in the stream has been read. (#882)
+
+## 1.0.3 (February 13th, 2024)
+
+- Fix support for async cancellations. (#880)
 - Fix trace extension when used with socks proxy. (#849)
+- Fix SSL context for connections using the "wss" scheme (#869)
 
 ## 1.0.2 (November 10th, 2023)
 

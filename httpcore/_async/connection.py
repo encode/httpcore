@@ -6,7 +6,7 @@ from typing import Iterable, Iterator, Optional, Type
 
 from .._backends.auto import AutoBackend
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
-from .._exceptions import ConnectError, ConnectionNotAvailable, ConnectTimeout
+from .._exceptions import ConnectError, ConnectTimeout
 from .._models import Origin, Request, Response
 from .._ssl import default_ssl_context
 from .._synchronization import AsyncLock
@@ -72,9 +72,16 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                 f"Attempted to send request to {request.url.origin} on connection to {self._origin}"
             )
 
-        async with self._request_lock:
-            if self._connection is None:
-                try:
+        try:
+            async with self._request_lock:
+                if self._connection is None:
+                    stream = await self._connect(request)
+
+                    ssl_object = stream.get_extra_info("ssl_object")
+                    http2_negotiated = (
+                        ssl_object is not None
+                        and ssl_object.selected_alpn_protocol() == "h2"
+                    )
                     if self._http3 and not (
                         self._http1 or self._http2
                     ):  # pragma: no cover
@@ -86,34 +93,23 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                             stream=stream,
                             keepalive_expiry=self._keepalive_expiry,
                         )
+                    elif http2_negotiated or (self._http2 and not self._http1):
+                        from .http2 import AsyncHTTP2Connection
 
-                    else:
-                        stream = await self._connect(request)
-
-                        ssl_object = stream.get_extra_info("ssl_object")
-                        http2_negotiated = (
-                            ssl_object is not None
-                            and ssl_object.selected_alpn_protocol() == "h2"
+                        self._connection = AsyncHTTP2Connection(
+                            origin=self._origin,
+                            stream=stream,
+                            keepalive_expiry=self._keepalive_expiry,
                         )
-                        if http2_negotiated or (self._http2 and not self._http1):
-                            from .http2 import AsyncHTTP2Connection
-
-                            self._connection = AsyncHTTP2Connection(
-                                origin=self._origin,
-                                stream=stream,
-                                keepalive_expiry=self._keepalive_expiry,
-                            )
-                        else:
-                            self._connection = AsyncHTTP11Connection(
-                                origin=self._origin,
-                                stream=stream,
-                                keepalive_expiry=self._keepalive_expiry,
-                            )
-                except Exception as exc:
-                    self._connect_failed = True
-                    raise exc
-            elif not self._connection.is_available():
-                raise ConnectionNotAvailable()
+                    else:
+                        self._connection = AsyncHTTP11Connection(
+                            origin=self._origin,
+                            stream=stream,
+                            keepalive_expiry=self._keepalive_expiry,
+                        )
+        except BaseException as exc:
+            self._connect_failed = True
+            raise exc
 
         return await self._connection.handle_async_request(request)
 
@@ -152,7 +148,7 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                         )
                         trace.return_value = stream
 
-                if self._origin.scheme == b"https":
+                if self._origin.scheme in (b"https", b"wss"):
                     ssl_context = (
                         default_ssl_context()
                         if self._ssl_context is None
