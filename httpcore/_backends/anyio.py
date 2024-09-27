@@ -104,9 +104,9 @@ class AnyIOBackend(AsyncNetworkBackend):
         timeout: typing.Optional[float] = None,
         local_address: typing.Optional[str] = None,
         socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
-    ) -> AsyncNetworkStream:
+    ) -> AsyncNetworkStream:  # pragma: nocover
         if socket_options is None:
-            socket_options = []  # pragma: no cover
+            socket_options = []
         exc_map = {
             TimeoutError: ConnectTimeout,
             OSError: ConnectError,
@@ -120,7 +120,7 @@ class AnyIOBackend(AsyncNetworkBackend):
                     local_host=local_address,
                 )
                 # By default TCP sockets opened in `asyncio` include TCP_NODELAY.
-                for option in socket_options:  # pragma: nocover
+                for option in socket_options:
                     stream._raw_socket.setsockopt(*option)  # type: ignore[attr-defined] # pragma: no cover
         return AnyIOStream(stream)
 
