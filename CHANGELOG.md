@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Version 1.0.6
 
+- Relax `trio` dependency pinning. (#956)
 - Handle `trio` raising `NotImplementedError` on unsupported platforms. (#955)
 - Handle mapping `ssl.SSLError` to `httpcore.ConnectError`. (#918)
 
