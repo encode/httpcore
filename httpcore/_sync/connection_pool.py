@@ -7,7 +7,12 @@ from .._backends.sync import SyncBackend
 from .._backends.base import SOCKET_OPTION, NetworkBackend
 from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
 from .._models import Origin, Request, Response
-from .._synchronization import Event, ShieldCancellation, ThreadLock
+from .._synchronization import (
+    EXCEPTION_OR_CANCELLED,
+    Event,
+    ShieldCancellation,
+    ThreadLock,
+)
 from .connection import HTTPConnection
 from .interfaces import ConnectionInterface, RequestInterface
 
@@ -205,7 +210,7 @@ class ConnectionPool(RequestInterface):
                 else:
                     break  # pragma: nocover
 
-        except BaseException as exc:
+        except EXCEPTION_OR_CANCELLED as exc:
             with self._optional_thread_lock:
                 # For any exception or cancellation we remove the request from
                 # the queue, and then re-assign requests to connections.
