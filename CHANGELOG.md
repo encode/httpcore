@@ -6,7 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Version 1.0.6
 
-- Handle `SSLError` exception. (#918)
+- Handle `trio` raising `NotImplementedError` on unsupported platforms. (#955)
+- Handle mapping `ssl.SSLError` to `httpcore.ConnectError`. (#918)
 
 ## 1.0.5 (March 27th, 2024)
 
