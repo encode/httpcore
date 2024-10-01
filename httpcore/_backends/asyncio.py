@@ -22,8 +22,6 @@ class AsyncIOStream(AsyncNetworkStream):
     ):
         self._stream_reader = stream_reader
         self._stream_writer = stream_writer
-        self._read_lock = asyncio.Lock()
-        self._write_lock = asyncio.Lock()
         self._inner: Optional[AsyncIOStream] = None
 
     async def start_tls(
@@ -76,23 +74,22 @@ class AsyncIOStream(AsyncNetworkStream):
             asyncio.TimeoutError: ReadTimeout,
             OSError: ReadError,
         }
-        async with self._read_lock:
-            with map_exceptions(exc_map):
-                try:
-                    return await asyncio.wait_for(
-                        self._stream_reader.read(max_bytes), timeout
-                    )
-                except AttributeError as exc:  # pragma: nocover
-                    if "resume_reading" in str(exc):
-                        # Python's asyncio has a bug that can occur when a
-                        # connection has been closed, while it is paused.
-                        # See: https://github.com/encode/httpx/issues/1213
-                        #
-                        # Returning an empty byte-string to indicate connection
-                        # close will eventually raise an httpcore.RemoteProtocolError
-                        # to the user when this goes through our HTTP parsing layer.
-                        return b""
-                    raise
+        with map_exceptions(exc_map):
+            try:
+                return await asyncio.wait_for(
+                    self._stream_reader.read(max_bytes), timeout
+                )
+            except AttributeError as exc:  # pragma: nocover
+                if "resume_reading" in str(exc):
+                    # Python's asyncio has a bug that can occur when a
+                    # connection has been closed, while it is paused.
+                    # See: https://github.com/encode/httpx/issues/1213
+                    #
+                    # Returning an empty byte-string to indicate connection
+                    # close will eventually raise an httpcore.RemoteProtocolError
+                    # to the user when this goes through our HTTP parsing layer.
+                    return b""
+                raise
 
     async def write(self, data: bytes, timeout: Optional[float] = None) -> None:
         if not data:
@@ -102,10 +99,9 @@ class AsyncIOStream(AsyncNetworkStream):
             asyncio.TimeoutError: WriteTimeout,
             OSError: WriteError,
         }
-        async with self._write_lock:
-            with map_exceptions(exc_map):
-                self._stream_writer.write(data)
-                return await asyncio.wait_for(self._stream_writer.drain(), timeout)
+        with map_exceptions(exc_map):
+            self._stream_writer.write(data)
+            return await asyncio.wait_for(self._stream_writer.drain(), timeout)
 
     async def aclose(self) -> None:
         # SSL connections should issue the close and then abort, rather than
@@ -124,17 +120,16 @@ class AsyncIOStream(AsyncNetworkStream):
         # * https://github.com/encode/httpx/issues/914
         is_ssl = self._sslobj is not None
 
-        async with self._write_lock:
-            try:
-                self._stream_writer.close()
-                if is_ssl:
-                    # Give the connection a chance to write any data in the buffer,
-                    # and then forcibly tear down the SSL connection.
-                    await asyncio.sleep(0)
-                    self._stream_writer.transport.abort()
-                await self._stream_writer.wait_closed()
-            except OSError:  # pragma: nocover
-                pass
+        try:
+            self._stream_writer.close()
+            if is_ssl:
+                # Give the connection a chance to write any data in the buffer,
+                # and then forcibly tear down the SSL connection.
+                await asyncio.sleep(0)
+                self._stream_writer.transport.abort()
+            await self._stream_writer.wait_closed()
+        except OSError:  # pragma: nocover
+            pass
 
     def get_extra_info(self, info: str) -> Any:
         if info == "is_readable":
