@@ -74,20 +74,20 @@ while True:
 If we're working with an `async` codebase, then we need to select a different backend.
 
 These `async` network backends are available:
-- `httpcore.AsyncioBackend` This networking backend is implemented using Pythons native `asyncio`.
+- `httpcore.AsyncIOBackend` This networking backend is implemented using Pythons native `asyncio`.
 - `httpcore.AnyIOBackend` This is implemented using [the `anyio` package](https://anyio.readthedocs.io/en/3.x/).
 - `httpcore.TrioBackend` This is implemented using [`trio`](https://trio.readthedocs.io/en/stable/).
 
 Currently by default `AnyIOBackend` is used when running with `asyncio` (this may change).
 `TrioBackend` is used by default when running with `trio`.
 
-Using `httpcore.AsyncioBackend`:
+Using `httpcore.AsyncIOBackend`:
 ```python
 import httpcore
 import asyncio
 
 async def main():
-    network_backend = httpcore.AsyncioBackend()
+    network_backend = httpcore.AsyncIOBackend()
     async with httpcore.AsyncConnectionPool(network_backend=network_backend) as http:
         response = await http.request('GET', 'https://www.example.com')
         print(response)
