@@ -18,6 +18,56 @@ from .._utils import is_socket_readable
 from .base import SOCKET_OPTION, NetworkBackend, NetworkStream
 
 
+class SyncUDPStream(NetworkStream):
+    def __init__(
+        self, sock: socket.socket, addr: typing.Tuple[str, int, int, int]
+    ) -> None:
+        self._sock = sock
+        self._addr = addr
+
+    def read(self, max_bytes: int, timeout: typing.Optional[float] = None) -> bytes:
+        exc_map: ExceptionMapping = {socket.timeout: ReadTimeout, OSError: ReadError}
+        with map_exceptions(exc_map):
+            self._sock.settimeout(timeout)
+            data = self._sock.recvfrom(max_bytes)[0]
+            return data
+
+    def write(self, buffer: bytes, timeout: typing.Optional[float] = None) -> None:
+        if not buffer:
+            return
+
+        exc_map: ExceptionMapping = {socket.timeout: WriteTimeout, OSError: WriteError}
+        with map_exceptions(exc_map):
+            while buffer:
+                self._sock.settimeout(timeout)
+                n = self._sock.sendto(buffer, self._addr)
+                buffer = buffer[n:]
+
+    def close(self) -> None:
+        self._sock.close()
+
+    def start_tls(
+        self,
+        ssl_context: ssl.SSLContext,
+        server_hostname: typing.Optional[str] = None,
+        timeout: typing.Optional[float] = None,
+    ) -> NetworkStream:
+        raise NotImplementedError()
+
+    def get_extra_info(self, info: str) -> typing.Any:
+        if info == "ssl_object" and isinstance(self._sock, ssl.SSLSocket):
+            return self._sock._sslobj  # type: ignore
+        if info == "client_addr":
+            return self._sock.getsockname()
+        if info == "server_addr":
+            return self._sock.getpeername()
+        if info == "socket":
+            return self._sock
+        if info == "is_readable":
+            return is_socket_readable(self._sock)
+        return None
+
+
 class TLSinTLSStream(NetworkStream):  # pragma: no cover
     """
     Because the standard `SSLContext.wrap_socket` method does
@@ -212,6 +262,23 @@ class SyncBackend(NetworkBackend):
                 sock.setsockopt(*option)  # pragma: no cover
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         return SyncStream(sock)
+
+    def connect_udp(
+        self,
+        host: str,
+        port: int,
+    ) -> NetworkStream:
+        infos = socket.getaddrinfo(host, port, type=socket.SOCK_DGRAM)
+        addr: typing.Any = infos[0][4]
+
+        if len(addr) == 2:
+            addr = ("::ffff:" + addr[0], addr[1], 0, 0)
+
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        sock.bind(("::", 0, 0, 0))
+
+        return SyncUDPStream(sock=sock, addr=addr)
 
     def connect_unix_socket(
         self,

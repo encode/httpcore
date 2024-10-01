@@ -17,6 +17,18 @@ except ImportError:  # pragma: nocover
 
 
 try:
+    from .http3 import HTTP3Connection
+except ImportError:  # pragma: nocover
+
+    class HTTP3Connection:  # type: ignore
+        def __init__(self, *args, **kwargs) -> None:  # type: ignore
+            raise RuntimeError(
+                "Attempted to use http3 support, but the `aioquic` package is not "
+                "installed. Use 'pip install httpcore[http3]'."
+            )
+
+
+try:
     from .socks_proxy import SOCKSProxy
 except ImportError:  # pragma: nocover
 
@@ -34,6 +46,7 @@ __all__ = [
     "HTTPProxy",
     "HTTP11Connection",
     "HTTP2Connection",
+    "HTTP3Connection",
     "ConnectionInterface",
     "SOCKSProxy",
 ]

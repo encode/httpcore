@@ -37,8 +37,13 @@ class NetworkBackend:
         host: str,
         port: int,
         timeout: typing.Optional[float] = None,
-        local_address: typing.Optional[str] = None,
-        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
+    ) -> NetworkStream:
+        raise NotImplementedError()  # pragma: nocover
+
+    def connect_udp(
+        self,
+        host: str,
+        port: int,
     ) -> NetworkStream:
         raise NotImplementedError()  # pragma: nocover
 
@@ -88,6 +93,13 @@ class AsyncNetworkBackend:
         timeout: typing.Optional[float] = None,
         local_address: typing.Optional[str] = None,
         socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
+    ) -> AsyncNetworkStream:
+        raise NotImplementedError()  # pragma: nocover
+
+    async def connect_udp(
+        self,
+        host: str,
+        port: int,
     ) -> AsyncNetworkStream:
         raise NotImplementedError()  # pragma: nocover
 
