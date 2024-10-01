@@ -64,7 +64,7 @@ class AsyncLock:
         if self._backend == "trio":
             self._trio_lock = trio.Lock()
         elif self._backend == "asyncio":
-            self._anyio_lock = anyio.Lock()
+            self._anyio_lock = anyio.Lock(fast_acquire=True)
 
     async def __aenter__(self) -> "AsyncLock":
         if not self._backend:
@@ -167,7 +167,7 @@ class AsyncSemaphore:
             )
         elif self._backend == "asyncio":
             self._anyio_semaphore = anyio.Semaphore(
-                initial_value=self._bound, max_value=self._bound
+                initial_value=self._bound, max_value=self._bound, fast_acquire=True
             )
 
     async def acquire(self) -> None:
