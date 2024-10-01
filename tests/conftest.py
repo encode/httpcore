@@ -7,7 +7,7 @@ from typing import Any, Awaitable, Callable, Generator, Iterator, List, Optional
 import pytest
 import uvicorn
 
-from httpcore import AnyIOBackend, AsyncioBackend
+from httpcore import AnyIOBackend, AsyncIOBackend
 from httpcore._backends.auto import AutoBackend
 
 
@@ -33,7 +33,7 @@ def anyio_backend(request, monkeypatch):
         async def patch_init_backend(auto_backend: AutoBackend) -> None:
             if hasattr(auto_backend, "_backend"):
                 return
-            auto_backend._backend = AnyIOBackend() if use_anyio else AsyncioBackend()
+            auto_backend._backend = AnyIOBackend() if use_anyio else AsyncIOBackend()
 
         monkeypatch.setattr(AutoBackend, "_init_backend", patch_init_backend)
 

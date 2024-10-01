@@ -164,7 +164,7 @@ class AsyncIOStream(AsyncNetworkStream):
         return sslobj
 
 
-class AsyncioBackend(AsyncNetworkBackend):
+class AsyncIOBackend(AsyncNetworkBackend):
     async def connect_tcp(
         self,
         host: str,

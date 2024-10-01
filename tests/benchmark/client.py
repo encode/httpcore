@@ -20,7 +20,7 @@ REQUESTS = 500
 CONCURRENCY = 20
 POOL_LIMIT = 100
 PROFILE = False
-NET_BACKEND = httpcore.AsyncioBackend
+NET_BACKEND = httpcore.AsyncIOBackend
 
 
 def duration(start: float) -> int:

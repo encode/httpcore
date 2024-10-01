@@ -3,7 +3,7 @@ from typing import Generator, List
 import pytest
 from sniffio import current_async_library
 
-from httpcore import AnyIOBackend, AsyncioBackend, AsyncNetworkBackend, TrioBackend
+from httpcore import AnyIOBackend, AsyncIOBackend, AsyncNetworkBackend, TrioBackend
 from httpcore._backends.auto import AutoBackend
 
 
@@ -13,7 +13,7 @@ def check_tested_backends() -> Generator[List[AsyncNetworkBackend], None, None]:
     backends: List[AsyncNetworkBackend] = []
     yield backends
     assert {b.__class__ for b in backends} == {
-        AsyncioBackend,
+        AsyncIOBackend,
         AnyIOBackend,
         TrioBackend,
     }
@@ -37,5 +37,5 @@ async def test_auto_backend_uses_expected_backend(monkeypatch):
     if current_async_library() == "trio":
         assert isinstance(auto._backend, TrioBackend)
     else:
-        # TODO add support for choosing the AsyncioBackend in AutoBackend
+        # TODO add support for choosing the AsyncIOBackend in AutoBackend
         assert isinstance(auto._backend, AnyIOBackend)
