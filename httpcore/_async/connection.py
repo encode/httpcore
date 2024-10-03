@@ -67,7 +67,8 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
     async def handle_async_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
             raise RuntimeError(
-                f"Attempted to send request to {request.url.origin} on connection to {self._origin}"
+                f"Attempted to send request to {request.url.origin}"
+                f" on connection to {self._origin}"
             )
 
         try:
@@ -118,7 +119,12 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                         "timeout": timeout,
                         "socket_options": self._socket_options,
                     }
-                    async with Trace("connect_tcp", logger, request, kwargs) as trace:
+                    async with Trace(
+                        "connect_tcp",
+                        logger,
+                        request,
+                        kwargs,
+                    ) as trace:
                         stream = await self._network_backend.connect_tcp(**kwargs)
                         trace.return_value = stream
                 else:
@@ -128,10 +134,13 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
                         "socket_options": self._socket_options,
                     }
                     async with Trace(
-                        "connect_unix_socket", logger, request, kwargs
+                        "connect_unix_socket",
+                        logger,
+                        request,
+                        kwargs,
                     ) as trace:
                         stream = await self._network_backend.connect_unix_socket(
-                            **kwargs
+                            **kwargs,
                         )
                         trace.return_value = stream
 

@@ -3,7 +3,7 @@ import pytest
 import httpcore
 
 
-
+# unasync anyio
 def test_http11_connection():
     origin = httpcore.Origin(b"https", b"example.com", 443)
     stream = httpcore.MockStream(
@@ -26,13 +26,13 @@ def test_http11_connection():
         assert not conn.is_closed()
         assert conn.is_available()
         assert not conn.has_expired()
-        assert (
-            repr(conn)
-            == "<HTTP11Connection ['https://example.com:443', IDLE, Request Count: 1]>"
-        )
+        assert repr(conn) == (
+            "<HTTP11Connection ['https://example.com:443', IDLE,"
+            " Request Count: 1]>"
+        )  # fmt: skip
 
 
-
+# unasync anyio
 def test_http11_connection_unread_response():
     """
     If the client releases the response without reading it to termination,
@@ -56,13 +56,13 @@ def test_http11_connection_unread_response():
         assert conn.is_closed()
         assert not conn.is_available()
         assert not conn.has_expired()
-        assert (
-            repr(conn)
-            == "<HTTP11Connection ['https://example.com:443', CLOSED, Request Count: 1]>"
+        assert repr(conn) == (
+            "<HTTP11Connection ['https://example.com:443', CLOSED,"
+            " Request Count: 1]>"
         )
 
 
-
+# unasync anyio
 def test_http11_connection_with_remote_protocol_error():
     """
     If a remote protocol error occurs, then no response will be returned,
@@ -78,13 +78,13 @@ def test_http11_connection_with_remote_protocol_error():
         assert conn.is_closed()
         assert not conn.is_available()
         assert not conn.has_expired()
-        assert (
-            repr(conn)
-            == "<HTTP11Connection ['https://example.com:443', CLOSED, Request Count: 1]>"
+        assert repr(conn) == (
+            "<HTTP11Connection ['https://example.com:443', CLOSED,"
+            " Request Count: 1]>"
         )
 
 
-
+# unasync anyio
 def test_http11_connection_with_incomplete_response():
     """
     We should be gracefully handling the case where the connection ends prematurely.
@@ -107,13 +107,13 @@ def test_http11_connection_with_incomplete_response():
         assert conn.is_closed()
         assert not conn.is_available()
         assert not conn.has_expired()
-        assert (
-            repr(conn)
-            == "<HTTP11Connection ['https://example.com:443', CLOSED, Request Count: 1]>"
+        assert repr(conn) == (
+            "<HTTP11Connection ['https://example.com:443', CLOSED,"
+            " Request Count: 1]>"
         )
 
 
-
+# unasync anyio
 def test_http11_connection_with_local_protocol_error():
     """
     If a local protocol error occurs, then no response will be returned,
@@ -139,13 +139,13 @@ def test_http11_connection_with_local_protocol_error():
         assert conn.is_closed()
         assert not conn.is_available()
         assert not conn.has_expired()
-        assert (
-            repr(conn)
-            == "<HTTP11Connection ['https://example.com:443', CLOSED, Request Count: 1]>"
+        assert repr(conn) == (
+            "<HTTP11Connection ['https://example.com:443', CLOSED,"
+            " Request Count: 1]>"
         )
 
 
-
+# unasync anyio
 def test_http11_connection_handles_one_active_request():
     """
     Attempting to send a request while one is already in-flight will raise
@@ -167,7 +167,7 @@ def test_http11_connection_handles_one_active_request():
                 conn.request("GET", "https://example.com/")
 
 
-
+# unasync anyio
 def test_http11_connection_attempt_close():
     """
     A connection can only be closed when it is idle.
@@ -189,7 +189,7 @@ def test_http11_connection_attempt_close():
             assert response.content == b"Hello, world!"
 
 
-
+# unasync anyio
 def test_http11_request_to_incorrect_origin():
     """
     A connection can only send requests to whichever origin it is connected to.
@@ -201,7 +201,7 @@ def test_http11_request_to_incorrect_origin():
             conn.request("GET", "https://other.com/")
 
 
-
+# unasync anyio
 def test_http11_expect_continue():
     """
     HTTP "100 Continue" is an interim response.
@@ -234,7 +234,7 @@ def test_http11_expect_continue():
         assert response.content == b"Hello, world!"
 
 
-
+# unasync anyio
 def test_http11_upgrade_connection():
     """
     HTTP "101 Switching Protocols" indicates an upgraded connection.
@@ -269,7 +269,7 @@ def test_http11_upgrade_connection():
             assert content == b"..."
 
 
-
+# unasync anyio
 def test_http11_upgrade_with_trailing_data():
     """
     HTTP "101 Switching Protocols" indicates an upgraded connection.
@@ -320,7 +320,7 @@ def test_http11_upgrade_with_trailing_data():
             network_stream.close()
 
 
-
+# unasync anyio
 def test_http11_early_hints():
     """
     HTTP "103 Early Hints" is an interim response.
@@ -356,7 +356,7 @@ def test_http11_early_hints():
         assert response.content == b"<html>Hello, world! ...</html>"
 
 
-
+# unasync anyio
 def test_http11_header_sub_100kb():
     """
     A connection should be able to handle a http header size up to 100kB.

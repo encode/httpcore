@@ -5,34 +5,37 @@ import sys
 from pprint import pprint
 
 SUBS = [
-    ('from .._backends.auto import AutoBackend', 'from .._backends.sync import SyncBackend'),
-    ('import trio as concurrency', 'from tests import concurrency'),
-    ('AsyncIterator', 'Iterator'),
-    ('Async([A-Z][A-Za-z0-9_]*)', r'\2'),
-    ('async def', 'def'),
-    ('async with', 'with'),
-    ('async for', 'for'),
-    ('await ', ''),
-    ('handle_async_request', 'handle_request'),
-    ('aclose', 'close'),
-    ('aiter_stream', 'iter_stream'),
-    ('aread', 'read'),
-    ('asynccontextmanager', 'contextmanager'),
-    ('__aenter__', '__enter__'),
-    ('__aexit__', '__exit__'),
-    ('__aiter__', '__iter__'),
-    ('@pytest.mark.anyio', ''),
-    ('@pytest.mark.trio', ''),
-    ('AutoBackend', 'SyncBackend'),
+    (
+        "from .._backends.auto import AutoBackend",
+        "from .._backends.sync import SyncBackend",
+    ),
+    ("import trio as concurrency", "from tests import concurrency"),
+    ("AsyncIterator", "Iterator"),
+    ("Async([A-Z][A-Za-z0-9_]*)", r"\2"),
+    ("async def", "def"),
+    ("async with", "with"),
+    ("async for", "for"),
+    ("await ", ""),
+    ("handle_async_request", "handle_request"),
+    ("aclose", "close"),
+    ("aiter_stream", "iter_stream"),
+    ("aread", "read"),
+    ("asynccontextmanager", "contextmanager"),
+    ("__aenter__", "__enter__"),
+    ("__aexit__", "__exit__"),
+    ("__aiter__", "__iter__"),
+    ("@pytest.mark.anyio", "# unasync anyio"),
+    ("@pytest.mark.trio", "# unasync trio"),
+    ("AutoBackend", "SyncBackend"),
 ]
 COMPILED_SUBS = [
-    (re.compile(r'(^|\b)' + regex + r'($|\b)'), repl)
-    for regex, repl in SUBS
+    (re.compile(r"(^|\b)" + regex + r"($|\b)"), repl) for regex, repl in SUBS
 ]
 
 USED_SUBS = set()
 
-def unasync_line(line):
+
+def unasync_line(line: str) -> str:
     for index, (regex, repl) in enumerate(COMPILED_SUBS):
         old_line = line
         line = re.sub(regex, repl, line)
@@ -41,7 +44,7 @@ def unasync_line(line):
     return line
 
 
-def unasync_file(in_path, out_path):
+def unasync_file(in_path: str, out_path: str) -> None:
     with open(in_path, "r") as in_file:
         with open(out_path, "w", newline="") as out_file:
             for line in in_file.readlines():
@@ -49,36 +52,36 @@ def unasync_file(in_path, out_path):
                 out_file.write(line)
 
 
-def unasync_file_check(in_path, out_path):
+def unasync_file_check(in_path: str, out_path: str) -> None:
     with open(in_path, "r") as in_file:
         with open(out_path, "r") as out_file:
             for in_line, out_line in zip(in_file.readlines(), out_file.readlines()):
                 expected = unasync_line(in_line)
                 if out_line != expected:
-                    print(f'unasync mismatch between {in_path!r} and {out_path!r}')
-                    print(f'Async code:         {in_line!r}')
-                    print(f'Expected sync code: {expected!r}')
-                    print(f'Actual sync code:   {out_line!r}')
+                    print(f"unasync mismatch between {in_path!r} and {out_path!r}")
+                    print(f"Async code:         {in_line!r}")
+                    print(f"Expected sync code: {expected!r}")
+                    print(f"Actual sync code:   {out_line!r}")
                     sys.exit(1)
 
 
-def unasync_dir(in_dir, out_dir, check_only=False):
+def unasync_dir(in_dir: str, out_dir: str, check_only: bool = False) -> None:
     for dirpath, dirnames, filenames in os.walk(in_dir):
         for filename in filenames:
-            if not filename.endswith('.py'):
+            if not filename.endswith(".py"):
                 continue
             rel_dir = os.path.relpath(dirpath, in_dir)
             in_path = os.path.normpath(os.path.join(in_dir, rel_dir, filename))
             out_path = os.path.normpath(os.path.join(out_dir, rel_dir, filename))
-            print(in_path, '->', out_path)
+            print(in_path, "->", out_path)
             if check_only:
                 unasync_file_check(in_path, out_path)
             else:
                 unasync_file(in_path, out_path)
 
 
-def main():
-    check_only = '--check' in sys.argv
+def main() -> None:
+    check_only = "--check" in sys.argv
     unasync_dir("httpcore/_async", "httpcore/_sync", check_only=check_only)
     unasync_dir("tests/_async", "tests/_sync", check_only=check_only)
 
@@ -87,8 +90,8 @@ def main():
 
         print("These patterns were not used:")
         pprint(unused_subs)
-        exit(1)   
-        
+        exit(1)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

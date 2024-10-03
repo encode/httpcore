@@ -32,7 +32,8 @@ async def test_socks5_request():
         async with proxy.stream("GET", "https://example.com/") as response:
             info = [repr(c) for c in proxy.connections]
             assert info == [
-                "<AsyncSocks5Connection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
+                "<AsyncSocks5Connection ['https://example.com:443', HTTP/1.1, ACTIVE,"
+                " Request Count: 1]>"
             ]
             await response.aread()
 
@@ -40,13 +41,15 @@ async def test_socks5_request():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in proxy.connections]
         assert info == [
-            "<AsyncSocks5Connection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 1]>"
+            "<AsyncSocks5Connection ['https://example.com:443', HTTP/1.1, IDLE,"
+            " Request Count: 1]>"
         ]
         assert proxy.connections[0].is_idle()
         assert proxy.connections[0].is_available()
         assert not proxy.connections[0].is_closed()
 
-        # A connection on a tunneled proxy can only handle HTTPS requests to the same origin.
+        # A connection on a tunneled proxy can only
+        # handle HTTPS requests to the same origin.
         assert not proxy.connections[0].can_handle_request(
             httpcore.Origin(b"http", b"example.com", 80)
         )
@@ -93,7 +96,8 @@ async def test_authenticated_socks5_request():
         async with proxy.stream("GET", "https://example.com/") as response:
             info = [repr(c) for c in proxy.connections]
             assert info == [
-                "<AsyncSocks5Connection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
+                "<AsyncSocks5Connection ['https://example.com:443', HTTP/1.1, ACTIVE,"
+                " Request Count: 1]>"
             ]
             await response.aread()
 
@@ -101,7 +105,8 @@ async def test_authenticated_socks5_request():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in proxy.connections]
         assert info == [
-            "<AsyncSocks5Connection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 1]>"
+            "<AsyncSocks5Connection ['https://example.com:443', HTTP/1.1, IDLE,"
+            " Request Count: 1]>"
         ]
         assert proxy.connections[0].is_idle()
         assert proxy.connections[0].is_available()
@@ -157,9 +162,9 @@ async def test_socks5_request_failed_to_provide_auth():
         # Sending a request, which the proxy rejects
         with pytest.raises(httpcore.ProxyError) as exc_info:
             await proxy.request("GET", "https://example.com/")
-        assert (
-            str(exc_info.value)
-            == "Requested NO AUTHENTICATION REQUIRED from proxy server, but got USERNAME/PASSWORD."
+        assert str(exc_info.value) == (
+            "Requested NO AUTHENTICATION REQUIRED from proxy server,"
+            " but got USERNAME/PASSWORD."
         )
 
         assert not proxy.connections

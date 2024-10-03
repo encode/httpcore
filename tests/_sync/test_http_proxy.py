@@ -16,7 +16,7 @@ from httpcore import (
 )
 
 
-
+# unasync anyio
 def test_proxy_forwarding():
     """
     Send an HTTP request via a proxy.
@@ -40,7 +40,8 @@ def test_proxy_forwarding():
         with proxy.stream("GET", "http://example.com/") as response:
             info = [repr(c) for c in proxy.connections]
             assert info == [
-                "<ForwardHTTPConnection ['http://localhost:8080', HTTP/1.1, ACTIVE, Request Count: 1]>"
+                "<ForwardHTTPConnection ['http://localhost:8080', HTTP/1.1,"
+                " ACTIVE, Request Count: 1]>"
             ]
             response.read()
 
@@ -48,13 +49,15 @@ def test_proxy_forwarding():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in proxy.connections]
         assert info == [
-            "<ForwardHTTPConnection ['http://localhost:8080', HTTP/1.1, IDLE, Request Count: 1]>"
+            "<ForwardHTTPConnection ['http://localhost:8080', HTTP/1.1, IDLE,"
+            " Request Count: 1]>"
         ]
         assert proxy.connections[0].is_idle()
         assert proxy.connections[0].is_available()
         assert not proxy.connections[0].is_closed()
 
-        # A connection on a forwarding proxy can only handle HTTP requests to the same origin.
+        # A connection on a forwarding proxy can only
+        # handle HTTP requests to the same origin.
         assert proxy.connections[0].can_handle_request(
             Origin(b"http", b"example.com", 80)
         )
@@ -69,7 +72,7 @@ def test_proxy_forwarding():
         )
 
 
-
+# unasync anyio
 def test_proxy_tunneling():
     """
     Send an HTTPS request via a proxy.
@@ -95,7 +98,8 @@ def test_proxy_tunneling():
         with proxy.stream("GET", "https://example.com/") as response:
             info = [repr(c) for c in proxy.connections]
             assert info == [
-                "<TunnelHTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
+                "<TunnelHTTPConnection ['https://example.com:443', HTTP/1.1,"
+                " ACTIVE, Request Count: 1]>"
             ]
             response.read()
 
@@ -103,13 +107,15 @@ def test_proxy_tunneling():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in proxy.connections]
         assert info == [
-            "<TunnelHTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 1]>"
+            "<TunnelHTTPConnection ['https://example.com:443', HTTP/1.1, IDLE,"
+            " Request Count: 1]>"
         ]
         assert proxy.connections[0].is_idle()
         assert proxy.connections[0].is_available()
         assert not proxy.connections[0].is_closed()
 
-        # A connection on a tunneled proxy can only handle HTTPS requests to the same origin.
+        # A connection on a tunneled proxy can only
+        # handle HTTPS requests to the same origin.
         assert not proxy.connections[0].can_handle_request(
             Origin(b"http", b"example.com", 80)
         )
@@ -151,7 +157,7 @@ class HTTP1ThenHTTP2Backend(MockBackend):
         return HTTP1ThenHTTP2Stream(list(self._buffer))
 
 
-
+# unasync anyio
 def test_proxy_tunneling_http2():
     """
     Send an HTTP/2 request via a proxy.
@@ -187,7 +193,8 @@ def test_proxy_tunneling_http2():
         with proxy.stream("GET", "https://example.com/") as response:
             info = [repr(c) for c in proxy.connections]
             assert info == [
-                "<TunnelHTTPConnection ['https://example.com:443', HTTP/2, ACTIVE, Request Count: 1]>"
+                "<TunnelHTTPConnection ['https://example.com:443', HTTP/2,"
+                " ACTIVE, Request Count: 1]>"
             ]
             response.read()
 
@@ -195,13 +202,15 @@ def test_proxy_tunneling_http2():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in proxy.connections]
         assert info == [
-            "<TunnelHTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 1]>"
+            "<TunnelHTTPConnection ['https://example.com:443', HTTP/2, IDLE,"
+            " Request Count: 1]>"
         ]
         assert proxy.connections[0].is_idle()
         assert proxy.connections[0].is_available()
         assert not proxy.connections[0].is_closed()
 
-        # A connection on a tunneled proxy can only handle HTTPS requests to the same origin.
+        # A connection on a tunneled proxy can only
+        # handle HTTPS requests to the same origin.
         assert not proxy.connections[0].can_handle_request(
             Origin(b"http", b"example.com", 80)
         )
@@ -216,7 +225,7 @@ def test_proxy_tunneling_http2():
         )
 
 
-
+# unasync anyio
 def test_proxy_tunneling_with_403():
     """
     Send an HTTPS request via a proxy.
@@ -237,7 +246,7 @@ def test_proxy_tunneling_with_403():
         assert not proxy.connections
 
 
-
+# unasync anyio
 def test_proxy_tunneling_with_auth():
     """
     Send an authenticated HTTPS request via a proxy.

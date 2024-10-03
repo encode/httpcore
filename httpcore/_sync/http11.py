@@ -88,7 +88,10 @@ class HTTP11Connection(ConnectionInterface):
             kwargs = {"request": request}
             try:
                 with Trace(
-                    "send_request_headers", logger, request, kwargs
+                    "send_request_headers",
+                    logger,
+                    request,
+                    kwargs,
                 ) as trace:
                     self._send_request_headers(**kwargs)
                 with Trace("send_request_body", logger, request, kwargs) as trace:
@@ -102,7 +105,10 @@ class HTTP11Connection(ConnectionInterface):
                 pass
 
             with Trace(
-                "receive_response_headers", logger, request, kwargs
+                "receive_response_headers",
+                logger,
+                request,
+                kwargs,
             ) as trace:
                 (
                     http_version,
@@ -168,7 +174,9 @@ class HTTP11Connection(ConnectionInterface):
         self._send_event(h11.EndOfMessage(), timeout=timeout)
 
     def _send_event(
-        self, event: h11.Event, timeout: Optional[float] = None
+        self,
+        event: h11.Event,
+        timeout: Optional[float] = None,
     ) -> None:
         bytes_to_send = self._h11_state.send(event)
         if bytes_to_send is not None:
@@ -222,7 +230,8 @@ class HTTP11Connection(ConnectionInterface):
 
             if event is h11.NEED_DATA:
                 data = self._network_stream.read(
-                    self.READ_NUM_BYTES, timeout=timeout
+                    self.READ_NUM_BYTES,
+                    timeout=timeout,
                 )
 
                 # If we feed this case through h11 we'll raise an exception like:

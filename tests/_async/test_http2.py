@@ -40,9 +40,8 @@ async def test_http2_connection():
         assert (
             conn.info() == "'https://example.com:443', HTTP/2, IDLE, Request Count: 1"
         )
-        assert (
-            repr(conn)
-            == "<AsyncHTTP2Connection ['https://example.com:443', IDLE, Request Count: 1]>"
+        assert repr(conn) == (
+            "<AsyncHTTP2Connection ['https://example.com:443', IDLE, Request Count: 1]>"
         )
 
 

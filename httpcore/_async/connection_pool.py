@@ -1,7 +1,14 @@
 import ssl
 import sys
 from types import TracebackType
-from typing import AsyncIterable, AsyncIterator, Iterable, List, Optional, Type
+from typing import (  # noqa: F811
+    AsyncIterable,
+    AsyncIterator,
+    Iterable,
+    List,
+    Optional,
+    Type,
+)
 
 from .._backends.auto import AutoBackend
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend
@@ -19,7 +26,8 @@ class AsyncPoolRequest:
         self._connection_acquired = AsyncEvent()
 
     def assign_to_connection(
-        self, connection: Optional[AsyncConnectionInterface]
+        self,
+        connection: Optional[AsyncConnectionInterface],
     ) -> None:
         self.connection = connection
         self._connection_acquired.set()
@@ -119,9 +127,10 @@ class AsyncConnectionPool(AsyncRequestInterface):
         self._connections: List[AsyncConnectionInterface] = []
         self._requests: List[AsyncPoolRequest] = []
 
-        # We only mutate the state of the connection pool within an 'optional_thread_lock'
-        # context. This holds a threading lock unless we're running in async mode,
-        # in which case it is a no-op.
+        # We only mutate the state of the connection pool
+        # within an 'optional_thread_lock' context.
+        # This holds a threading lock unless we're running in
+        # async mode, in which case it is a no-op.
         self._optional_thread_lock = AsyncThreadLock()
 
     def create_connection(self, origin: Origin) -> AsyncConnectionInterface:
@@ -148,9 +157,12 @@ class AsyncConnectionPool(AsyncRequestInterface):
         ```python
         >>> pool.connections
         [
-            <AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 6]>,
-            <AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 9]> ,
-            <AsyncHTTPConnection ['http://example.com:80', HTTP/1.1, IDLE, Request Count: 1]>,
+            <AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE,
+         Request Count: 6]>,
+            <AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, IDLE,
+         Request Count: 9]>,
+            <AsyncHTTPConnection ['http://example.com:80', HTTP/1.1, IDLE,
+         Request Count: 1]>,
         ]
         ```
         """
@@ -160,7 +172,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
         """
         Send an HTTP request, and return an HTTP response.
 
-        This is the core implementation that is called into by `.request()` or `.stream()`.
+        The core implementation that is called into by `.request()` or `.stream()`.
         """
         scheme = request.url.scheme.decode()
         if scheme == "":
@@ -194,7 +206,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
                 try:
                     # Send the request on the assigned connection.
                     response = await connection.handle_async_request(
-                        pool_request.request
+                        pool_request.request,
                     )
                 except ConnectionNotAvailable:
                     # In some cases a connection may initially be available to
