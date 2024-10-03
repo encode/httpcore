@@ -10,3 +10,4 @@ updates:
           - "*"
         exclude-patterns:
           - "werkzeug"
+          - "matplotlib"
