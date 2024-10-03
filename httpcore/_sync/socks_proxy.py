@@ -158,8 +158,8 @@ class SOCKSProxy(ConnectionPool):
             keepalive_expiry=keepalive_expiry,
             http1=http1,
             http2=http2,
-            network_backend=network_backend,
             retries=retries,
+            network_backend=network_backend,
         )
         self._ssl_context = ssl_context
         self._proxy_url = enforce_url(proxy_url, name="proxy_url")

@@ -110,6 +110,8 @@ class HTTPProxy(ConnectionPool):
                 `AF_INET6` address (IPv6).
             uds: Path to a Unix Domain Socket to use instead of TCP sockets.
             network_backend: A backend instance to use for handling network I/O.
+            socket_options: Socket options that have to be included
+             in the TCP socket when the connection was established.
         """
         super().__init__(
             ssl_context=ssl_context,
@@ -118,10 +120,10 @@ class HTTPProxy(ConnectionPool):
             keepalive_expiry=keepalive_expiry,
             http1=http1,
             http2=http2,
-            network_backend=network_backend,
             retries=retries,
             local_address=local_address,
             uds=uds,
+            network_backend=network_backend,
             socket_options=socket_options,
         )
 
@@ -148,22 +150,30 @@ class HTTPProxy(ConnectionPool):
         if origin.scheme == b"http":
             return ForwardHTTPConnection(
                 proxy_origin=self._proxy_url.origin,
-                proxy_headers=self._proxy_headers,
                 remote_origin=origin,
-                keepalive_expiry=self._keepalive_expiry,
-                network_backend=self._network_backend,
+                proxy_headers=self._proxy_headers,
                 proxy_ssl_context=self._proxy_ssl_context,
+                keepalive_expiry=self._keepalive_expiry,
+                retries=self._retries,
+                local_address=self._local_address,
+                uds=self._uds,
+                network_backend=self._network_backend,
+                socket_options=self._socket_options,
             )
         return TunnelHTTPConnection(
             proxy_origin=self._proxy_url.origin,
-            proxy_headers=self._proxy_headers,
             remote_origin=origin,
+            proxy_headers=self._proxy_headers,
             ssl_context=self._ssl_context,
             proxy_ssl_context=self._proxy_ssl_context,
             keepalive_expiry=self._keepalive_expiry,
             http1=self._http1,
             http2=self._http2,
+            retries=self._retries,
+            local_address=self._local_address,
+            uds=self._uds,
             network_backend=self._network_backend,
+            socket_options=self._socket_options,
         )
 
 
@@ -173,21 +183,27 @@ class ForwardHTTPConnection(ConnectionInterface):
         proxy_origin: Origin,
         remote_origin: Origin,
         proxy_headers: Union[HeadersAsMapping, HeadersAsSequence, None] = None,
+        proxy_ssl_context: Optional[ssl.SSLContext] = None,
         keepalive_expiry: Optional[float] = None,
+        retries: int = 0,
+        local_address: Optional[str] = None,
+        uds: Optional[str] = None,
         network_backend: Optional[NetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
-        proxy_ssl_context: Optional[ssl.SSLContext] = None,
     ) -> None:
         self._connection = HTTPConnection(
             origin=proxy_origin,
+            ssl_context=proxy_ssl_context,
             keepalive_expiry=keepalive_expiry,
+            retries=retries,
+            local_address=local_address,
+            uds=uds,
             network_backend=network_backend,
             socket_options=socket_options,
-            ssl_context=proxy_ssl_context,
         )
         self._proxy_origin = proxy_origin
-        self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
         self._remote_origin = remote_origin
+        self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
 
     def handle_request(self, request: Request) -> Response:
         headers = merge_headers(self._proxy_headers, request.headers)
@@ -236,27 +252,33 @@ class TunnelHTTPConnection(ConnectionInterface):
         self,
         proxy_origin: Origin,
         remote_origin: Origin,
+        proxy_headers: Optional[Sequence[Tuple[bytes, bytes]]] = None,
         ssl_context: Optional[ssl.SSLContext] = None,
         proxy_ssl_context: Optional[ssl.SSLContext] = None,
-        proxy_headers: Optional[Sequence[Tuple[bytes, bytes]]] = None,
         keepalive_expiry: Optional[float] = None,
         http1: bool = True,
         http2: bool = False,
+        retries: int = 0,
+        local_address: Optional[str] = None,
+        uds: Optional[str] = None,
         network_backend: Optional[NetworkBackend] = None,
         socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
     ) -> None:
         self._connection: ConnectionInterface = HTTPConnection(
             origin=proxy_origin,
+            ssl_context=proxy_ssl_context,
             keepalive_expiry=keepalive_expiry,
+            retries=retries,
+            local_address=local_address,
+            uds=uds,
             network_backend=network_backend,
             socket_options=socket_options,
-            ssl_context=proxy_ssl_context,
         )
         self._proxy_origin = proxy_origin
         self._remote_origin = remote_origin
+        self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
         self._ssl_context = ssl_context
         self._proxy_ssl_context = proxy_ssl_context
-        self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
         self._http2 = http2
