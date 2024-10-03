@@ -51,6 +51,30 @@ proxy = httpcore.HTTPProxy(
 )
 ```
 
+## Proxy Connection Mode
+
+There are two types of HTTP proxy:
+
+1. Forwarding (HTTP [absolute-url](https://tools.ietf.org/html/rfc7230#section-5.3.2))
+2. Tunneling (HTTP [`CONNECT` method](https://tools.ietf.org/html/rfc7231#section-4.3.6))
+
+By default `httpcore` will use forwarding for http requests and tunneling for https requests.
+
+You can change this behavior with `proxy_mode: httpcore.ProxyMode` parameter:
+
+```py
+import httpcore
+import base64
+
+proxy = httpcore.HTTPProxy(
+    proxy_url="http://127.0.0.1:8080/",
+    proxy_mode=httpcore.ProxyMode.TUNNEL,
+)
+```
+
+Note that `ProxyMode.FORWARD` will enable forwarding https requests, so they will be visible for proxy server.
+It means handling TLS stuffs like certificate validation would on proxy side.
+
 ## Proxy SSL
 
 The `httpcore` package also supports HTTPS proxies for http and https destinations.

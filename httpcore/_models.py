@@ -1,3 +1,4 @@
+import enum
 from typing import (
     Any,
     AsyncIterable,
@@ -490,3 +491,8 @@ class Response:
             )
         if hasattr(self.stream, "aclose"):
             await self.stream.aclose()
+
+
+class ProxyMode(enum.IntEnum):
+    FORWARD = 1
+    TUNNEL = 2
