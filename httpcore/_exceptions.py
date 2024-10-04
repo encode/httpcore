@@ -1,4 +1,5 @@
 import contextlib
+import ssl
 from typing import Iterator, Mapping, Type
 
 ExceptionMapping = Mapping[Type[Exception], Type[Exception]]
@@ -78,4 +79,8 @@ class ReadError(NetworkError):
 
 
 class WriteError(NetworkError):
+    pass
+
+
+class SSLError(ssl.SSLError, ConnectError):
     pass
