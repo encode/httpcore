@@ -206,7 +206,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
 
     async def _receive_event(
         self, timeout: float | None = None
-    ) -> Union[h11.Event, type[h11.PAUSED]]:
+    ) -> h11.Event | type[h11.PAUSED]:
         while True:
             with map_exceptions({h11.RemoteProtocolError: RemoteProtocolError}):
                 event = self._h11_state.next_event()

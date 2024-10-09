@@ -332,7 +332,9 @@ class HTTP2Connection(ConnectionInterface):
             raise RemoteProtocolError(event)
         return event
 
-    def _receive_events(self, request: Request, stream_id: int | None = None) -> None:
+    def _receive_events(
+        self, request: Request, stream_id: int | None = None
+    ) -> None:
         """
         Read some data from the network until we see one or more events
         for a given stream ID.
@@ -536,7 +538,7 @@ class HTTP2Connection(ConnectionInterface):
     # These context managers are not used in the standard flow, but are
     # useful for testing or working with connection instances directly.
 
-    def __enter__(self) -> "HTTP2Connection":
+    def __enter__(self) -> HTTP2Connection:
         return self
 
     def __exit__(

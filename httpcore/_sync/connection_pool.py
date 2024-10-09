@@ -3,7 +3,7 @@ from __future__ import annotations
 import ssl
 import sys
 from types import TracebackType
-from typing import Iterable, Iterator
+from typing import Iterable, Iterator, Iterable
 
 from .._backends.sync import SyncBackend
 from .._backends.base import SOCKET_OPTION, NetworkBackend
@@ -28,7 +28,9 @@ class PoolRequest:
         self.connection = None
         self._connection_acquired = Event()
 
-    def wait_for_connection(self, timeout: float | None = None) -> ConnectionInterface:
+    def wait_for_connection(
+        self, timeout: float | None = None
+    ) -> ConnectionInterface:
         if self.connection is None:
             self._connection_acquired.wait(timeout=timeout)
         assert self.connection is not None
@@ -191,7 +193,9 @@ class ConnectionPool(RequestInterface):
 
                 try:
                     # Send the request on the assigned connection.
-                    response = connection.handle_request(pool_request.request)
+                    response = connection.handle_request(
+                        pool_request.request
+                    )
                 except ConnectionNotAvailable:
                     # In some cases a connection may initially be available to
                     # handle a request, but then become unavailable.
@@ -308,7 +312,7 @@ class ConnectionPool(RequestInterface):
             self._connections = []
         self._close_connections(closing_connections)
 
-    def __enter__(self) -> "ConnectionPool":
+    def __enter__(self) -> ConnectionPool:
         return self
 
     def __exit__(
