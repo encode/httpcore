@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import logging
 import ssl
-import typing
 
 from socksio import socks5
 
@@ -43,7 +44,7 @@ async def _init_socks5_connection(
     *,
     host: bytes,
     port: int,
-    auth: typing.Optional[typing.Tuple[bytes, bytes]] = None,
+    auth: tuple[bytes, bytes] | None = None,
 ) -> None:
     conn = socks5.SOCKS5Connection()
 
@@ -108,18 +109,16 @@ class AsyncSOCKSProxy(AsyncConnectionPool):
 
     def __init__(
         self,
-        proxy_url: typing.Union[URL, bytes, str],
-        proxy_auth: typing.Optional[
-            typing.Tuple[typing.Union[bytes, str], typing.Union[bytes, str]]
-        ] = None,
-        ssl_context: typing.Optional[ssl.SSLContext] = None,
-        max_connections: typing.Optional[int] = 10,
-        max_keepalive_connections: typing.Optional[int] = None,
-        keepalive_expiry: typing.Optional[float] = None,
+        proxy_url: URL | bytes | str,
+        proxy_auth: tuple[bytes | str, bytes | str] | None = None,
+        ssl_context: ssl.SSLContext | None = None,
+        max_connections: int | None = 10,
+        max_keepalive_connections: int | None = None,
+        keepalive_expiry: float | None = None,
         http1: bool = True,
         http2: bool = False,
         retries: int = 0,
-        network_backend: typing.Optional[AsyncNetworkBackend] = None,
+        network_backend: AsyncNetworkBackend | None = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -167,7 +166,7 @@ class AsyncSOCKSProxy(AsyncConnectionPool):
             username, password = proxy_auth
             username_bytes = enforce_bytes(username, name="proxy_auth")
             password_bytes = enforce_bytes(password, name="proxy_auth")
-            self._proxy_auth: typing.Optional[typing.Tuple[bytes, bytes]] = (
+            self._proxy_auth: tuple[bytes, bytes] | None = (
                 username_bytes,
                 password_bytes,
             )
@@ -192,12 +191,12 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
         self,
         proxy_origin: Origin,
         remote_origin: Origin,
-        proxy_auth: typing.Optional[typing.Tuple[bytes, bytes]] = None,
-        ssl_context: typing.Optional[ssl.SSLContext] = None,
-        keepalive_expiry: typing.Optional[float] = None,
+        proxy_auth: tuple[bytes, bytes] | None = None,
+        ssl_context: ssl.SSLContext | None = None,
+        keepalive_expiry: float | None = None,
         http1: bool = True,
         http2: bool = False,
-        network_backend: typing.Optional[AsyncNetworkBackend] = None,
+        network_backend: AsyncNetworkBackend | None = None,
     ) -> None:
         self._proxy_origin = proxy_origin
         self._remote_origin = remote_origin
@@ -211,7 +210,7 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
             AutoBackend() if network_backend is None else network_backend
         )
         self._connect_lock = AsyncLock()
-        self._connection: typing.Optional[AsyncConnectionInterface] = None
+        self._connection: AsyncConnectionInterface | None = None
         self._connect_failed = False
 
     async def handle_async_request(self, request: Request) -> Response:
