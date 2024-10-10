@@ -1,18 +1,11 @@
+from __future__ import annotations
+
 import enum
 import logging
 import ssl
 import time
 from types import TracebackType
-from typing import (
-    Any,
-    Iterable,
-    Iterator,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    Union,
-)
+from typing import Any, Iterable, Iterator, Union
 
 import h11
 
@@ -55,12 +48,12 @@ class HTTP11Connection(ConnectionInterface):
         self,
         origin: Origin,
         stream: NetworkStream,
-        keepalive_expiry: Optional[float] = None,
+        keepalive_expiry: float | None = None,
     ) -> None:
         self._origin = origin
         self._network_stream = stream
-        self._keepalive_expiry: Optional[float] = keepalive_expiry
-        self._expire_at: Optional[float] = None
+        self._keepalive_expiry: float | None = keepalive_expiry
+        self._expire_at: float | None = None
         self._state = HTTPConnectionState.NEW
         self._state_lock = Lock()
         self._request_count = 0
@@ -167,9 +160,7 @@ class HTTP11Connection(ConnectionInterface):
 
         self._send_event(h11.EndOfMessage(), timeout=timeout)
 
-    def _send_event(
-        self, event: h11.Event, timeout: Optional[float] = None
-    ) -> None:
+    def _send_event(self, event: h11.Event, timeout: float | None = None) -> None:
         bytes_to_send = self._h11_state.send(event)
         if bytes_to_send is not None:
             self._network_stream.write(bytes_to_send, timeout=timeout)
@@ -178,7 +169,7 @@ class HTTP11Connection(ConnectionInterface):
 
     def _receive_response_headers(
         self, request: Request
-    ) -> Tuple[bytes, int, bytes, List[Tuple[bytes, bytes]], bytes]:
+    ) -> tuple[bytes, int, bytes, list[tuple[bytes, bytes]], bytes]:
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("read", None)
 
@@ -214,8 +205,8 @@ class HTTP11Connection(ConnectionInterface):
                 break
 
     def _receive_event(
-        self, timeout: Optional[float] = None
-    ) -> Union[h11.Event, Type[h11.PAUSED]]:
+        self, timeout: float | None = None
+    ) -> h11.Event | type[h11.PAUSED]:
         while True:
             with map_exceptions({h11.RemoteProtocolError: RemoteProtocolError}):
                 event = self._h11_state.next_event()
@@ -316,14 +307,14 @@ class HTTP11Connection(ConnectionInterface):
     # These context managers are not used in the standard flow, but are
     # useful for testing or working with connection instances directly.
 
-    def __enter__(self) -> "HTTP11Connection":
+    def __enter__(self) -> HTTP11Connection:
         return self
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]] = None,
-        exc_value: Optional[BaseException] = None,
-        traceback: Optional[TracebackType] = None,
+        exc_type: type[BaseException] | None = None,
+        exc_value: BaseException | None = None,
+        traceback: TracebackType | None = None,
     ) -> None:
         self.close()
 
@@ -360,7 +351,7 @@ class HTTP11UpgradeStream(NetworkStream):
         self._stream = stream
         self._leading_data = leading_data
 
-    def read(self, max_bytes: int, timeout: Optional[float] = None) -> bytes:
+    def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
         if self._leading_data:
             buffer = self._leading_data[:max_bytes]
             self._leading_data = self._leading_data[max_bytes:]
@@ -368,7 +359,7 @@ class HTTP11UpgradeStream(NetworkStream):
         else:
             return self._stream.read(max_bytes, timeout)
 
-    def write(self, buffer: bytes, timeout: Optional[float] = None) -> None:
+    def write(self, buffer: bytes, timeout: float | None = None) -> None:
         self._stream.write(buffer, timeout)
 
     def close(self) -> None:
@@ -377,8 +368,8 @@ class HTTP11UpgradeStream(NetworkStream):
     def start_tls(
         self,
         ssl_context: ssl.SSLContext,
-        server_hostname: Optional[str] = None,
-        timeout: Optional[float] = None,
+        server_hostname: str | None = None,
+        timeout: float | None = None,
     ) -> NetworkStream:
         return self._stream.start_tls(ssl_context, server_hostname, timeout)
 

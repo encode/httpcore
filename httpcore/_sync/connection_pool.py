@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import ssl
 import sys
 from types import TracebackType
-from typing import Iterable, Iterator, Iterable, List, Optional, Type
+from typing import Iterable, Iterator, Iterable
 
 from .._backends.sync import SyncBackend
 from .._backends.base import SOCKET_OPTION, NetworkBackend
@@ -15,12 +17,10 @@ from .interfaces import ConnectionInterface, RequestInterface
 class PoolRequest:
     def __init__(self, request: Request) -> None:
         self.request = request
-        self.connection: Optional[ConnectionInterface] = None
+        self.connection: ConnectionInterface | None = None
         self._connection_acquired = Event()
 
-    def assign_to_connection(
-        self, connection: Optional[ConnectionInterface]
-    ) -> None:
+    def assign_to_connection(self, connection: ConnectionInterface | None) -> None:
         self.connection = connection
         self._connection_acquired.set()
 
@@ -29,7 +29,7 @@ class PoolRequest:
         self._connection_acquired = Event()
 
     def wait_for_connection(
-        self, timeout: Optional[float] = None
+        self, timeout: float | None = None
     ) -> ConnectionInterface:
         if self.connection is None:
             self._connection_acquired.wait(timeout=timeout)
@@ -47,17 +47,17 @@ class ConnectionPool(RequestInterface):
 
     def __init__(
         self,
-        ssl_context: Optional[ssl.SSLContext] = None,
-        max_connections: Optional[int] = 10,
-        max_keepalive_connections: Optional[int] = None,
-        keepalive_expiry: Optional[float] = None,
+        ssl_context: ssl.SSLContext | None = None,
+        max_connections: int | None = 10,
+        max_keepalive_connections: int | None = None,
+        keepalive_expiry: float | None = None,
         http1: bool = True,
         http2: bool = False,
         retries: int = 0,
-        local_address: Optional[str] = None,
-        uds: Optional[str] = None,
-        network_backend: Optional[NetworkBackend] = None,
-        socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
+        local_address: str | None = None,
+        uds: str | None = None,
+        network_backend: NetworkBackend | None = None,
+        socket_options: Iterable[SOCKET_OPTION] | None = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -116,8 +116,8 @@ class ConnectionPool(RequestInterface):
 
         # The mutable state on a connection pool is the queue of incoming requests,
         # and the set of connections that are servicing those requests.
-        self._connections: List[ConnectionInterface] = []
-        self._requests: List[PoolRequest] = []
+        self._connections: list[ConnectionInterface] = []
+        self._requests: list[PoolRequest] = []
 
         # We only mutate the state of the connection pool within an 'optional_thread_lock'
         # context. This holds a threading lock unless we're running in async mode,
@@ -139,7 +139,7 @@ class ConnectionPool(RequestInterface):
         )
 
     @property
-    def connections(self) -> List[ConnectionInterface]:
+    def connections(self) -> list[ConnectionInterface]:
         """
         Return a list of the connections currently in the pool.
 
@@ -227,7 +227,7 @@ class ConnectionPool(RequestInterface):
             extensions=response.extensions,
         )
 
-    def _assign_requests_to_connections(self) -> List[ConnectionInterface]:
+    def _assign_requests_to_connections(self) -> list[ConnectionInterface]:
         """
         Manage the state of the connection pool, assigning incoming
         requests to connections as available.
@@ -298,7 +298,7 @@ class ConnectionPool(RequestInterface):
 
         return closing_connections
 
-    def _close_connections(self, closing: List[ConnectionInterface]) -> None:
+    def _close_connections(self, closing: list[ConnectionInterface]) -> None:
         # Close connections which have been removed from the pool.
         with ShieldCancellation():
             for connection in closing:
@@ -312,14 +312,14 @@ class ConnectionPool(RequestInterface):
             self._connections = []
         self._close_connections(closing_connections)
 
-    def __enter__(self) -> "ConnectionPool":
+    def __enter__(self) -> ConnectionPool:
         return self
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]] = None,
-        exc_value: Optional[BaseException] = None,
-        traceback: Optional[TracebackType] = None,
+        exc_type: type[BaseException] | None = None,
+        exc_value: BaseException | None = None,
+        traceback: TracebackType | None = None,
     ) -> None:
         self.close()
 

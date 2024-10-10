@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import ssl
 import sys
 from types import TracebackType
-from typing import AsyncIterable, AsyncIterator, Iterable, List, Optional, Type
+from typing import AsyncIterable, AsyncIterator, Iterable
 
 from .._backends.auto import AutoBackend
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend
@@ -15,12 +17,10 @@ from .interfaces import AsyncConnectionInterface, AsyncRequestInterface
 class AsyncPoolRequest:
     def __init__(self, request: Request) -> None:
         self.request = request
-        self.connection: Optional[AsyncConnectionInterface] = None
+        self.connection: AsyncConnectionInterface | None = None
         self._connection_acquired = AsyncEvent()
 
-    def assign_to_connection(
-        self, connection: Optional[AsyncConnectionInterface]
-    ) -> None:
+    def assign_to_connection(self, connection: AsyncConnectionInterface | None) -> None:
         self.connection = connection
         self._connection_acquired.set()
 
@@ -29,7 +29,7 @@ class AsyncPoolRequest:
         self._connection_acquired = AsyncEvent()
 
     async def wait_for_connection(
-        self, timeout: Optional[float] = None
+        self, timeout: float | None = None
     ) -> AsyncConnectionInterface:
         if self.connection is None:
             await self._connection_acquired.wait(timeout=timeout)
@@ -47,17 +47,17 @@ class AsyncConnectionPool(AsyncRequestInterface):
 
     def __init__(
         self,
-        ssl_context: Optional[ssl.SSLContext] = None,
-        max_connections: Optional[int] = 10,
-        max_keepalive_connections: Optional[int] = None,
-        keepalive_expiry: Optional[float] = None,
+        ssl_context: ssl.SSLContext | None = None,
+        max_connections: int | None = 10,
+        max_keepalive_connections: int | None = None,
+        keepalive_expiry: float | None = None,
         http1: bool = True,
         http2: bool = False,
         retries: int = 0,
-        local_address: Optional[str] = None,
-        uds: Optional[str] = None,
-        network_backend: Optional[AsyncNetworkBackend] = None,
-        socket_options: Optional[Iterable[SOCKET_OPTION]] = None,
+        local_address: str | None = None,
+        uds: str | None = None,
+        network_backend: AsyncNetworkBackend | None = None,
+        socket_options: Iterable[SOCKET_OPTION] | None = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -116,8 +116,8 @@ class AsyncConnectionPool(AsyncRequestInterface):
 
         # The mutable state on a connection pool is the queue of incoming requests,
         # and the set of connections that are servicing those requests.
-        self._connections: List[AsyncConnectionInterface] = []
-        self._requests: List[AsyncPoolRequest] = []
+        self._connections: list[AsyncConnectionInterface] = []
+        self._requests: list[AsyncPoolRequest] = []
 
         # We only mutate the state of the connection pool within an 'optional_thread_lock'
         # context. This holds a threading lock unless we're running in async mode,
@@ -139,7 +139,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
         )
 
     @property
-    def connections(self) -> List[AsyncConnectionInterface]:
+    def connections(self) -> list[AsyncConnectionInterface]:
         """
         Return a list of the connections currently in the pool.
 
@@ -227,7 +227,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
             extensions=response.extensions,
         )
 
-    def _assign_requests_to_connections(self) -> List[AsyncConnectionInterface]:
+    def _assign_requests_to_connections(self) -> list[AsyncConnectionInterface]:
         """
         Manage the state of the connection pool, assigning incoming
         requests to connections as available.
@@ -298,7 +298,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
 
         return closing_connections
 
-    async def _close_connections(self, closing: List[AsyncConnectionInterface]) -> None:
+    async def _close_connections(self, closing: list[AsyncConnectionInterface]) -> None:
         # Close connections which have been removed from the pool.
         with AsyncShieldCancellation():
             for connection in closing:
@@ -312,14 +312,14 @@ class AsyncConnectionPool(AsyncRequestInterface):
             self._connections = []
         await self._close_connections(closing_connections)
 
-    async def __aenter__(self) -> "AsyncConnectionPool":
+    async def __aenter__(self) -> AsyncConnectionPool:
         return self
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]] = None,
-        exc_value: Optional[BaseException] = None,
-        traceback: Optional[TracebackType] = None,
+        exc_type: type[BaseException] | None = None,
+        exc_value: BaseException | None = None,
+        traceback: TracebackType | None = None,
     ) -> None:
         await self.aclose()
 
