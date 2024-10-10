@@ -9,6 +9,7 @@ The following exceptions may be raised when sending a request:
     * `httpcore.WriteTimeout`
 * `httpcore.NetworkError`
     * `httpcore.ConnectError`
+        * `httpcore.SSLError`
     * `httpcore.ReadError`
     * `httpcore.WriteError`
 * `httpcore.ProtocolError`
