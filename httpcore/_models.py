@@ -1,13 +1,13 @@
+from __future__ import annotations
+
 from typing import (
     Any,
     AsyncIterable,
     AsyncIterator,
     Iterable,
     Iterator,
-    List,
     Mapping,
     MutableMapping,
-    Optional,
     Sequence,
     Tuple,
     Union,
@@ -24,7 +24,7 @@ HeaderTypes = Union[HeadersAsSequence, HeadersAsMapping, None]
 Extensions = MutableMapping[str, Any]
 
 
-def enforce_bytes(value: Union[bytes, str], *, name: str) -> bytes:
+def enforce_bytes(value: bytes | str, *, name: str) -> bytes:
     """
     Any arguments that are ultimately represented as bytes can be specified
     either as bytes or as strings.
@@ -45,7 +45,7 @@ def enforce_bytes(value: Union[bytes, str], *, name: str) -> bytes:
     raise TypeError(f"{name} must be bytes or str, but got {seen_type}.")
 
 
-def enforce_url(value: Union["URL", bytes, str], *, name: str) -> "URL":
+def enforce_url(value: URL | bytes | str, *, name: str) -> URL:
     """
     Type check for URL parameters.
     """
@@ -59,8 +59,8 @@ def enforce_url(value: Union["URL", bytes, str], *, name: str) -> "URL":
 
 
 def enforce_headers(
-    value: Union[HeadersAsMapping, HeadersAsSequence, None] = None, *, name: str
-) -> List[Tuple[bytes, bytes]]:
+    value: HeadersAsMapping | HeadersAsSequence | None = None, *, name: str
+) -> list[tuple[bytes, bytes]]:
     """
     Convienence function that ensure all items in request or response headers
     are either bytes or strings in the plain ASCII range.
@@ -91,8 +91,8 @@ def enforce_headers(
 
 
 def enforce_stream(
-    value: Union[bytes, Iterable[bytes], AsyncIterable[bytes], None], *, name: str
-) -> Union[Iterable[bytes], AsyncIterable[bytes]]:
+    value: bytes | Iterable[bytes] | AsyncIterable[bytes] | None, *, name: str
+) -> Iterable[bytes] | AsyncIterable[bytes]:
     if value is None:
         return ByteStream(b"")
     elif isinstance(value, bytes):
@@ -113,11 +113,11 @@ DEFAULT_PORTS = {
 
 
 def include_request_headers(
-    headers: List[Tuple[bytes, bytes]],
+    headers: list[tuple[bytes, bytes]],
     *,
     url: "URL",
-    content: Union[None, bytes, Iterable[bytes], AsyncIterable[bytes]],
-) -> List[Tuple[bytes, bytes]]:
+    content: None | bytes | Iterable[bytes] | AsyncIterable[bytes],
+) -> list[tuple[bytes, bytes]]:
     headers_set = set(k.lower() for k, v in headers)
 
     if b"host" not in headers_set:
@@ -254,12 +254,12 @@ class URL:
 
     def __init__(
         self,
-        url: Union[bytes, str] = "",
+        url: bytes | str = "",
         *,
-        scheme: Union[bytes, str] = b"",
-        host: Union[bytes, str] = b"",
-        port: Optional[int] = None,
-        target: Union[bytes, str] = b"",
+        scheme: bytes | str = b"",
+        host: bytes | str = b"",
+        port: int | None = None,
+        target: bytes | str = b"",
     ) -> None:
         """
         Parameters:
@@ -325,12 +325,12 @@ class Request:
 
     def __init__(
         self,
-        method: Union[bytes, str],
-        url: Union[URL, bytes, str],
+        method: bytes | str,
+        url: URL | bytes | str,
         *,
         headers: HeaderTypes = None,
-        content: Union[bytes, Iterable[bytes], AsyncIterable[bytes], None] = None,
-        extensions: Optional[Extensions] = None,
+        content: bytes | Iterable[bytes] | AsyncIterable[bytes] | None = None,
+        extensions: Extensions | None = None,
     ) -> None:
         """
         Parameters:
@@ -345,10 +345,10 @@ class Request:
         """
         self.method: bytes = enforce_bytes(method, name="method")
         self.url: URL = enforce_url(url, name="url")
-        self.headers: List[Tuple[bytes, bytes]] = enforce_headers(
+        self.headers: list[tuple[bytes, bytes]] = enforce_headers(
             headers, name="headers"
         )
-        self.stream: Union[Iterable[bytes], AsyncIterable[bytes]] = enforce_stream(
+        self.stream: Iterable[bytes] | AsyncIterable[bytes] = enforce_stream(
             content, name="content"
         )
         self.extensions = {} if extensions is None else extensions
@@ -375,8 +375,8 @@ class Response:
         status: int,
         *,
         headers: HeaderTypes = None,
-        content: Union[bytes, Iterable[bytes], AsyncIterable[bytes], None] = None,
-        extensions: Optional[Extensions] = None,
+        content: bytes | Iterable[bytes] | AsyncIterable[bytes] | None = None,
+        extensions: Extensions | None = None,
     ) -> None:
         """
         Parameters:
@@ -388,10 +388,10 @@ class Response:
                 `"reason_phrase"`, and `"network_stream"`.
         """
         self.status: int = status
-        self.headers: List[Tuple[bytes, bytes]] = enforce_headers(
+        self.headers: list[tuple[bytes, bytes]] = enforce_headers(
             headers, name="headers"
         )
-        self.stream: Union[Iterable[bytes], AsyncIterable[bytes]] = enforce_stream(
+        self.stream: Iterable[bytes] | AsyncIterable[bytes] = enforce_stream(
             content, name="content"
         )
         self.extensions = {} if extensions is None else extensions
