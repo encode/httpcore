@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import ssl
-import typing
+from typing import Any, Iterable
 
 import trio
 
@@ -20,9 +22,7 @@ class TrioStream(AsyncNetworkStream):
     def __init__(self, stream: trio.abc.Stream) -> None:
         self._stream = stream
 
-    async def read(
-        self, max_bytes: int, timeout: typing.Optional[float] = None
-    ) -> bytes:
+    async def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
         timeout_or_inf = float("inf") if timeout is None else timeout
         exc_map: ExceptionMapping = {
             trio.TooSlowError: ReadTimeout,
@@ -34,9 +34,7 @@ class TrioStream(AsyncNetworkStream):
                 data: bytes = await self._stream.receive_some(max_bytes=max_bytes)
                 return data
 
-    async def write(
-        self, buffer: bytes, timeout: typing.Optional[float] = None
-    ) -> None:
+    async def write(self, buffer: bytes, timeout: float | None = None) -> None:
         if not buffer:
             return
 
@@ -56,8 +54,8 @@ class TrioStream(AsyncNetworkStream):
     async def start_tls(
         self,
         ssl_context: ssl.SSLContext,
-        server_hostname: typing.Optional[str] = None,
-        timeout: typing.Optional[float] = None,
+        server_hostname: str | None = None,
+        timeout: float | None = None,
     ) -> AsyncNetworkStream:
         timeout_or_inf = float("inf") if timeout is None else timeout
         exc_map: ExceptionMapping = {
@@ -80,7 +78,7 @@ class TrioStream(AsyncNetworkStream):
                 raise exc
         return TrioStream(ssl_stream)
 
-    def get_extra_info(self, info: str) -> typing.Any:
+    def get_extra_info(self, info: str) -> Any:
         if info == "ssl_object" and isinstance(self._stream, trio.SSLStream):
             # Type checkers cannot see `_ssl_object` attribute because trio._ssl.SSLStream uses __getattr__/__setattr__.
             # Tracked at https://github.com/python-trio/trio/issues/542
@@ -113,9 +111,9 @@ class TrioBackend(AsyncNetworkBackend):
         self,
         host: str,
         port: int,
-        timeout: typing.Optional[float] = None,
-        local_address: typing.Optional[str] = None,
-        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
+        timeout: float | None = None,
+        local_address: str | None = None,
+        socket_options: Iterable[SOCKET_OPTION] | None = None,
     ) -> AsyncNetworkStream:
         # By default for TCP sockets, trio enables TCP_NODELAY.
         # https://trio.readthedocs.io/en/stable/reference-io.html#trio.SocketStream
@@ -139,8 +137,8 @@ class TrioBackend(AsyncNetworkBackend):
     async def connect_unix_socket(
         self,
         path: str,
-        timeout: typing.Optional[float] = None,
-        socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
+        timeout: float | None = None,
+        socket_options: Iterable[SOCKET_OPTION] | None = None,
     ) -> AsyncNetworkStream:  # pragma: nocover
         if socket_options is None:
             socket_options = []
