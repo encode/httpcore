@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import ssl
-from typing import Any, Iterable
+import typing
 
 import anyio
 
@@ -79,7 +79,7 @@ class AnyIOStream(AsyncNetworkStream):
                 raise exc
         return AnyIOStream(ssl_stream)
 
-    def get_extra_info(self, info: str) -> Any:
+    def get_extra_info(self, info: str) -> typing.Any:
         if info == "ssl_object":
             return self._stream.extra(anyio.streams.tls.TLSAttribute.ssl_object, None)
         if info == "client_addr":
@@ -101,7 +101,7 @@ class AnyIOBackend(AsyncNetworkBackend):
         port: int,
         timeout: float | None = None,
         local_address: str | None = None,
-        socket_options: Iterable[SOCKET_OPTION] | None = None,
+        socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
     ) -> AsyncNetworkStream:  # pragma: nocover
         if socket_options is None:
             socket_options = []
@@ -126,7 +126,7 @@ class AnyIOBackend(AsyncNetworkBackend):
         self,
         path: str,
         timeout: float | None = None,
-        socket_options: Iterable[SOCKET_OPTION] | None = None,
+        socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
     ) -> AsyncNetworkStream:  # pragma: nocover
         if socket_options is None:
             socket_options = []

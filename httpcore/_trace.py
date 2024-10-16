@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import inspect
 import logging
-from types import TracebackType
-from typing import Any
+import types
+import typing
 
 from ._models import Request
 
@@ -14,7 +14,7 @@ class Trace:
         name: str,
         logger: logging.Logger,
         request: Request | None = None,
-        kwargs: dict[str, Any] | None = None,
+        kwargs: dict[str, typing.Any] | None = None,
     ) -> None:
         self.name = name
         self.logger = logger
@@ -23,11 +23,11 @@ class Trace:
         )
         self.debug = self.logger.isEnabledFor(logging.DEBUG)
         self.kwargs = kwargs or {}
-        self.return_value: Any = None
+        self.return_value: typing.Any = None
         self.should_trace = self.debug or self.trace_extension is not None
         self.prefix = self.logger.name.split(".")[-1]
 
-    def trace(self, name: str, info: dict[str, Any]) -> None:
+    def trace(self, name: str, info: dict[str, typing.Any]) -> None:
         if self.trace_extension is not None:
             prefix_and_name = f"{self.prefix}.{name}"
             ret = self.trace_extension(prefix_and_name, info)
@@ -56,7 +56,7 @@ class Trace:
         self,
         exc_type: type[BaseException] | None = None,
         exc_value: BaseException | None = None,
-        traceback: TracebackType | None = None,
+        traceback: types.TracebackType | None = None,
     ) -> None:
         if self.should_trace:
             if exc_value is None:
@@ -66,7 +66,7 @@ class Trace:
                 info = {"exception": exc_value}
                 self.trace(f"{self.name}.failed", info)
 
-    async def atrace(self, name: str, info: dict[str, Any]) -> None:
+    async def atrace(self, name: str, info: dict[str, typing.Any]) -> None:
         if self.trace_extension is not None:
             prefix_and_name = f"{self.prefix}.{name}"
             coro = self.trace_extension(prefix_and_name, info)
@@ -96,7 +96,7 @@ class Trace:
         self,
         exc_type: type[BaseException] | None = None,
         exc_value: BaseException | None = None,
-        traceback: TracebackType | None = None,
+        traceback: types.TracebackType | None = None,
     ) -> None:
         if self.should_trace:
             if exc_value is None:

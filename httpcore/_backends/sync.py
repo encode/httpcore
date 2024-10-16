@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import functools
 import socket
 import ssl
 import sys
 import typing
-from functools import partial
 
 from .._exceptions import (
     ConnectError,
@@ -81,7 +81,7 @@ class TLSinTLSStream(NetworkStream):  # pragma: no cover
         with map_exceptions(exc_map):
             self._sock.settimeout(timeout)
             return typing.cast(
-                bytes, self._perform_io(partial(self.ssl_obj.read, max_bytes))
+                bytes, self._perform_io(functools.partial(self.ssl_obj.read, max_bytes))
             )
 
     def write(self, buffer: bytes, timeout: float | None = None) -> None:
@@ -89,7 +89,7 @@ class TLSinTLSStream(NetworkStream):  # pragma: no cover
         with map_exceptions(exc_map):
             self._sock.settimeout(timeout)
             while buffer:
-                nsent = self._perform_io(partial(self.ssl_obj.write, buffer))
+                nsent = self._perform_io(functools.partial(self.ssl_obj.write, buffer))
                 buffer = buffer[nsent:]
 
     def close(self) -> None:

@@ -1,27 +1,17 @@
 from __future__ import annotations
 
-from typing import (
-    Any,
-    AsyncIterable,
-    AsyncIterator,
-    Iterable,
-    Iterator,
-    Mapping,
-    MutableMapping,
-    Sequence,
-    Tuple,
-    Union,
-)
-from urllib.parse import urlparse
+import typing
+import urllib.parse
 
 # Functions for typechecking...
 
 
-HeadersAsSequence = Sequence[Tuple[Union[bytes, str], Union[bytes, str]]]
-HeadersAsMapping = Mapping[Union[bytes, str], Union[bytes, str]]
-HeaderTypes = Union[HeadersAsSequence, HeadersAsMapping, None]
+ByteOrStr = typing.Union[bytes, str]
+HeadersAsSequence = typing.Sequence[typing.Tuple[ByteOrStr, ByteOrStr]]
+HeadersAsMapping = typing.Mapping[ByteOrStr, ByteOrStr]
+HeaderTypes = typing.Union[HeadersAsSequence, HeadersAsMapping, None]
 
-Extensions = MutableMapping[str, Any]
+Extensions = typing.MutableMapping[str, typing.Any]
 
 
 def enforce_bytes(value: bytes | str, *, name: str) -> bytes:
@@ -67,7 +57,7 @@ def enforce_headers(
     """
     if value is None:
         return []
-    elif isinstance(value, Mapping):
+    elif isinstance(value, typing.Mapping):
         return [
             (
                 enforce_bytes(k, name="header name"),
@@ -75,7 +65,7 @@ def enforce_headers(
             )
             for k, v in value.items()
         ]
-    elif isinstance(value, Sequence):
+    elif isinstance(value, typing.Sequence):
         return [
             (
                 enforce_bytes(k, name="header name"),
@@ -91,8 +81,10 @@ def enforce_headers(
 
 
 def enforce_stream(
-    value: bytes | Iterable[bytes] | AsyncIterable[bytes] | None, *, name: str
-) -> Iterable[bytes] | AsyncIterable[bytes]:
+    value: bytes | typing.Iterable[bytes] | typing.AsyncIterable[bytes] | None,
+    *,
+    name: str,
+) -> typing.Iterable[bytes] | typing.AsyncIterable[bytes]:
     if value is None:
         return ByteStream(b"")
     elif isinstance(value, bytes):
@@ -116,7 +108,7 @@ def include_request_headers(
     headers: list[tuple[bytes, bytes]],
     *,
     url: "URL",
-    content: None | bytes | Iterable[bytes] | AsyncIterable[bytes],
+    content: None | bytes | typing.Iterable[bytes] | typing.AsyncIterable[bytes],
 ) -> list[tuple[bytes, bytes]]:
     headers_set = set(k.lower() for k, v in headers)
 
@@ -154,10 +146,10 @@ class ByteStream:
     def __init__(self, content: bytes) -> None:
         self._content = content
 
-    def __iter__(self) -> Iterator[bytes]:
+    def __iter__(self) -> typing.Iterator[bytes]:
         yield self._content
 
-    async def __aiter__(self) -> AsyncIterator[bytes]:
+    async def __aiter__(self) -> typing.AsyncIterator[bytes]:
         yield self._content
 
     def __repr__(self) -> str:
@@ -170,7 +162,7 @@ class Origin:
         self.host = host
         self.port = port
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: typing.Any) -> bool:
         return (
             isinstance(other, Origin)
             and self.scheme == other.scheme
@@ -271,7 +263,7 @@ class URL:
             target: The target of the HTTP request. Such as `"/items?search=red"`.
         """
         if url:
-            parsed = urlparse(enforce_bytes(url, name="url"))
+            parsed = urllib.parse.urlparse(enforce_bytes(url, name="url"))
             self.scheme = parsed.scheme
             self.host = parsed.hostname or b""
             self.port = parsed.port
@@ -297,7 +289,7 @@ class URL:
             scheme=self.scheme, host=self.host, port=self.port or default_port
         )
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: typing.Any) -> bool:
         return (
             isinstance(other, URL)
             and other.scheme == self.scheme
@@ -329,7 +321,10 @@ class Request:
         url: URL | bytes | str,
         *,
         headers: HeaderTypes = None,
-        content: bytes | Iterable[bytes] | AsyncIterable[bytes] | None = None,
+        content: bytes
+        | typing.Iterable[bytes]
+        | typing.AsyncIterable[bytes]
+        | None = None,
         extensions: Extensions | None = None,
     ) -> None:
         """
@@ -348,8 +343,8 @@ class Request:
         self.headers: list[tuple[bytes, bytes]] = enforce_headers(
             headers, name="headers"
         )
-        self.stream: Iterable[bytes] | AsyncIterable[bytes] = enforce_stream(
-            content, name="content"
+        self.stream: typing.Iterable[bytes] | typing.AsyncIterable[bytes] = (
+            enforce_stream(content, name="content")
         )
         self.extensions = {} if extensions is None else extensions
 
@@ -375,7 +370,10 @@ class Response:
         status: int,
         *,
         headers: HeaderTypes = None,
-        content: bytes | Iterable[bytes] | AsyncIterable[bytes] | None = None,
+        content: bytes
+        | typing.Iterable[bytes]
+        | typing.AsyncIterable[bytes]
+        | None = None,
         extensions: Extensions | None = None,
     ) -> None:
         """
@@ -391,8 +389,8 @@ class Response:
         self.headers: list[tuple[bytes, bytes]] = enforce_headers(
             headers, name="headers"
         )
-        self.stream: Iterable[bytes] | AsyncIterable[bytes] = enforce_stream(
-            content, name="content"
+        self.stream: typing.Iterable[bytes] | typing.AsyncIterable[bytes] = (
+            enforce_stream(content, name="content")
         )
         self.extensions = {} if extensions is None else extensions
 
@@ -401,7 +399,7 @@ class Response:
     @property
     def content(self) -> bytes:
         if not hasattr(self, "_content"):
-            if isinstance(self.stream, Iterable):
+            if isinstance(self.stream, typing.Iterable):
                 raise RuntimeError(
                     "Attempted to access 'response.content' on a streaming response. "
                     "Call 'response.read()' first."
@@ -419,7 +417,7 @@ class Response:
     # Sync interface...
 
     def read(self) -> bytes:
-        if not isinstance(self.stream, Iterable):  # pragma: nocover
+        if not isinstance(self.stream, typing.Iterable):  # pragma: nocover
             raise RuntimeError(
                 "Attempted to read an asynchronous response using 'response.read()'. "
                 "You should use 'await response.aread()' instead."
@@ -428,8 +426,8 @@ class Response:
             self._content = b"".join([part for part in self.iter_stream()])
         return self._content
 
-    def iter_stream(self) -> Iterator[bytes]:
-        if not isinstance(self.stream, Iterable):  # pragma: nocover
+    def iter_stream(self) -> typing.Iterator[bytes]:
+        if not isinstance(self.stream, typing.Iterable):  # pragma: nocover
             raise RuntimeError(
                 "Attempted to stream an asynchronous response using 'for ... in "
                 "response.iter_stream()'. "
@@ -444,7 +442,7 @@ class Response:
             yield chunk
 
     def close(self) -> None:
-        if not isinstance(self.stream, Iterable):  # pragma: nocover
+        if not isinstance(self.stream, typing.Iterable):  # pragma: nocover
             raise RuntimeError(
                 "Attempted to close an asynchronous response using 'response.close()'. "
                 "You should use 'await response.aclose()' instead."
@@ -455,7 +453,7 @@ class Response:
     # Async interface...
 
     async def aread(self) -> bytes:
-        if not isinstance(self.stream, AsyncIterable):  # pragma: nocover
+        if not isinstance(self.stream, typing.AsyncIterable):  # pragma: nocover
             raise RuntimeError(
                 "Attempted to read an synchronous response using "
                 "'await response.aread()'. "
@@ -465,8 +463,8 @@ class Response:
             self._content = b"".join([part async for part in self.aiter_stream()])
         return self._content
 
-    async def aiter_stream(self) -> AsyncIterator[bytes]:
-        if not isinstance(self.stream, AsyncIterable):  # pragma: nocover
+    async def aiter_stream(self) -> typing.AsyncIterator[bytes]:
+        if not isinstance(self.stream, typing.AsyncIterable):  # pragma: nocover
             raise RuntimeError(
                 "Attempted to stream an synchronous response using 'async for ... in "
                 "response.aiter_stream()'. "
@@ -482,7 +480,7 @@ class Response:
             yield chunk
 
     async def aclose(self) -> None:
-        if not isinstance(self.stream, AsyncIterable):  # pragma: nocover
+        if not isinstance(self.stream, typing.AsyncIterable):  # pragma: nocover
             raise RuntimeError(
                 "Attempted to close a synchronous response using "
                 "'await response.aclose()'. "

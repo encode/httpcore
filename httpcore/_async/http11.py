@@ -4,8 +4,8 @@ import enum
 import logging
 import ssl
 import time
-from types import TracebackType
-from typing import Any, AsyncIterable, AsyncIterator, Union
+import types
+import typing
 
 import h11
 
@@ -26,7 +26,7 @@ logger = logging.getLogger("httpcore.http11")
 
 
 # A subset of `h11.Event` types supported by `_send_event`
-H11SendEvent = Union[
+H11SendEvent = typing.Union[
     h11.Request,
     h11.Data,
     h11.EndOfMessage,
@@ -153,7 +153,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("write", None)
 
-        assert isinstance(request.stream, AsyncIterable)
+        assert isinstance(request.stream, typing.AsyncIterable)
         async for chunk in request.stream:
             event = h11.Data(data=chunk)
             await self._send_event(event, timeout=timeout)
@@ -193,7 +193,9 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
 
         return http_version, event.status_code, event.reason, headers, trailing_data
 
-    async def _receive_response_body(self, request: Request) -> AsyncIterator[bytes]:
+    async def _receive_response_body(
+        self, request: Request
+    ) -> typing.AsyncIterator[bytes]:
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("read", None)
 
@@ -314,7 +316,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
         self,
         exc_type: type[BaseException] | None = None,
         exc_value: BaseException | None = None,
-        traceback: TracebackType | None = None,
+        traceback: types.TracebackType | None = None,
     ) -> None:
         await self.aclose()
 
@@ -325,7 +327,7 @@ class HTTP11ConnectionByteStream:
         self._request = request
         self._closed = False
 
-    async def __aiter__(self) -> AsyncIterator[bytes]:
+    async def __aiter__(self) -> typing.AsyncIterator[bytes]:
         kwargs = {"request": self._request}
         try:
             async with Trace("receive_response_body", logger, self._request, kwargs):
@@ -373,5 +375,5 @@ class AsyncHTTP11UpgradeStream(AsyncNetworkStream):
     ) -> AsyncNetworkStream:
         return await self._stream.start_tls(ssl_context, server_hostname, timeout)
 
-    def get_extra_info(self, info: str) -> Any:
+    def get_extra_info(self, info: str) -> typing.Any:
         return self._stream.get_extra_info(info)
