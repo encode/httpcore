@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
-from typing import AsyncIterator
+import contextlib
+import typing
 
 from .._models import (
     URL,
@@ -24,7 +24,7 @@ class AsyncRequestInterface:
         url: URL | bytes | str,
         *,
         headers: HeaderTypes = None,
-        content: bytes | AsyncIterator[bytes] | None = None,
+        content: bytes | typing.AsyncIterator[bytes] | None = None,
         extensions: Extensions | None = None,
     ) -> Response:
         # Strict type checking on our parameters.
@@ -49,16 +49,16 @@ class AsyncRequestInterface:
             await response.aclose()
         return response
 
-    @asynccontextmanager
+    @contextlib.asynccontextmanager
     async def stream(
         self,
         method: bytes | str,
         url: URL | bytes | str,
         *,
         headers: HeaderTypes = None,
-        content: bytes | AsyncIterator[bytes] | None = None,
+        content: bytes | typing.AsyncIterator[bytes] | None = None,
         extensions: Extensions | None = None,
-    ) -> AsyncIterator[Response]:
+    ) -> typing.AsyncIterator[Response]:
         # Strict type checking on our parameters.
         method = enforce_bytes(method, name="method")
         url = enforce_url(url, name="url")

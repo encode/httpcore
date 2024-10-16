@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import base64
 import logging
 import ssl
-from base64 import b64encode
-from typing import Iterable, Mapping, Sequence, Tuple, Union
+import typing
 
 from .._backends.base import SOCKET_OPTION, NetworkBackend
 from .._exceptions import ProxyError
@@ -24,16 +24,17 @@ from .connection_pool import ConnectionPool
 from .http11 import HTTP11Connection
 from .interfaces import ConnectionInterface
 
-HeadersAsSequence = Sequence[Tuple[Union[bytes, str], Union[bytes, str]]]
-HeadersAsMapping = Mapping[Union[bytes, str], Union[bytes, str]]
+ByteOrStr = typing.Union[bytes, str]
+HeadersAsSequence = typing.Sequence[typing.Tuple[ByteOrStr, ByteOrStr]]
+HeadersAsMapping = typing.Mapping[ByteOrStr, ByteOrStr]
 
 
 logger = logging.getLogger("httpcore.proxy")
 
 
 def merge_headers(
-    default_headers: Sequence[tuple[bytes, bytes]] | None = None,
-    override_headers: Sequence[tuple[bytes, bytes]] | None = None,
+    default_headers: typing.Sequence[tuple[bytes, bytes]] | None = None,
+    override_headers: typing.Sequence[tuple[bytes, bytes]] | None = None,
 ) -> list[tuple[bytes, bytes]]:
     """
     Append default_headers and override_headers, de-duplicating if a key exists
@@ -52,7 +53,7 @@ def merge_headers(
 
 def build_auth_header(username: bytes, password: bytes) -> bytes:
     userpass = username + b":" + password
-    return b"Basic " + b64encode(userpass)
+    return b"Basic " + base64.b64encode(userpass)
 
 
 class HTTPProxy(ConnectionPool):
@@ -76,7 +77,7 @@ class HTTPProxy(ConnectionPool):
         local_address: str | None = None,
         uds: str | None = None,
         network_backend: NetworkBackend | None = None,
-        socket_options: Iterable[SOCKET_OPTION] | None = None,
+        socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -177,7 +178,7 @@ class ForwardHTTPConnection(ConnectionInterface):
         proxy_headers: HeadersAsMapping | HeadersAsSequence | None = None,
         keepalive_expiry: float | None = None,
         network_backend: NetworkBackend | None = None,
-        socket_options: Iterable[SOCKET_OPTION] | None = None,
+        socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
         proxy_ssl_context: ssl.SSLContext | None = None,
     ) -> None:
         self._connection = HTTPConnection(
@@ -240,12 +241,12 @@ class TunnelHTTPConnection(ConnectionInterface):
         remote_origin: Origin,
         ssl_context: ssl.SSLContext | None = None,
         proxy_ssl_context: ssl.SSLContext | None = None,
-        proxy_headers: Sequence[tuple[bytes, bytes]] | None = None,
+        proxy_headers: typing.Sequence[tuple[bytes, bytes]] | None = None,
         keepalive_expiry: float | None = None,
         http1: bool = True,
         http2: bool = False,
         network_backend: NetworkBackend | None = None,
-        socket_options: Iterable[SOCKET_OPTION] | None = None,
+        socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
     ) -> None:
         self._connection: ConnectionInterface = HTTPConnection(
             origin=proxy_origin,

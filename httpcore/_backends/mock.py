@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import ssl
-from typing import Any, Iterable
+import typing
 
 from .._exceptions import ReadError
 from .base import (
@@ -48,7 +48,7 @@ class MockStream(NetworkStream):
     ) -> NetworkStream:
         return self
 
-    def get_extra_info(self, info: str) -> Any:
+    def get_extra_info(self, info: str) -> typing.Any:
         return MockSSLObject(http2=self._http2) if info == "ssl_object" else None
 
     def __repr__(self) -> str:
@@ -66,7 +66,7 @@ class MockBackend(NetworkBackend):
         port: int,
         timeout: float | None = None,
         local_address: str | None = None,
-        socket_options: Iterable[SOCKET_OPTION] | None = None,
+        socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
     ) -> NetworkStream:
         return MockStream(list(self._buffer), http2=self._http2)
 
@@ -74,7 +74,7 @@ class MockBackend(NetworkBackend):
         self,
         path: str,
         timeout: float | None = None,
-        socket_options: Iterable[SOCKET_OPTION] | None = None,
+        socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
     ) -> NetworkStream:
         return MockStream(list(self._buffer), http2=self._http2)
 
@@ -109,7 +109,7 @@ class AsyncMockStream(AsyncNetworkStream):
     ) -> AsyncNetworkStream:
         return self
 
-    def get_extra_info(self, info: str) -> Any:
+    def get_extra_info(self, info: str) -> typing.Any:
         return MockSSLObject(http2=self._http2) if info == "ssl_object" else None
 
     def __repr__(self) -> str:
@@ -127,7 +127,7 @@ class AsyncMockBackend(AsyncNetworkBackend):
         port: int,
         timeout: float | None = None,
         local_address: str | None = None,
-        socket_options: Iterable[SOCKET_OPTION] | None = None,
+        socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
     ) -> AsyncNetworkStream:
         return AsyncMockStream(list(self._buffer), http2=self._http2)
 
@@ -135,7 +135,7 @@ class AsyncMockBackend(AsyncNetworkBackend):
         self,
         path: str,
         timeout: float | None = None,
-        socket_options: Iterable[SOCKET_OPTION] | None = None,
+        socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
     ) -> AsyncNetworkStream:
         return AsyncMockStream(list(self._buffer), http2=self._http2)
 
