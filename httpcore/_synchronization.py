@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import threading
-from types import TracebackType
+import types
 
 from ._exceptions import ExceptionMapping, PoolTimeout, map_exceptions
 
@@ -82,7 +82,7 @@ class AsyncLock:
         self,
         exc_type: type[BaseException] | None = None,
         exc_value: BaseException | None = None,
-        traceback: TracebackType | None = None,
+        traceback: types.TracebackType | None = None,
     ) -> None:
         if self._backend == "trio":
             self._trio_lock.release()
@@ -105,7 +105,7 @@ class AsyncThreadLock:
         self,
         exc_type: type[BaseException] | None = None,
         exc_value: BaseException | None = None,
-        traceback: TracebackType | None = None,
+        traceback: types.TracebackType | None = None,
     ) -> None:
         pass
 
@@ -218,7 +218,7 @@ class AsyncShieldCancellation:
         self,
         exc_type: type[BaseException] | None = None,
         exc_value: BaseException | None = None,
-        traceback: TracebackType | None = None,
+        traceback: types.TracebackType | None = None,
     ) -> None:
         if self._backend == "trio":
             self._trio_shield.__exit__(exc_type, exc_value, traceback)
@@ -248,7 +248,7 @@ class Lock:
         self,
         exc_type: type[BaseException] | None = None,
         exc_value: BaseException | None = None,
-        traceback: TracebackType | None = None,
+        traceback: types.TracebackType | None = None,
     ) -> None:
         self._lock.release()
 
@@ -272,7 +272,7 @@ class ThreadLock:
         self,
         exc_type: type[BaseException] | None = None,
         exc_value: BaseException | None = None,
-        traceback: TracebackType | None = None,
+        traceback: types.TracebackType | None = None,
     ) -> None:
         self._lock.release()
 
@@ -313,6 +313,6 @@ class ShieldCancellation:
         self,
         exc_type: type[BaseException] | None = None,
         exc_value: BaseException | None = None,
-        traceback: TracebackType | None = None,
+        traceback: types.TracebackType | None = None,
     ) -> None:
         pass

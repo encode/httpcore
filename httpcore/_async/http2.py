@@ -4,7 +4,7 @@ import enum
 import logging
 import time
 import types
-from typing import AsyncIterable, AsyncIterator
+import typing
 
 import h2.config
 import h2.connection
@@ -253,7 +253,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         if not has_body_headers(request):
             return
 
-        assert isinstance(request.stream, AsyncIterable)
+        assert isinstance(request.stream, typing.AsyncIterable)
         async for data in request.stream:
             await self._send_stream_data(request, stream_id, data)
         await self._send_end_stream(request, stream_id)
@@ -303,7 +303,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
     async def _receive_response_body(
         self, request: Request, stream_id: int
-    ) -> AsyncIterator[bytes]:
+    ) -> typing.AsyncIterator[bytes]:
         """
         Iterator that returns the bytes of the response body for a given stream ID.
         """
@@ -562,7 +562,7 @@ class HTTP2ConnectionByteStream:
         self._stream_id = stream_id
         self._closed = False
 
-    async def __aiter__(self) -> AsyncIterator[bytes]:
+    async def __aiter__(self) -> typing.AsyncIterator[bytes]:
         kwargs = {"request": self._request, "stream_id": self._stream_id}
         try:
             async with Trace("receive_response_body", logger, self._request, kwargs):

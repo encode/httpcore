@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
-from typing import Iterator
+import contextlib
+import typing
 
 from ._models import URL, Extensions, HeaderTypes, Response
 from ._sync.connection_pool import ConnectionPool
@@ -12,7 +12,7 @@ def request(
     url: URL | bytes | str,
     *,
     headers: HeaderTypes = None,
-    content: bytes | Iterator[bytes] | None = None,
+    content: bytes | typing.Iterator[bytes] | None = None,
     extensions: Extensions | None = None,
 ) -> Response:
     """
@@ -47,15 +47,15 @@ def request(
         )
 
 
-@contextmanager
+@contextlib.contextmanager
 def stream(
     method: bytes | str,
     url: URL | bytes | str,
     *,
     headers: HeaderTypes = None,
-    content: bytes | Iterator[bytes] | None = None,
+    content: bytes | typing.Iterator[bytes] | None = None,
     extensions: Extensions | None = None,
-) -> Iterator[Response]:
+) -> typing.Iterator[Response]:
     """
     Sends an HTTP request, returning the response within a content manager.
 
