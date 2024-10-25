@@ -43,11 +43,15 @@ def test_url_cannot_include_unicode_strings():
 
 def test_url_origin_socks5():
     url = httpcore.URL("socks5://127.0.0.1")
-    assert url.origin == httpcore.Origin(scheme=b"socks5", host=b"127.0.0.1", port=1080)
+    assert url.origin == httpcore.Origin(
+        scheme=b"socks5", host=b"127.0.0.1", port=1080
+    )
     assert str(url.origin) == "socks5://127.0.0.1:1080"
 
     url = httpcore.URL("socks5h://127.0.0.1")
-    assert url.origin == httpcore.Origin(scheme=b"socks5h", host=b"127.0.0.1", port=1080)
+    assert url.origin == httpcore.Origin(
+        scheme=b"socks5h", host=b"127.0.0.1", port=1080
+    )
     assert str(url.origin) == "socks5h://127.0.0.1:1080"
 
 
