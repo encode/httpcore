@@ -79,7 +79,8 @@ class TLSinTLSStream(NetworkStream):  # pragma: no cover
     def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
         exc_map: ExceptionMapping = {socket.timeout: ReadTimeout, OSError: ReadError}
         with map_exceptions(exc_map):
-            self._sock.settimeout(timeout)
+            if timeout:
+                self._sock.settimeout(timeout)
             return typing.cast(
                 bytes, self._perform_io(functools.partial(self.ssl_obj.read, max_bytes))
             )
@@ -87,7 +88,8 @@ class TLSinTLSStream(NetworkStream):  # pragma: no cover
     def write(self, buffer: bytes, timeout: float | None = None) -> None:
         exc_map: ExceptionMapping = {socket.timeout: WriteTimeout, OSError: WriteError}
         with map_exceptions(exc_map):
-            self._sock.settimeout(timeout)
+            if timeout:
+                self._sock.settimeout(timeout)
             while buffer:
                 nsent = self._perform_io(functools.partial(self.ssl_obj.write, buffer))
                 buffer = buffer[nsent:]
@@ -124,7 +126,8 @@ class SyncStream(NetworkStream):
     def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
         exc_map: ExceptionMapping = {socket.timeout: ReadTimeout, OSError: ReadError}
         with map_exceptions(exc_map):
-            self._sock.settimeout(timeout)
+            if timeout:
+                self._sock.settimeout(timeout)
             return self._sock.recv(max_bytes)
 
     def write(self, buffer: bytes, timeout: float | None = None) -> None:
@@ -134,7 +137,8 @@ class SyncStream(NetworkStream):
         exc_map: ExceptionMapping = {socket.timeout: WriteTimeout, OSError: WriteError}
         with map_exceptions(exc_map):
             while buffer:
-                self._sock.settimeout(timeout)
+                if timeout:
+                    self._sock.settimeout(timeout)
                 n = self._sock.send(buffer)
                 buffer = buffer[n:]
 
