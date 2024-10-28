@@ -398,8 +398,6 @@ def test_connection_pool_with_http_exception():
         "http11.send_request_body.complete",
         "http11.receive_response_headers.started",
         "http11.receive_response_headers.failed",
-        "http11.response_closed.started",
-        "http11.response_closed.complete",
     ]
 
 
