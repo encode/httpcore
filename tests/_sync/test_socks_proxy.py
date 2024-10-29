@@ -24,8 +24,8 @@ def test_socks5_request():
         ]
     )
 
-    with httpcore.SOCKSProxy(
-        proxy_url="socks5://localhost:8080/",
+    with httpcore.ConnectionPool(
+        proxy=httpcore.Proxy("socks5://localhost:8080/"),
         network_backend=network_backend,
     ) as proxy:
         # Sending an intial request, which once complete will return to the pool, IDLE.
@@ -84,9 +84,11 @@ def test_authenticated_socks5_request():
         ]
     )
 
-    with httpcore.SOCKSProxy(
-        proxy_url="socks5://localhost:8080/",
-        proxy_auth=(b"username", b"password"),
+    with httpcore.ConnectionPool(
+        proxy=httpcore.Proxy(
+            url="socks5://localhost:8080/",
+            auth=(b"username", b"password"),
+        ),
         network_backend=network_backend,
     ) as proxy:
         # Sending an intial request, which once complete will return to the pool, IDLE.
@@ -123,8 +125,8 @@ def test_socks5_request_connect_failed():
         ]
     )
 
-    with httpcore.SOCKSProxy(
-        proxy_url="socks5://localhost:8080/",
+    with httpcore.ConnectionPool(
+        proxy=httpcore.Proxy("socks5://localhost:8080/"),
         network_backend=network_backend,
     ) as proxy:
         # Sending a request, which the proxy rejects
@@ -150,8 +152,8 @@ def test_socks5_request_failed_to_provide_auth():
         ]
     )
 
-    with httpcore.SOCKSProxy(
-        proxy_url="socks5://localhost:8080/",
+    with httpcore.ConnectionPool(
+        proxy=httpcore.Proxy("socks5://localhost:8080/"),
         network_backend=network_backend,
     ) as proxy:
         # Sending a request, which the proxy rejects
@@ -180,9 +182,11 @@ def test_socks5_request_incorrect_auth():
         ]
     )
 
-    with httpcore.SOCKSProxy(
-        proxy_url="socks5://localhost:8080/",
-        proxy_auth=(b"invalid", b"invalid"),
+    with httpcore.ConnectionPool(
+        proxy=httpcore.Proxy(
+            url="socks5://localhost:8080/",
+            auth=(b"invalid", b"invalid"),
+        ),
         network_backend=network_backend,
     ) as proxy:
         # Sending a request, which the proxy rejects
