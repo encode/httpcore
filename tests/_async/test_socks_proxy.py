@@ -24,8 +24,8 @@ async def test_socks5_request():
         ]
     )
 
-    async with httpcore.AsyncSOCKSProxy(
-        proxy_url="socks5://localhost:8080/",
+    async with httpcore.AsyncConnectionPool(
+        proxy=httpcore.Proxy("socks5://localhost:8080/"),
         network_backend=network_backend,
     ) as proxy:
         # Sending an intial request, which once complete will return to the pool, IDLE.
@@ -84,9 +84,11 @@ async def test_authenticated_socks5_request():
         ]
     )
 
-    async with httpcore.AsyncSOCKSProxy(
-        proxy_url="socks5://localhost:8080/",
-        proxy_auth=(b"username", b"password"),
+    async with httpcore.AsyncConnectionPool(
+        proxy=httpcore.Proxy(
+            url="socks5://localhost:8080/",
+            auth=(b"username", b"password"),
+        ),
         network_backend=network_backend,
     ) as proxy:
         # Sending an intial request, which once complete will return to the pool, IDLE.
@@ -123,8 +125,8 @@ async def test_socks5_request_connect_failed():
         ]
     )
 
-    async with httpcore.AsyncSOCKSProxy(
-        proxy_url="socks5://localhost:8080/",
+    async with httpcore.AsyncConnectionPool(
+        proxy=httpcore.Proxy("socks5://localhost:8080/"),
         network_backend=network_backend,
     ) as proxy:
         # Sending a request, which the proxy rejects
@@ -150,8 +152,8 @@ async def test_socks5_request_failed_to_provide_auth():
         ]
     )
 
-    async with httpcore.AsyncSOCKSProxy(
-        proxy_url="socks5://localhost:8080/",
+    async with httpcore.AsyncConnectionPool(
+        proxy=httpcore.Proxy("socks5://localhost:8080/"),
         network_backend=network_backend,
     ) as proxy:
         # Sending a request, which the proxy rejects
@@ -180,9 +182,11 @@ async def test_socks5_request_incorrect_auth():
         ]
     )
 
-    async with httpcore.AsyncSOCKSProxy(
-        proxy_url="socks5://localhost:8080/",
-        proxy_auth=(b"invalid", b"invalid"),
+    async with httpcore.AsyncConnectionPool(
+        proxy=httpcore.Proxy(
+            url="socks5://localhost:8080/",
+            auth=(b"invalid", b"invalid"),
+        ),
         network_backend=network_backend,
     ) as proxy:
         # Sending a request, which the proxy rejects

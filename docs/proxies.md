@@ -7,7 +7,8 @@ Sending requests via a proxy is very similar to sending requests using a standar
 ```python
 import httpcore
 
-proxy = httpcore.HTTPProxy(proxy_url="http://127.0.0.1:8080/")
+proxy = httpcore.Proxy("http://127.0.0.1:8080/")
+pool = httpcore.ConnectionPool(proxy=proxy)
 r = proxy.request("GET", "https://www.example.com/")
 
 print(r)
@@ -31,10 +32,11 @@ Proxy authentication can be included in the initial configuration:
 import httpcore
 
 # A `Proxy-Authorization` header will be included on the initial proxy connection.
-proxy = httpcore.HTTPProxy(
-    proxy_url="http://127.0.0.1:8080/",
-    proxy_auth=("<username>", "<password>")
+proxy = httpcore.Proxy(
+    url="http://127.0.0.1:8080/",
+    auth=("<username>", "<password>")
 )
+pool = httpcore.ConnectionPool(proxy=proxy)
 ```
 
 Custom headers can also be included:
@@ -45,10 +47,11 @@ import base64
 
 # Construct and include a `Proxy-Authorization` header.
 auth = base64.b64encode(b"<username>:<password>")
-proxy = httpcore.HTTPProxy(
-    proxy_url="http://127.0.0.1:8080/",
-    proxy_headers={"Proxy-Authorization": b"Basic " + auth}
+proxy = httpcore.Proxy(
+    url="http://127.0.0.1:8080/",
+    headers={"Proxy-Authorization": b"Basic " + auth}
 )
+pool = httpcore.ConnectionPool(proxy=proxy)
 ```
 
 ## Proxy SSL
@@ -58,10 +61,10 @@ The `httpcore` package also supports HTTPS proxies for http and https destinatio
 HTTPS proxies can be used in the same way that HTTP proxies are.
 
 ```python
-proxy = httpcore.HTTPProxy(proxy_url="https://127.0.0.1:8080/")
+proxy = httpcore.Proxy(url="https://127.0.0.1:8080/")
 ```
 
-Also, when using HTTPS proxies, you may need to configure the SSL context, which you can do with the `proxy_ssl_context` argument.
+Also, when using HTTPS proxies, you may need to configure the SSL context, which you can do with the `ssl_context` argument.
 
 ```python
 import ssl
@@ -70,10 +73,12 @@ import httpcore
 proxy_ssl_context = ssl.create_default_context()
 proxy_ssl_context.check_hostname = False
 
-proxy = httpcore.HTTPProxy('https://127.0.0.1:8080/', proxy_ssl_context=proxy_ssl_context)
+proxy = httpcore.Proxy(
+    url='https://127.0.0.1:8080/',
+    ssl_context=proxy_ssl_context
+)
+pool = httpcore.ConnectionPool(proxy=proxy)
 ```
-
-It is important to note that the `ssl_context` argument is always used for the remote connection, and the `proxy_ssl_context` argument is always used for the proxy connection.
 
 ## HTTP Versions
 
@@ -91,8 +96,9 @@ The `SOCKSProxy` class should be using instead of a standard connection pool:
 import httpcore
 
 # Note that the SOCKS port is 1080.
-proxy = httpcore.SOCKSProxy(proxy_url="socks5://127.0.0.1:1080/")
-r = proxy.request("GET", "https://www.example.com/")
+proxy = httpcore.Proxy(url="socks5://127.0.0.1:1080/")
+pool = httpcore.ConnectionPool(proxy=proxy)
+r = pool.request("GET", "https://www.example.com/")
 ```
 
 Authentication via SOCKS is also supported:
@@ -100,20 +106,21 @@ Authentication via SOCKS is also supported:
 ```python
 import httpcore
 
-proxy = httpcore.SOCKSProxy(
-    proxy_url="socks5://127.0.0.1:8080/",
-    proxy_auth=("<username>", "<password>")
+proxy = httpcore.Proxy(
+    url="socks5://127.0.0.1:1080/",
+    auth=("<username>", "<password>"),
 )
-r = proxy.request("GET", "https://www.example.com/")
+pool = httpcore.ConnectionPool(proxy=proxy)
+r = pool.request("GET", "https://www.example.com/")
 ```
 
 ---
 
 # Reference
 
-## `httpcore.HTTPProxy`
+## `httpcore.Proxy`
 
-::: httpcore.HTTPProxy
+::: httpcore.Proxy
     handler: python
     rendering:
         show_source: False

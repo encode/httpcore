@@ -34,14 +34,6 @@ async with httpcore.AsyncConnectionPool() as http:
     ...
 ```
 
-Or if connecting via a proxy:
-
-```python
-# The async variation of `httpcore.HTTPProxy`
-async with httpcore.AsyncHTTPProxy() as proxy:
-    ...
-```
-
 ### Sending requests
 
 Sending requests with the async version of `httpcore` requires the `await` keyword:
@@ -218,13 +210,6 @@ anyio.run(main)
 ## `httpcore.AsyncConnectionPool`
 
 ::: httpcore.AsyncConnectionPool
-    handler: python
-    rendering:
-        show_source: False
-
-## `httpcore.AsyncHTTPProxy`
-
-::: httpcore.AsyncHTTPProxy
     handler: python
     rendering:
         show_source: False
