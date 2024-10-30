@@ -1,5 +1,4 @@
 import asyncio
-import os
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -21,7 +20,7 @@ REQUESTS = 500
 CONCURRENCY = 20
 POOL_LIMIT = 100
 PROFILE = False
-os.environ["HTTPCORE_PREFER_ANYIO"] = "0"
+NET_BACKEND = httpcore.AsyncIOBackend
 
 
 def duration(start: float) -> int:
@@ -66,7 +65,9 @@ async def run_async_requests(axis: Axes) -> None:
             assert res.status == 200, f"status={res.status}"
         timings.append(duration(start))
 
-    async with httpcore.AsyncConnectionPool(max_connections=POOL_LIMIT) as pool:
+    async with httpcore.AsyncConnectionPool(
+        max_connections=POOL_LIMIT, network_backend=NET_BACKEND()
+    ) as pool:
         # warmup
         await gather_limited_concurrency(
             (httpcore_get(pool, []) for _ in range(REQUESTS)), CONCURRENCY * 2
