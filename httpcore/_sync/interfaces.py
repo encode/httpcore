@@ -17,6 +17,33 @@ from .._models import (
 )
 
 
+class StartResponse:
+    def __init__(self, status: int, headers: HeaderTypes, extensions: Extensions):
+        self.status = status
+        self.headers = headers
+        self.extensions = extensions
+
+
+class ResponseContext:
+    def __init__(self, status: int, headers: HeaderTypes, iterator, extensions: Extensions):
+        self._status = status
+        self._headers = headers
+        self._iterator = iterator
+        self._extensions = extensions
+
+    def __enter__(self):
+        self._response = Response(
+            status=self._status,
+            headers=self._headers,
+            content=self._iterator,
+            extensions=self._extensions
+        )
+        return self._response
+
+    def __exit__(self, *args, **kwargs):
+        self._response.close()
+
+
 class RequestInterface:
     def request(
         self,
@@ -42,12 +69,15 @@ class RequestInterface:
             content=content,
             extensions=extensions,
         )
-        response = self.handle_request(request)
-        try:
-            response.read()
-        finally:
-            response.close()
-        return response
+        iterator = self.iterate_response(request)
+        start_response = next(iterator)
+        content = b"".join([part for part in iterator])
+        return Response(
+            status=start_response.status,
+            headers=start_response.headers,
+            content=content,
+            extensions=start_response.extensions,
+        )
 
     @contextlib.contextmanager
     def stream(
@@ -58,7 +88,7 @@ class RequestInterface:
         headers: HeaderTypes = None,
         content: bytes | typing.Iterator[bytes] | None = None,
         extensions: Extensions | None = None,
-    ) -> typing.Iterator[Response]:
+    ) -> ResponseContext:
         # Strict type checking on our parameters.
         method = enforce_bytes(method, name="method")
         url = enforce_url(url, name="url")
@@ -74,13 +104,22 @@ class RequestInterface:
             content=content,
             extensions=extensions,
         )
-        response = self.handle_request(request)
+        iterator = self.iterate_response(request)
+        start_response = next(iterator)
+        response = Response(
+            status=start_response.status,
+            headers=start_response.headers,
+            content=iterator,
+            extensions=start_response.extensions,
+        )
         try:
             yield response
         finally:
             response.close()
 
-    def handle_request(self, request: Request) -> Response:
+    def iterate_response(
+        self, request: Request
+    ) -> typing.Iterator[StartResponse | bytes]:
         raise NotImplementedError()  # pragma: nocover
 
 

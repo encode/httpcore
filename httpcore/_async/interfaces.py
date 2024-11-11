@@ -17,6 +17,33 @@ from .._models import (
 )
 
 
+class StartResponse:
+    def __init__(self, status: int, headers: HeaderTypes, extensions: Extensions):
+        self.status = status
+        self.headers = headers
+        self.extensions = extensions
+
+
+class ResponseContext:
+    def __init__(self, status: int, headers: HeaderTypes, iterator, extensions: Extensions):
+        self._status = status
+        self._headers = headers
+        self._iterator = iterator
+        self._extensions = extensions
+
+    async def __aenter__(self):
+        self._response = Response(
+            status=self._status,
+            headers=self._headers,
+            content=self._iterator,
+            extensions=self._extensions
+        )
+        return self._response
+
+    async def __aexit__(self, *args, **kwargs):
+        await self._response.aclose()
+
+
 class AsyncRequestInterface:
     async def request(
         self,
@@ -42,12 +69,15 @@ class AsyncRequestInterface:
             content=content,
             extensions=extensions,
         )
-        response = await self.handle_async_request(request)
-        try:
-            await response.aread()
-        finally:
-            await response.aclose()
-        return response
+        iterator = self.iterate_response(request)
+        start_response = await anext(iterator)
+        content = b"".join([part async for part in iterator])
+        return Response(
+            status=start_response.status,
+            headers=start_response.headers,
+            content=content,
+            extensions=start_response.extensions,
+        )
 
     @contextlib.asynccontextmanager
     async def stream(
@@ -58,7 +88,7 @@ class AsyncRequestInterface:
         headers: HeaderTypes = None,
         content: bytes | typing.AsyncIterator[bytes] | None = None,
         extensions: Extensions | None = None,
-    ) -> typing.AsyncIterator[Response]:
+    ) -> ResponseContext:
         # Strict type checking on our parameters.
         method = enforce_bytes(method, name="method")
         url = enforce_url(url, name="url")
@@ -74,14 +104,24 @@ class AsyncRequestInterface:
             content=content,
             extensions=extensions,
         )
-        response = await self.handle_async_request(request)
+        iterator = self.iterate_response(request)
+        start_response = await anext(iterator)
+        response = Response(
+            status=start_response.status,
+            headers=start_response.headers,
+            content=iterator,
+            extensions=start_response.extensions,
+        )
         try:
             yield response
         finally:
             await response.aclose()
 
-    async def handle_async_request(self, request: Request) -> Response:
+    async def iterate_response(
+        self, request: Request
+    ) -> typing.AsyncIterator[StartResponse | bytes]:
         raise NotImplementedError()  # pragma: nocover
+        yield b''
 
 
 class AsyncConnectionInterface(AsyncRequestInterface):

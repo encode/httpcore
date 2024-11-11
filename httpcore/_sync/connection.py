@@ -9,12 +9,12 @@ import typing
 from .._backends.sync import SyncBackend
 from .._backends.base import SOCKET_OPTION, NetworkBackend, NetworkStream
 from .._exceptions import ConnectError, ConnectTimeout
-from .._models import Origin, Request, Response
+from .._models import Origin, Request
 from .._ssl import default_ssl_context
-from .._synchronization import Lock
+from .._synchronization import Semaphore
 from .._trace import Trace
 from .http11 import HTTP11Connection
-from .interfaces import ConnectionInterface
+from .interfaces import ConnectionInterface, StartResponse
 
 RETRIES_BACKOFF_FACTOR = 0.5  # 0s, 0.5s, 1s, 2s, 4s, etc.
 
@@ -63,10 +63,10 @@ class HTTPConnection(ConnectionInterface):
         )
         self._connection: ConnectionInterface | None = None
         self._connect_failed: bool = False
-        self._request_lock = Lock()
+        self._request_lock = Semaphore(bound=1)
         self._socket_options = socket_options
 
-    def handle_request(self, request: Request) -> Response:
+    def iterate_response(self, request: Request) -> typing.Iterator[StartResponse | bytes]:
         if not self.can_handle_request(request.url.origin):
             raise RuntimeError(
                 f"Attempted to send request to {request.url.origin} on connection to {self._origin}"
@@ -100,7 +100,12 @@ class HTTPConnection(ConnectionInterface):
             self._connect_failed = True
             raise exc
 
-        return self._connection.handle_request(request)
+        # iterator = self._connection.iterate_response(request)
+        iterator = self._connection.iterate_response(request)
+        start_response = next(iterator)
+        yield start_response
+        for body in iterator:
+            yield body
 
     def _connect(self, request: Request) -> NetworkStream:
         timeouts = request.extensions.get("timeout", {})
@@ -174,14 +179,7 @@ class HTTPConnection(ConnectionInterface):
 
     def is_available(self) -> bool:
         if self._connection is None:
-            # If HTTP/2 support is enabled, and the resulting connection could
-            # end up as HTTP/2 then we should indicate the connection as being
-            # available to service multiple requests.
-            return (
-                self._http2
-                and (self._origin.scheme == b"https" or not self._http1)
-                and not self._connect_failed
-            )
+            return False
         return self._connection.is_available()
 
     def has_expired(self) -> bool:

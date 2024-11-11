@@ -171,7 +171,7 @@ class AsyncSemaphore:
                 initial_value=self._bound, max_value=self._bound
             )
 
-    async def acquire(self) -> None:
+    async def __aenter__(self) -> None:
         if not self._backend:
             self.setup()
 
@@ -180,7 +180,12 @@ class AsyncSemaphore:
         elif self._backend == "asyncio":
             await self._anyio_semaphore.acquire()
 
-    async def release(self) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None = None,
+        exc_value: BaseException | None = None,
+        traceback: types.TracebackType | None = None,
+    ) -> None:
         if self._backend == "trio":
             self._trio_semaphore.release()
         elif self._backend == "asyncio":
@@ -295,10 +300,15 @@ class Semaphore:
     def __init__(self, bound: int) -> None:
         self._semaphore = threading.Semaphore(value=bound)
 
-    def acquire(self) -> None:
+    def __enter__(self) -> None:
         self._semaphore.acquire()
 
-    def release(self) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None = None,
+        exc_value: BaseException | None = None,
+        traceback: types.TracebackType | None = None,
+    ) -> None:
         self._semaphore.release()
 
 
