@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ssl
 import sys
+import types
 import typing
 
 from .._backends.auto import AutoBackend
@@ -22,7 +23,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
         self,
         ssl_context: ssl.SSLContext | None = None,
         proxy: Proxy | None = None,
-        concurrency_limit: int = 100,
+        limit: int = 100,
         max_connections: int | None = 10,
         max_keepalive_connections: int | None = None,
         keepalive_expiry: float | None = None,
@@ -76,7 +77,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
         self._max_keepalive_connections = min(
             self._max_connections, self._max_keepalive_connections
         )
-        self._limits = AsyncSemaphore(bound=concurrency_limit)
+        self._limits = AsyncSemaphore(bound=limit)
 
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
@@ -93,7 +94,6 @@ class AsyncConnectionPool(AsyncRequestInterface):
         # The mutable state on a connection pool is the queue of incoming requests,
         # and the set of connections that are servicing those requests.
         self._connections: list[AsyncConnectionInterface] = []
-        self._requests: list[AsyncPoolRequest] = []
 
         # We only mutate the state of the connection pool within an 'optional_thread_lock'
         # context. This holds a threading lock unless we're running in async mode,
@@ -171,7 +171,9 @@ class AsyncConnectionPool(AsyncRequestInterface):
         """
         return list(self._connections)
 
-    async def iterate_response(self, request: Request) -> typing.AsyncIterator[StartResponse | bytes]:
+    async def iterate_response(
+        self, request: Request
+    ) -> typing.AsyncIterator[StartResponse | bytes]:
         """
         Send an HTTP request, and return an HTTP response.
 
@@ -219,7 +221,8 @@ class AsyncConnectionPool(AsyncRequestInterface):
     def _close_connections(self):
         closing = [conn for conn in self._connections if conn.has_expired()]
         self._connections = [
-            conn for conn in self._connections
+            conn
+            for conn in self._connections
             if not (conn.has_expired() or conn.is_closed())
         ]
         return closing
@@ -245,9 +248,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
 
     def __repr__(self) -> str:
         class_name = self.__class__.__name__
-        connection_is_idle = [
-            connection.is_idle() for connection in self._connections
-        ]
+        connection_is_idle = [connection.is_idle() for connection in self._connections]
         num_active_connections = connection_is_idle.count(False)
         num_idle_connections = connection_is_idle.count(True)
         connection_info = (

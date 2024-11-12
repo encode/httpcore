@@ -66,7 +66,9 @@ class HTTPConnection(ConnectionInterface):
         self._request_lock = Semaphore(bound=1)
         self._socket_options = socket_options
 
-    def iterate_response(self, request: Request) -> typing.Iterator[StartResponse | bytes]:
+    def iterate_response(
+        self, request: Request
+    ) -> typing.Iterator[StartResponse | bytes]:
         if not self.can_handle_request(request.url.origin):
             raise RuntimeError(
                 f"Attempted to send request to {request.url.origin} on connection to {self._origin}"
@@ -100,7 +102,6 @@ class HTTPConnection(ConnectionInterface):
             self._connect_failed = True
             raise exc
 
-        # iterator = self._connection.iterate_response(request)
         iterator = self._connection.iterate_response(request)
         start_response = next(iterator)
         yield start_response

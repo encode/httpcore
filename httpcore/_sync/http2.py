@@ -18,10 +18,10 @@ from .._exceptions import (
     LocalProtocolError,
     RemoteProtocolError,
 )
-from .._models import Origin, Request, Response
+from .._models import Origin, Request
 from .._synchronization import Lock, Semaphore, ShieldCancellation
 from .._trace import Trace
-from .interfaces import ConnectionInterface
+from .interfaces import ConnectionInterface, StartResponse
 
 logger = logging.getLogger("httpcore.http2")
 
@@ -60,6 +60,7 @@ class HTTP2Connection(ConnectionInterface):
         self._state_lock = Lock()
         self._read_lock = Lock()
         self._write_lock = Lock()
+        self._max_streams_semaphore = Semaphore(100)
         self._sent_connection_init = False
         self._used_all_stream_ids = False
         self._connection_error = False
@@ -80,7 +81,9 @@ class HTTP2Connection(ConnectionInterface):
         self._read_exception: Exception | None = None
         self._write_exception: Exception | None = None
 
-    def handle_request(self, request: Request) -> Response:
+    def iterate_response(
+        self, request: Request
+    ) -> typing.Iterator[StartResponse | bytes]:
         if not self.can_handle_request(request.url.origin):
             # This cannot occur in normal operation, since the connection pool
             # will only send requests on connections that handle them.
@@ -112,75 +115,66 @@ class HTTP2Connection(ConnectionInterface):
 
                 self._sent_connection_init = True
 
-                # Initially start with just 1 until the remote server provides
-                # its max_concurrent_streams value
-                self._max_streams = 1
+        with self._max_streams_semaphore:
+            try:
+                stream_id = self._h2_state.get_next_available_stream_id()
+                self._events[stream_id] = []
+            except h2.exceptions.NoAvailableStreamIDError:  # pragma: nocover
+                self._used_all_stream_ids = True
+                self._request_count -= 1
+                raise ConnectionNotAvailable()
 
-                local_settings_max_streams = (
-                    self._h2_state.local_settings.max_concurrent_streams
+            try:
+                kwargs = {"request": request, "stream_id": stream_id}
+                with Trace("send_request_headers", logger, request, kwargs):
+                    self._send_request_headers(
+                        request=request, stream_id=stream_id
+                    )
+                with Trace("send_request_body", logger, request, kwargs):
+                    self._send_request_body(request=request, stream_id=stream_id)
+                with Trace(
+                    "receive_response_headers", logger, request, kwargs
+                ) as trace:
+                    status, headers = self._receive_response(
+                        request=request, stream_id=stream_id
+                    )
+                    trace.return_value = (status, headers)
+
+                yield StartResponse(
+                    status=status,
+                    headers=headers,
+                    extensions={
+                        "http_version": b"HTTP/2",
+                        "network_stream": self._network_stream,
+                        "stream_id": stream_id,
+                    },
                 )
-                self._max_streams_semaphore = Semaphore(local_settings_max_streams)
-
-                for _ in range(local_settings_max_streams - self._max_streams):
-                    self._max_streams_semaphore.acquire()
-
-        self._max_streams_semaphore.acquire()
-
-        try:
-            stream_id = self._h2_state.get_next_available_stream_id()
-            self._events[stream_id] = []
-        except h2.exceptions.NoAvailableStreamIDError:  # pragma: nocover
-            self._used_all_stream_ids = True
-            self._request_count -= 1
-            raise ConnectionNotAvailable()
-
-        try:
-            kwargs = {"request": request, "stream_id": stream_id}
-            with Trace("send_request_headers", logger, request, kwargs):
-                self._send_request_headers(request=request, stream_id=stream_id)
-            with Trace("send_request_body", logger, request, kwargs):
-                self._send_request_body(request=request, stream_id=stream_id)
-            with Trace(
-                "receive_response_headers", logger, request, kwargs
-            ) as trace:
-                status, headers = self._receive_response(
-                    request=request, stream_id=stream_id
-                )
-                trace.return_value = (status, headers)
-
-            return Response(
-                status=status,
-                headers=headers,
-                content=HTTP2ConnectionByteStream(self, request, stream_id=stream_id),
-                extensions={
-                    "http_version": b"HTTP/2",
-                    "network_stream": self._network_stream,
-                    "stream_id": stream_id,
-                },
-            )
-        except BaseException as exc:  # noqa: PIE786
-            with ShieldCancellation():
+                with Trace("receive_response_body", logger, request, kwargs):
+                    for chunk in self._receive_response_body(
+                        request=request, stream_id=stream_id
+                    ):
+                        yield chunk
+            except BaseException as exc:  # noqa: PIE786
+                if isinstance(exc, h2.exceptions.ProtocolError):
+                    # One case where h2 can raise a protocol error is when a
+                    # closed frame has been seen by the state machine.
+                    #
+                    # This happens when one stream is reading, and encounters
+                    # a GOAWAY event. Other flows of control may then raise
+                    # a protocol error at any point they interact with the 'h2_state'.
+                    #
+                    # In this case we'll have stored the event, and should raise
+                    # it as a RemoteProtocolError.
+                    if self._connection_terminated:  # pragma: nocover
+                        raise RemoteProtocolError(self._connection_terminated)
+                    # If h2 raises a protocol error in some other state then we
+                    # must somehow have made a protocol violation.
+                    raise LocalProtocolError(exc)  # pragma: nocover
+                raise exc
+            finally:
                 kwargs = {"stream_id": stream_id}
                 with Trace("response_closed", logger, request, kwargs):
                     self._response_closed(stream_id=stream_id)
-
-            if isinstance(exc, h2.exceptions.ProtocolError):
-                # One case where h2 can raise a protocol error is when a
-                # closed frame has been seen by the state machine.
-                #
-                # This happens when one stream is reading, and encounters
-                # a GOAWAY event. Other flows of control may then raise
-                # a protocol error at any point they interact with the 'h2_state'.
-                #
-                # In this case we'll have stored the event, and should raise
-                # it as a RemoteProtocolError.
-                if self._connection_terminated:  # pragma: nocover
-                    raise RemoteProtocolError(self._connection_terminated)
-                # If h2 raises a protocol error in some other state then we
-                # must somehow have made a protocol violation.
-                raise LocalProtocolError(exc)  # pragma: nocover
-
-            raise exc
 
     def _send_connection_init(self, request: Request) -> None:
         """
@@ -356,14 +350,14 @@ class HTTP2Connection(ConnectionInterface):
             if stream_id is None or not self._events.get(stream_id):
                 events = self._read_incoming_data(request)
                 for event in events:
-                    if isinstance(event, h2.events.RemoteSettingsChanged):
-                        with Trace(
-                            "receive_remote_settings", logger, request
-                        ) as trace:
-                            self._receive_remote_settings_change(event)
-                            trace.return_value = event
+                    # if isinstance(event, h2.events.RemoteSettingsChanged):
+                    #     with Trace(
+                    #         "receive_remote_settings", logger, request
+                    #     ) as trace:
+                    #         self._receive_remote_settings_change(event)
+                    #         trace.return_value = event
 
-                    elif isinstance(
+                    if isinstance(
                         event,
                         (
                             h2.events.ResponseReceived,
@@ -380,25 +374,24 @@ class HTTP2Connection(ConnectionInterface):
 
         self._write_outgoing_data(request)
 
-    def _receive_remote_settings_change(self, event: h2.events.Event) -> None:
-        max_concurrent_streams = event.changed_settings.get(
-            h2.settings.SettingCodes.MAX_CONCURRENT_STREAMS
-        )
-        if max_concurrent_streams:
-            new_max_streams = min(
-                max_concurrent_streams.new_value,
-                self._h2_state.local_settings.max_concurrent_streams,
-            )
-            if new_max_streams and new_max_streams != self._max_streams:
-                while new_max_streams > self._max_streams:
-                    self._max_streams_semaphore.release()
-                    self._max_streams += 1
-                while new_max_streams < self._max_streams:
-                    self._max_streams_semaphore.acquire()
-                    self._max_streams -= 1
+    # def _receive_remote_settings_change(self, event: h2.events.Event) -> None:
+    #     max_concurrent_streams = event.changed_settings.get(
+    #         h2.settings.SettingCodes.MAX_CONCURRENT_STREAMS
+    #     )
+    #     if max_concurrent_streams:
+    #         new_max_streams = min(
+    #             max_concurrent_streams.new_value,
+    #             self._h2_state.local_settings.max_concurrent_streams,
+    #         )
+    #         if new_max_streams and new_max_streams != self._max_streams:
+    #             while new_max_streams > self._max_streams:
+    #                 self._max_streams_semaphore.release()
+    #                 self._max_streams += 1
+    #             while new_max_streams < self._max_streams:
+    #                 self._max_streams_semaphore.acquire()
+    #                 self._max_streams -= 1
 
     def _response_closed(self, stream_id: int) -> None:
-        self._max_streams_semaphore.release()
         del self._events[stream_id]
         with self._state_lock:
             if self._connection_terminated and not self._events:

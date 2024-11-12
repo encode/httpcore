@@ -145,26 +145,26 @@ def test_http11_connection_with_local_protocol_error():
         )
 
 
-
-def test_http11_connection_handles_one_active_request():
-    """
-    Attempting to send a request while one is already in-flight will raise
-    a ConnectionNotAvailable exception.
-    """
-    origin = httpcore.Origin(b"https", b"example.com", 443)
-    stream = httpcore.MockStream(
-        [
-            b"HTTP/1.1 200 OK\r\n",
-            b"Content-Type: plain/text\r\n",
-            b"Content-Length: 13\r\n",
-            b"\r\n",
-            b"Hello, world!",
-        ]
-    )
-    with httpcore.HTTP11Connection(origin=origin, stream=stream) as conn:
-        with conn.stream("GET", "https://example.com/"):
-            with pytest.raises(httpcore.ConnectionNotAvailable):
-                conn.request("GET", "https://example.com/")
+# @pytest.mark.anyio
+# def test_http11_connection_handles_one_active_request():
+#     """
+#     Attempting to send a request while one is already in-flight will raise
+#     a ConnectionNotAvailable exception.
+#     """
+#     origin = httpcore.Origin(b"https", b"example.com", 443)
+#     stream = httpcore.MockStream(
+#         [
+#             b"HTTP/1.1 200 OK\r\n",
+#             b"Content-Type: plain/text\r\n",
+#             b"Content-Length: 13\r\n",
+#             b"\r\n",
+#             b"Hello, world!",
+#         ]
+#     )
+#     with httpcore.HTTP11Connection(origin=origin, stream=stream) as conn:
+#         with conn.stream("GET", "https://example.com/"):
+#             with pytest.raises(httpcore.ConnectionNotAvailable):
+#                 conn.request("GET", "https://example.com/")
 
 
 

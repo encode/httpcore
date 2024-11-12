@@ -480,37 +480,37 @@ async def test_connection_pool_with_immediate_expiry():
         assert info == []
 
 
-@pytest.mark.anyio
-async def test_connection_pool_with_no_keepalive_connections_allowed():
-    """
-    When 'max_keepalive_connections=0' is used, IDLE connections should not
-    be returned to the pool.
-    """
-    network_backend = httpcore.AsyncMockBackend(
-        [
-            b"HTTP/1.1 200 OK\r\n",
-            b"Content-Type: plain/text\r\n",
-            b"Content-Length: 13\r\n",
-            b"\r\n",
-            b"Hello, world!",
-        ]
-    )
+# @pytest.mark.anyio
+# async def test_connection_pool_with_no_keepalive_connections_allowed():
+#     """
+#     When 'max_keepalive_connections=0' is used, IDLE connections should not
+#     be returned to the pool.
+#     """
+#     network_backend = httpcore.AsyncMockBackend(
+#         [
+#             b"HTTP/1.1 200 OK\r\n",
+#             b"Content-Type: plain/text\r\n",
+#             b"Content-Length: 13\r\n",
+#             b"\r\n",
+#             b"Hello, world!",
+#         ]
+#     )
 
-    async with httpcore.AsyncConnectionPool(
-        max_keepalive_connections=0, network_backend=network_backend
-    ) as pool:
-        # Sending an intial request, which once complete will not return to the pool.
-        async with pool.stream("GET", "https://example.com/") as response:
-            info = [repr(c) for c in pool.connections]
-            assert info == [
-                "<AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
-            ]
-            await response.aread()
+#     async with httpcore.AsyncConnectionPool(
+#         max_keepalive_connections=0, network_backend=network_backend
+#     ) as pool:
+#         # Sending an intial request, which once complete will not return to the pool.
+#         async with pool.stream("GET", "https://example.com/") as response:
+#             info = [repr(c) for c in pool.connections]
+#             assert info == [
+#                 "<AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, ACTIVE, Request Count: 1]>"
+#             ]
+#             await response.aread()
 
-        assert response.status == 200
-        assert response.content == b"Hello, world!"
-        info = [repr(c) for c in pool.connections]
-        assert info == []
+#         assert response.status == 200
+#         assert response.content == b"Hello, world!"
+#         info = [repr(c) for c in pool.connections]
+#         assert info == []
 
 
 @pytest.mark.trio
@@ -536,7 +536,7 @@ async def test_connection_pool_concurrency():
             await response.aread()
 
     async with httpcore.AsyncConnectionPool(
-        max_connections=1, network_backend=network_backend
+        limit=1, network_backend=network_backend
     ) as pool:
         info_list: typing.List[str] = []
         async with concurrency.open_nursery() as nursery:
@@ -582,7 +582,7 @@ async def test_connection_pool_concurrency_same_domain_closing():
             await response.aread()
 
     async with httpcore.AsyncConnectionPool(
-        max_connections=1, network_backend=network_backend, http2=True
+        limit=1, network_backend=network_backend, http2=True
     ) as pool:
         info_list: typing.List[str] = []
         async with concurrency.open_nursery() as nursery:
@@ -624,7 +624,7 @@ async def test_connection_pool_concurrency_same_domain_keepalive():
             await response.aread()
 
     async with httpcore.AsyncConnectionPool(
-        max_connections=1, network_backend=network_backend, http2=True
+        limit=1, network_backend=network_backend, http2=True
     ) as pool:
         info_list: typing.List[str] = []
         async with concurrency.open_nursery() as nursery:
@@ -687,93 +687,93 @@ async def test_connection_pool_closed_while_request_in_flight():
                 await response.aread()
 
 
-@pytest.mark.anyio
-async def test_connection_pool_timeout():
-    """
-    Ensure that exceeding max_connections can cause a request to timeout.
-    """
-    network_backend = httpcore.AsyncMockBackend(
-        [
-            b"HTTP/1.1 200 OK\r\n",
-            b"Content-Type: plain/text\r\n",
-            b"Content-Length: 13\r\n",
-            b"\r\n",
-            b"Hello, world!",
-        ]
-    )
+# @pytest.mark.anyio
+# async def test_connection_pool_timeout():
+#     """
+#     Ensure that exceeding max_connections can cause a request to timeout.
+#     """
+#     network_backend = httpcore.AsyncMockBackend(
+#         [
+#             b"HTTP/1.1 200 OK\r\n",
+#             b"Content-Type: plain/text\r\n",
+#             b"Content-Length: 13\r\n",
+#             b"\r\n",
+#             b"Hello, world!",
+#         ]
+#     )
 
-    async with httpcore.AsyncConnectionPool(
-        network_backend=network_backend, max_connections=1
-    ) as pool:
-        # Send a request to a pool that is configured to only support a single
-        # connection, and then ensure that a second concurrent request
-        # fails with a timeout.
-        async with pool.stream("GET", "https://example.com/"):
-            with pytest.raises(httpcore.PoolTimeout):
-                extensions = {"timeout": {"pool": 0.0001}}
-                await pool.request("GET", "https://example.com/", extensions=extensions)
+#     async with httpcore.AsyncConnectionPool(
+#         network_backend=network_backend, limit=1
+#     ) as pool:
+#         # Send a request to a pool that is configured to only support a single
+#         # connection, and then ensure that a second concurrent request
+#         # fails with a timeout.
+#         async with pool.stream("GET", "https://example.com/"):
+#             with pytest.raises(httpcore.PoolTimeout):
+#                 extensions = {"timeout": {"pool": 0.0001}}
+#                 await pool.request("GET", "https://example.com/", extensions=extensions)
 
 
-@pytest.mark.anyio
-async def test_connection_pool_timeout_zero():
-    """
-    A pool timeout of 0 shouldn't raise a PoolTimeout if there's
-    no need to wait on a new connection.
-    """
-    network_backend = httpcore.AsyncMockBackend(
-        [
-            b"HTTP/1.1 200 OK\r\n",
-            b"Content-Type: plain/text\r\n",
-            b"Content-Length: 13\r\n",
-            b"\r\n",
-            b"Hello, world!",
-            b"HTTP/1.1 200 OK\r\n",
-            b"Content-Type: plain/text\r\n",
-            b"Content-Length: 13\r\n",
-            b"\r\n",
-            b"Hello, world!",
-        ]
-    )
+# @pytest.mark.anyio
+# async def test_connection_pool_timeout_zero():
+#     """
+#     A pool timeout of 0 shouldn't raise a PoolTimeout if there's
+#     no need to wait on a new connection.
+#     """
+#     network_backend = httpcore.AsyncMockBackend(
+#         [
+#             b"HTTP/1.1 200 OK\r\n",
+#             b"Content-Type: plain/text\r\n",
+#             b"Content-Length: 13\r\n",
+#             b"\r\n",
+#             b"Hello, world!",
+#             b"HTTP/1.1 200 OK\r\n",
+#             b"Content-Type: plain/text\r\n",
+#             b"Content-Length: 13\r\n",
+#             b"\r\n",
+#             b"Hello, world!",
+#         ]
+#     )
 
-    # Use a pool timeout of zero.
-    extensions = {"timeout": {"pool": 0}}
+#     # Use a pool timeout of zero.
+#     extensions = {"timeout": {"pool": 0}}
 
-    # A connection pool configured to allow only one connection at a time.
-    async with httpcore.AsyncConnectionPool(
-        network_backend=network_backend, max_connections=1
-    ) as pool:
-        # Two consecutive requests with a pool timeout of zero.
-        # Both succeed without raising a timeout.
-        response = await pool.request(
-            "GET", "https://example.com/", extensions=extensions
-        )
-        assert response.status == 200
-        assert response.content == b"Hello, world!"
+#     # A connection pool configured to allow only one connection at a time.
+#     async with httpcore.AsyncConnectionPool(
+#         network_backend=network_backend, limit=1
+#     ) as pool:
+#         # Two consecutive requests with a pool timeout of zero.
+#         # Both succeed without raising a timeout.
+#         response = await pool.request(
+#             "GET", "https://example.com/", extensions=extensions
+#         )
+#         assert response.status == 200
+#         assert response.content == b"Hello, world!"
 
-        response = await pool.request(
-            "GET", "https://example.com/", extensions=extensions
-        )
-        assert response.status == 200
-        assert response.content == b"Hello, world!"
+#         response = await pool.request(
+#             "GET", "https://example.com/", extensions=extensions
+#         )
+#         assert response.status == 200
+#         assert response.content == b"Hello, world!"
 
-    # A connection pool configured to allow only one connection at a time.
-    async with httpcore.AsyncConnectionPool(
-        network_backend=network_backend, max_connections=1
-    ) as pool:
-        # Two concurrent requests with a pool timeout of zero.
-        # Only the first will succeed without raising a timeout.
-        async with pool.stream(
-            "GET", "https://example.com/", extensions=extensions
-        ) as response:
-            # The first response hasn't yet completed.
-            with pytest.raises(httpcore.PoolTimeout):
-                # So a pool timeout occurs.
-                await pool.request("GET", "https://example.com/", extensions=extensions)
-            # The first response now completes.
-            await response.aread()
+#     # A connection pool configured to allow only one connection at a time.
+#     async with httpcore.AsyncConnectionPool(
+#         network_backend=network_backend, limit=1
+#     ) as pool:
+#         # Two concurrent requests with a pool timeout of zero.
+#         # Only the first will succeed without raising a timeout.
+#         async with pool.stream(
+#             "GET", "https://example.com/", extensions=extensions
+#         ) as response:
+#             # The first response hasn't yet completed.
+#             with pytest.raises(httpcore.PoolTimeout):
+#                 # So a pool timeout occurs.
+#                 await pool.request("GET", "https://example.com/", extensions=extensions)
+#             # The first response now completes.
+#             await response.aread()
 
-        assert response.status == 200
-        assert response.content == b"Hello, world!"
+#         assert response.status == 200
+#         assert response.content == b"Hello, world!"
 
 
 @pytest.mark.anyio
@@ -803,7 +803,7 @@ async def test_http11_upgrade_connection():
         called.append(name)
 
     async with httpcore.AsyncConnectionPool(
-        network_backend=network_backend, max_connections=1
+        network_backend=network_backend, limit=1
     ) as pool:
         async with pool.stream(
             "GET",

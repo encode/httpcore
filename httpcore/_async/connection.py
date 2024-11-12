@@ -66,7 +66,9 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
         self._request_lock = AsyncSemaphore(bound=1)
         self._socket_options = socket_options
 
-    async def iterate_response(self, request: Request) -> typing.AsyncIterator[StartResponse | bytes]:
+    async def iterate_response(
+        self, request: Request
+    ) -> typing.AsyncIterator[StartResponse | bytes]:
         if not self.can_handle_request(request.url.origin):
             raise RuntimeError(
                 f"Attempted to send request to {request.url.origin} on connection to {self._origin}"

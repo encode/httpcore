@@ -25,7 +25,9 @@ class StartResponse:
 
 
 class ResponseContext:
-    def __init__(self, status: int, headers: HeaderTypes, iterator, extensions: Extensions):
+    def __init__(
+        self, status: int, headers: HeaderTypes, iterator, extensions: Extensions
+    ):
         self._status = status
         self._headers = headers
         self._iterator = iterator
@@ -36,7 +38,7 @@ class ResponseContext:
             status=self._status,
             headers=self._headers,
             content=self._iterator,
-            extensions=self._extensions
+            extensions=self._extensions,
         )
         return self._response
 
@@ -121,6 +123,7 @@ class RequestInterface:
         self, request: Request
     ) -> typing.Iterator[StartResponse | bytes]:
         raise NotImplementedError()  # pragma: nocover
+        yield b""
 
 
 class ConnectionInterface(RequestInterface):

@@ -18,7 +18,7 @@ from .._exceptions import (
     LocalProtocolError,
     RemoteProtocolError,
 )
-from .._models import Origin, Request, Response
+from .._models import Origin, Request
 from .._synchronization import AsyncLock, AsyncSemaphore, AsyncShieldCancellation
 from .._trace import Trace
 from .interfaces import AsyncConnectionInterface, StartResponse
@@ -127,7 +127,9 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
             try:
                 kwargs = {"request": request, "stream_id": stream_id}
                 async with Trace("send_request_headers", logger, request, kwargs):
-                    await self._send_request_headers(request=request, stream_id=stream_id)
+                    await self._send_request_headers(
+                        request=request, stream_id=stream_id
+                    )
                 async with Trace("send_request_body", logger, request, kwargs):
                     await self._send_request_body(request=request, stream_id=stream_id)
                 async with Trace(
