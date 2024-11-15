@@ -61,29 +61,29 @@ async def test_http_connection():
         )
 
 
-# @pytest.mark.anyio
-# async def test_concurrent_requests_not_available_on_http11_connections():
-#     """
-#     Attempting to issue a request against an already active HTTP/1.1 connection
-#     will raise a `ConnectionNotAvailable` exception.
-#     """
-#     origin = Origin(b"https", b"example.com", 443)
-#     network_backend = AsyncMockBackend(
-#         [
-#             b"HTTP/1.1 200 OK\r\n",
-#             b"Content-Type: plain/text\r\n",
-#             b"Content-Length: 13\r\n",
-#             b"\r\n",
-#             b"Hello, world!",
-#         ]
-#     )
+@pytest.mark.anyio
+async def test_concurrent_requests_not_available_on_http11_connections():
+    """
+    Attempting to issue a request against an already active HTTP/1.1 connection
+    will raise a `ConnectionNotAvailable` exception.
+    """
+    origin = Origin(b"https", b"example.com", 443)
+    network_backend = AsyncMockBackend(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
 
-#     async with AsyncHTTPConnection(
-#         origin=origin, network_backend=network_backend, keepalive_expiry=5.0
-#     ) as conn:
-#         async with conn.stream("GET", "https://example.com/"):
-#             with pytest.raises(ConnectionNotAvailable):
-#                 await conn.request("GET", "https://example.com/")
+    async with AsyncHTTPConnection(
+        origin=origin, network_backend=network_backend, keepalive_expiry=5.0
+    ) as conn:
+        async with conn.stream("GET", "https://example.com/"):
+            with pytest.raises(ConnectionNotAvailable):
+                await conn.request("GET", "https://example.com/")
 
 
 @pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")

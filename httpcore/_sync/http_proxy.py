@@ -17,7 +17,7 @@ from .._models import (
     enforce_url,
 )
 from .._ssl import default_ssl_context
-from .._synchronization import Semaphore
+from .._synchronization import Lock
 from .._trace import Trace
 from .connection import HTTPConnection
 from .connection_pool import ConnectionPool
@@ -259,7 +259,7 @@ class TunnelHTTPConnection(ConnectionInterface):
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
         self._http2 = http2
-        self._connect_lock = Semaphore(bound=1)
+        self._connect_lock = Lock()
         self._connected = False
 
     def handle_request(self, request: Request) -> Response:

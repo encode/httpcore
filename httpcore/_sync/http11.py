@@ -17,10 +17,10 @@ from .._exceptions import (
     WriteError,
     map_exceptions,
 )
-from .._models import Origin, Request
-from .._synchronization import Semaphore
+from .._models import Origin, Request, Response
+from .._synchronization import Lock, ShieldCancellation
 from .._trace import Trace
-from .interfaces import ConnectionInterface, StartResponse
+from .interfaces import ConnectionInterface
 
 logger = logging.getLogger("httpcore.http11")
 
@@ -55,23 +55,21 @@ class HTTP11Connection(ConnectionInterface):
         self._keepalive_expiry: float | None = keepalive_expiry
         self._expire_at: float | None = None
         self._state = HTTPConnectionState.NEW
-        self._request_lock = Semaphore(bound=1)
+        self._state_lock = Lock()
         self._request_count = 0
         self._h11_state = h11.Connection(
             our_role=h11.CLIENT,
             max_incomplete_event_size=self.MAX_INCOMPLETE_EVENT_SIZE,
         )
 
-    def iterate_response(
-        self, request: Request
-    ) -> typing.Iterator[StartResponse | bytes]:
+    def handle_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
             raise RuntimeError(
                 f"Attempted to send request to {request.url.origin} on connection "
                 f"to {self._origin}"
             )
 
-        with self._request_lock:
+        with self._state_lock:
             if self._state in (HTTPConnectionState.NEW, HTTPConnectionState.IDLE):
                 self._request_count += 1
                 self._state = HTTPConnectionState.ACTIVE
@@ -79,69 +77,63 @@ class HTTP11Connection(ConnectionInterface):
             else:
                 raise ConnectionNotAvailable()
 
+        try:
+            kwargs = {"request": request}
             try:
-                kwargs = {"request": request}
-                try:
-                    with Trace(
-                        "send_request_headers", logger, request, kwargs
-                    ) as trace:
-                        self._send_request_headers(**kwargs)
-                    with Trace(
-                        "send_request_body", logger, request, kwargs
-                    ) as trace:
-                        self._send_request_body(**kwargs)
-                except WriteError:
-                    # If we get a write error while we're writing the request,
-                    # then we supress this error and move on to attempting to
-                    # read the response. Servers can sometimes close the request
-                    # pre-emptively and then respond with a well formed HTTP
-                    # error response.
-                    pass
-
                 with Trace(
-                    "receive_response_headers", logger, request, kwargs
+                    "send_request_headers", logger, request, kwargs
                 ) as trace:
-                    (
-                        http_version,
-                        status,
-                        reason_phrase,
-                        headers,
-                        trailing_data,
-                    ) = self._receive_response_headers(**kwargs)
-                    trace.return_value = (
-                        http_version,
-                        status,
-                        reason_phrase,
-                        headers,
-                    )
+                    self._send_request_headers(**kwargs)
+                with Trace("send_request_body", logger, request, kwargs) as trace:
+                    self._send_request_body(**kwargs)
+            except WriteError:
+                # If we get a write error while we're writing the request,
+                # then we supress this error and move on to attempting to
+                # read the response. Servers can sometimes close the request
+                # pre-emptively and then respond with a well formed HTTP
+                # error response.
+                pass
 
-                network_stream = self._network_stream
-
-                # CONNECT or Upgrade request
-                if (status == 101) or (
-                    (request.method == b"CONNECT") and (200 <= status < 300)
-                ):
-                    network_stream = HTTP11UpgradeStream(
-                        network_stream, trailing_data
-                    )
-
-                yield StartResponse(
-                    status=status,
-                    headers=headers,
-                    extensions={
-                        "http_version": http_version,
-                        "reason_phrase": reason_phrase,
-                        "network_stream": network_stream,
-                    },
+            with Trace(
+                "receive_response_headers", logger, request, kwargs
+            ) as trace:
+                (
+                    http_version,
+                    status,
+                    reason_phrase,
+                    headers,
+                    trailing_data,
+                ) = self._receive_response_headers(**kwargs)
+                trace.return_value = (
+                    http_version,
+                    status,
+                    reason_phrase,
+                    headers,
                 )
-                with Trace("receive_response_body", logger, request, kwargs):
-                    for chunk in self._receive_response_body(**kwargs):
-                        yield chunk
-            finally:
-                self._response_closed()
+
+            network_stream = self._network_stream
+
+            # CONNECT or Upgrade request
+            if (status == 101) or (
+                (request.method == b"CONNECT") and (200 <= status < 300)
+            ):
+                network_stream = HTTP11UpgradeStream(network_stream, trailing_data)
+
+            return Response(
+                status=status,
+                headers=headers,
+                content=HTTP11ConnectionByteStream(self, request),
+                extensions={
+                    "http_version": http_version,
+                    "reason_phrase": reason_phrase,
+                    "network_stream": network_stream,
+                },
+            )
+        except BaseException as exc:
+            with ShieldCancellation():
                 with Trace("response_closed", logger, request) as trace:
-                    if self.is_closed():
-                        self.close()
+                    self._response_closed()
+            raise exc
 
     # Sending the request...
 
@@ -244,17 +236,18 @@ class HTTP11Connection(ConnectionInterface):
                 return event  # type: ignore[return-value]
 
     def _response_closed(self) -> None:
-        if (
-            self._h11_state.our_state is h11.DONE
-            and self._h11_state.their_state is h11.DONE
-        ):
-            self._state = HTTPConnectionState.IDLE
-            self._h11_state.start_next_cycle()
-            if self._keepalive_expiry is not None:
-                now = time.monotonic()
-                self._expire_at = now + self._keepalive_expiry
-        else:
-            self._state = HTTPConnectionState.CLOSED
+        with self._state_lock:
+            if (
+                self._h11_state.our_state is h11.DONE
+                and self._h11_state.their_state is h11.DONE
+            ):
+                self._state = HTTPConnectionState.IDLE
+                self._h11_state.start_next_cycle()
+                if self._keepalive_expiry is not None:
+                    now = time.monotonic()
+                    self._expire_at = now + self._keepalive_expiry
+            else:
+                self.close()
 
     # Once the connection is no longer required...
 
@@ -326,6 +319,33 @@ class HTTP11Connection(ConnectionInterface):
         traceback: types.TracebackType | None = None,
     ) -> None:
         self.close()
+
+
+class HTTP11ConnectionByteStream:
+    def __init__(self, connection: HTTP11Connection, request: Request) -> None:
+        self._connection = connection
+        self._request = request
+        self._closed = False
+
+    def __iter__(self) -> typing.Iterator[bytes]:
+        kwargs = {"request": self._request}
+        try:
+            with Trace("receive_response_body", logger, self._request, kwargs):
+                for chunk in self._connection._receive_response_body(**kwargs):
+                    yield chunk
+        except BaseException as exc:
+            # If we get an exception while streaming the response,
+            # we want to close the response (and possibly the connection)
+            # before raising that exception.
+            with ShieldCancellation():
+                self.close()
+            raise exc
+
+    def close(self) -> None:
+        if not self._closed:
+            self._closed = True
+            with Trace("response_closed", logger, self._request):
+                self._connection._response_closed()
 
 
 class HTTP11UpgradeStream(NetworkStream):

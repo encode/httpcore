@@ -17,7 +17,6 @@ SUBS = [
     ('aclose', 'close'),
     ('aiter_stream', 'iter_stream'),
     ('aread', 'read'),
-    ('anext', 'next'),
     ('asynccontextmanager', 'contextmanager'),
     ('__aenter__', '__enter__'),
     ('__aexit__', '__exit__'),

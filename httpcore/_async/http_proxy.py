@@ -17,7 +17,7 @@ from .._models import (
     enforce_url,
 )
 from .._ssl import default_ssl_context
-from .._synchronization import AsyncSemaphore
+from .._synchronization import AsyncLock
 from .._trace import Trace
 from .connection import AsyncHTTPConnection
 from .connection_pool import AsyncConnectionPool
@@ -259,7 +259,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
         self._http2 = http2
-        self._connect_lock = AsyncSemaphore(bound=1)
+        self._connect_lock = AsyncLock()
         self._connected = False
 
     async def handle_async_request(self, request: Request) -> Response:

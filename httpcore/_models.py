@@ -397,9 +397,6 @@ class Response:
         )
         self.extensions = {} if extensions is None else extensions
 
-        if isinstance(content, bytes):
-            self._content = content
-
         self._stream_consumed = False
 
     @property
