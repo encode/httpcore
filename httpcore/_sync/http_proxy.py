@@ -51,12 +51,7 @@ def merge_headers(
     return default_headers + override_headers
 
 
-def build_auth_header(username: bytes, password: bytes) -> bytes:
-    userpass = username + b":" + password
-    return b"Basic " + base64.b64encode(userpass)
-
-
-class HTTPProxy(ConnectionPool):
+class HTTPProxy(ConnectionPool):  # pragma: nocover
     """
     A connection pool that sends requests via an HTTP proxy.
     """
@@ -142,7 +137,8 @@ class HTTPProxy(ConnectionPool):
         if proxy_auth is not None:
             username = enforce_bytes(proxy_auth[0], name="proxy_auth")
             password = enforce_bytes(proxy_auth[1], name="proxy_auth")
-            authorization = build_auth_header(username, password)
+            userpass = username + b":" + password
+            authorization = b"Basic " + base64.b64encode(userpass)
             self._proxy_headers = [
                 (b"Proxy-Authorization", authorization)
             ] + self._proxy_headers

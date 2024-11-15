@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import ssl
 import typing
 import urllib.parse
 
@@ -489,3 +491,26 @@ class Response:
             )
         if hasattr(self.stream, "aclose"):
             await self.stream.aclose()
+
+
+class Proxy:
+    def __init__(
+        self,
+        url: URL | bytes | str,
+        auth: tuple[bytes | str, bytes | str] | None = None,
+        headers: HeadersAsMapping | HeadersAsSequence | None = None,
+        ssl_context: ssl.SSLContext | None = None,
+    ):
+        self.url = enforce_url(url, name="url")
+        self.headers = enforce_headers(headers, name="headers")
+        self.ssl_context = ssl_context
+
+        if auth is not None:
+            username = enforce_bytes(auth[0], name="auth")
+            password = enforce_bytes(auth[1], name="auth")
+            userpass = username + b":" + password
+            authorization = b"Basic " + base64.b64encode(userpass)
+            self.auth: tuple[bytes, bytes] | None = (username, password)
+            self.headers = [(b"Proxy-Authorization", authorization)] + self.headers
+        else:
+            self.auth = None

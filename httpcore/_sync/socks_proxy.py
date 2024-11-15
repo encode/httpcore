@@ -102,7 +102,7 @@ def _init_socks5_connection(
         raise ProxyError(f"Proxy Server could not connect: {reply_code}.")
 
 
-class SOCKSProxy(ConnectionPool):
+class SOCKSProxy(ConnectionPool):  # pragma: nocover
     """
     A connection pool that sends requests via an HTTP proxy.
     """
