@@ -69,7 +69,7 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
             status=resp.status,
             headers=resp.headers,
             content=iterator,
-            extensions=resp.extensions
+            extensions=resp.extensions,
         )
 
     async def iterate_response(
