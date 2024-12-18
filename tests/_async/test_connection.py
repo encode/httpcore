@@ -36,6 +36,7 @@ async def test_http_connection():
         origin=origin, network_backend=network_backend, keepalive_expiry=5.0
     ) as conn:
         assert not conn.is_idle()
+        assert not conn.is_connected()
         assert not conn.is_closed()
         assert not conn.is_available()
         assert not conn.has_expired()
@@ -52,6 +53,7 @@ async def test_http_connection():
         assert response.content == b"Hello, world!"
 
         assert conn.is_idle()
+        assert conn.is_connected()
         assert not conn.is_closed()
         assert conn.is_available()
         assert not conn.has_expired()
