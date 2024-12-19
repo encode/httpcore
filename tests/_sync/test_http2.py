@@ -35,6 +35,7 @@ def test_http2_connection():
 
         assert conn.is_idle()
         assert conn.is_available()
+        assert conn.is_connected()
         assert not conn.is_closed()
         assert not conn.has_expired()
         assert (

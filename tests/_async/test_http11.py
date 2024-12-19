@@ -23,6 +23,7 @@ async def test_http11_connection():
         assert response.content == b"Hello, world!"
 
         assert conn.is_idle()
+        assert conn.is_connected()
         assert not conn.is_closed()
         assert conn.is_available()
         assert not conn.has_expired()

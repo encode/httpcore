@@ -278,12 +278,16 @@ class AsyncConnectionPool(AsyncRequestInterface):
         those connections to be handled seperately.
         """
         closing_connections = []
+        request_connections = {request.connection for request in self._requests}
 
         # First we handle cleaning up any connections that are closed,
         # have expired their keep-alive, or surplus idle connections.
         for connection in list(self._connections):
             if connection.is_closed():
                 # log: "removing closed connection"
+                self._connections.remove(connection)
+            elif not (connection.is_connected() or connection in request_connections):
+                # log: "removing garbage connection"
                 self._connections.remove(connection)
             elif connection.has_expired():
                 # log: "closing expired connection"

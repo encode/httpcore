@@ -214,6 +214,9 @@ class ForwardHTTPConnection(ConnectionInterface):
     def info(self) -> str:
         return self._connection.info()
 
+    def is_connected(self) -> bool:
+        return self._connection.is_connected()
+
     def is_available(self) -> bool:
         return self._connection.is_available()
 
@@ -350,6 +353,9 @@ class TunnelHTTPConnection(ConnectionInterface):
 
     def info(self) -> str:
         return self._connection.info()
+
+    def is_connected(self) -> bool:
+        return self._connection.is_connected()
 
     def is_available(self) -> bool:
         return self._connection.is_available()

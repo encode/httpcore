@@ -94,6 +94,14 @@ class AsyncConnectionInterface(AsyncRequestInterface):
     def can_handle_request(self, origin: Origin) -> bool:
         raise NotImplementedError()  # pragma: nocover
 
+    def is_connected(self) -> bool:
+        """
+        Return `True` if the connection is open.
+
+        Beware that for some implementations `is_connected() != not is_closed()`.
+        """
+        raise NotImplementedError()  # pragma: nocover
+
     def is_available(self) -> bool:
         """
         Return `True` if the connection is currently able to accept an
