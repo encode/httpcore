@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased
+
+- Fix `max_keepalive_connections` not being properly handled. (#1000)
+
 ## Version 1.0.7 (November 15th, 2024)
 
 - Support `proxy=…` configuration on `ConnectionPool()`. (#974)
