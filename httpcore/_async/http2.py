@@ -295,11 +295,9 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
             if isinstance(event, h2.events.ResponseReceived):
                 break
 
-        if event.headers is None:
-            return (200, [])
-
         status_code = 200
         headers = []
+        assert event.headers is not None
         for k, v in event.headers:
             if k == b":status":
                 status_code = int(v.decode("ascii", errors="ignore"))
@@ -316,11 +314,9 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         """
         while True:
             event = await self._receive_stream_event(request, stream_id)
-            if (
-                isinstance(event, h2.events.DataReceived)
-                and event.flow_controlled_length is not None
-                and event.data is not None
-            ):
+            if isinstance(event, h2.events.DataReceived):
+                assert event.flow_controlled_length is not None
+                assert event.data is not None
                 amount = event.flow_controlled_length
                 self._h2_state.acknowledge_received_data(amount, stream_id)
                 await self._write_outgoing_data(request)
