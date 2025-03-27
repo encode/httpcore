@@ -8,7 +8,7 @@ export SOURCE_FILES="httpcore tests"
 
 set -x
 
-${PREFIX}ruff --fix $SOURCE_FILES
+${PREFIX}ruff check --fix $SOURCE_FILES
 ${PREFIX}ruff format $SOURCE_FILES
 
 # Run unasync last because its `--check` mode is not aware of code formatters.
