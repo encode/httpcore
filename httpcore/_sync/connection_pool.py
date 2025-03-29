@@ -291,7 +291,7 @@ class ConnectionPool(RequestInterface):
                 closing_connections.append(connection)
             elif (
                 connection.is_idle()
-                and len([connection.is_idle() for connection in self._connections])
+                and sum(connection.is_idle() for connection in self._connections)
                 > self._max_keepalive_connections
             ):
                 # log: "closing idle connection"
