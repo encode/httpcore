@@ -30,7 +30,7 @@ async def test_connection_pool_with_keepalive():
     )
 
     async with httpcore.AsyncConnectionPool(
-        network_backend=network_backend,
+        network_backend=network_backend, max_keepalive_connections=1
     ) as pool:
         # Sending an intial request, which once complete will return to the pool, IDLE.
         async with pool.stream("GET", "https://example.com/") as response:
@@ -79,28 +79,33 @@ async def test_connection_pool_with_keepalive():
         )
 
         # Sending a request to a different origin will not reuse the existing IDLE connection.
-        async with pool.stream("GET", "http://example.com/") as response:
+        async with pool.stream("GET", "http://example.com/") as response_1, pool.stream(
+            "GET", "http://example.com/"
+        ) as response_2:
             info = [repr(c) for c in pool.connections]
             assert info == [
                 "<AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 2]>",
                 "<AsyncHTTPConnection ['http://example.com:80', HTTP/1.1, ACTIVE, Request Count: 1]>",
+                "<AsyncHTTPConnection ['http://example.com:80', HTTP/1.1, ACTIVE, Request Count: 1]>",
             ]
             assert (
                 repr(pool)
-                == "<AsyncConnectionPool [Requests: 1 active, 0 queued | Connections: 1 active, 1 idle]>"
+                == "<AsyncConnectionPool [Requests: 2 active, 0 queued | Connections: 2 active, 1 idle]>"
             )
-            await response.aread()
+            await response_1.aread()
+            await response_2.aread()
 
-        assert response.status == 200
-        assert response.content == b"Hello, world!"
+        assert response_1.status == 200
+        assert response_1.content == b"Hello, world!"
+        assert response_2.status == 200
+        assert response_2.content == b"Hello, world!"
         info = [repr(c) for c in pool.connections]
         assert info == [
-            "<AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 2]>",
             "<AsyncHTTPConnection ['http://example.com:80', HTTP/1.1, IDLE, Request Count: 1]>",
         ]
         assert (
             repr(pool)
-            == "<AsyncConnectionPool [Requests: 0 active, 0 queued | Connections: 0 active, 2 idle]>"
+            == "<AsyncConnectionPool [Requests: 0 active, 0 queued | Connections: 0 active, 1 idle]>"
         )
 
 
