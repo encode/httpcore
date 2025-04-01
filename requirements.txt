@@ -16,15 +16,7 @@ twine==6.1.0
 coverage[toml]==7.5.4
 ruff==0.5.0
 mypy==1.10.1
-trio-typing==0.10.0
 pytest==8.2.2
 pytest-httpbin==2.0.0
 pytest-trio==0.8.0
 werkzeug<3.1  # See: https://github.com/psf/httpbin/issues/35
-
-# Benchmarking and profiling
-uvicorn==0.30.1
-aiohttp==3.10.2
-urllib3==2.2.2
-matplotlib==3.7.5
-pyinstrument==4.6.2
