@@ -90,15 +90,16 @@ class AsyncLock:
             self._anyio_lock.release()
 
 
-class AsyncThreadLock:
+class AsyncThreadRLock:
     """
     This is a threading-only lock for no-I/O contexts.
+    The lock type is a reentrant lock.
 
     In the sync case `ThreadRLock` provides thread locking.
-    In the async case `AsyncThreadLock` is a no-op.
+    In the async case `AsyncThreadRLock` is a no-op.
     """
 
-    def __enter__(self) -> AsyncThreadLock:
+    def __enter__(self) -> AsyncThreadRLock:
         return self
 
     def __exit__(
@@ -259,7 +260,7 @@ class ThreadRLock:
     The lock type is a reentrant lock.
 
     In the sync case `ThreadRLock` provides thread locking.
-    In the async case `AsyncThreadLock` is a no-op.
+    In the async case `AsyncThreadRLock` is a no-op.
     """
 
     def __init__(self) -> None:
