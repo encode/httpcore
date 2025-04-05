@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import base64
 import logging
 import ssl
-from base64 import b64encode
-from typing import Iterable, Mapping, Sequence, Tuple, Union
+import typing
 
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend
 from .._exceptions import ProxyError
@@ -24,16 +24,17 @@ from .connection_pool import AsyncConnectionPool
 from .http11 import AsyncHTTP11Connection
 from .interfaces import AsyncConnectionInterface
 
-HeadersAsSequence = Sequence[Tuple[Union[bytes, str], Union[bytes, str]]]
-HeadersAsMapping = Mapping[Union[bytes, str], Union[bytes, str]]
+ByteOrStr = typing.Union[bytes, str]
+HeadersAsSequence = typing.Sequence[typing.Tuple[ByteOrStr, ByteOrStr]]
+HeadersAsMapping = typing.Mapping[ByteOrStr, ByteOrStr]
 
 
 logger = logging.getLogger("httpcore.proxy")
 
 
 def merge_headers(
-    default_headers: Sequence[tuple[bytes, bytes]] | None = None,
-    override_headers: Sequence[tuple[bytes, bytes]] | None = None,
+    default_headers: typing.Sequence[tuple[bytes, bytes]] | None = None,
+    override_headers: typing.Sequence[tuple[bytes, bytes]] | None = None,
 ) -> list[tuple[bytes, bytes]]:
     """
     Append default_headers and override_headers, de-duplicating if a key exists
@@ -50,12 +51,7 @@ def merge_headers(
     return default_headers + override_headers
 
 
-def build_auth_header(username: bytes, password: bytes) -> bytes:
-    userpass = username + b":" + password
-    return b"Basic " + b64encode(userpass)
-
-
-class AsyncHTTPProxy(AsyncConnectionPool):
+class AsyncHTTPProxy(AsyncConnectionPool):  # pragma: nocover
     """
     A connection pool that sends requests via an HTTP proxy.
     """
@@ -76,7 +72,7 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         local_address: str | None = None,
         uds: str | None = None,
         network_backend: AsyncNetworkBackend | None = None,
-        socket_options: Iterable[SOCKET_OPTION] | None = None,
+        socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -141,7 +137,8 @@ class AsyncHTTPProxy(AsyncConnectionPool):
         if proxy_auth is not None:
             username = enforce_bytes(proxy_auth[0], name="proxy_auth")
             password = enforce_bytes(proxy_auth[1], name="proxy_auth")
-            authorization = build_auth_header(username, password)
+            userpass = username + b":" + password
+            authorization = b"Basic " + base64.b64encode(userpass)
             self._proxy_headers = [
                 (b"Proxy-Authorization", authorization)
             ] + self._proxy_headers
@@ -177,7 +174,7 @@ class AsyncForwardHTTPConnection(AsyncConnectionInterface):
         proxy_headers: HeadersAsMapping | HeadersAsSequence | None = None,
         keepalive_expiry: float | None = None,
         network_backend: AsyncNetworkBackend | None = None,
-        socket_options: Iterable[SOCKET_OPTION] | None = None,
+        socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
         proxy_ssl_context: ssl.SSLContext | None = None,
     ) -> None:
         self._connection = AsyncHTTPConnection(
@@ -240,12 +237,12 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
         remote_origin: Origin,
         ssl_context: ssl.SSLContext | None = None,
         proxy_ssl_context: ssl.SSLContext | None = None,
-        proxy_headers: Sequence[tuple[bytes, bytes]] | None = None,
+        proxy_headers: typing.Sequence[tuple[bytes, bytes]] | None = None,
         keepalive_expiry: float | None = None,
         http1: bool = True,
         http2: bool = False,
         network_backend: AsyncNetworkBackend | None = None,
-        socket_options: Iterable[SOCKET_OPTION] | None = None,
+        socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
     ) -> None:
         self._connection: AsyncConnectionInterface = AsyncHTTPConnection(
             origin=proxy_origin,

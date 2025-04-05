@@ -4,7 +4,7 @@ import enum
 import logging
 import time
 import types
-from typing import AsyncIterable, AsyncIterator
+import typing
 
 import h2.config
 import h2.connection
@@ -67,10 +67,12 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         # Mapping from stream ID to response stream events.
         self._events: dict[
             int,
-            h2.events.ResponseReceived
-            | h2.events.DataReceived
-            | h2.events.StreamEnded
-            | h2.events.StreamReset,
+            list[
+                h2.events.ResponseReceived
+                | h2.events.DataReceived
+                | h2.events.StreamEnded
+                | h2.events.StreamReset,
+            ],
         ] = {}
 
         # Connection terminated events are stored as state since
@@ -102,9 +104,11 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         async with self._init_lock:
             if not self._sent_connection_init:
                 try:
-                    kwargs = {"request": request}
-                    async with Trace("send_connection_init", logger, request, kwargs):
-                        await self._send_connection_init(**kwargs)
+                    sci_kwargs = {"request": request}
+                    async with Trace(
+                        "send_connection_init", logger, request, sci_kwargs
+                    ):
+                        await self._send_connection_init(**sci_kwargs)
                 except BaseException as exc:
                     with AsyncShieldCancellation():
                         await self.aclose()
@@ -253,7 +257,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         if not has_body_headers(request):
             return
 
-        assert isinstance(request.stream, AsyncIterable)
+        assert isinstance(request.stream, typing.AsyncIterable)
         async for data in request.stream:
             await self._send_stream_data(request, stream_id, data)
         await self._send_end_stream(request, stream_id)
@@ -293,6 +297,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
         status_code = 200
         headers = []
+        assert event.headers is not None
         for k, v in event.headers:
             if k == b":status":
                 status_code = int(v.decode("ascii", errors="ignore"))
@@ -303,13 +308,15 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
     async def _receive_response_body(
         self, request: Request, stream_id: int
-    ) -> AsyncIterator[bytes]:
+    ) -> typing.AsyncIterator[bytes]:
         """
         Iterator that returns the bytes of the response body for a given stream ID.
         """
         while True:
             event = await self._receive_stream_event(request, stream_id)
             if isinstance(event, h2.events.DataReceived):
+                assert event.flow_controlled_length is not None
+                assert event.data is not None
                 amount = event.flow_controlled_length
                 self._h2_state.acknowledge_received_data(amount, stream_id)
                 await self._write_outgoing_data(request)
@@ -380,7 +387,9 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
         await self._write_outgoing_data(request)
 
-    async def _receive_remote_settings_change(self, event: h2.events.Event) -> None:
+    async def _receive_remote_settings_change(
+        self, event: h2.events.RemoteSettingsChanged
+    ) -> None:
         max_concurrent_streams = event.changed_settings.get(
             h2.settings.SettingCodes.MAX_CONCURRENT_STREAMS
         )
@@ -559,7 +568,7 @@ class HTTP2ConnectionByteStream:
         self._stream_id = stream_id
         self._closed = False
 
-    async def __aiter__(self) -> AsyncIterator[bytes]:
+    async def __aiter__(self) -> typing.AsyncIterator[bytes]:
         kwargs = {"request": self._request, "stream_id": self._stream_id}
         try:
             async with Trace("receive_response_body", logger, self._request, kwargs):

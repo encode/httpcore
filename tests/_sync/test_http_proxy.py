@@ -7,11 +7,12 @@ import pytest
 
 from httpcore import (
     SOCKET_OPTION,
-    HTTPProxy,
+    ConnectionPool,
     MockBackend,
     MockStream,
     NetworkStream,
     Origin,
+    Proxy,
     ProxyError,
 )
 
@@ -31,8 +32,8 @@ def test_proxy_forwarding():
         ]
     )
 
-    with HTTPProxy(
-        proxy_url="http://localhost:8080/",
+    with ConnectionPool(
+        proxy=Proxy("http://localhost:8080/"),
         max_connections=10,
         network_backend=network_backend,
     ) as proxy:
@@ -87,8 +88,8 @@ def test_proxy_tunneling():
         ]
     )
 
-    with HTTPProxy(
-        proxy_url="http://localhost:8080/",
+    with ConnectionPool(
+        proxy=Proxy("http://localhost:8080/"),
         network_backend=network_backend,
     ) as proxy:
         # Sending an intial request, which once complete will return to the pool, IDLE.
@@ -178,8 +179,8 @@ def test_proxy_tunneling_http2():
         ],
     )
 
-    with HTTPProxy(
-        proxy_url="http://localhost:8080/",
+    with ConnectionPool(
+        proxy=Proxy("http://localhost:8080/"),
         network_backend=network_backend,
         http2=True,
     ) as proxy:
@@ -227,8 +228,8 @@ def test_proxy_tunneling_with_403():
         ]
     )
 
-    with HTTPProxy(
-        proxy_url="http://localhost:8080/",
+    with ConnectionPool(
+        proxy=Proxy("http://localhost:8080/"),
         network_backend=network_backend,
     ) as proxy:
         with pytest.raises(ProxyError) as exc_info:
@@ -255,17 +256,23 @@ def test_proxy_tunneling_with_auth():
         ]
     )
 
-    with HTTPProxy(
-        proxy_url="http://localhost:8080/",
-        proxy_auth=("username", "password"),
+    with ConnectionPool(
+        proxy=Proxy(
+            url="http://localhost:8080/",
+            auth=("username", "password"),
+        ),
         network_backend=network_backend,
     ) as proxy:
         response = proxy.request("GET", "https://example.com/")
         assert response.status == 200
         assert response.content == b"Hello, world!"
 
-        # Dig into this private property as a cheap lazy way of
-        # checking that the proxy header is set correctly.
-        assert proxy._proxy_headers == [  # type: ignore
-            (b"Proxy-Authorization", b"Basic dXNlcm5hbWU6cGFzc3dvcmQ=")
-        ]
+
+def test_proxy_headers():
+    proxy = Proxy(
+        url="http://localhost:8080/",
+        auth=("username", "password"),
+    )
+    assert proxy.headers == [
+        (b"Proxy-Authorization", b"Basic dXNlcm5hbWU6cGFzc3dvcmQ=")
+    ]

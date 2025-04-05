@@ -10,14 +10,13 @@
 * Connection Pools
     * `httpcore.ConnectionPool`
 * Proxies
-    * `httpcore.HTTPProxy`
+    * `httpcore.Proxy`
 * Connections
     * `httpcore.HTTPConnection`
     * `httpcore.HTTP11Connection`
     * `httpcore.HTTP2Connection`
 * Async Support
     * `httpcore.AsyncConnectionPool`
-    * `httpcore.AsyncHTTPProxy`
     * `httpcore.AsyncHTTPConnection`
     * `httpcore.AsyncHTTP11Connection`
     * `httpcore.AsyncHTTP2Connection`

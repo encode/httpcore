@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import ssl
 import sys
-from types import TracebackType
-from typing import Iterable, Iterator, Iterable
+import types
+import typing
 
 from .._backends.sync import SyncBackend
 from .._backends.base import SOCKET_OPTION, NetworkBackend
 from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
-from .._models import Origin, Request, Response
+from .._models import Origin, Proxy, Request, Response
 from .._synchronization import Event, ShieldCancellation, ThreadLock
 from .connection import HTTPConnection
 from .interfaces import ConnectionInterface, RequestInterface
@@ -48,6 +48,7 @@ class ConnectionPool(RequestInterface):
     def __init__(
         self,
         ssl_context: ssl.SSLContext | None = None,
+        proxy: Proxy | None = None,
         max_connections: int | None = 10,
         max_keepalive_connections: int | None = None,
         keepalive_expiry: float | None = None,
@@ -57,7 +58,7 @@ class ConnectionPool(RequestInterface):
         local_address: str | None = None,
         uds: str | None = None,
         network_backend: NetworkBackend | None = None,
-        socket_options: Iterable[SOCKET_OPTION] | None = None,
+        socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -89,7 +90,7 @@ class ConnectionPool(RequestInterface):
              in the TCP socket when the connection was established.
         """
         self._ssl_context = ssl_context
-
+        self._proxy = proxy
         self._max_connections = (
             sys.maxsize if max_connections is None else max_connections
         )
@@ -125,6 +126,45 @@ class ConnectionPool(RequestInterface):
         self._optional_thread_lock = ThreadLock()
 
     def create_connection(self, origin: Origin) -> ConnectionInterface:
+        if self._proxy is not None:
+            if self._proxy.url.scheme in (b"socks5", b"socks5h"):
+                from .socks_proxy import Socks5Connection
+
+                return Socks5Connection(
+                    proxy_origin=self._proxy.url.origin,
+                    proxy_auth=self._proxy.auth,
+                    remote_origin=origin,
+                    ssl_context=self._ssl_context,
+                    keepalive_expiry=self._keepalive_expiry,
+                    http1=self._http1,
+                    http2=self._http2,
+                    network_backend=self._network_backend,
+                )
+            elif origin.scheme == b"http":
+                from .http_proxy import ForwardHTTPConnection
+
+                return ForwardHTTPConnection(
+                    proxy_origin=self._proxy.url.origin,
+                    proxy_headers=self._proxy.headers,
+                    proxy_ssl_context=self._proxy.ssl_context,
+                    remote_origin=origin,
+                    keepalive_expiry=self._keepalive_expiry,
+                    network_backend=self._network_backend,
+                )
+            from .http_proxy import TunnelHTTPConnection
+
+            return TunnelHTTPConnection(
+                proxy_origin=self._proxy.url.origin,
+                proxy_headers=self._proxy.headers,
+                proxy_ssl_context=self._proxy.ssl_context,
+                remote_origin=origin,
+                ssl_context=self._ssl_context,
+                keepalive_expiry=self._keepalive_expiry,
+                http1=self._http1,
+                http2=self._http2,
+                network_backend=self._network_backend,
+            )
+
         return HTTPConnection(
             origin=origin,
             ssl_context=self._ssl_context,
@@ -217,7 +257,7 @@ class ConnectionPool(RequestInterface):
 
         # Return the response. Note that in this case we still have to manage
         # the point at which the response is closed.
-        assert isinstance(response.stream, Iterable)
+        assert isinstance(response.stream, typing.Iterable)
         return Response(
             status=response.status,
             headers=response.headers,
@@ -319,7 +359,7 @@ class ConnectionPool(RequestInterface):
         self,
         exc_type: type[BaseException] | None = None,
         exc_value: BaseException | None = None,
-        traceback: TracebackType | None = None,
+        traceback: types.TracebackType | None = None,
     ) -> None:
         self.close()
 
@@ -349,7 +389,7 @@ class ConnectionPool(RequestInterface):
 class PoolByteStream:
     def __init__(
         self,
-        stream: Iterable[bytes],
+        stream: typing.Iterable[bytes],
         pool_request: PoolRequest,
         pool: ConnectionPool,
     ) -> None:
@@ -358,7 +398,7 @@ class PoolByteStream:
         self._pool = pool
         self._closed = False
 
-    def __iter__(self) -> Iterator[bytes]:
+    def __iter__(self) -> typing.Iterator[bytes]:
         try:
             for part in self._stream:
                 yield part

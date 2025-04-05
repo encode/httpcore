@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Version 1.0.7 (November 15th, 2024)
+
+- Support `proxy=…` configuration on `ConnectionPool()`. (#974)
+
 ## Version 1.0.6 (October 1st, 2024)
 
 - Relax `trio` dependency pinning. (#956)
