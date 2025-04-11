@@ -1,0 +1,1151 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A minimal HTTP client for Python.">
+      
+      
+      
+        <link rel="canonical" href="https://www.encode.io/httpcore/connection-pools/">
+      
+      
+        <link rel="prev" href="../quickstart/">
+      
+      
+        <link rel="next" href="../proxies/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.27">
+    
+    
+      
+        <title>Connection Pools - HTTPCore</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.6543a935.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#connection-pools" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="HTTPCore" class="md-header__button md-logo" aria-label="HTTPCore" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            HTTPCore
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Connection Pools
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/encode/httpcore/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    encode/httpcore
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="HTTPCore" class="md-nav__button md-logo" aria-label="HTTPCore" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    HTTPCore
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/encode/httpcore/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    encode/httpcore
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Introduction
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Quickstart
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Connection Pools
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Connection Pools
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ssl-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      SSL configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pooling-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pooling configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#http-version-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      HTTP version support
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Other options
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pool-lifespans" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pool lifespans
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#thread-and-task-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      Thread and task safety
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../proxies/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Proxies
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../http2/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    HTTP/2
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../async/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Async Support
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../network-backends/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Backends
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extensions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Extensions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../logging/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Logging
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../exceptions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Exceptions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ssl-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      SSL configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pooling-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pooling configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#http-version-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      HTTP version support
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Other options
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pool-lifespans" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pool lifespans
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#thread-and-task-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      Thread and task safety
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="connection-pools">Connection Pools</h1>
+<p>While the top-level API provides convenience functions for working with <code>httpcore</code>,
+in practice you'll almost always want to take advantage of the connection pooling
+functionality that it provides.</p>
+<p>To do so, instantiate a pool instance, and use it to send requests:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">httpcore</span>
+
+<span class="n">http</span> <span class="o">=</span> <span class="n">httpcore</span><span class="o">.</span><span class="n">ConnectionPool</span><span class="p">()</span>
+<span class="n">r</span> <span class="o">=</span> <span class="n">http</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s2">&quot;GET&quot;</span><span class="p">,</span> <span class="s2">&quot;https://www.example.com/&quot;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+<span class="c1"># &lt;Response [200]&gt;</span>
+</code></pre></div>
+
+<p>Connection pools support the same <code>.request()</code> and <code>.stream()</code> APIs <a href="../quickstart">as described in the Quickstart</a>.</p>
+<p>We can observe the benefits of connection pooling with a simple script like so:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">httpcore</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+
+<span class="n">http</span> <span class="o">=</span> <span class="n">httpcore</span><span class="o">.</span><span class="n">ConnectionPool</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">counter</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+    <span class="n">started</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">http</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s2">&quot;GET&quot;</span><span class="p">,</span> <span class="s2">&quot;https://www.example.com/&quot;</span><span class="p">)</span>
+    <span class="n">complete</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="s2">&quot;in </span><span class="si">%.3f</span><span class="s2"> seconds&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">complete</span> <span class="o">-</span> <span class="n">started</span><span class="p">))</span>
+</code></pre></div>
+
+<p>The output <em>should</em> demonstrate the initial request as being substantially slower than the subsequent requests:</p>
+<div class="highlight"><pre><span></span><code>&lt;Response [200]&gt; in {0.529} seconds
+&lt;Response [200]&gt; in {0.096} seconds
+&lt;Response [200]&gt; in {0.097} seconds
+&lt;Response [200]&gt; in {0.095} seconds
+&lt;Response [200]&gt; in {0.098} seconds
+</code></pre></div>
+
+<p>This is to be expected. Once we've established a connection to <code>"www.example.com"</code> we're able to reuse it for following requests.</p>
+<h2 id="configuration">Configuration</h2>
+<p>The connection pool instance is also the main point of configuration. Let's take a look at the various options that it provides:</p>
+<h3 id="ssl-configuration">SSL configuration</h3>
+<ul>
+<li><code>ssl_context</code>: An SSL context to use for verifying connections.
+                 If not specified, the default <code>httpcore.default_ssl_context()</code>
+                 will be used.</li>
+</ul>
+<h3 id="pooling-configuration">Pooling configuration</h3>
+<ul>
+<li><code>max_connections</code>: The maximum number of concurrent HTTP connections that the pool
+                     should allow. Any attempt to send a request on a pool that would
+                     exceed this amount will block until a connection is available.</li>
+<li><code>max_keepalive_connections</code>: The maximum number of idle HTTP connections that will
+                               be maintained in the pool.</li>
+<li><code>keepalive_expiry</code>: The duration in seconds that an idle HTTP connection may be
+                      maintained for before being expired from the pool.</li>
+</ul>
+<h3 id="http-version-support">HTTP version support</h3>
+<ul>
+<li><code>http1</code>: A boolean indicating if HTTP/1.1 requests should be supported by the connection
+           pool. Defaults to <code>True</code>.</li>
+<li><code>http2</code>: A boolean indicating if HTTP/2 requests should be supported by the connection
+           pool. Defaults to <code>False</code>.</li>
+</ul>
+<h3 id="other-options">Other options</h3>
+<ul>
+<li><code>retries</code>: The maximum number of retries when trying to establish a connection.</li>
+<li><code>local_address</code>: Local address to connect from. Can also be used to connect using
+                   a particular address family. Using <code>local_address="0.0.0.0"</code> will
+                   connect using an <code>AF_INET</code> address (IPv4), while using <code>local_address="::"</code>
+                   will connect using an <code>AF_INET6</code> address (IPv6).</li>
+<li><code>uds</code>: Path to a Unix Domain Socket to use instead of TCP sockets.</li>
+<li><code>network_backend</code>: A backend instance to use for handling network I/O.</li>
+<li><code>socket_options</code>: Socket options that have to be included in the TCP socket when the connection was established.</li>
+</ul>
+<h2 id="pool-lifespans">Pool lifespans</h2>
+<p>Because connection pools hold onto network resources, careful developers may want to ensure that instances are properly closed once they are no longer required.</p>
+<p>Working with a single global instance isn't a bad idea for many use case, since the connection pool will automatically be closed when the <code>__del__</code> method is called on it:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># This is perfectly fine for most purposes.</span>
+<span class="c1"># The connection pool will automatically be closed when it is garbage collected,</span>
+<span class="c1"># or when the Python interpreter exits.</span>
+<span class="n">http</span> <span class="o">=</span> <span class="n">httpcore</span><span class="o">.</span><span class="n">ConnectionPool</span><span class="p">()</span>
+</code></pre></div>
+
+<p>However, to be more explicit around the resource usage, we can use the connection pool within a context manager:</p>
+<div class="highlight"><pre><span></span><code><span class="k">with</span> <span class="n">httpcore</span><span class="o">.</span><span class="n">ConnectionPool</span><span class="p">()</span> <span class="k">as</span> <span class="n">http</span><span class="p">:</span>
+    <span class="o">...</span>
+</code></pre></div>
+
+<p>Or else close the pool explicitly:</p>
+<div class="highlight"><pre><span></span><code><span class="n">http</span> <span class="o">=</span> <span class="n">httpcore</span><span class="o">.</span><span class="n">ConnectionPool</span><span class="p">()</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="o">...</span>
+<span class="k">finally</span><span class="p">:</span>
+    <span class="n">http</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</code></pre></div>
+
+<h2 id="thread-and-task-safety">Thread and task safety</h2>
+<p>Connection pools are designed to be thread-safe. Similarly, when using <code>httpcore</code> in an async context connection pools are task-safe.</p>
+<p>This means that you can have a single connection pool instance shared by multiple threads.</p>
+<hr />
+<h1 id="reference">Reference</h1>
+<h2 id="httpcoreconnectionpool"><code>httpcore.ConnectionPool</code></h2>
+
+
+  <div class="doc doc-object doc-class">
+
+<a id="httpcore.ConnectionPool"></a>
+    <div class="doc doc-contents first">
+
+      <p>A connection pool for making HTTP requests.</p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="httpcore.ConnectionPool.connections" class="doc doc-heading">
+<code class=" language-python"><span class="n">connections</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ConnectionInterface</span><span class="p">]</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-readonly"><code>readonly</code></small>
+  </span>
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+      <p>Return a list of the connections currently in the pool.</p>
+<p>For example:</p>
+<div class="highlight"><pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="n">pool</span><span class="o">.</span><span class="n">connections</span>
+<span class="p">[</span>
+    <span class="o">&lt;</span><span class="n">HTTPConnection</span> <span class="p">[</span><span class="s1">&#39;https://example.com:443&#39;</span><span class="p">,</span> <span class="n">HTTP</span><span class="o">/</span><span class="mf">1.1</span><span class="p">,</span> <span class="n">ACTIVE</span><span class="p">,</span> <span class="n">Request</span> <span class="n">Count</span><span class="p">:</span> <span class="mi">6</span><span class="p">]</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="o">&lt;</span><span class="n">HTTPConnection</span> <span class="p">[</span><span class="s1">&#39;https://example.com:443&#39;</span><span class="p">,</span> <span class="n">HTTP</span><span class="o">/</span><span class="mf">1.1</span><span class="p">,</span> <span class="n">IDLE</span><span class="p">,</span> <span class="n">Request</span> <span class="n">Count</span><span class="p">:</span> <span class="mi">9</span><span class="p">]</span><span class="o">&gt;</span> <span class="p">,</span>
+    <span class="o">&lt;</span><span class="n">HTTPConnection</span> <span class="p">[</span><span class="s1">&#39;http://example.com:80&#39;</span><span class="p">,</span> <span class="n">HTTP</span><span class="o">/</span><span class="mf">1.1</span><span class="p">,</span> <span class="n">IDLE</span><span class="p">,</span> <span class="n">Request</span> <span class="n">Count</span><span class="p">:</span> <span class="mi">1</span><span class="p">]</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="p">]</span>
+</code></pre></div>
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h2 id="httpcore.ConnectionPool.__init__" class="doc doc-heading">
+<code class=" language-python"><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ssl_context</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">proxy</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_connections</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">max_keepalive_connections</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">keepalive_expiry</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">http1</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">http2</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">retries</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">local_address</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">uds</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">network_backend</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">socket_options</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-special"><code>special</code></small>
+  </span>
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+      <p>A connection pool for making HTTP requests.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ssl_context</code></td>
+        <td><code>ssl.SSLContext | None</code></td>
+        <td><p>An SSL context to use for verifying connections.
+If not specified, the default <code>httpcore.default_ssl_context()</code>
+will be used.</p></td>
+        <td><code>None</code></td>
+      </tr>
+      <tr>
+        <td><code>max_connections</code></td>
+        <td><code>int | None</code></td>
+        <td><p>The maximum number of concurrent HTTP connections that
+the pool should allow. Any attempt to send a request on a pool that
+would exceed this amount will block until a connection is available.</p></td>
+        <td><code>10</code></td>
+      </tr>
+      <tr>
+        <td><code>max_keepalive_connections</code></td>
+        <td><code>int | None</code></td>
+        <td><p>The maximum number of idle HTTP connections
+that will be maintained in the pool.</p></td>
+        <td><code>None</code></td>
+      </tr>
+      <tr>
+        <td><code>keepalive_expiry</code></td>
+        <td><code>float | None</code></td>
+        <td><p>The duration in seconds that an idle HTTP connection
+may be maintained for before being expired from the pool.</p></td>
+        <td><code>None</code></td>
+      </tr>
+      <tr>
+        <td><code>http1</code></td>
+        <td><code>bool</code></td>
+        <td><p>A boolean indicating if HTTP/1.1 requests should be supported
+by the connection pool. Defaults to True.</p></td>
+        <td><code>True</code></td>
+      </tr>
+      <tr>
+        <td><code>http2</code></td>
+        <td><code>bool</code></td>
+        <td><p>A boolean indicating if HTTP/2 requests should be supported by
+the connection pool. Defaults to False.</p></td>
+        <td><code>False</code></td>
+      </tr>
+      <tr>
+        <td><code>retries</code></td>
+        <td><code>int</code></td>
+        <td><p>The maximum number of retries when trying to establish a
+connection.</p></td>
+        <td><code>0</code></td>
+      </tr>
+      <tr>
+        <td><code>local_address</code></td>
+        <td><code>str | None</code></td>
+        <td><p>Local address to connect from. Can also be used to connect
+using a particular address family. Using <code>local_address="0.0.0.0"</code>
+will connect using an <code>AF_INET</code> address (IPv4), while using
+<code>local_address="::"</code> will connect using an <code>AF_INET6</code> address (IPv6).</p></td>
+        <td><code>None</code></td>
+      </tr>
+      <tr>
+        <td><code>uds</code></td>
+        <td><code>str | None</code></td>
+        <td><p>Path to a Unix Domain Socket to use instead of TCP sockets.</p></td>
+        <td><code>None</code></td>
+      </tr>
+      <tr>
+        <td><code>network_backend</code></td>
+        <td><code>NetworkBackend | None</code></td>
+        <td><p>A backend instance to use for handling network I/O.</p></td>
+        <td><code>None</code></td>
+      </tr>
+      <tr>
+        <td><code>socket_options</code></td>
+        <td><code>Iterable[SOCKET_OPTION] | None</code></td>
+        <td><p>Socket options that have to be included
+in the TCP socket when the connection was established.</p></td>
+        <td><code>None</code></td>
+      </tr>
+  </tbody>
+</table>
+        <details class="quote">
+          <summary>Source code in <code>httpcore/__init__.py</code></summary>
+          <div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">ssl_context</span><span class="p">:</span> <span class="n">ssl</span><span class="o">.</span><span class="n">SSLContext</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">proxy</span><span class="p">:</span> <span class="n">Proxy</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">max_connections</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="n">max_keepalive_connections</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">keepalive_expiry</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">http1</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">http2</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">retries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">local_address</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">uds</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">network_backend</span><span class="p">:</span> <span class="n">NetworkBackend</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">socket_options</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="n">SOCKET_OPTION</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A connection pool for making HTTP requests.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        ssl_context: An SSL context to use for verifying connections.</span>
+<span class="sd">            If not specified, the default `httpcore.default_ssl_context()`</span>
+<span class="sd">            will be used.</span>
+<span class="sd">        max_connections: The maximum number of concurrent HTTP connections that</span>
+<span class="sd">            the pool should allow. Any attempt to send a request on a pool that</span>
+<span class="sd">            would exceed this amount will block until a connection is available.</span>
+<span class="sd">        max_keepalive_connections: The maximum number of idle HTTP connections</span>
+<span class="sd">            that will be maintained in the pool.</span>
+<span class="sd">        keepalive_expiry: The duration in seconds that an idle HTTP connection</span>
+<span class="sd">            may be maintained for before being expired from the pool.</span>
+<span class="sd">        http1: A boolean indicating if HTTP/1.1 requests should be supported</span>
+<span class="sd">            by the connection pool. Defaults to True.</span>
+<span class="sd">        http2: A boolean indicating if HTTP/2 requests should be supported by</span>
+<span class="sd">            the connection pool. Defaults to False.</span>
+<span class="sd">        retries: The maximum number of retries when trying to establish a</span>
+<span class="sd">            connection.</span>
+<span class="sd">        local_address: Local address to connect from. Can also be used to connect</span>
+<span class="sd">            using a particular address family. Using `local_address=&quot;0.0.0.0&quot;`</span>
+<span class="sd">            will connect using an `AF_INET` address (IPv4), while using</span>
+<span class="sd">            `local_address=&quot;::&quot;` will connect using an `AF_INET6` address (IPv6).</span>
+<span class="sd">        uds: Path to a Unix Domain Socket to use instead of TCP sockets.</span>
+<span class="sd">        network_backend: A backend instance to use for handling network I/O.</span>
+<span class="sd">        socket_options: Socket options that have to be included</span>
+<span class="sd">         in the TCP socket when the connection was established.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_ssl_context</span> <span class="o">=</span> <span class="n">ssl_context</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_proxy</span> <span class="o">=</span> <span class="n">proxy</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_max_connections</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">maxsize</span> <span class="k">if</span> <span class="n">max_connections</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">max_connections</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_max_keepalive_connections</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">maxsize</span>
+        <span class="k">if</span> <span class="n">max_keepalive_connections</span> <span class="ow">is</span> <span class="kc">None</span>
+        <span class="k">else</span> <span class="n">max_keepalive_connections</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_max_keepalive_connections</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_max_connections</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_keepalive_connections</span>
+    <span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">_keepalive_expiry</span> <span class="o">=</span> <span class="n">keepalive_expiry</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_http1</span> <span class="o">=</span> <span class="n">http1</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_http2</span> <span class="o">=</span> <span class="n">http2</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_retries</span> <span class="o">=</span> <span class="n">retries</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_local_address</span> <span class="o">=</span> <span class="n">local_address</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_uds</span> <span class="o">=</span> <span class="n">uds</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">_network_backend</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">SyncBackend</span><span class="p">()</span> <span class="k">if</span> <span class="n">network_backend</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">network_backend</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_socket_options</span> <span class="o">=</span> <span class="n">socket_options</span>
+
+    <span class="c1"># The mutable state on a connection pool is the queue of incoming requests,</span>
+    <span class="c1"># and the set of connections that are servicing those requests.</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_connections</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ConnectionInterface</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_requests</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">PoolRequest</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># We only mutate the state of the connection pool within an &#39;optional_thread_lock&#39;</span>
+    <span class="c1"># context. This holds a threading lock unless we&#39;re running in async mode,</span>
+    <span class="c1"># in which case it is a no-op.</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_optional_thread_lock</span> <span class="o">=</span> <span class="n">ThreadLock</span><span class="p">()</span>
+</code></pre></div>
+        </details>
+    </div>
+
+  </div>
+
+
+
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h2 id="httpcore.ConnectionPool.handle_request" class="doc doc-heading">
+<code class=" language-python"><span class="n">handle_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">)</span></code>
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+      <p>Send an HTTP request, and return an HTTP response.</p>
+<p>This is the core implementation that is called into by <code>.request()</code> or <code>.stream()</code>.</p>
+
+        <details class="quote">
+          <summary>Source code in <code>httpcore/__init__.py</code></summary>
+          <div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">handle_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Send an HTTP request, and return an HTTP response.</span>
+
+<span class="sd">    This is the core implementation that is called into by `.request()` or `.stream()`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">scheme</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">url</span><span class="o">.</span><span class="n">scheme</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">scheme</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">UnsupportedProtocol</span><span class="p">(</span>
+            <span class="s2">&quot;Request URL is missing an &#39;http://&#39; or &#39;https://&#39; protocol.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">scheme</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;http&quot;</span><span class="p">,</span> <span class="s2">&quot;https&quot;</span><span class="p">,</span> <span class="s2">&quot;ws&quot;</span><span class="p">,</span> <span class="s2">&quot;wss&quot;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">UnsupportedProtocol</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Request URL has an unsupported protocol &#39;</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s2">://&#39;.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="n">timeouts</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">extensions</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;timeout&quot;</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="n">timeout</span> <span class="o">=</span> <span class="n">timeouts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pool&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optional_thread_lock</span><span class="p">:</span>
+        <span class="c1"># Add the incoming request to our request queue.</span>
+        <span class="n">pool_request</span> <span class="o">=</span> <span class="n">PoolRequest</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_requests</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pool_request</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optional_thread_lock</span><span class="p">:</span>
+                <span class="c1"># Assign incoming requests to available connections,</span>
+                <span class="c1"># closing or creating new connections as required.</span>
+                <span class="n">closing</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assign_requests_to_connections</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_close_connections</span><span class="p">(</span><span class="n">closing</span><span class="p">)</span>
+
+            <span class="c1"># Wait until this request has an assigned connection.</span>
+            <span class="n">connection</span> <span class="o">=</span> <span class="n">pool_request</span><span class="o">.</span><span class="n">wait_for_connection</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Send the request on the assigned connection.</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">handle_request</span><span class="p">(</span>
+                    <span class="n">pool_request</span><span class="o">.</span><span class="n">request</span>
+                <span class="p">)</span>
+            <span class="k">except</span> <span class="n">ConnectionNotAvailable</span><span class="p">:</span>
+                <span class="c1"># In some cases a connection may initially be available to</span>
+                <span class="c1"># handle a request, but then become unavailable.</span>
+                <span class="c1">#</span>
+                <span class="c1"># In this case we clear the connection and try again.</span>
+                <span class="n">pool_request</span><span class="o">.</span><span class="n">clear_connection</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">break</span>  <span class="c1"># pragma: nocover</span>
+
+    <span class="k">except</span> <span class="ne">BaseException</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optional_thread_lock</span><span class="p">:</span>
+            <span class="c1"># For any exception or cancellation we remove the request from</span>
+            <span class="c1"># the queue, and then re-assign requests to connections.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_requests</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">pool_request</span><span class="p">)</span>
+            <span class="n">closing</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assign_requests_to_connections</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_close_connections</span><span class="p">(</span><span class="n">closing</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">exc</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+
+    <span class="c1"># Return the response. Note that in this case we still have to manage</span>
+    <span class="c1"># the point at which the response is closed.</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">stream</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Iterable</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span>
+        <span class="n">status</span><span class="o">=</span><span class="n">response</span><span class="o">.</span><span class="n">status</span><span class="p">,</span>
+        <span class="n">headers</span><span class="o">=</span><span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+        <span class="n">content</span><span class="o">=</span><span class="n">PoolByteStream</span><span class="p">(</span>
+            <span class="n">stream</span><span class="o">=</span><span class="n">response</span><span class="o">.</span><span class="n">stream</span><span class="p">,</span> <span class="n">pool_request</span><span class="o">=</span><span class="n">pool_request</span><span class="p">,</span> <span class="n">pool</span><span class="o">=</span><span class="bp">self</span>
+        <span class="p">),</span>
+        <span class="n">extensions</span><span class="o">=</span><span class="n">response</span><span class="o">.</span><span class="n">extensions</span><span class="p">,</span>
+    <span class="p">)</span>
+</code></pre></div>
+        </details>
+    </div>
+
+  </div>
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.ad660dcc.min.js"></script>
+      
+    
+  </body>
+</html>
