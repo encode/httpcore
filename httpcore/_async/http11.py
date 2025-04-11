@@ -18,7 +18,7 @@ from .._exceptions import (
     map_exceptions,
 )
 from .._models import Origin, Request, Response
-from .._synchronization import AsyncLock, AsyncShieldCancellation
+from .._synchronization import AsyncThreadLock
 from .._trace import Trace
 from .interfaces import AsyncConnectionInterface
 
@@ -55,7 +55,9 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
         self._keepalive_expiry: float | None = keepalive_expiry
         self._expire_at: float | None = None
         self._state = HTTPConnectionState.NEW
-        self._state_lock = AsyncLock()
+        self._state_thread_lock = (
+            AsyncThreadLock()
+        )  # thread-lock for sync, no-op for async
         self._request_count = 0
         self._h11_state = h11.Connection(
             our_role=h11.CLIENT,
@@ -69,7 +71,9 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
                 f"to {self._origin}"
             )
 
-        async with self._state_lock:
+        with self._state_thread_lock:
+            # We ensure that state changes at the start and end of a
+            # request/response cycle are thread-locked.
             if self._state in (HTTPConnectionState.NEW, HTTPConnectionState.IDLE):
                 self._request_count += 1
                 self._state = HTTPConnectionState.ACTIVE
@@ -130,9 +134,8 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
                 },
             )
         except BaseException as exc:
-            with AsyncShieldCancellation():
-                async with Trace("response_closed", logger, request) as trace:
-                    await self._response_closed()
+            if self._connection_should_close():
+                await self._network_stream.aclose()
             raise exc
 
     # Sending the request...
@@ -235,8 +238,12 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
                 # mypy fails to narrow the type in the above if statement above
                 return event  # type: ignore[return-value]
 
-    async def _response_closed(self) -> None:
-        async with self._state_lock:
+    def _connection_should_close(self) -> bool:
+        # Once the response is complete we either need to move into
+        # an IDLE or CLOSED state.
+        with self._state_thread_lock:
+            # We ensure that state changes at the start and end of a
+            # request/response cycle are thread-locked.
             if (
                 self._h11_state.our_state is h11.DONE
                 and self._h11_state.their_state is h11.DONE
@@ -246,8 +253,10 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
                 if self._keepalive_expiry is not None:
                     now = time.monotonic()
                     self._expire_at = now + self._keepalive_expiry
-            else:
-                await self.aclose()
+                return False
+
+            self._state = HTTPConnectionState.CLOSED
+            return True
 
     # Once the connection is no longer required...
 
@@ -337,15 +346,16 @@ class HTTP11ConnectionByteStream:
             # If we get an exception while streaming the response,
             # we want to close the response (and possibly the connection)
             # before raising that exception.
-            with AsyncShieldCancellation():
-                await self.aclose()
+            if self._connection._connection_should_close():
+                await self._connection.aclose()
             raise exc
 
     async def aclose(self) -> None:
-        if not self._closed:
-            self._closed = True
-            async with Trace("response_closed", logger, self._request):
-                await self._connection._response_closed()
+        async with Trace("response_closed", logger, self._request, kwargs={}):
+            if not self._closed:
+                self._closed = True
+                if self._connection._connection_should_close():
+                    await self._connection.aclose()
 
 
 class AsyncHTTP11UpgradeStream(AsyncNetworkStream):
