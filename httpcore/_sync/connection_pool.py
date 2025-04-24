@@ -9,7 +9,7 @@ from .._backends.sync import SyncBackend
 from .._backends.base import SOCKET_OPTION, NetworkBackend
 from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
 from .._models import Origin, Proxy, Request, Response
-from .._synchronization import Event, ShieldCancellation, ThreadLock
+from .._synchronization import Event, ShieldCancellation, ThreadRLock
 from .connection import HTTPConnection
 from .interfaces import ConnectionInterface, RequestInterface
 
@@ -123,7 +123,7 @@ class ConnectionPool(RequestInterface):
         # We only mutate the state of the connection pool within an 'optional_thread_lock'
         # context. This holds a threading lock unless we're running in async mode,
         # in which case it is a no-op.
-        self._optional_thread_lock = ThreadLock()
+        self._optional_thread_lock = ThreadRLock()
 
     def create_connection(self, origin: Origin) -> ConnectionInterface:
         if self._proxy is not None:
