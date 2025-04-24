@@ -30,7 +30,7 @@ classifiers = [
 ]
 dependencies = [
     "certifi",
-    "h11>=0.13,<0.16",
+    "h11>=0.13",
 ]
 
 [project.optional-dependencies]
