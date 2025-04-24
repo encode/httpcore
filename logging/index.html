@@ -1,0 +1,551 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A minimal HTTP client for Python.">
+      
+      
+      
+        <link rel="canonical" href="https://www.encode.io/httpcore/logging/">
+      
+      
+        <link rel="prev" href="../extensions/">
+      
+      
+        <link rel="next" href="../exceptions/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.27">
+    
+    
+      
+        <title>Logging - HTTPCore</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.6543a935.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#logging" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="HTTPCore" class="md-header__button md-logo" aria-label="HTTPCore" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            HTTPCore
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Logging
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/encode/httpcore/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    encode/httpcore
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="HTTPCore" class="md-nav__button md-logo" aria-label="HTTPCore" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    HTTPCore
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/encode/httpcore/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    encode/httpcore
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Introduction
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Quickstart
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../connection-pools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Connection Pools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../proxies/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Proxies
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../http2/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    HTTP/2
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../async/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Async Support
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../network-backends/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Backends
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extensions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Extensions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Logging
+  </span>
+  
+
+      </a>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../exceptions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Exceptions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="logging">Logging</h1>
+<p>If you need to inspect the internal behaviour of <code>httpcore</code>, you can use Python's standard logging to output debug level information.</p>
+<p>For example, the following configuration...</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">httpcore</span>
+
+<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span>
+    <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%(levelname)s</span><span class="s2"> [</span><span class="si">%(asctime)s</span><span class="s2">] </span><span class="si">%(name)s</span><span class="s2"> - </span><span class="si">%(message)s</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="n">datefmt</span><span class="o">=</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">,</span>
+    <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span>
+<span class="p">)</span>
+
+<span class="n">httpcore</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="s1">&#39;https://www.example.com&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<p>Will send debug level output to the console, or wherever <code>stdout</code> is directed too...</p>
+<div class="highlight"><pre><span></span><code><span class="nx">DEBUG</span><span class="w"> </span><span class="p">[</span><span class="mi">2023</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">09</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="p">]</span><span class="w"> </span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">connection</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">connect_tcp</span><span class="p">.</span><span class="nx">started</span><span class="w"> </span><span class="nx">host</span><span class="p">=</span><span class="err">&#39;</span><span class="nx">www</span><span class="p">.</span><span class="nx">example</span><span class="p">.</span><span class="nx">com</span><span class="err">&#39;</span><span class="w"> </span><span class="nx">port</span><span class="p">=</span><span class="mi">443</span><span class="w"> </span><span class="nx">local_address</span><span class="p">=</span><span class="nx">None</span><span class="w"> </span><span class="nx">timeout</span><span class="p">=</span><span class="nx">None</span>
+<span class="nx">DEBUG</span><span class="w"> </span><span class="p">[</span><span class="mi">2023</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">09</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="p">]</span><span class="w"> </span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">connection</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">connect_tcp</span><span class="p">.</span><span class="nx">complete</span><span class="w"> </span><span class="nx">return_value</span><span class="p">=&lt;</span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">backends</span><span class="p">.</span><span class="nx">sync</span><span class="p">.</span><span class="nx">SyncStream</span><span class="w"> </span><span class="nx">object</span><span class="w"> </span><span class="nx">at</span><span class="w"> </span><span class="mh">0x109ba6610</span><span class="p">&gt;</span>
+<span class="nx">DEBUG</span><span class="w"> </span><span class="p">[</span><span class="mi">2023</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">09</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="p">]</span><span class="w"> </span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">connection</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">start_tls</span><span class="p">.</span><span class="nx">started</span><span class="w"> </span><span class="nx">ssl_context</span><span class="p">=&lt;</span><span class="nx">ssl</span><span class="p">.</span><span class="nx">SSLContext</span><span class="w"> </span><span class="nx">object</span><span class="w"> </span><span class="nx">at</span><span class="w"> </span><span class="mh">0x109e427b0</span><span class="p">&gt;</span><span class="w"> </span><span class="nx">server_hostname</span><span class="p">=</span><span class="err">&#39;</span><span class="nx">www</span><span class="p">.</span><span class="nx">example</span><span class="p">.</span><span class="nx">com</span><span class="err">&#39;</span><span class="w"> </span><span class="nx">timeout</span><span class="p">=</span><span class="nx">None</span>
+<span class="nx">DEBUG</span><span class="w"> </span><span class="p">[</span><span class="mi">2023</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">09</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="p">]</span><span class="w"> </span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">connection</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">start_tls</span><span class="p">.</span><span class="nx">complete</span><span class="w"> </span><span class="nx">return_value</span><span class="p">=&lt;</span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">backends</span><span class="p">.</span><span class="nx">sync</span><span class="p">.</span><span class="nx">SyncStream</span><span class="w"> </span><span class="nx">object</span><span class="w"> </span><span class="nx">at</span><span class="w"> </span><span class="mh">0x109e8b050</span><span class="p">&gt;</span>
+<span class="nx">DEBUG</span><span class="w"> </span><span class="p">[</span><span class="mi">2023</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">09</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="p">]</span><span class="w"> </span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">http11</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">send_request_headers</span><span class="p">.</span><span class="nx">started</span><span class="w"> </span><span class="nx">request</span><span class="p">=&lt;</span><span class="nx">Request</span><span class="w"> </span><span class="p">[</span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">GET</span><span class="err">&#39;</span><span class="p">]&gt;</span>
+<span class="nx">DEBUG</span><span class="w"> </span><span class="p">[</span><span class="mi">2023</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">09</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="p">]</span><span class="w"> </span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">http11</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">send_request_headers</span><span class="p">.</span><span class="nx">complete</span>
+<span class="nx">DEBUG</span><span class="w"> </span><span class="p">[</span><span class="mi">2023</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">09</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="p">]</span><span class="w"> </span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">http11</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">send_request_body</span><span class="p">.</span><span class="nx">started</span><span class="w"> </span><span class="nx">request</span><span class="p">=&lt;</span><span class="nx">Request</span><span class="w"> </span><span class="p">[</span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">GET</span><span class="err">&#39;</span><span class="p">]&gt;</span>
+<span class="nx">DEBUG</span><span class="w"> </span><span class="p">[</span><span class="mi">2023</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">09</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="p">]</span><span class="w"> </span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">http11</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">send_request_body</span><span class="p">.</span><span class="nx">complete</span>
+<span class="nx">DEBUG</span><span class="w"> </span><span class="p">[</span><span class="mi">2023</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">09</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="p">]</span><span class="w"> </span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">http11</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">receive_response_headers</span><span class="p">.</span><span class="nx">started</span><span class="w"> </span><span class="nx">request</span><span class="p">=&lt;</span><span class="nx">Request</span><span class="w"> </span><span class="p">[</span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">GET</span><span class="err">&#39;</span><span class="p">]&gt;</span>
+<span class="nx">DEBUG</span><span class="w"> </span><span class="p">[</span><span class="mi">2023</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">09</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="p">]</span><span class="w"> </span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">http11</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">receive_response_headers</span><span class="p">.</span><span class="nx">complete</span><span class="w"> </span><span class="nx">return_value</span><span class="p">=(</span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">HTTP</span><span class="o">/</span><span class="m m-Double">1.1</span><span class="err">&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">OK</span><span class="err">&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">[(</span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">Age</span><span class="err">&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">b</span><span class="err">&#39;</span><span class="mi">572646</span><span class="err">&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">Cache</span><span class="o">-</span><span class="nx">Control</span><span class="err">&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">max</span><span class="o">-</span><span class="nx">age</span><span class="p">=</span><span class="mi">604800</span><span class="err">&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">Content</span><span class="o">-</span><span class="nx">Type</span><span class="err">&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">text</span><span class="o">/</span><span class="nx">html</span><span class="p">;</span><span class="w"> </span><span class="nx">charset</span><span class="p">=</span><span class="nx">UTF</span><span class="o">-</span><span class="mi">8</span><span class="err">&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">Date</span><span class="err">&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">Mon</span><span class="p">,</span><span class="w"> </span><span class="mi">09</span><span class="w"> </span><span class="nx">Jan</span><span class="w"> </span><span class="mi">2023</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="w"> </span><span class="nx">GMT</span><span class="err">&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">Etag</span><span class="err">&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">b</span><span class="err">&#39;</span><span class="s">&quot;3147526947+ident&quot;</span><span class="err">&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">Expires</span><span class="err">&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">Mon</span><span class="p">,</span><span class="w"> </span><span class="mi">16</span><span class="w"> </span><span class="nx">Jan</span><span class="w"> </span><span class="mi">2023</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="w"> </span><span class="nx">GMT</span><span class="err">&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">Last</span><span class="o">-</span><span class="nx">Modified</span><span class="err">&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">Thu</span><span class="p">,</span><span class="w"> </span><span class="mi">17</span><span class="w"> </span><span class="nx">Oct</span><span class="w"> </span><span class="mi">2019</span><span class="w"> </span><span class="mi">07</span><span class="p">:</span><span class="mi">18</span><span class="p">:</span><span class="mi">26</span><span class="w"> </span><span class="nx">GMT</span><span class="err">&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">Server</span><span class="err">&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">ECS</span><span class="w"> </span><span class="p">(</span><span class="nx">nyb</span><span class="o">/</span><span class="mi">1</span><span class="nx">D18</span><span class="p">)</span><span class="err">&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">Vary</span><span class="err">&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">Accept</span><span class="o">-</span><span class="nx">Encoding</span><span class="err">&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">X</span><span class="o">-</span><span class="nx">Cache</span><span class="err">&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">HIT</span><span class="err">&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">Content</span><span class="o">-</span><span class="nx">Length</span><span class="err">&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">b</span><span class="err">&#39;</span><span class="mi">1256</span><span class="err">&#39;</span><span class="p">)])</span>
+<span class="nx">DEBUG</span><span class="w"> </span><span class="p">[</span><span class="mi">2023</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">09</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="p">]</span><span class="w"> </span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">http11</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">receive_response_body</span><span class="p">.</span><span class="nx">started</span><span class="w"> </span><span class="nx">request</span><span class="p">=&lt;</span><span class="nx">Request</span><span class="w"> </span><span class="p">[</span><span class="nx">b</span><span class="err">&#39;</span><span class="nx">GET</span><span class="err">&#39;</span><span class="p">]&gt;</span>
+<span class="nx">DEBUG</span><span class="w"> </span><span class="p">[</span><span class="mi">2023</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">09</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="p">]</span><span class="w"> </span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">http11</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">receive_response_body</span><span class="p">.</span><span class="nx">complete</span>
+<span class="nx">DEBUG</span><span class="w"> </span><span class="p">[</span><span class="mi">2023</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">09</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="p">]</span><span class="w"> </span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">http11</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">response_closed</span><span class="p">.</span><span class="nx">started</span>
+<span class="nx">DEBUG</span><span class="w"> </span><span class="p">[</span><span class="mi">2023</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">09</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="p">]</span><span class="w"> </span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">http11</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">response_closed</span><span class="p">.</span><span class="nx">complete</span>
+<span class="nx">DEBUG</span><span class="w"> </span><span class="p">[</span><span class="mi">2023</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">09</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="p">]</span><span class="w"> </span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">connection</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">close</span><span class="p">.</span><span class="nx">started</span>
+<span class="nx">DEBUG</span><span class="w"> </span><span class="p">[</span><span class="mi">2023</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">09</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">00</span><span class="p">]</span><span class="w"> </span><span class="nx">httpcore</span><span class="p">.</span><span class="nx">connection</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">close</span><span class="p">.</span><span class="nx">complete</span>
+</code></pre></div>
+
+<p>The exact formatting of the debug logging may be subject to change across different versions of <code>httpcore</code>. If you need to rely on a particular format it is recommended that you pin installation of the package to a fixed version.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.ad660dcc.min.js"></script>
+      
+    
+  </body>
+</html>
