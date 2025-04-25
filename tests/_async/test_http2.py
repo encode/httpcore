@@ -1,8 +1,12 @@
+import time
+
 import hpack
 import hyperframe.frame
 import pytest
+import trio as concurrency
 
 import httpcore
+from tests import h2server
 
 
 @pytest.mark.anyio
@@ -380,3 +384,28 @@ async def test_http2_remote_max_streams_update():
                         conn._h2_state.local_settings.max_concurrent_streams,
                     )
                 i += 1
+
+
+@pytest.mark.trio
+@pytest.mark.xfail(reason="https://github.com/encode/httpx/discussions/3278")
+async def test_slow_overlapping_requests():
+    fetches = []
+
+    with h2server.run() as server:
+        url = f"http://127.0.0.1:{server.port}/"
+
+        async with httpcore.AsyncConnectionPool(http1=False, http2=True) as pool:
+
+            async def fetch(start_delay):
+                await concurrency.sleep(start_delay)
+
+                start = time.time()
+                await pool.request("GET", url)
+                end = time.time()
+                fetches.append(round(end - start, 1))
+
+            async with concurrency.open_nursery() as nursery:
+                for start_delay in [0, 0.2, 0.4, 0.6, 0.8]:
+                    nursery.start_soon(fetch, start_delay)
+
+    assert fetches == [1.0] * 5
