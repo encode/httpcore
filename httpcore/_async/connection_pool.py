@@ -245,7 +245,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
                 else:
                     break  # pragma: nocover
 
-        except BaseException as exc:
+        except BaseException:
             with self._optional_thread_lock:
                 # For any exception or cancellation we remove the request from
                 # the queue, and then re-assign requests to connections.
@@ -253,7 +253,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
                 closing = self._assign_requests_to_connections()
 
             await self._close_connections(closing)
-            raise exc from None
+            raise
 
         # Return the response. Note that in this case we still have to manage
         # the point at which the response is closed.
@@ -402,9 +402,9 @@ class PoolByteStream:
         try:
             async for part in self._stream:
                 yield part
-        except BaseException as exc:
+        except BaseException:
             await self.aclose()
-            raise exc from None
+            raise
 
     async def aclose(self) -> None:
         if not self._closed:
