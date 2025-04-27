@@ -406,6 +406,9 @@ class HTTP2Connection(ConnectionInterface):
                     self._max_streams_semaphore.acquire()
                     self._max_streams -= 1
 
+    def _reset_steam(self, stream_id: int, error_code: int) -> None:
+        self._h2_state.reset_stream(stream_id=stream_id, error_code=error_code)
+
     def _response_closed(self, stream_id: int) -> None:
         self._max_streams_semaphore.release()
         del self._events[stream_id]
@@ -581,6 +584,12 @@ class HTTP2ConnectionByteStream:
             # we want to close the response (and possibly the connection)
             # before raising that exception.
             with ShieldCancellation():
+                # need send cancel frame when the exception is not from remote peer.
+                if not isinstance(exc, RemoteProtocolError):
+                    self._connection._reset_steam(
+                        stream_id=self._stream_id,
+                        error_code=h2.settings.ErrorCodes.CANCEL,
+                    )
                 self.close()
             raise exc
 
