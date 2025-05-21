@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Version 1.0.9 (April 24th, 2025)
+
+- Resolve https://github.com/advisories/GHSA-vqfr-h8mv-ghfj with h11 dependency update. (#1008)
+
+## Version 1.0.8 (April 11th, 2025)
+
+- Fix `AttributeError` when importing on Python 3.14. (#1005)
+
 ## Version 1.0.7 (November 15th, 2024)
 
 - Support `proxy=…` configuration on `ConnectionPool()`. (#974)
