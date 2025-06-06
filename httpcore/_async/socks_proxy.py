@@ -45,7 +45,7 @@ async def _init_socks5_connection(
     host: bytes,
     port: int,
     auth: tuple[bytes, bytes] | None = None,
-    init_timeouts: tuple[float, float] | None = None
+    init_timeouts: tuple[float, float] | None = None,
 ) -> None:
     read_timeout, write_timeout = init_timeouts or (None, None)
     conn = socksio.socks5.SOCKS5Connection()
