@@ -45,7 +45,9 @@ async def _init_socks5_connection(
     host: bytes,
     port: int,
     auth: tuple[bytes, bytes] | None = None,
+    init_timeouts: tuple[float, float] | None = None,
 ) -> None:
+    read_timeout, write_timeout = init_timeouts or (None, None)
     conn = socksio.socks5.SOCKS5Connection()
 
     # Auth method request
@@ -56,10 +58,10 @@ async def _init_socks5_connection(
     )
     conn.send(socksio.socks5.SOCKS5AuthMethodsRequest([auth_method]))
     outgoing_bytes = conn.data_to_send()
-    await stream.write(outgoing_bytes)
+    await stream.write(outgoing_bytes, timeout=write_timeout)
 
     # Auth method response
-    incoming_bytes = await stream.read(max_bytes=4096)
+    incoming_bytes = await stream.read(max_bytes=4096, timeout=read_timeout)
     response = conn.receive_data(incoming_bytes)
     assert isinstance(response, socksio.socks5.SOCKS5AuthReply)
     if response.method != auth_method:
@@ -75,10 +77,10 @@ async def _init_socks5_connection(
         username, password = auth
         conn.send(socksio.socks5.SOCKS5UsernamePasswordRequest(username, password))
         outgoing_bytes = conn.data_to_send()
-        await stream.write(outgoing_bytes)
+        await stream.write(outgoing_bytes, timeout=write_timeout)
 
         # Username/password response
-        incoming_bytes = await stream.read(max_bytes=4096)
+        incoming_bytes = await stream.read(max_bytes=4096, timeout=read_timeout)
         response = conn.receive_data(incoming_bytes)
         assert isinstance(response, socksio.socks5.SOCKS5UsernamePasswordReply)
         if not response.success:
@@ -91,10 +93,10 @@ async def _init_socks5_connection(
         )
     )
     outgoing_bytes = conn.data_to_send()
-    await stream.write(outgoing_bytes)
+    await stream.write(outgoing_bytes, timeout=write_timeout)
 
     # Connect response
-    incoming_bytes = await stream.read(max_bytes=4096)
+    incoming_bytes = await stream.read(max_bytes=4096, timeout=read_timeout)
     response = conn.receive_data(incoming_bytes)
     assert isinstance(response, socksio.socks5.SOCKS5Reply)
     if response.reply_code != socksio.socks5.SOCKS5ReplyCode.SUCCEEDED:
@@ -217,6 +219,7 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
         timeouts = request.extensions.get("timeout", {})
         sni_hostname = request.extensions.get("sni_hostname", None)
         timeout = timeouts.get("connect", None)
+        init_timeouts = timeouts.get("read", None), timeouts.get("write", None)
 
         async with self._connect_lock:
             if self._connection is None:
@@ -237,6 +240,7 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
                         "host": self._remote_origin.host.decode("ascii"),
                         "port": self._remote_origin.port,
                         "auth": self._proxy_auth,
+                        "init_timeouts": init_timeouts,
                     }
                     async with Trace(
                         "setup_socks5_connection", logger, request, kwargs
