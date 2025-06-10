@@ -251,9 +251,11 @@ class Socks5Connection(ConnectionInterface):
                             if self._ssl_context is None
                             else self._ssl_context
                         )
-                        alpn_protocols = (
-                            ["h2", "http/1.1"] if self._http2 else ["http/1.1"]
-                        )
+                        alpn_protocols = []
+                        if self._http2:
+                            alpn_protocols.append("h2")
+                        if self._http1:
+                            alpn_protocols.append("http/1.1")
                         ssl_context.set_alpn_protocols(alpn_protocols)
 
                         kwargs = {
