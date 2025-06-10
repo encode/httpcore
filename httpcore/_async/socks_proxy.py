@@ -252,7 +252,7 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
                             else self._ssl_context
                         )
                         alpn_protocols = (
-                            ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
+                            ["h2", "http/1.1"] if self._http2 else ["http/1.1"]
                         )
                         ssl_context.set_alpn_protocols(alpn_protocols)
 
