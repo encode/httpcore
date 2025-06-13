@@ -163,6 +163,9 @@ class AsyncByteIterator:
         for chunk in self._chunks:
             yield chunk
 
+    async def aclose(self) -> None:
+        pass
+
 
 @pytest.mark.trio
 async def test_response_async_read():
