@@ -7,6 +7,8 @@ import sys
 if sys.version_info >= (3, 10):
     from contextlib import aclosing as aclosing
 else:
+    from contextlib import AbstractAsyncContextManager
+
     class aclosing(AbstractAsyncContextManager):
         def __init__(self, thing):
             self.thing = thing

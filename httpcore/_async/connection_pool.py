@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
-
 import ssl
 import sys
 import types
 import typing
+from collections.abc import AsyncGenerator
 
 from .._backends.auto import AutoBackend
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend
@@ -17,8 +16,9 @@ from .connection import AsyncHTTPConnection
 from .interfaces import AsyncConnectionInterface, AsyncRequestInterface
 
 if typing.TYPE_CHECKING:
-    from .http11 import HTTP11ConnectionByteStream
     from .http2 import HTTP2ConnectionByteStream
+    from .http11 import HTTP11ConnectionByteStream
+
 
 class AsyncPoolRequest:
     def __init__(self, request: Request) -> None:
