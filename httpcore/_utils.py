@@ -4,6 +4,21 @@ import select
 import socket
 import sys
 
+if sys.version_info >= (3, 10):
+    from contextlib import aclosing as aclosing
+else:
+    from contextlib import AbstractAsyncContextManager
+
+    class aclosing(AbstractAsyncContextManager):
+        def __init__(self, thing):
+            self.thing = thing
+
+        async def __aenter__(self):
+            return self.thing
+
+        async def __aexit__(self, *exc_info):
+            await self.thing.aclose()
+
 
 def is_socket_readable(sock: socket.socket | None) -> bool:
     """

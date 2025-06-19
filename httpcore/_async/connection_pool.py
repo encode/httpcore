@@ -4,14 +4,20 @@ import ssl
 import sys
 import types
 import typing
+from collections.abc import AsyncGenerator
 
 from .._backends.auto import AutoBackend
 from .._backends.base import SOCKET_OPTION, AsyncNetworkBackend
 from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
 from .._models import Origin, Proxy, Request, Response
 from .._synchronization import AsyncEvent, AsyncShieldCancellation, AsyncThreadLock
+from .._utils import aclosing
 from .connection import AsyncHTTPConnection
 from .interfaces import AsyncConnectionInterface, AsyncRequestInterface
+
+if typing.TYPE_CHECKING:
+    from .http2 import HTTP2ConnectionByteStream
+    from .http11 import HTTP11ConnectionByteStream
 
 
 class AsyncPoolRequest:
@@ -389,7 +395,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
 class PoolByteStream:
     def __init__(
         self,
-        stream: typing.AsyncIterable[bytes],
+        stream: HTTP11ConnectionByteStream | HTTP2ConnectionByteStream,
         pool_request: AsyncPoolRequest,
         pool: AsyncConnectionPool,
     ) -> None:
@@ -398,20 +404,16 @@ class PoolByteStream:
         self._pool = pool
         self._closed = False
 
-    async def __aiter__(self) -> typing.AsyncIterator[bytes]:
-        try:
-            async for part in self._stream:
-                yield part
-        except BaseException as exc:
-            await self.aclose()
-            raise exc from None
+    async def __aiter__(self) -> AsyncGenerator[bytes]:
+        async with aclosing(self._stream.__aiter__()) as iterator:
+            async for chunk in iterator:
+                yield chunk
 
     async def aclose(self) -> None:
         if not self._closed:
             self._closed = True
             with AsyncShieldCancellation():
-                if hasattr(self._stream, "aclose"):
-                    await self._stream.aclose()
+                await self._stream.aclose()
 
             with self._pool._optional_thread_lock:
                 self._pool._requests.remove(self._pool_request)
