@@ -403,7 +403,10 @@ class PoolByteStream:
             async for part in self._stream:
                 yield part
         except BaseException as exc:
-            await self.aclose()
+            try:
+                await self.aclose()
+            except BaseException:
+                pass
             raise exc from None
 
     async def aclose(self) -> None:
