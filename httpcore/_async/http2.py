@@ -64,6 +64,11 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         self._used_all_stream_ids = False
         self._connection_error = False
 
+        # self._max_streams contains the maximum number of concurrent requests that this connection can handle
+        # Initially start with just 1 until the remote server provides its max_concurrent_streams value
+        self._max_streams = 1
+        self._concurrent_streams = 0  # Tracks currently active requests.
+
         # Mapping from stream ID to response stream events.
         self._events: dict[
             int,
@@ -116,10 +121,6 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
                 self._sent_connection_init = True
 
-                # Initially start with just 1 until the remote server provides
-                # its max_concurrent_streams value
-                self._max_streams = 1
-
                 local_settings_max_streams = (
                     self._h2_state.local_settings.max_concurrent_streams
                 )
@@ -129,6 +130,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                     await self._max_streams_semaphore.acquire()
 
         await self._max_streams_semaphore.acquire()
+        self._concurrent_streams += 1
 
         try:
             stream_id = self._h2_state.get_next_available_stream_id()
@@ -408,6 +410,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
     async def _response_closed(self, stream_id: int) -> None:
         await self._max_streams_semaphore.release()
+        self._concurrent_streams -= 1
         del self._events[stream_id]
         async with self._state_lock:
             if self._connection_terminated and not self._events:
@@ -528,6 +531,14 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
     def is_closed(self) -> bool:
         return self._state == HTTPConnectionState.CLOSED
+
+    def get_available_stream_capacity(self) -> int:
+        """
+        Return the number of additional streams that can be handled by this connection.
+        This is useful for determining how many more requests can be sent on this HTTP/2 connection.
+        Uses the actual SETTINGS_MAX_CONCURRENT_STREAMS negotiated with the server.
+        """
+        return self._max_streams - self._concurrent_streams
 
     def info(self) -> str:
         origin = str(self._origin)

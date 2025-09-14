@@ -135,3 +135,12 @@ class AsyncConnectionInterface(AsyncRequestInterface):
         returned to the connection pool or not.
         """
         raise NotImplementedError()  # pragma: nocover
+
+    def get_available_stream_capacity(self) -> int:
+        """
+        Return the number of additional streams that can be handled by this connection.
+
+        For HTTP/1.1 connections, this is 1 if the connection is idle, 0 otherwise.
+        For HTTP/2 connections, this is the number of available concurrent streams.
+        """
+        raise NotImplementedError()  # pragma: nocover

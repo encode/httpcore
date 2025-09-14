@@ -830,3 +830,184 @@ def test_http11_upgrade_connection():
         "http11.response_closed.started",
         "http11.response_closed.complete",
     ]
+
+
+
+def test_keepalive_idle_connections():
+    """
+    With max_keepalive_connections=1 and max_connections=5, after making 2 requests
+    and reading 1 response, we should have 1 IDLE and 1 ACTIVE connection.
+    The IDLE connection should NOT be closed because we're under the keepalive limit.
+    """
+    network_backend = httpcore.MockBackend(
+        [
+            # First request/response
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+            # Second request/response
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
+
+    with httpcore.ConnectionPool(
+        network_backend=network_backend,
+        max_connections=5,  # Allow multiple connections
+        max_keepalive_connections=1,  # But only keep 1 idle
+        keepalive_expiry=10.0,  # Long timeout to avoid expiry issues
+        http1=True,
+        http2=False,
+    ) as pool:
+        with pool.stream("GET", "https://example.com/") as response1:
+            with pool.stream("GET", "https://example.com/") as response2:
+                # At this point, both connections are ACTIVE and both requests are ACTIVE
+                assert (
+                    repr(pool)
+                    == "<ConnectionPool [Requests: 2 active, 0 queued | Connections: 2 active, 0 idle]>"
+                )
+                # CRITICAL: Must read response to allow h11 state machine to progress to DONE
+                response2.read()
+
+            # After finishing one request, we should have:
+            # - 1 ACTIVE connection
+            # - 1 IDLE connection
+            # The IDLE connection should NOT be closed because idle_count (1) <= max_keepalive_connections (1)
+            assert (
+                repr(pool)
+                == "<ConnectionPool [Requests: 1 active, 0 queued | Connections: 1 active, 1 idle]>"
+            )
+
+            # Read response to allow state machine to progress to DONE
+            response1.read()
+
+        # After both responses are complete, we have 2 idle connections
+        # but the cleanup logic should close 1 to respect max_keepalive_connections=1
+        assert (
+            repr(pool)
+            == "<ConnectionPool [Requests: 0 active, 0 queued | Connections: 0 active, 1 idle]>"
+        )
+
+
+
+def test_idle_but_not_available_connection_closing():
+    """
+    Test that a connection that is idle but not available gets closed.
+    This is a pathological edge case that shouldn't occur in reality, but the connection pool
+    handles it anyway.
+    """
+
+    class MockIdleNotAvailableConnection(httpcore.ConnectionInterface):
+        def __init__(self) -> None:
+            self._origin = httpcore.Origin(b"https", b"example.com", 443)
+
+        def is_available(self) -> bool:
+            return False  # Not available
+
+        def is_idle(self) -> bool:
+            return True  # But is idle - this is the edge case
+
+        def is_closed(self) -> bool:
+            return False
+
+        def has_expired(self) -> bool:
+            return False
+
+    network_backend = httpcore.MockBackend([])
+
+    with httpcore.ConnectionPool(
+        network_backend=network_backend,
+    ) as pool:
+        # Replace the connection list with our pathological mock connection
+        mock_conn = MockIdleNotAvailableConnection()
+
+        pool._connections = [mock_conn]
+
+        # This should move the idle-but-not-available connection to closing_conns
+        closing_conns = pool._assign_requests_to_connections()
+
+        # Verify the connection is marked for closing
+        assert len(closing_conns) == 1
+        assert closing_conns[0] is mock_conn
+
+        # Verify it's no longer in the connection pool
+        assert len(pool._connections) == 0
+
+
+
+def test_active_http2_connection_keepalive_preservation():
+    """
+    Test that active HTTP/2 connections with capacity are preserved during keepalive enforcement.
+    This tests line 421 where active HTTP/2 connections are kept during keepalive enforcement.
+    """
+
+    class MockActiveHTTP2Connection(httpcore.ConnectionInterface):
+        def __init__(self) -> None:
+            self._origin = httpcore.Origin(b"https", b"example.com", 443)
+
+        def is_available(self) -> bool:
+            return True  # Available with capacity
+
+        def is_idle(self) -> bool:
+            return False  # Not idle (active HTTP/2 connection with streams)
+
+        def is_closed(self) -> bool:
+            return False
+
+        def has_expired(self) -> bool:
+            return False
+
+        def get_available_stream_capacity(self) -> int:
+            return 5  # HTTP/2 connection with available stream capacity
+
+        def close(self):
+            pass
+
+    class MockIdleConnection(httpcore.ConnectionInterface):
+        def __init__(self) -> None:
+            self._origin = httpcore.Origin(b"https", b"example.com", 443)
+
+        def is_available(self) -> bool:
+            return True
+
+        def is_idle(self) -> bool:
+            return True  # This is an idle connection
+
+        def is_closed(self) -> bool:
+            return False
+
+        def has_expired(self) -> bool:
+            return False
+
+        def get_available_stream_capacity(self) -> int:
+            return 1
+
+    network_backend = httpcore.MockBackend([])
+
+    with httpcore.ConnectionPool(
+        max_keepalive_connections=0,  # Force keepalive limit to 0
+        http2=True,
+        network_backend=network_backend,
+    ) as pool:
+        # Create one idle connection and one active HTTP/2 connection
+        idle_conn = MockIdleConnection()
+        active_http2_conn = MockActiveHTTP2Connection()
+
+        with pool._optional_thread_lock:
+            pool._connections = [idle_conn, active_http2_conn]
+
+            # This should close idle connections but preserve the active HTTP/2 connection
+            closing_conns = pool._assign_requests_to_connections()
+
+            # Verify idle connection is marked for closing
+            assert len(closing_conns) == 1
+            assert idle_conn in closing_conns
+
+            # Verify the active HTTP/2 connection is preserved (line 421)
+            assert len(pool._connections) == 1
+            assert active_http2_conn in pool._connections

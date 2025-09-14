@@ -363,5 +363,8 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
     def is_closed(self) -> bool:
         return self._connection.is_closed()
 
+    def get_available_stream_capacity(self) -> int:
+        return self._connection.get_available_stream_capacity()
+
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} [{self.info()}]>"

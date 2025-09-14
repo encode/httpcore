@@ -291,6 +291,13 @@ class HTTP11Connection(ConnectionInterface):
     def is_closed(self) -> bool:
         return self._state == HTTPConnectionState.CLOSED
 
+    def get_available_stream_capacity(self) -> int:
+        """
+        For HTTP/1.1, return 1 if the connection is idle (can accept a request),
+        0 otherwise (connection is busy).
+        """
+        return 1 if self._state == HTTPConnectionState.IDLE else 0
+
     def info(self) -> str:
         origin = str(self._origin)
         return (

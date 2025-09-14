@@ -199,6 +199,11 @@ class HTTPConnection(ConnectionInterface):
             return self._connect_failed
         return self._connection.is_closed()
 
+    def get_available_stream_capacity(self) -> int:
+        if self._connection is None:
+            return 1
+        return self._connection.get_available_stream_capacity()
+
     def info(self) -> str:
         if self._connection is None:
             return "CONNECTION FAILED" if self._connect_failed else "CONNECTING"
