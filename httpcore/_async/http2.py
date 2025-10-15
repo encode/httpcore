@@ -71,9 +71,13 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 h2.events.ResponseReceived
                 | h2.events.DataReceived
                 | h2.events.StreamEnded
-                | h2.events.StreamReset,
+                | h2.events.StreamReset
+                | h2.events.TrailersReceived,
             ],
         ] = {}
+
+        # Mapping from stream ID to trailing headers
+        self._trailing_headers: dict[int, list[tuple[bytes, bytes]]] = {}
 
         # Connection terminated events are stored as state since
         # we need to handle them for all streams.
@@ -152,15 +156,22 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 )
                 trace.return_value = (status, headers)
 
+            extensions = {
+                "http_version": b"HTTP/2",
+                "network_stream": self._network_stream,
+                "stream_id": stream_id,
+            }
+
             return Response(
                 status=status,
                 headers=headers,
-                content=HTTP2ConnectionByteStream(self, request, stream_id=stream_id),
-                extensions={
-                    "http_version": b"HTTP/2",
-                    "network_stream": self._network_stream,
-                    "stream_id": stream_id,
-                },
+                content=HTTP2ConnectionByteStream(
+                    connection=self,
+                    request=request,
+                    stream_id=stream_id,
+                    extensions=extensions,
+                ),
+                extensions=extensions,
             )
         except BaseException as exc:  # noqa: PIE786
             with AsyncShieldCancellation():
@@ -326,7 +337,12 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
     async def _receive_stream_event(
         self, request: Request, stream_id: int
-    ) -> h2.events.ResponseReceived | h2.events.DataReceived | h2.events.StreamEnded:
+    ) -> (
+        h2.events.ResponseReceived
+        | h2.events.DataReceived
+        | h2.events.StreamEnded
+        | h2.events.TrailersReceived
+    ):
         """
         Return the next available event for a given stream ID.
 
@@ -337,6 +353,13 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         event = self._events[stream_id].pop(0)
         if isinstance(event, h2.events.StreamReset):
             raise RemoteProtocolError(event)
+        elif isinstance(event, h2.events.TrailersReceived):
+            if event.stream_id in self._events and event.headers is not None:
+                self._trailing_headers[event.stream_id] = []
+                for k, v in event.headers:
+                    if not k.startswith(b":"):
+                        self._trailing_headers[event.stream_id].append((k, v))
+
         return event
 
     async def _receive_events(
@@ -377,6 +400,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                             h2.events.DataReceived,
                             h2.events.StreamEnded,
                             h2.events.StreamReset,
+                            h2.events.TrailersReceived,
                         ),
                     ):
                         if event.stream_id in self._events:
@@ -409,6 +433,8 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
     async def _response_closed(self, stream_id: int) -> None:
         await self._max_streams_semaphore.release()
         del self._events[stream_id]
+        if stream_id in self._trailing_headers:
+            del self._trailing_headers[stream_id]
         async with self._state_lock:
             if self._connection_terminated and not self._events:
                 await self.aclose()
@@ -561,12 +587,17 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
 class HTTP2ConnectionByteStream:
     def __init__(
-        self, connection: AsyncHTTP2Connection, request: Request, stream_id: int
+        self,
+        connection: AsyncHTTP2Connection,
+        request: Request,
+        stream_id: int,
+        extensions: typing.MutableMapping[str, typing.Any],
     ) -> None:
         self._connection = connection
         self._request = request
         self._stream_id = stream_id
         self._closed = False
+        self._extensions = extensions
 
     async def __aiter__(self) -> typing.AsyncIterator[bytes]:
         kwargs = {"request": self._request, "stream_id": self._stream_id}
@@ -576,6 +607,11 @@ class HTTP2ConnectionByteStream:
                     request=self._request, stream_id=self._stream_id
                 ):
                     yield chunk
+
+                if self._stream_id in self._connection._trailing_headers:
+                    self._extensions["trailing_headers"] = (
+                        self._connection._trailing_headers[self._stream_id]
+                    )
         except BaseException as exc:
             # If we get an exception while streaming the response,
             # we want to close the response (and possibly the connection)
