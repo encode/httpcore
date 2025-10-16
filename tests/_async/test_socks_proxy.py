@@ -27,6 +27,8 @@ async def test_socks5_request():
     async with httpcore.AsyncConnectionPool(
         proxy=httpcore.Proxy("socks5://localhost:8080/"),
         network_backend=network_backend,
+        # We also enable h2, but will negotiated http1.1
+        http2=True,
     ) as proxy:
         # Sending an intial request, which once complete will return to the pool, IDLE.
         async with proxy.stream("GET", "https://example.com/") as response:
