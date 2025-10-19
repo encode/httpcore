@@ -82,7 +82,7 @@ class TrioStream(AsyncNetworkStream):
         if info == "ssl_object" and isinstance(self._stream, trio.SSLStream):
             # Type checkers cannot see `_ssl_object` attribute because trio._ssl.SSLStream uses __getattr__/__setattr__.
             # Tracked at https://github.com/python-trio/trio/issues/542
-            return self._stream._ssl_object  # type: ignore[attr-defined]
+            return self._stream._ssl_object
         if info == "client_addr":
             return self._get_socket_stream().socket.getsockname()
         if info == "server_addr":

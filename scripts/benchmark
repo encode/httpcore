@@ -9,9 +9,9 @@ fi
 
 set -x
 
-${PREFIX}python tests/benchmark/server.py &
+${PREFIX}python scripts/bench/server.py &
 SERVER_PID=$!
 EXIT_CODE=0
-${PREFIX}python tests/benchmark/client.py "$@" || EXIT_CODE=$?
+${PREFIX}python scripts/bench/client.py "$@" || EXIT_CODE=$?
 kill $SERVER_PID
 exit $EXIT_CODE
