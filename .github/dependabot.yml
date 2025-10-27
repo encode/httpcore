@@ -10,3 +10,11 @@ updates:
           - "*"
         exclude-patterns:
           - "werkzeug"
+  - package-ecosystem: github-actions
+    directory: /
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    schedule:
+      interval: "monthly"
