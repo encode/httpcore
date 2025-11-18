@@ -13,18 +13,20 @@ jobs:
     runs-on: "ubuntu-latest"
 
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14", "3.14t"]
 
     steps:
-      - uses: "actions/checkout@v4"
-      - uses: "actions/setup-python@v4"
+      - uses: "actions/checkout@v5"
+      - uses: "actions/setup-python@v6"
         with:
           python-version: "${{ matrix.python-version }}"
           allow-prereleases: true
       - name: "Install dependencies"
         run: "scripts/install"
       - name: "Run linting checks"
+        if: matrix.python-version != '3.8' && matrix.python-version != '3.9'
         run: "scripts/check"
       - name: "Build package & docs"
         run: "scripts/build"

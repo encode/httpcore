@@ -7,10 +7,10 @@ from contextlib import contextmanager
 from typing import Any, Callable, Coroutine, Iterator, List
 
 import aiohttp
-import matplotlib.pyplot as plt  # type: ignore[import-untyped]
+import matplotlib.pyplot as plt
 import pyinstrument
 import urllib3
-from matplotlib.axes import Axes  # type: ignore[import-untyped]
+from matplotlib.axes import Axes
 
 import httpcore
 
