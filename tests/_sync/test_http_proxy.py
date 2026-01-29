@@ -224,7 +224,7 @@ def test_proxy_tunneling_with_403():
     """
     network_backend = MockBackend(
         [
-            b"HTTP/1.1 403 Permission Denied\r\n" b"\r\n",
+            b"HTTP/1.1 403 Permission Denied\r\n\r\n",
         ]
     )
 
@@ -276,3 +276,45 @@ def test_proxy_headers():
     assert proxy.headers == [
         (b"Proxy-Authorization", b"Basic dXNlcm5hbWU6cGFzc3dvcmQ=")
     ]
+
+
+
+def test_proxy_tunneling_tls_error():
+    """
+    Send an HTTPS request via a proxy, but the TLS handshake fails.
+    """
+
+    class BrokenTLSStream(MockStream):
+        def start_tls(
+            self,
+            ssl_context: ssl.SSLContext,
+            server_hostname: typing.Optional[str] = None,
+            timeout: typing.Optional[float] = None,
+        ) -> NetworkStream:
+            raise OSError("TLS Failure")
+
+    class BrokenTLSBackend(MockBackend):
+        def connect_tcp(
+            self,
+            host: str,
+            port: int,
+            timeout: typing.Optional[float] = None,
+            local_address: typing.Optional[str] = None,
+            socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
+        ) -> NetworkStream:
+            return BrokenTLSStream(list(self._buffer))
+
+    network_backend = BrokenTLSBackend(
+        [
+            b"HTTP/1.1 200 OK\r\n\r\n",
+        ]
+    )
+
+    with ConnectionPool(
+        proxy=Proxy("http://localhost:8080/"),
+        network_backend=network_backend,
+    ) as proxy:
+        with pytest.raises(OSError, match="TLS Failure"):
+            proxy.request("GET", "https://example.com/")
+
+        assert not proxy.connections
