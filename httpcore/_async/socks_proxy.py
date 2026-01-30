@@ -45,6 +45,7 @@ async def _init_socks5_connection(
     host: bytes,
     port: int,
     auth: tuple[bytes, bytes] | None = None,
+    timeout: float | None = None,  # <--- FIX 1: Add timeout argument
 ) -> None:
     conn = socksio.socks5.SOCKS5Connection()
 
@@ -56,10 +57,12 @@ async def _init_socks5_connection(
     )
     conn.send(socksio.socks5.SOCKS5AuthMethodsRequest([auth_method]))
     outgoing_bytes = conn.data_to_send()
-    await stream.write(outgoing_bytes)
+    await stream.write(outgoing_bytes, timeout=timeout)  # <--- FIX 2: Pass timeout
 
     # Auth method response
-    incoming_bytes = await stream.read(max_bytes=4096)
+    incoming_bytes = await stream.read(
+        max_bytes=4096, timeout=timeout
+    )  # <--- FIX 3: Pass timeout
     response = conn.receive_data(incoming_bytes)
     assert isinstance(response, socksio.socks5.SOCKS5AuthReply)
     if response.method != auth_method:
@@ -75,10 +78,12 @@ async def _init_socks5_connection(
         username, password = auth
         conn.send(socksio.socks5.SOCKS5UsernamePasswordRequest(username, password))
         outgoing_bytes = conn.data_to_send()
-        await stream.write(outgoing_bytes)
+        await stream.write(outgoing_bytes, timeout=timeout)  # <--- FIX 4: Pass timeout
 
         # Username/password response
-        incoming_bytes = await stream.read(max_bytes=4096)
+        incoming_bytes = await stream.read(
+            max_bytes=4096, timeout=timeout
+        )  # <--- FIX 5: Pass timeout
         response = conn.receive_data(incoming_bytes)
         assert isinstance(response, socksio.socks5.SOCKS5UsernamePasswordReply)
         if not response.success:
@@ -91,10 +96,12 @@ async def _init_socks5_connection(
         )
     )
     outgoing_bytes = conn.data_to_send()
-    await stream.write(outgoing_bytes)
+    await stream.write(outgoing_bytes, timeout=timeout)  # <--- FIX 6: Pass timeout
 
     # Connect response
-    incoming_bytes = await stream.read(max_bytes=4096)
+    incoming_bytes = await stream.read(
+        max_bytes=4096, timeout=timeout
+    )  # <--- FIX 7: Pass timeout
     response = conn.receive_data(incoming_bytes)
     assert isinstance(response, socksio.socks5.SOCKS5Reply)
     if response.reply_code != socksio.socks5.SOCKS5ReplyCode.SUCCEEDED:
@@ -122,33 +129,6 @@ class AsyncSOCKSProxy(AsyncConnectionPool):  # pragma: nocover
     ) -> None:
         """
         A connection pool for making HTTP requests.
-
-        Parameters:
-            proxy_url: The URL to use when connecting to the proxy server.
-                For example `"http://127.0.0.1:8080/"`.
-            ssl_context: An SSL context to use for verifying connections.
-                If not specified, the default `httpcore.default_ssl_context()`
-                will be used.
-            max_connections: The maximum number of concurrent HTTP connections that
-                the pool should allow. Any attempt to send a request on a pool that
-                would exceed this amount will block until a connection is available.
-            max_keepalive_connections: The maximum number of idle HTTP connections
-                that will be maintained in the pool.
-            keepalive_expiry: The duration in seconds that an idle HTTP connection
-                may be maintained for before being expired from the pool.
-            http1: A boolean indicating if HTTP/1.1 requests should be supported
-                by the connection pool. Defaults to True.
-            http2: A boolean indicating if HTTP/2 requests should be supported by
-                the connection pool. Defaults to False.
-            retries: The maximum number of retries when trying to establish
-                a connection.
-            local_address: Local address to connect from. Can also be used to
-                connect using a particular address family. Using
-                `local_address="0.0.0.0"` will connect using an `AF_INET` address
-                (IPv4), while using `local_address="::"` will connect using an
-                `AF_INET6` address (IPv6).
-            uds: Path to a Unix Domain Socket to use instead of TCP sockets.
-            network_backend: A backend instance to use for handling network I/O.
         """
         super().__init__(
             ssl_context=ssl_context,
@@ -237,6 +217,7 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
                         "host": self._remote_origin.host.decode("ascii"),
                         "port": self._remote_origin.port,
                         "auth": self._proxy_auth,
+                        "timeout": timeout,  # <--- FIX 8: Pass timeout argument
                     }
                     async with Trace(
                         "setup_socks5_connection", logger, request, kwargs
