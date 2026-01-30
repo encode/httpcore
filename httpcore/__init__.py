@@ -19,6 +19,7 @@ from ._backends.mock import AsyncMockBackend, AsyncMockStream, MockBackend, Mock
 from ._backends.sync import SyncBackend
 from ._exceptions import (
     ConnectError,
+    ConnectionGoingAway,
     ConnectionNotAvailable,
     ConnectTimeout,
     LocalProtocolError,
@@ -114,6 +115,7 @@ __all__ = [
     "default_ssl_context",
     "SOCKET_OPTION",
     # exceptions
+    "ConnectionGoingAway",
     "ConnectionNotAvailable",
     "ProxyError",
     "ProtocolError",

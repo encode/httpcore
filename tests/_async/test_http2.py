@@ -214,7 +214,7 @@ async def test_http2_connection_with_goaway():
     )
     async with httpcore.AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
         # The initial request has been closed midway, with an unrecoverable error.
-        with pytest.raises(httpcore.RemoteProtocolError):
+        with pytest.raises(httpcore.ConnectionGoingAway):
             await conn.request("GET", "https://example.com/")
 
         # The second request can receive a graceful `ConnectionNotAvailable`,

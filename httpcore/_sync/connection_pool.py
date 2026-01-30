@@ -7,7 +7,12 @@ import typing
 
 from .._backends.sync import SyncBackend
 from .._backends.base import SOCKET_OPTION, NetworkBackend
-from .._exceptions import ConnectionNotAvailable, UnsupportedProtocol
+from .._exceptions import (
+    ConnectionGoingAway,
+    ConnectionNotAvailable,
+    RemoteProtocolError,
+    UnsupportedProtocol,
+)
 from .._models import Origin, Proxy, Request, Response
 from .._synchronization import Event, ShieldCancellation, ThreadLock
 from .connection import HTTPConnection
@@ -236,6 +241,27 @@ class ConnectionPool(RequestInterface):
                     response = connection.handle_request(
                         pool_request.request
                     )
+                except ConnectionGoingAway as exc:
+                    # GOAWAY frame recieved during request processing.
+                    # Determine if we can safely retry based on RFC 7540 semantics.
+                    # NOTE: This must be caught before ConnectionNotAvailable since
+                    # ConnectionGoingAway is a subclass of ConnectionNotAvailable.
+                    pool_request.clear_connection()
+
+                    if exc.is_safe_to_retry:
+                        # stream_id > last_stream_id: guaranteed unprocessed per RFC 7540
+                        # Safe to retry on a new connection
+                        continue
+                    elif exc.is_graceful_shutdown and not exc.may_have_side_effects:
+                        # Graceful shutdown and headers weren't sent yet.
+                        # Likely safe to retry.
+                        continue
+                    else:
+                        # Request may have been processed. Propagate error with context so application can decide
+                        # whether to retry.
+                        msg = "GOAWAY recieved: request may have been processed"
+                        # QUESTION: What is the best way to propagate the context for the applications?
+                        raise RemoteProtocolError(msg) from exc
                 except ConnectionNotAvailable:
                     # In some cases a connection may initially be available to
                     # handle a request, but then become unavailable.

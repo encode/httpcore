@@ -14,6 +14,7 @@ import h2.settings
 
 from .._backends.base import AsyncNetworkStream
 from .._exceptions import (
+    ConnectionGoingAway,
     ConnectionNotAvailable,
     LocalProtocolError,
     RemoteProtocolError,
@@ -36,7 +37,8 @@ def has_body_headers(request: Request) -> bool:
 class HTTPConnectionState(enum.IntEnum):
     ACTIVE = 1
     IDLE = 2
-    CLOSED = 3
+    DRAINING = 3
+    CLOSED = 4
 
 
 class AsyncHTTP2Connection(AsyncConnectionInterface):
@@ -81,6 +83,11 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
         self._read_exception: Exception | None = None
         self._write_exception: Exception | None = None
+
+        # Track request phases for GOAWAY retry safety determination.
+        # Maps stream_id -> {"headers_sent": bool, "body_sent": bool}
+        # TODO: Consider shifting this to a dataclass or typeddict
+        self._stream_requests: dict[int, dict[str, bool]] = {}
 
     async def handle_async_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
@@ -133,6 +140,11 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         try:
             stream_id = self._h2_state.get_next_available_stream_id()
             self._events[stream_id] = []
+            # Initialize phase tracking for this stream
+            self._stream_requests[stream_id] = {
+                "headers_sent": False,
+                "body_sent": False,
+            }
         except h2.exceptions.NoAvailableStreamIDError:  # pragma: nocover
             self._used_all_stream_ids = True
             self._request_count -= 1
@@ -142,8 +154,10 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
             kwargs = {"request": request, "stream_id": stream_id}
             async with Trace("send_request_headers", logger, request, kwargs):
                 await self._send_request_headers(request=request, stream_id=stream_id)
+            self._stream_requests[stream_id]["headers_sent"] = True
             async with Trace("send_request_body", logger, request, kwargs):
                 await self._send_request_body(request=request, stream_id=stream_id)
+            self._stream_requests[stream_id]["body_sent"] = True
             async with Trace(
                 "receive_response_headers", logger, request, kwargs
             ) as trace:
@@ -177,9 +191,46 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 # a protocol error at any point they interact with the 'h2_state'.
                 #
                 # In this case we'll have stored the event, and should raise
-                # it as a RemoteProtocolError.
+                # it as a ConnectionGoingAway if applicable, or RemoteProtocolError.
                 if self._connection_terminated:  # pragma: nocover
-                    raise RemoteProtocolError(self._connection_terminated)
+                    phase = self._stream_requests.get(
+                        stream_id,
+                        {
+                            "headers_sent": False,
+                            "body_sent": False,
+                        },
+                    )
+                    raise ConnectionGoingAway(
+                        self._connection_terminated,  # type: ignore[arg-type,unused-ignore]
+                        last_stream_id=self._connection_terminated.last_stream_id,  # type: ignore[arg-type,unused-ignore]
+                        error_code=self._connection_terminated.error_code,  # type: ignore[arg-type,unused-ignore]
+                        request_stream_id=stream_id,
+                        headers_sent=phase["headers_sent"],
+                        body_sent=phase["body_sent"],
+                    )
+                # Check if h2 is in CLOSED state due to GOAWAY. This can happen when
+                # GOAWAY was recieved but we haven't processed the event yet (race condition).
+                if (
+                    self._h2_state.state_machine.state
+                    == h2.connection.ConnectionState.CLOSED
+                ):
+                    phase = self._stream_requests.get(
+                        stream_id,
+                        {
+                            "headers_sent": False,
+                            "body_sent": False,
+                        },
+                    )
+                    msg = f"Connection closed: {exc}"
+                    raise ConnectionGoingAway(
+                        msg,
+                        last_stream_id=stream_id,  # Conservative: assume this stream may have been processed
+                        error_code=0,  # Assume graceful shutdown
+                        request_stream_id=stream_id,
+                        headers_sent=phase["headers_sent"],
+                        body_sent=phase["body_sent"],
+                    )
+
                 # If h2 raises a protocol error in some other state then we
                 # must somehow have made a protocol violation.
                 raise LocalProtocolError(exc)  # pragma: nocover
@@ -349,10 +400,39 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         async with self._read_lock:
             if self._connection_terminated is not None:
                 last_stream_id = self._connection_terminated.last_stream_id
-                if stream_id and last_stream_id and stream_id > last_stream_id:
-                    self._request_count -= 1
-                    raise ConnectionNotAvailable()
-                raise RemoteProtocolError(self._connection_terminated)
+                if stream_id is not None:
+                    phase = self._stream_requests.get(
+                        stream_id,
+                        {
+                            "headers_sent": False,
+                            "body_sent": False,
+                        },
+                    )
+                    if last_stream_id is not None and stream_id > last_stream_id:
+                        # stream_id > last_stream_id: guaranteed unprocessed, safe to retry
+                        self._request_count -= 1
+                        raise ConnectionGoingAway(
+                            f"GOAWAY received: stream {stream_id} > last_stream_id {last_stream_id}",
+                            last_stream_id=last_stream_id,
+                            error_code=self._connection_terminated.error_code,  # type: ignore[arg-type,unused-ignore]
+                            request_stream_id=stream_id,
+                            headers_sent=phase["headers_sent"],
+                            body_sent=phase["body_sent"],
+                        )
+                    if self._state != HTTPConnectionState.DRAINING:
+                        # stream_id <= last_stream_id: may have been processed
+                        raise ConnectionGoingAway(
+                            f"GOAWAY received: stream {stream_id} <= last_stream_id {last_stream_id}",
+                            last_stream_id=last_stream_id
+                            if last_stream_id is not None
+                            else 0,
+                            error_code=self._connection_terminated.error_code,  # type: ignore[arg-type,unused-ignore]
+                            request_stream_id=stream_id,
+                            headers_sent=phase["headers_sent"],
+                            body_sent=phase["body_sent"],
+                        )
+                else:
+                    raise RemoteProtocolError(self._connection_terminated)
 
             # This conditional is a bit icky. We don't want to block reading if we've
             # actually got an event to return for a given stream. We need to do that
@@ -361,7 +441,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
             # block until we've available flow control, event when we have events
             # pending for the stream ID we're attempting to send on.
             if stream_id is None or not self._events.get(stream_id):
-                events = await self._read_incoming_data(request)
+                events = await self._read_incoming_data(request, stream_id)
                 for event in events:
                     if isinstance(event, h2.events.RemoteSettingsChanged):
                         async with Trace(
@@ -384,6 +464,13 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
                     elif isinstance(event, h2.events.ConnectionTerminated):
                         self._connection_terminated = event
+                        # Transition to DRAINING on graceful shutdown (NO_ERROR),
+                        # allowing in-flight streams to complete.
+                        # Non-graceful shutdown closes immediately.
+                        if event.error_code == 0:
+                            self._state = HTTPConnectionState.DRAINING
+                        else:
+                            self._state = HTTPConnectionState.CLOSED
 
         await self._write_outgoing_data(request)
 
@@ -409,6 +496,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
     async def _response_closed(self, stream_id: int) -> None:
         await self._max_streams_semaphore.release()
         del self._events[stream_id]
+        self._stream_requests.pop(stream_id, None)  # Clean up phase tracking
         async with self._state_lock:
             if self._connection_terminated and not self._events:
                 await self.aclose()
@@ -430,7 +518,9 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
     # Wrappers around network read/write operations...
 
-    async def _read_incoming_data(self, request: Request) -> list[h2.events.Event]:
+    async def _read_incoming_data(
+        self, request: Request, stream_id: int | None = None
+    ) -> list[h2.events.Event]:
         timeouts = request.extensions.get("timeout", {})
         timeout = timeouts.get("read", None)
 
@@ -440,6 +530,39 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         try:
             data = await self._network_stream.read(self.READ_NUM_BYTES, timeout)
             if data == b"":
+                # Server disconnected. Check if this is related to GOAWAY.
+                if stream_id is not None:
+                    phase = self._stream_requests.get(
+                        stream_id,
+                        {
+                            "headers_sent": False,
+                            "body_sent": False,
+                        },
+                    )
+                    # If we have a GOAWAY recorded, this disconnect is GOAWAY-related
+                    if self._connection_terminated is not None:
+                        last_stream_id = self._connection_terminated.last_stream_id
+                        raise ConnectionGoingAway(
+                            "Server disconnected after GOAWAY",
+                            last_stream_id=last_stream_id if last_stream_id else 0,
+                            error_code=self._connection_terminated.error_code,  # type: ignore[arg-type,unused-ignore]
+                            request_stream_id=stream_id,
+                            headers_sent=phase["headers_sent"],
+                            body_sent=phase["body_sent"],
+                        )
+                    # Check if h2 is in CLOSED state (GOAWAY received but not processed)
+                    if (
+                        self._h2_state.state_machine.state
+                        == h2.connection.ConnectionState.CLOSED
+                    ):
+                        raise ConnectionGoingAway(
+                            "Server disconnected (connection closed)",
+                            last_stream_id=stream_id,  # Conservative
+                            error_code=0,  # Assume graceful
+                            request_stream_id=stream_id,
+                            headers_sent=phase["headers_sent"],
+                            body_sent=phase["body_sent"],
+                        )
                 raise RemoteProtocolError("Server disconnected")
         except Exception as exc:
             # If we get a network error we should:
@@ -510,7 +633,8 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
     def is_available(self) -> bool:
         return (
-            self._state != HTTPConnectionState.CLOSED
+            self._state
+            not in (HTTPConnectionState.DRAINING, HTTPConnectionState.CLOSED)
             and not self._connection_error
             and not self._used_all_stream_ids
             and not (
@@ -521,7 +645,12 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
     def has_expired(self) -> bool:
         now = time.monotonic()
-        return self._expire_at is not None and now > self._expire_at
+        keepalive_expired = self._expire_at is not None and now > self._expire_at
+        # Draining connections with no active streams are considered expired
+        draining_complete = (
+            self._state == HTTPConnectionState.DRAINING and not self._events
+        )
+        return keepalive_expired or draining_complete
 
     def is_idle(self) -> bool:
         return self._state == HTTPConnectionState.IDLE

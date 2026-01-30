@@ -224,7 +224,7 @@ def test_proxy_tunneling_with_403():
     """
     network_backend = MockBackend(
         [
-            b"HTTP/1.1 403 Permission Denied\r\n" b"\r\n",
+            b"HTTP/1.1 403 Permission Denied\r\n\r\n",
         ]
     )
 
