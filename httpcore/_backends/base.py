@@ -97,5 +97,8 @@ class AsyncNetworkBackend:
     ) -> AsyncNetworkStream:
         raise NotImplementedError()  # pragma: nocover
 
+    async def aclose(self) -> None:
+        raise NotImplementedError()  # pragma: nocover
+
     async def sleep(self, seconds: float) -> None:
         raise NotImplementedError()  # pragma: nocover
