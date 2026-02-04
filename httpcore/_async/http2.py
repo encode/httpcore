@@ -33,7 +33,7 @@ def has_body_headers(request: Request) -> bool:
     )
 
 
-class HTTPConnectionState(enum.IntEnum):
+class HTTPConnectionState(enum.Enum):
     ACTIVE = 1
     IDLE = 2
     CLOSED = 3
