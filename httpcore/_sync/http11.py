@@ -33,7 +33,7 @@ H11SendEvent = typing.Union[
 ]
 
 
-class HTTPConnectionState(enum.IntEnum):
+class HTTPConnectionState(enum.Enum):
     NEW = 0
     ACTIVE = 1
     IDLE = 2
