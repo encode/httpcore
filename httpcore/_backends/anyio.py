@@ -12,7 +12,6 @@ from .._exceptions import (
     ReadTimeout,
     WriteError,
     WriteTimeout,
-    map_exceptions,
 )
 from .._utils import is_socket_readable
 from .base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
@@ -23,31 +22,35 @@ class AnyIOStream(AsyncNetworkStream):
         self._stream = stream
 
     async def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
-        exc_map = {
-            TimeoutError: ReadTimeout,
-            anyio.BrokenResourceError: ReadError,
-            anyio.ClosedResourceError: ReadError,
-            anyio.EndOfStream: ReadError,
-        }
-        with map_exceptions(exc_map):
+        try:
             with anyio.fail_after(timeout):
                 try:
                     return await self._stream.receive(max_bytes=max_bytes)
                 except anyio.EndOfStream:  # pragma: nocover
                     return b""
+        except TimeoutError as exc:  # pragma: nocover
+            raise ReadTimeout(exc) from exc
+        except (
+            anyio.BrokenResourceError,
+            anyio.ClosedResourceError,
+            anyio.EndOfStream,
+        ) as exc:  # pragma: nocover
+            raise ReadError(exc) from exc
 
     async def write(self, buffer: bytes, timeout: float | None = None) -> None:
         if not buffer:
             return
 
-        exc_map = {
-            TimeoutError: WriteTimeout,
-            anyio.BrokenResourceError: WriteError,
-            anyio.ClosedResourceError: WriteError,
-        }
-        with map_exceptions(exc_map):
+        try:
             with anyio.fail_after(timeout):
                 await self._stream.send(item=buffer)
+        except TimeoutError as exc:  # pragma: nocover
+            raise WriteTimeout(exc) from exc
+        except (
+            anyio.BrokenResourceError,
+            anyio.ClosedResourceError,
+        ) as exc:  # pragma: nocover
+            raise WriteError(exc) from exc
 
     async def aclose(self) -> None:
         await self._stream.aclose()
@@ -58,13 +61,7 @@ class AnyIOStream(AsyncNetworkStream):
         server_hostname: str | None = None,
         timeout: float | None = None,
     ) -> AsyncNetworkStream:
-        exc_map = {
-            TimeoutError: ConnectTimeout,
-            anyio.BrokenResourceError: ConnectError,
-            anyio.EndOfStream: ConnectError,
-            ssl.SSLError: ConnectError,
-        }
-        with map_exceptions(exc_map):
+        try:
             try:
                 with anyio.fail_after(timeout):
                     ssl_stream = await anyio.streams.tls.TLSStream.wrap(
@@ -77,6 +74,14 @@ class AnyIOStream(AsyncNetworkStream):
             except Exception as exc:  # pragma: nocover
                 await self.aclose()
                 raise exc
+        except TimeoutError as exc:  # pragma: nocover
+            raise ConnectTimeout(exc) from exc
+        except (
+            anyio.BrokenResourceError,
+            anyio.EndOfStream,
+            ssl.SSLError,
+        ) as exc:  # pragma: nocover
+            raise ConnectError(exc) from exc
         return AnyIOStream(ssl_stream)
 
     def get_extra_info(self, info: str) -> typing.Any:
@@ -105,12 +110,7 @@ class AnyIOBackend(AsyncNetworkBackend):
     ) -> AsyncNetworkStream:  # pragma: nocover
         if socket_options is None:
             socket_options = []
-        exc_map = {
-            TimeoutError: ConnectTimeout,
-            OSError: ConnectError,
-            anyio.BrokenResourceError: ConnectError,
-        }
-        with map_exceptions(exc_map):
+        try:
             with anyio.fail_after(timeout):
                 stream: anyio.abc.ByteStream = await anyio.connect_tcp(
                     remote_host=host,
@@ -120,6 +120,10 @@ class AnyIOBackend(AsyncNetworkBackend):
                 # By default TCP sockets opened in `asyncio` include TCP_NODELAY.
                 for option in socket_options:
                     stream._raw_socket.setsockopt(*option)  # type: ignore[attr-defined] # pragma: no cover
+        except TimeoutError as exc:
+            raise ConnectTimeout(exc) from exc
+        except (OSError, anyio.BrokenResourceError) as exc:
+            raise ConnectError(exc) from exc
         return AnyIOStream(stream)
 
     async def connect_unix_socket(
@@ -130,16 +134,15 @@ class AnyIOBackend(AsyncNetworkBackend):
     ) -> AsyncNetworkStream:  # pragma: nocover
         if socket_options is None:
             socket_options = []
-        exc_map = {
-            TimeoutError: ConnectTimeout,
-            OSError: ConnectError,
-            anyio.BrokenResourceError: ConnectError,
-        }
-        with map_exceptions(exc_map):
+        try:
             with anyio.fail_after(timeout):
                 stream: anyio.abc.ByteStream = await anyio.connect_unix(path)
                 for option in socket_options:
                     stream._raw_socket.setsockopt(*option)  # type: ignore[attr-defined] # pragma: no cover
+        except TimeoutError as exc:
+            raise ConnectTimeout(exc) from exc
+        except (OSError, anyio.BrokenResourceError) as exc:
+            raise ConnectError(exc) from exc
         return AnyIOStream(stream)
 
     async def sleep(self, seconds: float) -> None:
