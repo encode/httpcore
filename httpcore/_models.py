@@ -174,7 +174,7 @@ class Origin:
 
     def __str__(self) -> str:
         scheme = self.scheme.decode("ascii")
-        host = self.host.decode("ascii")
+        host = self.host.decode("ascii").rstrip(".")
         port = str(self.port)
         return f"{scheme}://{host}:{port}"
 

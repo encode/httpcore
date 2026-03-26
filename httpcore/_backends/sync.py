@@ -88,9 +88,13 @@ class TLSinTLSStream(NetworkStream):  # pragma: no cover
         exc_map: ExceptionMapping = {socket.timeout: WriteTimeout, OSError: WriteError}
         with map_exceptions(exc_map):
             self._sock.settimeout(timeout)
-            while buffer:
-                nsent = self._perform_io(functools.partial(self.ssl_obj.write, buffer))
-                buffer = buffer[nsent:]
+            # Use a memoryview to avoid O(n²) copying when buffer is sliced on each
+            # iteration. Plain bytes slicing (buffer = buffer[n:]) creates a full copy;
+            # memoryview slicing is zero-copy, critical for large upload payloads.
+            view = memoryview(buffer)
+            while view:
+                nsent = self._perform_io(functools.partial(self.ssl_obj.write, view))
+                view = view[nsent:]
 
     def close(self) -> None:
         self._sock.close()
@@ -133,10 +137,14 @@ class SyncStream(NetworkStream):
 
         exc_map: ExceptionMapping = {socket.timeout: WriteTimeout, OSError: WriteError}
         with map_exceptions(exc_map):
-            while buffer:
+            # Use a memoryview to avoid O(n²) copying when buffer is sliced on each
+            # iteration. Plain bytes slicing (buffer = buffer[n:]) creates a full copy;
+            # memoryview slicing is zero-copy, critical for large upload payloads.
+            view = memoryview(buffer)
+            while view:
                 self._sock.settimeout(timeout)
-                n = self._sock.send(buffer)
-                buffer = buffer[n:]
+                n = self._sock.send(view)
+                view = view[n:]
 
     def close(self) -> None:
         self._sock.close()

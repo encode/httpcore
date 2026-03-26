@@ -309,7 +309,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
 
                 kwargs = {
                     "ssl_context": ssl_context,
-                    "server_hostname": self._remote_origin.host.decode("ascii"),
+                    "server_hostname": self._remote_origin.host.decode("ascii").rstrip("."),
                     "timeout": timeout,
                 }
                 async with Trace("start_tls", logger, request, kwargs) as trace:
