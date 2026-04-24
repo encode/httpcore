@@ -54,7 +54,7 @@ def enforce_headers(
     value: HeadersAsMapping | HeadersAsSequence | None = None, *, name: str
 ) -> list[tuple[bytes, bytes]]:
     """
-    Convienence function that ensure all items in request or response headers
+    Convenience function that ensure all items in request or response headers
     are either bytes or strings in the plain ASCII range.
     """
     if value is None:
@@ -183,13 +183,13 @@ class URL:
     """
     Represents the URL against which an HTTP request may be made.
 
-    The URL may either be specified as a plain string, for convienence:
+    The URL may either be specified as a plain string, for convenience:
 
     ```python
     url = httpcore.URL("https://www.example.com/")
     ```
 
-    Or be constructed with explicitily pre-parsed components:
+    Or be constructed with explicitly pre-parsed components:
 
     ```python
     url = httpcore.URL(scheme=b'https', host=b'www.example.com', port=None, target=b'/')

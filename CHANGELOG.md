@@ -29,7 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## 1.0.5 (March 27th, 2024)
 
 - Handle `EndOfStream` exception for anyio backend. (#899)
-- Allow trio `0.25.*` series in package dependancies. (#903)
+- Allow trio `0.25.*` series in package dependencies. (#903)
 
 ## 1.0.4 (February 21st, 2024)
 
@@ -165,7 +165,7 @@ The project versioning policy is now explicitly governed by SEMVER. See https://
 ## 0.14.1 (November 12th, 2021)
 
 - `max_connections` becomes optional. (Pull #429)
-- `certifi` is now included in the install dependancies. (Pull #428)
+- `certifi` is now included in the install dependencies. (Pull #428)
 - `h2` is now strictly optional. (Pull #428)
 
 ## 0.14.0 (November 11th, 2021)
