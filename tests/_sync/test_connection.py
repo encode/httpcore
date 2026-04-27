@@ -235,6 +235,46 @@ def test_request_to_incorrect_origin():
             conn.request("GET", "https://other.com/")
 
 
+def test_connection_strips_trailing_dot_from_sni_hostname():
+    class CaptureHostnameBackend(MockBackend):
+        def __init__(self, buffer: typing.List[bytes]) -> None:
+            super().__init__(buffer)
+            self.server_hostname: typing.Optional[str] = None
+
+        def connect_tcp(
+            self,
+            host: str,
+            port: int,
+            timeout: typing.Optional[float] = None,
+            local_address: typing.Optional[str] = None,
+            socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
+        ) -> MockStream:
+            backend = self
+
+            class CaptureHostnameStream(MockStream):
+                def start_tls(
+                    self,
+                    ssl_context: ssl.SSLContext,
+                    server_hostname: typing.Optional[str] = None,
+                    timeout: typing.Optional[float] = None,
+                ) -> NetworkStream:
+                    backend.server_hostname = server_hostname
+                    return super().start_tls(ssl_context, server_hostname, timeout)
+
+            return CaptureHostnameStream(list(self._buffer), http2=self._http2)
+
+    origin = Origin(b"https", b"example.com.", 443)
+    network_backend = CaptureHostnameBackend(
+        [b"HTTP/1.1 200 OK\r\n", b"Content-Length: 0\r\n", b"\r\n"]
+    )
+
+    with HTTPConnection(origin=origin, network_backend=network_backend) as conn:
+        response = conn.request("GET", "https://example.com./")
+        assert response.status == 200
+
+    assert network_backend.server_hostname == "example.com"
+
+
 class NeedsRetryBackend(MockBackend):
     def __init__(
         self,

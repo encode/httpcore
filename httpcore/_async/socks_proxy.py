@@ -10,6 +10,7 @@ from .._backends.base import AsyncNetworkBackend, AsyncNetworkStream
 from .._exceptions import ConnectionNotAvailable, ProxyError
 from .._models import URL, Origin, Request, Response, enforce_bytes, enforce_url
 from .._ssl import default_ssl_context
+from .._ssl import normalize_server_hostname
 from .._synchronization import AsyncLock
 from .._trace import Trace
 from .connection_pool import AsyncConnectionPool
@@ -258,8 +259,9 @@ class AsyncSocks5Connection(AsyncConnectionInterface):
 
                         kwargs = {
                             "ssl_context": ssl_context,
-                            "server_hostname": sni_hostname
-                            or self._remote_origin.host.decode("ascii"),
+                            "server_hostname": normalize_server_hostname(
+                                sni_hostname or self._remote_origin.host.decode("ascii")
+                            ),
                             "timeout": timeout,
                         }
                         async with Trace("start_tls", logger, request, kwargs) as trace:

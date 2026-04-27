@@ -14,7 +14,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
-from .._utils import is_socket_readable
+from .._utils import is_socket_readable, normalize_tls_server_hostname
 from .base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
 
 
@@ -70,7 +70,7 @@ class AnyIOStream(AsyncNetworkStream):
                     ssl_stream = await anyio.streams.tls.TLSStream.wrap(
                         self._stream,
                         ssl_context=ssl_context,
-                        hostname=server_hostname,
+                        hostname=normalize_tls_server_hostname(server_hostname),
                         standard_compatible=False,
                         server_side=False,
                     )

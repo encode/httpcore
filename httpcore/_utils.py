@@ -35,3 +35,9 @@ def is_socket_readable(sock: socket.socket | None) -> bool:
     p = select.poll()
     p.register(sock_fd, select.POLLIN)
     return bool(p.poll(0))
+
+
+def normalize_tls_server_hostname(server_hostname: str | None) -> str | None:
+    if server_hostname is None:
+        return None
+    return server_hostname.rstrip(".")

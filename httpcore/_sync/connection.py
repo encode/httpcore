@@ -11,6 +11,7 @@ from .._backends.base import SOCKET_OPTION, NetworkBackend, NetworkStream
 from .._exceptions import ConnectError, ConnectTimeout
 from .._models import Origin, Request, Response
 from .._ssl import default_ssl_context
+from .._ssl import normalize_server_hostname
 from .._synchronization import Lock
 from .._trace import Trace
 from .http11 import HTTP11Connection
@@ -148,8 +149,9 @@ class HTTPConnection(ConnectionInterface):
 
                     kwargs = {
                         "ssl_context": ssl_context,
-                        "server_hostname": sni_hostname
-                        or self._origin.host.decode("ascii"),
+                        "server_hostname": normalize_server_hostname(
+                            sni_hostname or self._origin.host.decode("ascii")
+                        ),
                         "timeout": timeout,
                     }
                     with Trace("start_tls", logger, request, kwargs) as trace:
