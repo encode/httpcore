@@ -15,6 +15,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
+from .._utils import normalize_tls_server_hostname
 from .base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
 
 
@@ -65,7 +66,7 @@ class TrioStream(AsyncNetworkStream):
         ssl_stream = trio.SSLStream(
             self._stream,
             ssl_context=ssl_context,
-            server_hostname=server_hostname,
+            server_hostname=normalize_tls_server_hostname(server_hostname),
             https_compatible=True,
             server_side=False,
         )
