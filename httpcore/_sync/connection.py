@@ -48,6 +48,7 @@ class HTTPConnection(ConnectionInterface):
         uds: str | None = None,
         network_backend: NetworkBackend | None = None,
         socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
+        h2_ping_interval: float | None = None,
     ) -> None:
         self._origin = origin
         self._ssl_context = ssl_context
@@ -57,6 +58,7 @@ class HTTPConnection(ConnectionInterface):
         self._retries = retries
         self._local_address = local_address
         self._uds = uds
+        self._h2_ping_interval = h2_ping_interval
 
         self._network_backend: NetworkBackend = (
             SyncBackend() if network_backend is None else network_backend
@@ -89,6 +91,7 @@ class HTTPConnection(ConnectionInterface):
                             origin=self._origin,
                             stream=stream,
                             keepalive_expiry=self._keepalive_expiry,
+                            h2_ping_interval=self._h2_ping_interval,
                         )
                     else:
                         self._connection = HTTP11Connection(

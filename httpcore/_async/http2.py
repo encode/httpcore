@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import enum
 import logging
+import os
+import threading
 import time
 import types
 import typing
@@ -48,6 +50,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         origin: Origin,
         stream: AsyncNetworkStream,
         keepalive_expiry: float | None = None,
+        h2_ping_interval: float | None = None,
     ):
         self._origin = origin
         self._network_stream = stream
@@ -63,6 +66,15 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         self._sent_connection_init = False
         self._used_all_stream_ids = False
         self._connection_error = False
+
+        if h2_ping_interval is not None:
+            self._h2_ping_interval: float | None = h2_ping_interval
+        else:
+            env_val = os.environ.get("HTTPCORE_H2_PING_INTERVAL")
+            self._h2_ping_interval = float(env_val) if env_val else None
+        self._ping_thread: threading.Thread | None = None
+        self._ping_stop = threading.Event()
+        self._ping_write_lock = threading.Lock()
 
         # Mapping from stream ID to response stream events.
         self._events: dict[
@@ -216,6 +228,48 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         self._h2_state.initiate_connection()
         self._h2_state.increment_flow_control_window(2**24)
         await self._write_outgoing_data(request)
+
+        if self._h2_ping_interval is not None:
+            self._start_ping_keepalive()
+
+    def _start_ping_keepalive(self) -> None:
+        self._ping_stop.clear()
+        self._ping_thread = threading.Thread(
+            target=self._ping_keepalive_loop, daemon=True
+        )
+        self._ping_thread.start()
+        logger.debug(
+            "HTTP/2 PING keepalive started (interval=%.0fs)", self._h2_ping_interval
+        )
+
+    def _ping_keepalive_loop(self) -> None:
+        """Background thread that sends periodic PING frames via the raw socket."""
+        assert self._h2_ping_interval is not None
+
+        raw_sock = self._network_stream.get_extra_info("socket")
+        if raw_sock is None:
+            raw_sock = self._network_stream.get_extra_info("ssl_object")
+        if raw_sock is None:  # pragma: nocover
+            logger.debug("HTTP/2 PING keepalive: unable to obtain raw socket, stopping")
+            return
+
+        while not self._ping_stop.wait(self._h2_ping_interval):
+            try:
+                if self.is_closed():  # pragma: nocover
+                    break
+                with self._ping_write_lock:
+                    if self.is_closed():  # pragma: nocover
+                        break
+                    opaque = int(time.monotonic_ns() & 0xFFFFFFFFFFFFFFFF).to_bytes(
+                        8, "big"
+                    )
+                    self._h2_state.ping(opaque)
+                    data_to_send = self._h2_state.data_to_send()
+                    if data_to_send:
+                        raw_sock.sendall(data_to_send)
+                    logger.debug("HTTP/2 PING sent")
+            except Exception:  # pragma: nocover
+                break
 
     # Sending the request...
 
@@ -424,6 +478,10 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
     async def aclose(self) -> None:
         # Note that this method unilaterally closes the connection, and does
         # not have any kind of locking in place around it.
+        self._ping_stop.set()
+        if self._ping_thread is not None:
+            self._ping_thread.join(timeout=2)
+            self._ping_thread = None
         self._h2_state.close_connection()
         self._state = HTTPConnectionState.CLOSED
         await self._network_stream.aclose()

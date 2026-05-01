@@ -59,6 +59,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
         uds: str | None = None,
         network_backend: AsyncNetworkBackend | None = None,
         socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
+        h2_ping_interval: float | None = None,
     ) -> None:
         """
         A connection pool for making HTTP requests.
@@ -88,6 +89,10 @@ class AsyncConnectionPool(AsyncRequestInterface):
             network_backend: A backend instance to use for handling network I/O.
             socket_options: Socket options that have to be included
              in the TCP socket when the connection was established.
+            h2_ping_interval: Interval in seconds between HTTP/2 PING frames
+                sent to keep connections alive. Set to ``None`` to disable.
+                Falls back to the ``HTTPCORE_H2_PING_INTERVAL`` environment
+                variable if not specified.
         """
         self._ssl_context = ssl_context
         self._proxy = proxy
@@ -114,6 +119,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
             AutoBackend() if network_backend is None else network_backend
         )
         self._socket_options = socket_options
+        self._h2_ping_interval = h2_ping_interval
 
         # The mutable state on a connection pool is the queue of incoming requests,
         # and the set of connections that are servicing those requests.
@@ -176,6 +182,7 @@ class AsyncConnectionPool(AsyncRequestInterface):
             uds=self._uds,
             network_backend=self._network_backend,
             socket_options=self._socket_options,
+            h2_ping_interval=self._h2_ping_interval,
         )
 
     @property

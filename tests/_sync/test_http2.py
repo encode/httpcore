@@ -1,3 +1,8 @@
+import os
+import time
+import typing
+from unittest.mock import patch
+
 import hpack
 import hyperframe.frame
 import pytest
@@ -380,3 +385,199 @@ def test_http2_remote_max_streams_update():
                         conn._h2_state.local_settings.max_concurrent_streams,
                     )
                 i += 1
+
+
+
+def test_http2_ping_keepalive_thread_lifecycle():
+    """
+    When h2_ping_interval is set, a background PING thread should be started
+    after the connection is initialized and stopped when the connection is closed.
+    """
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.MockStream(
+        [
+            hyperframe.frame.SettingsFrame().serialize(),
+            hyperframe.frame.HeadersFrame(
+                stream_id=1,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=1, data=b"Hello, world!", flags=["END_STREAM"]
+            ).serialize(),
+        ]
+    )
+    conn = httpcore.HTTP2Connection(
+        origin=origin, stream=stream, h2_ping_interval=10.0
+    )
+    assert conn._h2_ping_interval == 10.0
+
+    response = conn.request("GET", "https://example.com/")
+    assert response.status == 200
+    assert response.content == b"Hello, world!"
+
+    assert conn._ping_thread is not None
+    assert conn._ping_thread.is_alive()
+
+    conn.close()
+
+    assert conn._ping_thread is None or not conn._ping_thread.is_alive()
+
+
+
+def test_http2_no_ping_keepalive_by_default():
+    """
+    When h2_ping_interval is not set and the env var is absent, no PING thread
+    should be started.
+    """
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.MockStream(
+        [
+            hyperframe.frame.SettingsFrame().serialize(),
+            hyperframe.frame.HeadersFrame(
+                stream_id=1,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=1, data=b"Hello, world!", flags=["END_STREAM"]
+            ).serialize(),
+        ]
+    )
+    with patch.dict(os.environ, {}, clear=False):
+        os.environ.pop("HTTPCORE_H2_PING_INTERVAL", None)
+        with httpcore.HTTP2Connection(origin=origin, stream=stream) as conn:
+            response = conn.request("GET", "https://example.com/")
+            assert response.status == 200
+            assert conn._h2_ping_interval is None
+            assert conn._ping_thread is None
+
+
+
+def test_http2_ping_keepalive_env_var():
+    """
+    The HTTPCORE_H2_PING_INTERVAL environment variable should enable PING
+    keepalive when the constructor argument is not provided.
+    """
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.MockStream(
+        [
+            hyperframe.frame.SettingsFrame().serialize(),
+            hyperframe.frame.HeadersFrame(
+                stream_id=1,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=1, data=b"Hello, world!", flags=["END_STREAM"]
+            ).serialize(),
+        ]
+    )
+    with patch.dict(os.environ, {"HTTPCORE_H2_PING_INTERVAL": "30"}):
+        conn = httpcore.HTTP2Connection(origin=origin, stream=stream)
+        assert conn._h2_ping_interval == 30.0
+
+        response = conn.request("GET", "https://example.com/")
+        assert response.status == 200
+
+        assert conn._ping_thread is not None
+
+        conn.close()
+
+
+
+def test_http2_ping_keepalive_constructor_overrides_env():
+    """
+    An explicit h2_ping_interval constructor argument should take precedence
+    over the HTTPCORE_H2_PING_INTERVAL environment variable.
+    """
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.MockStream([])
+
+    with patch.dict(os.environ, {"HTTPCORE_H2_PING_INTERVAL": "30"}):
+        conn = httpcore.HTTP2Connection(
+            origin=origin, stream=stream, h2_ping_interval=45.0
+        )
+        assert conn._h2_ping_interval == 45.0
+        conn.close()
+
+
+
+def test_http2_ping_keepalive_sends_ping_frames():
+    """
+    Verify that the PING keepalive loop actually generates PING frames
+    on the h2 state machine.
+    """
+    written_data: typing.List[bytes] = []
+
+    class RecordingMockStream(httpcore.MockStream):
+        def write(
+            self, buffer: bytes, timeout: typing.Optional[float] = None
+        ) -> None:
+            written_data.append(buffer)
+
+        def get_extra_info(self, info: str) -> typing.Any:
+            if info == "socket":
+                return RecordingSocket()
+            return super().get_extra_info(info)  # pragma: nocover
+
+    class RecordingSocket:
+        """Fake socket that records sendall calls for the async PING thread."""
+
+        def sendall(self, data: bytes) -> None:
+            written_data.append(data)
+
+        def selected_alpn_protocol(self) -> str:  # pragma: nocover
+            return "h2"
+
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = RecordingMockStream(
+        [
+            hyperframe.frame.SettingsFrame().serialize(),
+            hyperframe.frame.HeadersFrame(
+                stream_id=1,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=1, data=b"Hello, world!", flags=["END_STREAM"]
+            ).serialize(),
+        ]
+    )
+    conn = httpcore.HTTP2Connection(
+        origin=origin,
+        stream=stream,
+        h2_ping_interval=0.1,
+    )
+    response = conn.request("GET", "https://example.com/")
+    assert response.status == 200
+
+    # Wait for at least one PING to be sent
+    time.sleep(0.3)
+
+    conn.close()
+
+    # Look for PING frames (type 0x06) in the written data
+    ping_frame_type = b"\x06"
+    ping_found = any(ping_frame_type in data for data in written_data)
+    assert ping_found, "Expected at least one PING frame to be written"
