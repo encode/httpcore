@@ -496,7 +496,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         local_flow: int = self._h2_state.local_flow_control_window(stream_id)
         max_frame_size: int = self._h2_state.max_outbound_frame_size
         flow = min(local_flow, max_frame_size)
-        while flow == 0:
+        while flow <= 0:
             await self._receive_events(request)
             local_flow = self._h2_state.local_flow_control_window(stream_id)
             max_frame_size = self._h2_state.max_outbound_frame_size
