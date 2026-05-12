@@ -224,6 +224,66 @@ async def test_http2_connection_with_goaway():
 
 
 @pytest.mark.anyio
+async def test_http2_connection_with_negative_flow_control_window():
+    """
+    When a server sends a SETTINGS frame that reduces INITIAL_WINDOW_SIZE after a
+    stream's window has been fully consumed, the stream's flow control window can go
+    negative. httpcore must wait for WINDOW_UPDATE frames to bring the window back
+    to a positive value before sending more data, rather than proceeding with the
+    negative window and letting h2 raise a LocalProtocolError.
+    See: https://github.com/encode/httpcore/issues/1082
+    """
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    # The default HTTP/2 stream flow control window is 65535.
+    # We will send 100,000 bytes, exhausting that window after 65535 bytes.
+    # At that point the server reduces INITIAL_WINDOW_SIZE from 65535 to 32768,
+    # which adjusts the stream window from 0 to -32767.
+    # Without the fix (_wait_for_outgoing_flow uses `while flow == 0` instead of
+    # `while flow <= 0`), the negative window is returned directly and h2 raises
+    # LocalProtocolError when send_data is called.
+    reduce_settings = hyperframe.frame.SettingsFrame(stream_id=0)
+    reduce_settings.settings = {
+        hyperframe.frame.SettingsFrame.INITIAL_WINDOW_SIZE: 32768
+    }
+    stream = httpcore.AsyncMockStream(
+        [
+            hyperframe.frame.SettingsFrame(stream_id=0).serialize(),
+            # After window exhaustion, server reduces INITIAL_WINDOW_SIZE:
+            # stream window goes from 0 to 0 + (32768 - 65535) = -32767
+            reduce_settings.serialize(),
+            # Server then provides enough window credit to finish the upload
+            hyperframe.frame.WindowUpdateFrame(
+                stream_id=0, window_increment=100_000
+            ).serialize(),
+            hyperframe.frame.WindowUpdateFrame(
+                stream_id=1, window_increment=100_000
+            ).serialize(),
+            hyperframe.frame.HeadersFrame(
+                stream_id=1,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=1, data=b"response", flags=["END_STREAM"]
+            ).serialize(),
+        ]
+    )
+    async with httpcore.AsyncHTTP2Connection(origin=origin, stream=stream) as conn:
+        response = await conn.request(
+            "POST",
+            "https://example.com/",
+            content=b"x" * 100_000,
+        )
+        assert response.status == 200
+        assert response.content == b"response"
+
+
+@pytest.mark.anyio
 async def test_http2_connection_with_flow_control():
     origin = httpcore.Origin(b"https", b"example.com", 443)
     stream = httpcore.AsyncMockStream(
