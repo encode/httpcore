@@ -242,6 +242,17 @@ class AsyncConnectionPool(AsyncRequestInterface):
                     #
                     # In this case we clear the connection and try again.
                     pool_request.clear_connection()
+                    with self._optional_thread_lock:
+                        closing = []
+                        # If the connection still claims to be available then
+                        # it would be immediately assigned again, so drop it.
+                        if (
+                            connection in self._connections
+                            and connection.is_available()
+                        ):
+                            self._connections.remove(connection)
+                            closing.append(connection)
+                    await self._close_connections(closing)
                 else:
                     break  # pragma: nocover
 

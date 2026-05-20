@@ -452,6 +452,112 @@ async def test_connection_pool_with_connect_exception():
 
 
 @pytest.mark.anyio
+async def test_connection_pool_drops_stale_available_connection():
+    """
+    If a connection claims to be available but then refuses a request,
+    the pool should not keep assigning requests to that stale connection.
+    """
+
+    class StaleConnection(httpcore.AsyncConnectionInterface):
+        def __init__(self) -> None:
+            self.closed = False
+
+        async def handle_async_request(
+            self, request: httpcore.Request
+        ) -> httpcore.Response:
+            raise httpcore.ConnectionNotAvailable()
+
+        def can_handle_request(self, origin: httpcore.Origin) -> bool:
+            return True
+
+        def is_available(self) -> bool:
+            return True
+
+        def has_expired(self) -> bool:
+            return False
+
+        def is_idle(self) -> bool:
+            return True
+
+        def is_closed(self) -> bool:
+            return False
+
+        async def aclose(self) -> None:
+            self.closed = True
+
+        def info(self) -> str:
+            return "STALE"
+
+    class SuccessConnection(httpcore.AsyncConnectionInterface):
+        def __init__(self) -> None:
+            self.closed = False
+
+        async def handle_async_request(
+            self, request: httpcore.Request
+        ) -> httpcore.Response:
+            async def content() -> typing.AsyncIterator[bytes]:
+                yield b"ok"
+
+            return httpcore.Response(200, content=content())
+
+        def can_handle_request(self, origin: httpcore.Origin) -> bool:
+            return True
+
+        def is_available(self) -> bool:
+            return True
+
+        def has_expired(self) -> bool:
+            return False
+
+        def is_idle(self) -> bool:
+            return True
+
+        def is_closed(self) -> bool:
+            return False
+
+        async def aclose(self) -> None:
+            self.closed = True
+
+        def info(self) -> str:
+            return "OK"
+
+    class Pool(httpcore.AsyncConnectionPool):
+        def __init__(self) -> None:
+            super().__init__()
+            self.stale_connection = StaleConnection()
+            self.success_connection = SuccessConnection()
+            self._created = 0
+
+        def create_connection(
+            self, origin: httpcore.Origin
+        ) -> httpcore.AsyncConnectionInterface:
+            self._created += 1
+            if self._created == 1:
+                return self.stale_connection
+            return self.success_connection
+
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    pool = Pool()
+    async with pool:
+        response = await pool.request("GET", "https://example.com/")
+
+        assert response.status == 200
+        assert response.content == b"ok"
+        assert pool.stale_connection.closed
+        assert len(pool.connections) == 1
+        connection = typing.cast(typing.Any, pool.connections[0])
+        assert connection is pool.success_connection
+        assert pool.stale_connection.can_handle_request(origin)
+        assert not pool.stale_connection.has_expired()
+        assert pool.stale_connection.is_idle()
+        assert not pool.stale_connection.is_closed()
+        assert pool.stale_connection.info() == "STALE"
+        assert pool.success_connection.can_handle_request(origin)
+        assert pool.success_connection.is_available()
+        assert pool.success_connection.info() == "OK"
+
+
+@pytest.mark.anyio
 async def test_connection_pool_with_immediate_expiry():
     """
     Connection pools with keepalive_expiry=0.0 should immediately expire

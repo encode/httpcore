@@ -511,6 +511,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
     def is_available(self) -> bool:
         return (
             self._state != HTTPConnectionState.CLOSED
+            and self._connection_terminated is None
             and not self._connection_error
             and not self._used_all_stream_ids
             and not (
