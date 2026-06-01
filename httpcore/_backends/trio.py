@@ -15,6 +15,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
+from .._ssl import _normalize_server_hostname
 from .base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
 
 
@@ -62,6 +63,8 @@ class TrioStream(AsyncNetworkStream):
             trio.TooSlowError: ConnectTimeout,
             trio.BrokenResourceError: ConnectError,
         }
+        server_hostname = _normalize_server_hostname(server_hostname)
+
         ssl_stream = trio.SSLStream(
             self._stream,
             ssl_context=ssl_context,

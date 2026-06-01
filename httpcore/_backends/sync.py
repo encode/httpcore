@@ -16,6 +16,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
+from .._ssl import _normalize_server_hostname
 from .._utils import is_socket_readable
 from .base import SOCKET_OPTION, NetworkBackend, NetworkStream
 
@@ -41,6 +42,7 @@ class TLSinTLSStream(NetworkStream):  # pragma: no cover
         self._sock = sock
         self._incoming = ssl.MemoryBIO()
         self._outgoing = ssl.MemoryBIO()
+        server_hostname = _normalize_server_hostname(server_hostname)
 
         self.ssl_obj = ssl_context.wrap_bio(
             incoming=self._incoming,
@@ -151,6 +153,8 @@ class SyncStream(NetworkStream):
             socket.timeout: ConnectTimeout,
             OSError: ConnectError,
         }
+        server_hostname = _normalize_server_hostname(server_hostname)
+
         with map_exceptions(exc_map):
             try:
                 if isinstance(self._sock, ssl.SSLSocket):  # pragma: no cover

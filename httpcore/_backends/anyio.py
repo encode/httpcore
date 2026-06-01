@@ -14,6 +14,7 @@ from .._exceptions import (
     WriteTimeout,
     map_exceptions,
 )
+from .._ssl import _normalize_server_hostname
 from .._utils import is_socket_readable
 from .base import SOCKET_OPTION, AsyncNetworkBackend, AsyncNetworkStream
 
@@ -64,6 +65,8 @@ class AnyIOStream(AsyncNetworkStream):
             anyio.EndOfStream: ConnectError,
             ssl.SSLError: ConnectError,
         }
+        server_hostname = _normalize_server_hostname(server_hostname)
+
         with map_exceptions(exc_map):
             try:
                 with anyio.fail_after(timeout):
