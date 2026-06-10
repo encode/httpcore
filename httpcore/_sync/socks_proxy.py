@@ -258,8 +258,9 @@ class Socks5Connection(ConnectionInterface):
 
                         kwargs = {
                             "ssl_context": ssl_context,
-                            "server_hostname": sni_hostname
-                            or self._remote_origin.host.decode("ascii"),
+                            "server_hostname": (
+                                sni_hostname or self._remote_origin.host.decode("ascii")
+                            ).rstrip("."),
                             "timeout": timeout,
                         }
                         with Trace("start_tls", logger, request, kwargs) as trace:

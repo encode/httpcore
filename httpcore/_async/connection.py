@@ -148,8 +148,9 @@ class AsyncHTTPConnection(AsyncConnectionInterface):
 
                     kwargs = {
                         "ssl_context": ssl_context,
-                        "server_hostname": sni_hostname
-                        or self._origin.host.decode("ascii"),
+                        "server_hostname": (
+                            sni_hostname or self._origin.host.decode("ascii")
+                        ).rstrip("."),
                         "timeout": timeout,
                     }
                     async with Trace("start_tls", logger, request, kwargs) as trace:
