@@ -1,3 +1,4 @@
+import importlib
 import logging
 import typing
 
@@ -7,6 +8,56 @@ import pytest
 import trio as concurrency
 
 import httpcore
+
+
+class AsyncNonBlockingSemaphore:
+    def __init__(self, bound: int) -> None:
+        self._value = bound
+
+    async def acquire(self) -> None:
+        if self._value <= 0:  # pragma: nocover
+            raise RuntimeError("stream semaphore exhausted")
+        self._value -= 1
+
+    def acquire_nowait(self) -> bool:
+        if self._value <= 0:  # pragma: nocover
+            return False
+        self._value -= 1
+        return True
+
+    async def release(self) -> None:
+        self._value += 1
+
+
+def http2_settings(max_concurrent_streams: int) -> bytes:
+    return hyperframe.frame.SettingsFrame(
+        settings={
+            hyperframe.frame.SettingsFrame.MAX_CONCURRENT_STREAMS: max_concurrent_streams
+        }
+    ).serialize()
+
+
+def http2_response_headers(stream_id: int) -> bytes:
+    return hyperframe.frame.HeadersFrame(
+        stream_id=stream_id,
+        data=hpack.Encoder().encode(
+            [
+                (b":status", b"200"),
+                (b"content-type", b"plain/text"),
+            ]
+        ),
+        flags=["END_HEADERS"],
+    ).serialize()
+
+
+def use_non_blocking_semaphore(monkeypatch: pytest.MonkeyPatch) -> None:
+    module_name = (
+        "httpcore._async.http2"
+        if httpcore.AsyncHTTP2Connection.__name__.startswith("Async")
+        else "httpcore._sync.http2"
+    )
+    http2_module = importlib.import_module(module_name)
+    monkeypatch.setattr(http2_module, "AsyncSemaphore", AsyncNonBlockingSemaphore)
 
 
 @pytest.mark.anyio
@@ -202,6 +253,132 @@ async def test_connection_pool_with_http2():
         assert info == [
             "<AsyncHTTPConnection ['https://example.com:443', HTTP/2, IDLE, Request Count: 2]>"
         ]
+
+
+@pytest.mark.anyio
+async def test_connection_pool_with_http2_connecting_connection_capacity_update():
+    class CapacityKnownConnection:
+        def can_handle_request(
+            self, origin: httpcore.Origin
+        ) -> bool:  # pragma: nocover
+            return True
+
+        def is_available(self) -> bool:
+            return True
+
+        def max_concurrent_requests(self) -> int:
+            return 2
+
+        def has_expired(self) -> bool:
+            return False
+
+        def is_idle(self) -> bool:
+            return False
+
+        def is_closed(self) -> bool:
+            return False
+
+        async def aclose(self) -> None:
+            pass
+
+        def info(self) -> str:  # pragma: nocover
+            return "HTTP/2, ACTIVE"
+
+    class QueuedPoolRequest:
+        def __init__(self) -> None:
+            self.request = httpcore.Request("GET", "https://example.com/")
+            self.connection: typing.Any = None
+
+        def is_queued(self) -> bool:
+            return self.connection is None
+
+        def assign_to_connection(self, connection: typing.Any) -> None:
+            self.connection = connection
+
+    async with httpcore.AsyncConnectionPool(
+        http2=True,
+        max_connections=1,
+        network_backend=httpcore.AsyncMockBackend([], http2=True),
+    ) as pool:
+        pool_request_1 = QueuedPoolRequest()
+        pool_request_2 = QueuedPoolRequest()
+        pool._requests = typing.cast(typing.Any, [pool_request_1, pool_request_2])
+
+        assert pool._assign_requests_to_connections() == []
+        assert len(pool.connections) == 1
+        assert pool_request_1.connection is not None
+        assert pool_request_2.connection is None
+        assert pool_request_1.connection.max_concurrent_requests() == 1
+
+        typing.cast(
+            typing.Any, pool_request_1.connection
+        )._connection = CapacityKnownConnection()
+        await pool._connection_capacity_updated()
+        assert pool_request_2.connection is pool_request_1.connection
+
+
+@pytest.mark.anyio
+async def test_connection_pool_with_http2_stream_limit_opens_extra_connection(
+    monkeypatch,
+):
+    use_non_blocking_semaphore(monkeypatch)
+    network_backend = httpcore.AsyncMockBackend(
+        buffer=[
+            http2_settings(max_concurrent_streams=2),
+            http2_response_headers(stream_id=1),
+            http2_response_headers(stream_id=3),
+            http2_response_headers(stream_id=5),
+        ],
+        http2=True,
+    )
+
+    async with httpcore.AsyncConnectionPool(
+        network_backend=network_backend,
+        max_connections=3,
+    ) as pool:
+        async with pool.stream("GET", "https://example.com/") as response_1:
+            assert response_1.status == 200
+            async with pool.stream("GET", "https://example.com/") as response_2:
+                assert response_2.status == 200
+                assert len(pool.connections) == 1
+                async with pool.stream("GET", "https://example.com/") as response_3:
+                    assert response_3.status == 200
+                    assert len(pool.connections) == 2
+
+
+@pytest.mark.anyio
+async def test_connection_pool_with_http2_stream_limit_queues(monkeypatch):
+    use_non_blocking_semaphore(monkeypatch)
+    network_backend = httpcore.AsyncMockBackend(
+        buffer=[
+            http2_settings(max_concurrent_streams=2),
+            http2_response_headers(stream_id=1),
+            http2_response_headers(stream_id=3),
+            http2_response_headers(stream_id=5),
+        ],
+        http2=True,
+    )
+
+    async with httpcore.AsyncConnectionPool(
+        network_backend=network_backend,
+        max_connections=1,
+    ) as pool:
+        async with pool.stream("GET", "https://example.com/") as response_1:
+            assert response_1.status == 200
+            async with pool.stream("GET", "https://example.com/") as response_2:
+                assert response_2.status == 200
+
+                with pytest.raises(httpcore.PoolTimeout):
+                    await pool.request(
+                        "GET",
+                        "https://example.com/",
+                        extensions={"timeout": {"pool": 0}},
+                    )
+                assert len(pool._requests) == 2
+
+            async with pool.stream("GET", "https://example.com/") as response_3:
+                assert response_3.status == 200
+                assert len(pool.connections) == 1
 
 
 @pytest.mark.anyio

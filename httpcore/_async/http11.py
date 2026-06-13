@@ -271,6 +271,9 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
         # acquired from the connection pool for any other request.
         return self._state == HTTPConnectionState.IDLE
 
+    def max_concurrent_requests(self) -> int:
+        return 1
+
     def has_expired(self) -> bool:
         now = time.monotonic()
         keepalive_expired = self._expire_at is not None and now > self._expire_at

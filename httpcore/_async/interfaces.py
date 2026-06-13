@@ -112,6 +112,13 @@ class AsyncConnectionInterface(AsyncRequestInterface):
         """
         raise NotImplementedError()  # pragma: nocover
 
+    def max_concurrent_requests(self) -> int:  # pragma: nocover
+        """
+        Return the maximum number of requests that may be assigned to this
+        connection at a given time.
+        """
+        return 1
+
     def has_expired(self) -> bool:
         """
         Return `True` if the connection is in a state where it should be closed.

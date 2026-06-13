@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import ssl
+import typing
 
 import socksio
 
@@ -197,6 +198,7 @@ class Socks5Connection(ConnectionInterface):
         http1: bool = True,
         http2: bool = False,
         network_backend: NetworkBackend | None = None,
+        on_capacity_update: typing.Callable[[], typing.Any] | None = None,
     ) -> None:
         self._proxy_origin = proxy_origin
         self._remote_origin = remote_origin
@@ -205,6 +207,7 @@ class Socks5Connection(ConnectionInterface):
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
         self._http2 = http2
+        self._on_capacity_update = on_capacity_update
 
         self._network_backend: NetworkBackend = (
             SyncBackend() if network_backend is None else network_backend
@@ -283,6 +286,7 @@ class Socks5Connection(ConnectionInterface):
                             origin=self._remote_origin,
                             stream=stream,
                             keepalive_expiry=self._keepalive_expiry,
+                            on_capacity_update=self._on_capacity_update,
                         )
                     else:
                         self._connection = HTTP11Connection(
@@ -316,6 +320,11 @@ class Socks5Connection(ConnectionInterface):
                 and not self._connect_failed
             )
         return self._connection.is_available()
+
+    def max_concurrent_requests(self) -> int:  # pragma: nocover
+        if self._connection is None:  # pragma: nocover
+            return 1
+        return self._connection.max_concurrent_requests()
 
     def has_expired(self) -> bool:
         if self._connection is None:  # pragma: nocover
