@@ -48,10 +48,12 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         origin: Origin,
         stream: AsyncNetworkStream,
         keepalive_expiry: float | None = None,
+        on_capacity_update: typing.Callable[[], typing.Any] | None = None,
     ):
         self._origin = origin
         self._network_stream = stream
         self._keepalive_expiry: float | None = keepalive_expiry
+        self._on_capacity_update = on_capacity_update
         self._h2_state = h2.connection.H2Connection(config=self.CONFIG)
         self._state = HTTPConnectionState.IDLE
         self._expire_at: float | None = None
@@ -74,6 +76,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 | h2.events.StreamReset,
             ],
         ] = {}
+        self._closed_streams: set[int] = set()
 
         # Connection terminated events are stored as state since
         # we need to handle them for all streams.
@@ -95,6 +98,8 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
 
         async with self._state_lock:
             if self._state in (HTTPConnectionState.ACTIVE, HTTPConnectionState.IDLE):
+                previous_state = self._state
+                previous_expire_at = self._expire_at
                 self._request_count += 1
                 self._expire_at = None
                 self._state = HTTPConnectionState.ACTIVE
@@ -128,7 +133,13 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 for _ in range(local_settings_max_streams - self._max_streams):
                     await self._max_streams_semaphore.acquire()
 
-        await self._max_streams_semaphore.acquire()
+        if not self._max_streams_semaphore.acquire_nowait():
+            async with self._state_lock:
+                self._request_count -= 1
+                if not self._events:  # pragma: nocover
+                    self._state = previous_state
+                    self._expire_at = previous_expire_at
+            raise ConnectionNotAvailable()
 
         try:
             stream_id = self._h2_state.get_next_available_stream_id()
@@ -136,6 +147,7 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         except h2.exceptions.NoAvailableStreamIDError:  # pragma: nocover
             self._used_all_stream_ids = True
             self._request_count -= 1
+            await self._max_streams_semaphore.release()
             raise ConnectionNotAvailable()
 
         try:
@@ -380,6 +392,10 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                         ),
                     ):
                         if event.stream_id in self._events:
+                            if isinstance(
+                                event, (h2.events.StreamEnded, h2.events.StreamReset)
+                            ):
+                                self._closed_streams.add(event.stream_id)
                             self._events[event.stream_id].append(event)
 
                     elif isinstance(event, h2.events.ConnectionTerminated):
@@ -399,27 +415,48 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                 self._h2_state.local_settings.max_concurrent_streams,
             )
             if new_max_streams and new_max_streams != self._max_streams:
-                while new_max_streams > self._max_streams:
+                active_stream_count = len(self._events)
+                old_available_streams = max(0, self._max_streams - active_stream_count)
+                new_available_streams = max(0, new_max_streams - active_stream_count)
+                self._max_streams = new_max_streams
+                while new_available_streams > old_available_streams:
                     await self._max_streams_semaphore.release()
-                    self._max_streams += 1
-                while new_max_streams < self._max_streams:
+                    old_available_streams += 1
+                while new_available_streams < old_available_streams:
                     await self._max_streams_semaphore.acquire()
-                    self._max_streams -= 1
+                    old_available_streams -= 1
+                if self._on_capacity_update is not None:
+                    await self._on_capacity_update()
 
     async def _response_closed(self, stream_id: int) -> None:
-        await self._max_streams_semaphore.release()
+        stream_was_reset = stream_id not in self._closed_streams
+        if stream_was_reset:
+            # Keep h2's stream state aligned without blocking close/cancel on I/O.
+            # Any pending RST_STREAM data will be flushed by the next write.
+            try:
+                self._h2_state.reset_stream(stream_id)
+            except (
+                h2.exceptions.NoSuchStreamError,
+                h2.exceptions.StreamClosedError,
+                h2.exceptions.ProtocolError,
+            ):
+                pass
+        if len(self._events) <= self._max_streams:
+            await self._max_streams_semaphore.release()
+        self._closed_streams.discard(stream_id)
         del self._events[stream_id]
         async with self._state_lock:
             if self._connection_terminated and not self._events:
                 await self.aclose()
 
             elif self._state == HTTPConnectionState.ACTIVE and not self._events:
-                self._state = HTTPConnectionState.IDLE
-                if self._keepalive_expiry is not None:
-                    now = time.monotonic()
-                    self._expire_at = now + self._keepalive_expiry
-                if self._used_all_stream_ids:  # pragma: nocover
+                if stream_was_reset or self._used_all_stream_ids:
                     await self.aclose()
+                else:
+                    self._state = HTTPConnectionState.IDLE
+                    if self._keepalive_expiry is not None:
+                        now = time.monotonic()
+                        self._expire_at = now + self._keepalive_expiry
 
     async def aclose(self) -> None:
         # Note that this method unilaterally closes the connection, and does
@@ -513,11 +550,15 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
             self._state != HTTPConnectionState.CLOSED
             and not self._connection_error
             and not self._used_all_stream_ids
+            and len(self._events) < self.max_concurrent_requests()
             and not (
                 self._h2_state.state_machine.state
                 == h2.connection.ConnectionState.CLOSED
             )
         )
+
+    def max_concurrent_requests(self) -> int:
+        return self._max_streams if self._sent_connection_init else 1
 
     def has_expired(self) -> bool:
         now = time.monotonic()

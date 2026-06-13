@@ -1,8 +1,60 @@
+import importlib
+
 import hpack
 import hyperframe.frame
 import pytest
 
 import httpcore
+
+
+class NonBlockingSemaphore:
+    def __init__(self, bound: int) -> None:
+        self._value = bound
+
+    def acquire(self) -> None:
+        if self._value <= 0:  # pragma: nocover
+            raise RuntimeError("stream semaphore exhausted")
+        self._value -= 1
+
+    def acquire_nowait(self) -> bool:
+        if self._value <= 0:  # pragma: nocover
+            return False
+        self._value -= 1
+        return True
+
+    def release(self) -> None:
+        self._value += 1
+
+
+def use_non_blocking_semaphore(monkeypatch: pytest.MonkeyPatch) -> None:
+    module_name = (
+        "httpcore._async.http2"
+        if httpcore.HTTP2Connection.__name__.startswith("Async")
+        else "httpcore._sync.http2"
+    )
+    http2_module = importlib.import_module(module_name)
+    monkeypatch.setattr(http2_module, "Semaphore", NonBlockingSemaphore)
+
+
+def http2_settings(max_concurrent_streams: int) -> bytes:
+    return hyperframe.frame.SettingsFrame(
+        settings={
+            hyperframe.frame.SettingsFrame.MAX_CONCURRENT_STREAMS: max_concurrent_streams
+        }
+    ).serialize()
+
+
+def http2_response_headers(stream_id: int) -> bytes:
+    return hyperframe.frame.HeadersFrame(
+        stream_id=stream_id,
+        data=hpack.Encoder().encode(
+            [
+                (b":status", b"200"),
+                (b"content-type", b"plain/text"),
+            ]
+        ),
+        flags=["END_HEADERS"],
+    ).serialize()
 
 
 
@@ -80,6 +132,46 @@ def test_http2_connection_closed():
             conn.request("GET", "https://example.com/")
 
         assert not conn.is_available()
+
+
+
+def test_http2_connection_unavailable_when_max_streams_reached():
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.MockStream(
+        [
+            http2_settings(max_concurrent_streams=2),
+            http2_response_headers(stream_id=1),
+            http2_response_headers(stream_id=3),
+        ]
+    )
+    with httpcore.HTTP2Connection(origin=origin, stream=stream) as conn:
+        with conn.stream("GET", "https://example.com/") as response_1:
+            assert response_1.status == 200
+            assert conn.is_available()
+
+            with conn.stream("GET", "https://example.com/") as response_2:
+                assert response_2.status == 200
+                assert conn.max_concurrent_requests() == 2
+                assert not conn.is_available()
+                with pytest.raises(httpcore.ConnectionNotAvailable):
+                    conn.request("GET", "https://example.com/")
+
+
+
+def test_http2_connection_closes_when_idle_stream_is_reset():
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.MockStream(
+        [
+            http2_settings(max_concurrent_streams=2),
+            http2_response_headers(stream_id=1),
+        ]
+    )
+    with httpcore.HTTP2Connection(origin=origin, stream=stream) as conn:
+        with conn.stream("GET", "https://example.com/") as response:
+            assert response.status == 200
+            assert conn.is_available()
+
+        assert conn.is_closed()
 
 
 
@@ -380,3 +472,40 @@ def test_http2_remote_max_streams_update():
                         conn._h2_state.local_settings.max_concurrent_streams,
                     )
                 i += 1
+
+
+
+def test_http2_remote_max_streams_update_below_active_streams(monkeypatch):
+    use_non_blocking_semaphore(monkeypatch)
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.MockStream(
+        [
+            http2_settings(max_concurrent_streams=3),
+            http2_response_headers(stream_id=1),
+            http2_response_headers(stream_id=3),
+            http2_response_headers(stream_id=5),
+            hyperframe.frame.DataFrame(stream_id=5, data=b"Hello").serialize(),
+            http2_settings(max_concurrent_streams=2),
+            hyperframe.frame.DataFrame(
+                stream_id=5, data=b", world!", flags=["END_STREAM"]
+            ).serialize(),
+        ]
+    )
+    with httpcore.HTTP2Connection(origin=origin, stream=stream) as conn:
+        with conn.stream("GET", "https://example.com/") as response_1:
+            assert response_1.status == 200
+            with conn.stream("GET", "https://example.com/") as response_2:
+                assert response_2.status == 200
+                with conn.stream("GET", "https://example.com/") as response_3:
+                    assert response_3.status == 200
+                    assert not conn.is_available()
+                    assert [part for part in response_3.iter_stream()] == [
+                        b"Hello",
+                        b", world!",
+                    ]
+                    assert conn.max_concurrent_requests() == 2
+                    assert not conn.is_available()
+
+                assert not conn.is_available()
+
+            assert conn.is_available()

@@ -204,7 +204,7 @@ async def test_h2_timeout_during_request():
             await conn.request("GET", "http://example.com")
 
         assert not conn.is_closed()
-        assert conn.is_idle()
+        assert conn.is_idle()  # pragma: nocover
 
 
 @pytest.mark.xfail
@@ -242,4 +242,4 @@ async def test_h2_timeout_during_response():
             await conn.request("GET", "http://example.com")
 
         assert not conn.is_closed()
-        assert conn.is_idle()
+        assert conn.is_idle()  # pragma: nocover

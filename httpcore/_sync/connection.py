@@ -48,6 +48,7 @@ class HTTPConnection(ConnectionInterface):
         uds: str | None = None,
         network_backend: NetworkBackend | None = None,
         socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
+        on_capacity_update: typing.Callable[[], typing.Any] | None = None,
     ) -> None:
         self._origin = origin
         self._ssl_context = ssl_context
@@ -65,6 +66,7 @@ class HTTPConnection(ConnectionInterface):
         self._connect_failed: bool = False
         self._request_lock = Lock()
         self._socket_options = socket_options
+        self._on_capacity_update = on_capacity_update
 
     def handle_request(self, request: Request) -> Response:
         if not self.can_handle_request(request.url.origin):
@@ -89,6 +91,7 @@ class HTTPConnection(ConnectionInterface):
                             origin=self._origin,
                             stream=stream,
                             keepalive_expiry=self._keepalive_expiry,
+                            on_capacity_update=self._on_capacity_update,
                         )
                     else:
                         self._connection = HTTP11Connection(
@@ -183,6 +186,11 @@ class HTTPConnection(ConnectionInterface):
                 and not self._connect_failed
             )
         return self._connection.is_available()
+
+    def max_concurrent_requests(self) -> int:
+        if self._connection is None:
+            return 1
+        return self._connection.max_concurrent_requests()
 
     def has_expired(self) -> bool:
         if self._connection is None:

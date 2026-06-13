@@ -176,6 +176,7 @@ class AsyncForwardHTTPConnection(AsyncConnectionInterface):
         network_backend: AsyncNetworkBackend | None = None,
         socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
         proxy_ssl_context: ssl.SSLContext | None = None,
+        on_capacity_update: typing.Callable[[], typing.Any] | None = None,
     ) -> None:
         self._connection = AsyncHTTPConnection(
             origin=proxy_origin,
@@ -183,6 +184,7 @@ class AsyncForwardHTTPConnection(AsyncConnectionInterface):
             network_backend=network_backend,
             socket_options=socket_options,
             ssl_context=proxy_ssl_context,
+            on_capacity_update=on_capacity_update,
         )
         self._proxy_origin = proxy_origin
         self._proxy_headers = enforce_headers(proxy_headers, name="proxy_headers")
@@ -217,6 +219,9 @@ class AsyncForwardHTTPConnection(AsyncConnectionInterface):
     def is_available(self) -> bool:
         return self._connection.is_available()
 
+    def max_concurrent_requests(self) -> int:  # pragma: nocover
+        return self._connection.max_concurrent_requests()
+
     def has_expired(self) -> bool:
         return self._connection.has_expired()
 
@@ -243,6 +248,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
         http2: bool = False,
         network_backend: AsyncNetworkBackend | None = None,
         socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
+        on_capacity_update: typing.Callable[[], typing.Any] | None = None,
     ) -> None:
         self._connection: AsyncConnectionInterface = AsyncHTTPConnection(
             origin=proxy_origin,
@@ -250,6 +256,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
             network_backend=network_backend,
             socket_options=socket_options,
             ssl_context=proxy_ssl_context,
+            on_capacity_update=on_capacity_update,
         )
         self._proxy_origin = proxy_origin
         self._remote_origin = remote_origin
@@ -259,6 +266,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
         self._keepalive_expiry = keepalive_expiry
         self._http1 = http1
         self._http2 = http2
+        self._on_capacity_update = on_capacity_update
         self._connect_lock = AsyncLock()
         self._connected = False
 
@@ -331,6 +339,7 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
                         origin=self._remote_origin,
                         stream=stream,
                         keepalive_expiry=self._keepalive_expiry,
+                        on_capacity_update=self._on_capacity_update,
                     )
                 else:
                     self._connection = AsyncHTTP11Connection(
@@ -353,6 +362,9 @@ class AsyncTunnelHTTPConnection(AsyncConnectionInterface):
 
     def is_available(self) -> bool:
         return self._connection.is_available()
+
+    def max_concurrent_requests(self) -> int:  # pragma: nocover
+        return self._connection.max_concurrent_requests()
 
     def has_expired(self) -> bool:
         return self._connection.has_expired()
