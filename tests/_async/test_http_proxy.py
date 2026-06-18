@@ -224,7 +224,7 @@ async def test_proxy_tunneling_with_403():
     """
     network_backend = AsyncMockBackend(
         [
-            b"HTTP/1.1 403 Permission Denied\r\n" b"\r\n",
+            b"HTTP/1.1 403 Permission Denied\r\n\r\n",
         ]
     )
 
@@ -263,6 +263,69 @@ async def test_proxy_tunneling_with_auth():
         ),
         network_backend=network_backend,
     ) as proxy:
+        response = await proxy.request("GET", "https://example.com/")
+        assert response.status == 200
+        assert response.content == b"Hello, world!"
+
+
+@pytest.mark.anyio
+async def test_proxy_tunneling_tls_failure_cleans_up():
+    """
+    When start_tls raises after a successful CONNECT through a proxy,
+    the tunnel connection is closed and removed from the pool, so
+    subsequent requests do not hit PoolTimeout.
+    """
+
+    class FailingTLSStream(AsyncMockStream):
+        async def start_tls(
+            self,
+            ssl_context: ssl.SSLContext,
+            server_hostname: typing.Optional[str] = None,
+            timeout: typing.Optional[float] = None,
+        ) -> AsyncNetworkStream:
+            raise OSError("TLS handshake failed")
+
+    class FailOnceBackend(AsyncMockBackend):
+        def __init__(self, buffer: typing.List[bytes]) -> None:
+            super().__init__(buffer)
+            self._should_fail = True
+
+        async def connect_tcp(
+            self,
+            host: str,
+            port: int,
+            timeout: typing.Optional[float] = None,
+            local_address: typing.Optional[str] = None,
+            socket_options: typing.Optional[typing.Iterable[SOCKET_OPTION]] = None,
+        ) -> AsyncNetworkStream:
+            if self._should_fail:
+                self._should_fail = False
+                return FailingTLSStream(list(self._buffer))
+            return AsyncMockStream(list(self._buffer))
+
+    buffer = [
+        b"HTTP/1.1 200 OK\r\n\r\n",
+        b"HTTP/1.1 200 OK\r\n",
+        b"Content-Type: plain/text\r\n",
+        b"Content-Length: 13\r\n",
+        b"\r\n",
+        b"Hello, world!",
+    ]
+    backend = FailOnceBackend(buffer)
+
+    async with AsyncConnectionPool(
+        proxy=Proxy("http://localhost:8080/"),
+        max_connections=1,
+        network_backend=backend,
+    ) as proxy:
+        # First request: CONNECT succeeds, start_tls raises OSError.
+        with pytest.raises(OSError, match="TLS handshake failed"):
+            await proxy.request("GET", "https://example.com/")
+
+        # The poisoned tunnel connection must have been cleaned up.
+        assert not proxy.connections
+
+        # Second request: pool is clean, so it succeeds normally.
         response = await proxy.request("GET", "https://example.com/")
         assert response.status == 200
         assert response.content == b"Hello, world!"
