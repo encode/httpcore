@@ -521,7 +521,12 @@ class HTTP2Connection(ConnectionInterface):
 
     def has_expired(self) -> bool:
         now = time.monotonic()
-        return self._expire_at is not None and now > self._expire_at
+        # Read `_expire_at` once into a local: another thread may reset it to
+        # `None` (see `handle_request`) between the `is not None` check and
+        # the comparison, which raises a `TypeError` on the free-threaded build
+        # where there is no GIL to serialise the two attribute reads.
+        expire_at = self._expire_at
+        return expire_at is not None and now > expire_at
 
     def is_idle(self) -> bool:
         return self._state == HTTPConnectionState.IDLE
