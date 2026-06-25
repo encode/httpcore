@@ -1,6 +1,38 @@
+import typing
+
 import pytest
 
 import httpcore
+
+
+class AsyncRecordingTimeoutStream(httpcore.AsyncMockStream):
+    def __init__(self, buffer: typing.List[bytes]) -> None:
+        super().__init__(buffer)
+        self.read_timeouts: typing.List[typing.Optional[float]] = []
+        self.write_timeouts: typing.List[typing.Optional[float]] = []
+
+    async def read(
+        self, max_bytes: int, timeout: typing.Optional[float] = None
+    ) -> bytes:
+        self.read_timeouts.append(timeout)
+        return await super().read(max_bytes, timeout)
+
+    async def write(
+        self, buffer: bytes, timeout: typing.Optional[float] = None
+    ) -> None:
+        self.write_timeouts.append(timeout)
+        return await super().write(buffer, timeout)
+
+
+class AsyncRecordingTimeoutBackend(httpcore.AsyncMockBackend):
+    def __init__(self, buffer: typing.List[bytes]) -> None:
+        super().__init__(buffer)
+        self.stream = AsyncRecordingTimeoutStream(buffer)
+
+    async def connect_tcp(
+        self, *args: typing.Any, **kwargs: typing.Any
+    ) -> httpcore.AsyncNetworkStream:
+        return self.stream
 
 
 @pytest.mark.anyio
@@ -59,6 +91,47 @@ async def test_socks5_request():
         assert not proxy.connections[0].can_handle_request(
             httpcore.Origin(b"https", b"other.com", 443)
         )
+
+
+@pytest.mark.anyio
+async def test_socks5_request_uses_connect_timeout_for_handshake():
+    """
+    Apply the connect timeout to all SOCKS handshake I/O.
+    """
+    network_backend = AsyncRecordingTimeoutBackend(
+        [
+            # The initial socks CONNECT
+            #   v5 USERNAME/PASSWORD
+            b"\x05\x02",
+            #   v1 VALID USERNAME/PASSWORD
+            b"\x01\x00",
+            #   v5 SUC RSV IP4 127  .0  .0  .1     :80
+            b"\x05\x00\x00\x01\xff\x00\x00\x01\x00\x50",
+            # The actual response from the remote server
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
+
+    async with httpcore.AsyncConnectionPool(
+        proxy=httpcore.Proxy(
+            url="socks5://localhost:8080/",
+            auth=(b"username", b"password"),
+        ),
+        network_backend=network_backend,
+    ) as proxy:
+        response = await proxy.request(
+            "GET",
+            "https://example.com/",
+            extensions={"timeout": {"connect": 5.0}},
+        )
+
+    assert response.status == 200
+    assert network_backend.stream.write_timeouts[:3] == [5.0, 5.0, 5.0]
+    assert network_backend.stream.read_timeouts[:3] == [5.0, 5.0, 5.0]
 
 
 @pytest.mark.anyio

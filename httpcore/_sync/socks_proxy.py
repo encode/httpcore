@@ -45,6 +45,7 @@ def _init_socks5_connection(
     host: bytes,
     port: int,
     auth: tuple[bytes, bytes] | None = None,
+    timeout: float | None = None,
 ) -> None:
     conn = socksio.socks5.SOCKS5Connection()
 
@@ -56,10 +57,10 @@ def _init_socks5_connection(
     )
     conn.send(socksio.socks5.SOCKS5AuthMethodsRequest([auth_method]))
     outgoing_bytes = conn.data_to_send()
-    stream.write(outgoing_bytes)
+    stream.write(outgoing_bytes, timeout=timeout)
 
     # Auth method response
-    incoming_bytes = stream.read(max_bytes=4096)
+    incoming_bytes = stream.read(max_bytes=4096, timeout=timeout)
     response = conn.receive_data(incoming_bytes)
     assert isinstance(response, socksio.socks5.SOCKS5AuthReply)
     if response.method != auth_method:
@@ -75,10 +76,10 @@ def _init_socks5_connection(
         username, password = auth
         conn.send(socksio.socks5.SOCKS5UsernamePasswordRequest(username, password))
         outgoing_bytes = conn.data_to_send()
-        stream.write(outgoing_bytes)
+        stream.write(outgoing_bytes, timeout=timeout)
 
         # Username/password response
-        incoming_bytes = stream.read(max_bytes=4096)
+        incoming_bytes = stream.read(max_bytes=4096, timeout=timeout)
         response = conn.receive_data(incoming_bytes)
         assert isinstance(response, socksio.socks5.SOCKS5UsernamePasswordReply)
         if not response.success:
@@ -91,10 +92,10 @@ def _init_socks5_connection(
         )
     )
     outgoing_bytes = conn.data_to_send()
-    stream.write(outgoing_bytes)
+    stream.write(outgoing_bytes, timeout=timeout)
 
     # Connect response
-    incoming_bytes = stream.read(max_bytes=4096)
+    incoming_bytes = stream.read(max_bytes=4096, timeout=timeout)
     response = conn.receive_data(incoming_bytes)
     assert isinstance(response, socksio.socks5.SOCKS5Reply)
     if response.reply_code != socksio.socks5.SOCKS5ReplyCode.SUCCEEDED:
@@ -237,6 +238,7 @@ class Socks5Connection(ConnectionInterface):
                         "host": self._remote_origin.host.decode("ascii"),
                         "port": self._remote_origin.port,
                         "auth": self._proxy_auth,
+                        "timeout": timeout,
                     }
                     with Trace(
                         "setup_socks5_connection", logger, request, kwargs
