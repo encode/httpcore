@@ -489,14 +489,18 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         """
         Returns the maximum allowable outgoing flow for a given stream.
 
-        If the allowable flow is zero, then waits on the network until
+        If the allowable flow is zero or negative, then waits on the network until
         WindowUpdated frames have increased the flow rate.
         https://tools.ietf.org/html/rfc7540#section-6.9
         """
         local_flow: int = self._h2_state.local_flow_control_window(stream_id)
         max_frame_size: int = self._h2_state.max_outbound_frame_size
         flow = min(local_flow, max_frame_size)
-        while flow == 0:
+        # h2 may report a *negative* window when prior DATA already overshot the
+        # remote window (issue #1082). Treat any non-positive flow like zero:
+        # block on WINDOW_UPDATE instead of returning a negative max_flow that
+        # later makes `send_data` raise LocalProtocolError.
+        while flow <= 0:
             await self._receive_events(request)
             local_flow = self._h2_state.local_flow_control_window(stream_id)
             max_frame_size = self._h2_state.max_outbound_frame_size

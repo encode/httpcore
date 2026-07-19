@@ -380,3 +380,56 @@ def test_http2_remote_max_streams_update():
                         conn._h2_state.local_settings.max_concurrent_streams,
                     )
                 i += 1
+
+
+
+def test_http2_wait_for_outgoing_flow_handles_negative_window():
+    """Negative local flow must wait like zero (#1082)."""
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    stream = httpcore.MockStream(
+        [
+            hyperframe.frame.SettingsFrame().serialize(),
+            # Read while waiting on non-positive flow.
+            hyperframe.frame.WindowUpdateFrame(
+                stream_id=0, window_increment=50_000
+            ).serialize(),
+            hyperframe.frame.WindowUpdateFrame(
+                stream_id=1, window_increment=50_000
+            ).serialize(),
+            hyperframe.frame.HeadersFrame(
+                stream_id=1,
+                data=hpack.Encoder().encode(
+                    [
+                        (b":status", b"200"),
+                        (b"content-type", b"plain/text"),
+                    ]
+                ),
+                flags=["END_HEADERS"],
+            ).serialize(),
+            hyperframe.frame.DataFrame(
+                stream_id=1, data=b"ok", flags=["END_STREAM"]
+            ).serialize(),
+        ]
+    )
+    with httpcore.HTTP2Connection(origin=origin, stream=stream) as conn:
+        windows = [-49151, -100, 0, 16_384]
+
+        def fake_local_flow_control_window(stream_id):  # noqa: ARG001
+            return windows.pop(0) if windows else 16_384
+
+        real_send_body = conn._send_request_body
+
+        def send_body_with_negative_window(request, stream_id):
+            conn._h2_state.local_flow_control_window = (  # type: ignore[method-assign]
+                fake_local_flow_control_window
+            )
+            return real_send_body(request, stream_id)
+
+        conn._send_request_body = send_body_with_negative_window  # type: ignore[method-assign]
+        response = conn.request(
+            "POST",
+            "https://example.com/",
+            content=b"x" * 1_000,
+        )
+        assert response.status == 200
+        assert response.content == b"ok"
