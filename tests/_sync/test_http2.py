@@ -420,12 +420,14 @@ def test_http2_wait_for_outgoing_flow_handles_negative_window():
         real_send_body = conn._send_request_body
 
         def send_body_with_negative_window(request, stream_id):
-            conn._h2_state.local_flow_control_window = (  # type: ignore[method-assign]
-                fake_local_flow_control_window
+            setattr(
+                conn._h2_state,
+                "local_flow_control_window",
+                fake_local_flow_control_window,
             )
             return real_send_body(request, stream_id)
 
-        conn._send_request_body = send_body_with_negative_window  # type: ignore[method-assign]
+        setattr(conn, "_send_request_body", send_body_with_negative_window)
         response = conn.request(
             "POST",
             "https://example.com/",
