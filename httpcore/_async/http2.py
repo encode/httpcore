@@ -407,6 +407,28 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                     self._max_streams -= 1
 
     async def _response_closed(self, stream_id: int) -> None:
+        # If the stream is still open as far as `h2` is concerned then we are
+        # tearing it down early -- typically because the task was cancelled
+        # before the END_STREAM frame could be written. Reset it so that `h2`
+        # also drops the stream from its own count of open streams.
+        #
+        # Without this, our semaphore and h2's accounting drift apart on every
+        # cancelled request, until h2 rejects new streams with "Max outbound
+        # streams" while the pool still believes there is spare capacity.
+        #
+        # The RST_STREAM frame that this queues is deliberately not flushed
+        # here. This runs inside a cancellation shield during teardown, and
+        # taking the write lock at this point risks deadlocking against the
+        # request that currently holds it. The frame is written out by the
+        # next call to `_write_outgoing_data()` instead.
+        h2_stream = self._h2_state.streams.get(stream_id)
+        if h2_stream is not None and not h2_stream.closed:
+            try:
+                self._h2_state.reset_stream(stream_id)
+            except h2.exceptions.ProtocolError:  # pragma: nocover
+                # The stream may already have been reset by the remote end.
+                pass
+
         await self._max_streams_semaphore.release()
         del self._events[stream_id]
         async with self._state_lock:

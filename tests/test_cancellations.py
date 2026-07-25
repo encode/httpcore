@@ -243,3 +243,69 @@ async def test_h2_timeout_during_response():
 
         assert not conn.is_closed()
         assert conn.is_idle()
+
+
+class HandshakeThenBlockedWriteStream(httpcore.AsyncNetworkStream):
+    """
+    A stream that allows the HTTP/2 handshake to complete, then blocks on
+    every subsequent write, signalling when it has done so.
+
+    This lets a request be cancelled at a precise point, once its headers have
+    been handed to `h2` but before they have reached the network.
+    """
+
+    def __init__(self) -> None:
+        self._handshake_complete = False
+        self.blocked = anyio.Event()
+
+    async def write(
+        self, buffer: bytes, timeout: typing.Optional[float] = None
+    ) -> None:
+        if not self._handshake_complete:
+            self._handshake_complete = True
+            return
+        self.blocked.set()
+        await anyio.sleep(999)
+
+    async def read(
+        self, max_bytes: int, timeout: typing.Optional[float] = None
+    ) -> bytes:
+        await anyio.sleep(999)  # pragma: nocover
+        return b""  # pragma: nocover
+
+    async def aclose(self) -> None:
+        await anyio.sleep(0)
+
+
+@pytest.mark.anyio
+async def test_h2_stream_count_stays_in_sync_after_cancellation():
+    """
+    Cancelling an HTTP/2 request releases our own stream semaphore, so `h2`
+    must be told that the stream is finished as well.
+
+    If the two drift apart then the connection eventually rejects new streams
+    with "Max outbound streams is 100, 100 open", while we still believe there
+    is spare capacity available.
+
+    See https://github.com/encode/httpcore/issues/1022
+    """
+    origin = httpcore.Origin(b"http", b"example.com", 80)
+    stream = HandshakeThenBlockedWriteStream()
+    async with httpcore.AsyncHTTP2Connection(origin, stream) as conn:
+        # An overall ceiling, so that a regression here fails rather than
+        # hanging. The cancellation itself is triggered deterministically,
+        # once the request headers are known to have reached the stream.
+        with anyio.move_on_after(5.0):
+            async with anyio.create_task_group() as task_group:
+
+                async def send_request() -> None:
+                    await conn.request("GET", "http://example.com")
+
+                task_group.start_soon(send_request)
+                await stream.blocked.wait()
+                task_group.cancel_scope.cancel()
+
+        # We have released our own stream slot, so h2's count of open streams
+        # has to agree, or the two drift apart by one on every cancellation
+        # until no further streams can be opened at all.
+        assert conn._h2_state.open_outbound_streams == 0
