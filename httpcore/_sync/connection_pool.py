@@ -279,8 +279,18 @@ class ConnectionPool(RequestInterface):
         """
         closing_connections = []
 
-        # First we handle cleaning up any connections that are closed,
-        # have expired their keep-alive, or surplus idle connections.
+        # A connection that is neither "available" nor "idle" is reserved for
+        # the one request it was assigned to, and only that request is able to
+        # drive it forward. We record which connections are still spoken for,
+        # so that any which have been abandoned can be cleaned up below.
+        #
+        # Identity is used here rather than equality, since connection classes
+        # are not required to be hashable or comparable.
+        reserved_connections = {id(request.connection) for request in self._requests}
+
+        # First we handle cleaning up any connections that are closed, have
+        # expired their keep-alive, are surplus idle connections, or have been
+        # orphaned by the request they were created for.
         for connection in list(self._connections):
             if connection.is_closed():
                 # log: "removing closed connection"
@@ -295,6 +305,20 @@ class ConnectionPool(RequestInterface):
                 > self._max_keepalive_connections
             ):
                 # log: "closing idle connection"
+                self._connections.remove(connection)
+                closing_connections.append(connection)
+            elif (
+                id(connection) not in reserved_connections
+                and not connection.is_available()
+                and not connection.is_idle()
+            ):
+                # log: "closing orphaned connection"
+                #
+                # The request this connection was reserved for was cancelled or
+                # failed before the connection was established. Nothing will
+                # ever complete the connection, and it cannot be handed out to
+                # another request, so without this it would occupy a pool slot
+                # indefinitely and eventually starve the pool.
                 self._connections.remove(connection)
                 closing_connections.append(connection)
 
