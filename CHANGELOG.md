@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Unreleased
 
 - Fix `max_keepalive_connections` not being properly handled. (#1000)
+- Reset the HTTP/2 stream when a request is cancelled, keeping `h2`'s count of open streams in step with our own. (#1022)
 
 ## Version 1.0.9 (April 24th, 2025)
 
