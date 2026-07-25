@@ -1,3 +1,4 @@
+import asyncio
 import typing
 
 import anyio
@@ -243,3 +244,86 @@ async def test_h2_timeout_during_response():
 
         assert not conn.is_closed()
         assert conn.is_idle()
+
+
+def test_connection_pool_does_not_leak_slot_on_cancelled_request():
+    """
+    A request which is cancelled after the pool has assigned it a newly
+    created connection, but before that connection has been established,
+    must not leave the connection behind holding a pool slot.
+
+    Such a connection can never be reaped, because it is neither closed,
+    expired, nor idle, and can never be reused, because it is not available.
+    Every occurrence therefore consumes a slot permanently, until the pool
+    fails every subsequent request with `PoolTimeout`, even though the server
+    is perfectly healthy.
+
+    This drives `asyncio` directly rather than going through `anyio`, because
+    it relies on a task being cancelled while it is suspended waiting for a
+    connection to be assigned to it. Scope based cancellation, as used by
+    `anyio.move_on_after` and by trio, is only delivered at the next
+    checkpoint, which falls inside the connection's own error handling where
+    it is already dealt with correctly.
+
+    See https://github.com/encode/httpcore/issues/1093
+    """
+
+    async def scenario() -> None:
+        network_backend = httpcore.AsyncMockBackend(
+            [
+                b"HTTP/1.1 200 OK\r\n",
+                b"Content-Type: plain/text\r\n",
+                b"Content-Length: 13\r\n",
+                b"\r\n",
+                b"Hello, world!",
+            ]
+        )
+
+        async with httpcore.AsyncConnectionPool(
+            max_connections=1, network_backend=network_backend
+        ) as pool:
+            # Occupy the pool's only slot, leaving the response body unread so
+            # that the connection remains checked out.
+            response = await pool.handle_async_request(
+                httpcore.Request(
+                    "GET", "http://a.example/", headers={"Host": "a.example"}
+                )
+            )
+
+            # A request to a different origin queues up behind it.
+            task = asyncio.ensure_future(
+                pool.handle_async_request(
+                    httpcore.Request(
+                        "GET", "http://b.example/", headers={"Host": "b.example"}
+                    )
+                )
+            )
+            for _ in range(10):
+                await asyncio.sleep(0)
+            assert not task.done()
+
+            # Closing the first response frees the slot. The pool evicts the
+            # now idle connection and assigns a freshly created one to the
+            # queued request. Cancelling that request before it is scheduled
+            # to resume leaves nothing to establish the new connection.
+            await response.aclose()
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+
+            # The abandoned connection must not be left occupying the pool.
+            assert pool.connections == []
+
+            # ...and so the pool must still be usable.
+            response = await pool.handle_async_request(
+                httpcore.Request(
+                    "GET",
+                    "http://c.example/",
+                    headers={"Host": "c.example"},
+                    extensions={"timeout": {"pool": 1.0}},
+                )
+            )
+            await response.aread()
+            assert response.status == 200
+
+    asyncio.run(scenario())
