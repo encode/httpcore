@@ -66,7 +66,7 @@ def stream(
 
     When using the `stream()` function, the body of the response will not be
     automatically read. If you want to access the response body you should
-    either use `content = response.read()`, or `for chunk in response.iter_content()`.
+    either use `content = response.read()`, or `for chunk in response.iter_stream()`.
 
     Arguments:
         method: The HTTP method for the request. Typically one of `"GET"`,
