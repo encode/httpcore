@@ -117,6 +117,19 @@ def test_response():
     assert repr(response.stream) == "<ByteStream [0 bytes]>"
 
 
+def test_response_streaming_api_names():
+    # The public docstrings (e.g. `httpcore.stream()`) tell users to read a
+    # streamed body with `response.read()` or `for chunk in response.iter_stream()`.
+    # Pin those method names so the documented API cannot silently drift to a
+    # name that does not exist (doctests are not run in CI).
+    response = httpcore.Response(200)
+    assert hasattr(response, "read")
+    assert hasattr(response, "iter_stream")
+    assert hasattr(response, "aread")
+    assert hasattr(response, "aiter_stream")
+    assert not hasattr(response, "iter_content")
+
+
 # Tests for reading and streaming sync byte streams...
 
 
