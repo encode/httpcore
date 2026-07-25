@@ -1,3 +1,5 @@
+import typing
+
 import pytest
 
 import httpcore
@@ -195,3 +197,92 @@ def test_socks5_request_incorrect_auth():
         assert str(exc_info.value) == "Invalid username/password"
 
         assert not proxy.connections
+
+
+class TimeoutRecordingStream(httpcore.MockStream):
+    """
+    A mock stream which records the timeout applied to each read.
+    """
+
+    def __init__(
+        self,
+        buffer: typing.List[bytes],
+        read_timeouts: typing.List[typing.Optional[float]],
+    ) -> None:
+        super().__init__(buffer)
+        self._read_timeouts = read_timeouts
+
+    def read(
+        self, max_bytes: int, timeout: typing.Optional[float] = None
+    ) -> bytes:
+        self._read_timeouts.append(timeout)
+        return super().read(max_bytes, timeout)
+
+
+class TimeoutRecordingBackend(httpcore.MockBackend):
+    """
+    A mock backend handing out streams which record their read timeouts.
+    """
+
+    def __init__(
+        self,
+        buffer: typing.List[bytes],
+        read_timeouts: typing.List[typing.Optional[float]],
+    ) -> None:
+        super().__init__(buffer)
+        self._read_timeouts = read_timeouts
+
+    def connect_tcp(
+        self,
+        host: str,
+        port: int,
+        timeout: typing.Optional[float] = None,
+        local_address: typing.Optional[str] = None,
+        socket_options: typing.Optional[typing.Iterable[httpcore.SOCKET_OPTION]] = None,
+    ) -> httpcore.NetworkStream:
+        return TimeoutRecordingStream(list(self._buffer), self._read_timeouts)
+
+
+
+def test_socks5_connect_timeout_applies_to_handshake():
+    """
+    The connect timeout must cover the SOCKS5 handshake, and not only the
+    initial TCP connection to the proxy itself.
+
+    A proxy which accepts the TCP connection but then never replies would
+    otherwise block the read forever, whatever timeouts were configured.
+
+    See https://github.com/encode/httpcore/issues/1015
+    """
+    read_timeouts: typing.List[typing.Optional[float]] = []
+    network_backend = TimeoutRecordingBackend(
+        [
+            # The initial socks CONNECT
+            #   v5 NOAUTH
+            b"\x05\x00",
+            #   v5 SUC RSV IP4 127  .0  .0  .1     :80
+            b"\x05\x00\x00\x01\xff\x00\x00\x01\x00\x50",
+            # The actual response from the remote server
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ],
+        read_timeouts,
+    )
+
+    with httpcore.ConnectionPool(
+        proxy=httpcore.Proxy("socks5://localhost:8080/"),
+        network_backend=network_backend,
+    ) as proxy:
+        response = proxy.request(
+            "GET",
+            "https://example.com/",
+            extensions={"timeout": {"connect": 5.0}},
+        )
+        assert response.status == 200
+
+    # The two handshake reads, being the auth method reply and the connect
+    # reply, must both be bounded by the configured connect timeout.
+    assert read_timeouts[:2] == [5.0, 5.0]
