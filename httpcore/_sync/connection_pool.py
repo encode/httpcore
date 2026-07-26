@@ -297,6 +297,12 @@ class ConnectionPool(RequestInterface):
                 # log: "closing idle connection"
                 self._connections.remove(connection)
                 closing_connections.append(connection)
+            elif not connection.is_idle() and not any(
+                request.connection is connection for request in self._requests
+            ):
+                # log: "closing orphaned connection"
+                self._connections.remove(connection)
+                closing_connections.append(connection)
 
         # Assign queued requests to connections.
         queued_requests = [request for request in self._requests if request.is_queued()]

@@ -6,6 +6,8 @@ import hyperframe
 import pytest
 
 import httpcore
+from httpcore._async import connection_pool
+from httpcore._async.interfaces import AsyncConnectionInterface
 
 
 class SlowWriteStream(httpcore.AsyncNetworkStream):
@@ -93,6 +95,77 @@ class SlowReadBackend(httpcore.AsyncNetworkBackend):
         socket_options: typing.Optional[typing.Iterable[httpcore.SOCKET_OPTION]] = None,
     ) -> httpcore.AsyncNetworkStream:
         return SlowReadStream(self._buffer)
+
+
+@pytest.mark.anyio
+async def test_connection_pool_removes_connection_after_request_cancellation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request_assigned = anyio.Event()
+
+    class WaitingPoolRequest(connection_pool.AsyncPoolRequest):
+        async def wait_for_connection(
+            self, timeout: typing.Optional[float] = None
+        ) -> AsyncConnectionInterface:
+            await super().wait_for_connection(timeout)
+            request_assigned.set()
+            await anyio.sleep_forever()
+            raise AssertionError("Pool request must be cancelled")  # pragma: nocover
+
+    monkeypatch.setattr(connection_pool, "AsyncPoolRequest", WaitingPoolRequest)
+
+    class ConnectingConnection(AsyncConnectionInterface):
+        def __init__(self) -> None:
+            self.closed = False
+
+        async def handle_async_request(
+            self, request: httpcore.Request
+        ) -> httpcore.Response:
+            raise AssertionError(  # pragma: nocover
+                "Cancelled request must not reach the connection"
+            )
+
+        async def aclose(self) -> None:
+            self.closed = True
+
+        def can_handle_request(self, origin: httpcore.Origin) -> bool:
+            return True  # pragma: nocover
+
+        def is_available(self) -> bool:
+            return False  # pragma: nocover
+
+        def has_expired(self) -> bool:
+            return False
+
+        def is_idle(self) -> bool:
+            return False
+
+        def is_closed(self) -> bool:
+            return False
+
+        def info(self) -> str:
+            return "CONNECTING"  # pragma: nocover
+
+    class TestPool(httpcore.AsyncConnectionPool):
+        def create_connection(
+            self, origin: httpcore.Origin
+        ) -> AsyncConnectionInterface:
+            return connection
+
+    connection = ConnectingConnection()
+    async with TestPool(max_connections=1) as pool:
+
+        async def request() -> None:
+            with pytest.raises(TimeoutError):
+                with anyio.fail_after(0.01):
+                    await pool.request("GET", "https://example.com/")
+
+        async with anyio.create_task_group() as task_group:
+            task_group.start_soon(request)
+            await request_assigned.wait()
+
+        assert pool.connections == []
+        assert connection.closed
 
 
 @pytest.mark.anyio
