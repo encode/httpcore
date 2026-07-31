@@ -32,7 +32,7 @@ def test_connection_pool_with_keepalive():
     with httpcore.ConnectionPool(
         network_backend=network_backend, max_keepalive_connections=1
     ) as pool:
-        # Sending an intial request, which once complete will return to the pool, IDLE.
+        # Sending an initial request, which once complete will return to the pool, IDLE.
         with pool.stream("GET", "https://example.com/") as response:
             info = [repr(c) for c in pool.connections]
             assert info == [
@@ -126,7 +126,7 @@ def test_connection_pool_with_close():
     )
 
     with httpcore.ConnectionPool(network_backend=network_backend) as pool:
-        # Sending an intial request, which once complete will not return to the pool.
+        # Sending an initial request, which once complete will not return to the pool.
         with pool.stream(
             "GET", "https://example.com/", headers={"Connection": "close"}
         ) as response:
@@ -183,7 +183,7 @@ def test_connection_pool_with_http2():
     with httpcore.ConnectionPool(
         network_backend=network_backend,
     ) as pool:
-        # Sending an intial request, which once complete will return to the pool, IDLE.
+        # Sending an initial request, which once complete will return to the pool, IDLE.
         response = pool.request("GET", "https://example.com/")
         assert response.status == 200
         assert response.content == b"Hello, world!"
@@ -237,7 +237,7 @@ def test_connection_pool_with_http2_goaway():
     with httpcore.ConnectionPool(
         network_backend=network_backend,
     ) as pool:
-        # Sending an intial request, which once complete will return to the pool, IDLE.
+        # Sending an initial request, which once complete will return to the pool, IDLE.
         response = pool.request("GET", "https://example.com/")
         assert response.status == 200
         assert response.content == b"Hello, world!"
@@ -471,7 +471,7 @@ def test_connection_pool_with_immediate_expiry():
         keepalive_expiry=0.0,
         network_backend=network_backend,
     ) as pool:
-        # Sending an intial request, which once complete will not return to the pool.
+        # Sending an initial request, which once complete will not return to the pool.
         with pool.stream("GET", "https://example.com/") as response:
             info = [repr(c) for c in pool.connections]
             assert info == [
@@ -504,7 +504,7 @@ def test_connection_pool_with_no_keepalive_connections_allowed():
     with httpcore.ConnectionPool(
         max_keepalive_connections=0, network_backend=network_backend
     ) as pool:
-        # Sending an intial request, which once complete will not return to the pool.
+        # Sending an initial request, which once complete will not return to the pool.
         with pool.stream("GET", "https://example.com/") as response:
             info = [repr(c) for c in pool.connections]
             assert info == [

@@ -28,7 +28,7 @@ def test_socks5_request():
         proxy=httpcore.Proxy("socks5://localhost:8080/"),
         network_backend=network_backend,
     ) as proxy:
-        # Sending an intial request, which once complete will return to the pool, IDLE.
+        # Sending an initial request, which once complete will return to the pool, IDLE.
         with proxy.stream("GET", "https://example.com/") as response:
             info = [repr(c) for c in proxy.connections]
             assert info == [
@@ -91,7 +91,7 @@ def test_authenticated_socks5_request():
         ),
         network_backend=network_backend,
     ) as proxy:
-        # Sending an intial request, which once complete will return to the pool, IDLE.
+        # Sending an initial request, which once complete will return to the pool, IDLE.
         with proxy.stream("GET", "https://example.com/") as response:
             info = [repr(c) for c in proxy.connections]
             assert info == [
@@ -171,7 +171,7 @@ def test_socks5_request_failed_to_provide_auth():
 def test_socks5_request_incorrect_auth():
     """
     Attempt to send an HTTP request via an authenticated SOCKS proxy,
-    wit incorrect authentication credentials.
+    with incorrect authentication credentials.
     """
     network_backend = httpcore.MockBackend(
         [
