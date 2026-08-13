@@ -18,14 +18,17 @@ try:
 except ImportError:  # pragma: nocover
     anyio = None  # type: ignore
 
+try:
+    import sniffio
+except ImportError:  # pragma: nocover
+    sniffio = None  # type: ignore
+
 
 def current_async_library() -> str:
     # Determine if we're running under trio or asyncio.
     # See https://sniffio.readthedocs.io/en/latest/
-    try:
-        import sniffio
-    except ImportError:  # pragma: nocover
-        environment = "asyncio"
+    if sniffio is None:
+        environment = "asyncio"  # pragma: nocover
     else:
         environment = sniffio.current_async_library()
 
