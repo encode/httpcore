@@ -300,15 +300,22 @@ class ConnectionPool(RequestInterface):
 
         # Assign queued requests to connections.
         queued_requests = [request for request in self._requests if request.is_queued()]
+        if not queued_requests:
+            return closing_connections
+
+        # Which connections are available or idle does not depend on the request,
+        # so scan the pool once and keep both lists up to date as the loop below
+        # creates and closes connections, rather than re-scanning every connection
+        # for every queued request.
+        available = [c for c in self._connections if c.is_available()]
+        idle_connections = [c for c in self._connections if c.is_idle()]
+
         for pool_request in queued_requests:
             origin = pool_request.request.url.origin
             available_connections = [
                 connection
-                for connection in self._connections
-                if connection.can_handle_request(origin) and connection.is_available()
-            ]
-            idle_connections = [
-                connection for connection in self._connections if connection.is_idle()
+                for connection in available
+                if connection.can_handle_request(origin)
             ]
 
             # There are three cases for how we may be able to handle the request:
@@ -325,16 +332,27 @@ class ConnectionPool(RequestInterface):
                 # log: "creating new connection"
                 connection = self.create_connection(origin)
                 self._connections.append(connection)
+                if connection.is_available():
+                    available.append(connection)
                 pool_request.assign_to_connection(connection)
             elif idle_connections:
                 # log: "closing idle connection"
-                connection = idle_connections[0]
+                connection = idle_connections.pop(0)
                 self._connections.remove(connection)
+                if connection in available:
+                    available.remove(connection)
                 closing_connections.append(connection)
                 # log: "creating new connection"
                 connection = self.create_connection(origin)
                 self._connections.append(connection)
+                if connection.is_available():
+                    available.append(connection)
                 pool_request.assign_to_connection(connection)
+            elif not available:
+                # The pool is full, nothing is idle, and no connection is
+                # available for any origin, so no later request in the queue
+                # can be assigned either.
+                break
 
         return closing_connections
 

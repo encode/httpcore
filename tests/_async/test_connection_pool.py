@@ -835,3 +835,39 @@ async def test_http11_upgrade_connection():
         "http11.response_closed.started",
         "http11.response_closed.complete",
     ]
+
+
+@pytest.mark.anyio
+async def test_connection_pool_closes_idle_connection_for_new_origin():
+    """
+    A pool at 'max_connections' with an idle connection to one origin should close
+    that connection to make room for a request to a different origin.
+    """
+    network_backend = httpcore.AsyncMockBackend(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
+
+    async with httpcore.AsyncConnectionPool(
+        network_backend=network_backend, max_connections=1, http2=True
+    ) as pool:
+        response = await pool.request("GET", "https://example.com/")
+        assert response.status == 200
+        info = [repr(c) for c in pool.connections]
+        assert info == [
+            "<AsyncHTTPConnection ['https://example.com:443', HTTP/1.1, IDLE, Request Count: 1]>"
+        ]
+
+        # A request to a different origin can not reuse the idle connection, and
+        # the pool is full, so the idle connection is closed and replaced.
+        response = await pool.request("GET", "https://other.com/")
+        assert response.status == 200
+        info = [repr(c) for c in pool.connections]
+        assert info == [
+            "<AsyncHTTPConnection ['https://other.com:443', HTTP/1.1, IDLE, Request Count: 1]>"
+        ]
