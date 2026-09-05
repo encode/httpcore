@@ -3,7 +3,7 @@ from __future__ import annotations
 import ssl
 import typing
 
-import anyio
+import anyio.abc
 
 from .._exceptions import (
     ConnectError,
