@@ -259,10 +259,21 @@ class ThreadLock:
 
     In the sync case `ThreadLock` provides thread locking.
     In the async case `AsyncThreadLock` is a no-op.
+
+    This must be re-entrant (safe for the *same* thread to acquire it more
+    than once). `ConnectionPool` uses this lock around its internal
+    bookkeeping (`_assign_requests_to_connections`), which calls out to
+    connection/stream methods such as `is_idle()`. If the *last* reference to
+    an unclosed `PoolByteStream` is dropped while that bookkeeping is running
+    (for example because it's garbage collected), Python finalizes the
+    generator in `PoolByteStream.__iter__`, which calls `PoolByteStream.close()`,
+    which re-enters this same lock, on the same thread that is already
+    holding it. With a plain, non-reentrant lock this deadlocks the pool
+    permanently (see https://github.com/encode/httpcore/discussions/990).
     """
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def __enter__(self) -> ThreadLock:
         self._lock.acquire()
