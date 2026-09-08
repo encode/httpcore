@@ -835,3 +835,116 @@ def test_http11_upgrade_connection():
         "http11.response_closed.started",
         "http11.response_closed.complete",
     ]
+
+
+def test_connection_pool_reentrant_close_does_not_deadlock():
+    """
+    Regression test for https://github.com/encode/httpcore/discussions/990
+
+    `PoolByteStream.__iter__` is a generator. If it is abandoned mid-iteration
+    (the last reference to the response/stream is dropped without reading it
+    to completion or calling `.close()`), CPython finalizes the generator by
+    throwing `GeneratorExit` at its suspension point. That lands in the
+    `except BaseException` handler in `PoolByteStream.__iter__`, which calls
+    `self.close()` -> re-acquires `ConnectionPool._optional_thread_lock`.
+
+    In production reports (multithreaded servers using httpx/httpcore,
+    frequently via the OpenAI SDK) this finalization is triggered by
+    CPython's garbage collector, which can run at essentially any allocation
+    point -- including from *inside* `_assign_requests_to_connections()`,
+    which only ever runs while `_optional_thread_lock` is already held. If
+    that happens on the same thread, a non-reentrant lock deadlocks
+    permanently.
+
+    This test reproduces the interleaving deterministically (without relying
+    on GC timing) by monkeypatching one connection's `is_idle()` -- a method
+    `_assign_requests_to_connections()` calls while holding the lock -- to
+    drop the last reference to an abandoned stream at exactly that point.
+    This is sync-only: in async mode `AsyncThreadLock` is a no-op, so there
+    is no lock to deadlock on, and no equivalent scenario exists.
+    """
+    import threading
+    import types
+
+    network_backend = httpcore.MockBackend(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, ",
+            b"world!",
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 2\r\n",
+            b"\r\n",
+            b"OK",
+        ]
+    )
+
+    with httpcore.ConnectionPool(
+        network_backend=network_backend, max_connections=2
+    ) as pool:
+        request1 = httpcore.Request(
+            "GET", "https://example.com/", headers=[(b"Host", b"example.com")]
+        )
+        response1 = pool.handle_request(request1)
+
+        # Partially consume the stream, then abandon it: the generator inside
+        # PoolByteStream.__iter__ is now suspended mid
+        # `for part in self._stream: yield part`, with its pool_request
+        # still active.
+        assert isinstance(response1.stream, typing.Iterable)
+        stream_iter = iter(response1.stream)
+        next(stream_iter)
+
+        # Keep the only remaining reference to the generator in a mutable
+        # holder, so we can drop it from inside is_idle() below, simulating
+        # the moment CPython's GC would otherwise finalize it.
+        holder = [stream_iter]
+        del stream_iter, response1
+
+        assert len(pool.connections) == 1
+        connection1 = pool.connections[0]
+        real_is_idle = connection1.is_idle
+
+        def patched_is_idle(self: object) -> bool:
+            if holder:
+                # Drop the last reference to the abandoned generator *while
+                # this thread is inside _assign_requests_to_connections(),
+                # holding _optional_thread_lock*. This calls
+                # PoolByteStream.close(), which re-enters the same lock.
+                holder.clear()
+            return real_is_idle()
+
+        connection1.is_idle = types.MethodType(patched_is_idle, connection1)  # type: ignore[method-assign]
+
+        # Sending a second request forces the pool to re-run
+        # _assign_requests_to_connections(), which calls connection1.is_idle()
+        # while holding the lock -> triggers the reentrant close() above.
+        # Run it on a background thread with a bounded join so that if this
+        # regresses, the test fails instead of hanging CI forever.
+        result: typing.Dict[str, object] = {}
+
+        def worker() -> None:
+            try:
+                request2 = httpcore.Request(
+                    "GET",
+                    "https://example.com/",
+                    headers=[(b"Host", b"example.com")],
+                )
+                response2 = pool.handle_request(request2)
+                response2.read()
+                result["ok"] = True
+            except BaseException as exc:  # pragma: no cover - diagnostic only
+                result["error"] = exc
+
+        thread = threading.Thread(target=worker, daemon=True)
+        thread.start()
+        thread.join(timeout=5)
+
+        assert not thread.is_alive(), (
+            "ConnectionPool deadlocked: a reentrant call into "
+            "_optional_thread_lock did not resolve within 5 seconds."
+        )
+        assert result.get("ok") is True, result.get("error")
