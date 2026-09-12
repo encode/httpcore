@@ -7,6 +7,7 @@ import pytest
 from tests import concurrency
 
 import httpcore
+from httpcore._sync.connection_pool import PoolRequest
 
 
 
@@ -516,6 +517,44 @@ def test_connection_pool_with_no_keepalive_connections_allowed():
         assert response.content == b"Hello, world!"
         info = [repr(c) for c in pool.connections]
         assert info == []
+
+
+
+def test_connection_pool_keeps_connection_assigned_to_queued_request():
+    """
+    A connection assigned to a queued request stays IDLE until the request
+    starts on it. A concurrent pass over the pool must not close it as
+    surplus in the meantime.
+    """
+    network_backend = httpcore.MockBackend(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: plain/text\r\n",
+            b"Content-Length: 13\r\n",
+            b"\r\n",
+            b"Hello, world!",
+        ]
+    )
+
+    with httpcore.ConnectionPool(network_backend=network_backend) as pool:
+        # An initial request leaves an IDLE connection in the pool.
+        pool.request("GET", "https://example.com/")
+        [connection] = pool.connections
+
+        # Queue a request and assign the IDLE connection to it, as the pass
+        # triggered by another request completing would.
+        pool_request = PoolRequest(httpcore.Request("GET", "https://example.com/"))
+        pool._requests.append(pool_request)
+        assert pool._assign_requests_to_connections() == []
+        assert pool_request.connection is connection
+
+        # Before the request starts on its connection, another pass finds
+        # more IDLE connections than keep-alive allows.
+        pool._max_keepalive_connections = 0
+        assert pool._assign_requests_to_connections() == []
+        assert pool.connections == [connection]
+
+        pool._requests.remove(pool_request)
 
 
 
