@@ -279,19 +279,35 @@ class ConnectionPool(RequestInterface):
         """
         closing_connections = []
 
+        # A connection assigned to a request still reports as idle until that
+        # request starts on it. It is spoken for: closing it here would either
+        # send the request back to the queue, or close the socket underneath
+        # the request if it started in the meantime.
+        assigned_connections = {
+            request.connection
+            for request in self._requests
+            if request.connection is not None
+        }
+
+        def is_idle(connection: ConnectionInterface) -> bool:
+            return connection.is_idle() and connection not in assigned_connections
+
         # First we handle cleaning up any connections that are closed,
         # have expired their keep-alive, or surplus idle connections.
         for connection in list(self._connections):
             if connection.is_closed():
                 # log: "removing closed connection"
                 self._connections.remove(connection)
+            elif connection in assigned_connections:
+                # log: "keeping assigned connection"
+                pass
             elif connection.has_expired():
                 # log: "closing expired connection"
                 self._connections.remove(connection)
                 closing_connections.append(connection)
             elif (
                 connection.is_idle()
-                and sum(connection.is_idle() for connection in self._connections)
+                and sum(is_idle(connection) for connection in self._connections)
                 > self._max_keepalive_connections
             ):
                 # log: "closing idle connection"
@@ -308,7 +324,7 @@ class ConnectionPool(RequestInterface):
                 if connection.can_handle_request(origin) and connection.is_available()
             ]
             idle_connections = [
-                connection for connection in self._connections if connection.is_idle()
+                connection for connection in self._connections if is_idle(connection)
             ]
 
             # There are three cases for how we may be able to handle the request:
@@ -321,6 +337,7 @@ class ConnectionPool(RequestInterface):
                 # log: "reusing existing connection"
                 connection = available_connections[0]
                 pool_request.assign_to_connection(connection)
+                assigned_connections.add(connection)
             elif len(self._connections) < self._max_connections:
                 # log: "creating new connection"
                 connection = self.create_connection(origin)
