@@ -267,6 +267,14 @@ class ConnectionPool(RequestInterface):
             extensions=response.extensions,
         )
 
+    def _is_connection_assigned(self, connection: ConnectionInterface) -> bool:
+        """
+        Check if a connection has been assigned to any request in the pool.
+        """
+        return any(
+            req.connection is connection for req in self._requests
+        )
+
     def _assign_requests_to_connections(self) -> list[ConnectionInterface]:
         """
         Manage the state of the connection pool, assigning incoming
@@ -291,7 +299,11 @@ class ConnectionPool(RequestInterface):
                 closing_connections.append(connection)
             elif (
                 connection.is_idle()
-                and sum(connection.is_idle() for connection in self._connections)
+                and not self._is_connection_assigned(connection)
+                and sum(
+                    c.is_idle() and not self._is_connection_assigned(c)
+                    for c in self._connections
+                )
                 > self._max_keepalive_connections
             ):
                 # log: "closing idle connection"
