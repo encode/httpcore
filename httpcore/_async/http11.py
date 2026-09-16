@@ -344,8 +344,13 @@ class HTTP11ConnectionByteStream:
     async def aclose(self) -> None:
         if not self._closed:
             self._closed = True
-            async with Trace("response_closed", logger, self._request):
-                await self._connection._response_closed()
+            try:
+                async with Trace("response_closed", logger, self._request):
+                    await self._connection._response_closed()
+            except BaseException:
+                # Allow the caller to retry cleanup if it was interrupted.
+                self._closed = False
+                raise
 
 
 class AsyncHTTP11UpgradeStream(AsyncNetworkStream):

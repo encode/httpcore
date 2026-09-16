@@ -243,3 +243,89 @@ async def test_h2_timeout_during_response():
 
         assert not conn.is_closed()
         assert conn.is_idle()
+
+
+@pytest.mark.parametrize("cancel_during", ["state_lock", "network_close"])
+def test_http11_double_cancel_releases_connection(cancel_during):
+    """A second cancellation must not prevent the pool from retrying cleanup."""
+    import asyncio
+
+    async def run() -> None:
+        reading = asyncio.Event()
+        closing = asyncio.Event()
+        never = asyncio.Event()
+
+        class Stream(httpcore.AsyncMockStream):
+            async def read(self, max_bytes, timeout=None):
+                if not self._buffer:
+                    reading.set()
+                    await never.wait()
+                return await super().read(max_bytes, timeout)
+
+            async def aclose(self):
+                if cancel_during == "network_close" and not closing.is_set():
+                    closing.set()
+                    await never.wait()
+                await super().aclose()
+
+        streams = []
+
+        class Backend(httpcore.AsyncMockBackend):
+            async def connect_tcp(self, *args, **kwargs):
+                stream = Stream([b"HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\nx"])
+                streams.append(stream)
+                return stream
+
+        async def trace(name, info):
+            if (
+                cancel_during == "state_lock"
+                and name == "http11.response_closed.started"
+            ):
+                closing.set()
+
+        async with httpcore.AsyncConnectionPool(
+            network_backend=Backend([]), max_connections=1
+        ) as pool:
+
+            async def consume() -> None:
+                async with pool.stream(
+                    "GET", "http://example.com", extensions={"trace": trace}
+                ) as response:
+                    async for _ in response.aiter_stream():
+                        pass
+
+            task = asyncio.create_task(consume())
+            await asyncio.wait_for(reading.wait(), 1)
+            pooled_connection = pool.connections[0]
+            assert isinstance(pooled_connection, httpcore.AsyncHTTPConnection)
+            connection = pooled_connection._connection
+            assert isinstance(connection, httpcore.AsyncHTTP11Connection)
+            lock = connection._state_lock
+            if cancel_during == "state_lock":
+                await lock.__aenter__()
+            try:
+                task.cancel()
+                await asyncio.wait_for(closing.wait(), 1)
+                task.cancel()
+                # Deliver cancellation while cleanup is still blocked.
+                await asyncio.sleep(0)
+            finally:
+                if cancel_during == "state_lock":
+                    await lock.__aexit__(None, None, None)
+            with pytest.raises(asyncio.CancelledError):
+                await asyncio.wait_for(task, 1)
+
+            assert connection.is_closed()
+            assert streams[0]._closed
+            assert not pool.connections
+            assert not pool._requests
+
+            # A one-slot pool must still be able to service another request.
+            async with pool.stream(
+                "GET", "http://example.com", extensions={"timeout": {"pool": 0.1}}
+            ) as response:
+                assert response.status == 200
+            assert not pool.connections
+            assert streams[1]._closed
+
+    asyncio.run(run())

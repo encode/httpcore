@@ -378,3 +378,39 @@ async def test_http11_header_sub_100kb():
         response = await conn.request("GET", "https://example.com/")
         assert response.status == 200
         assert response.content == b""
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("read_body", [False, True])
+async def test_http11_retry_response_close(read_body):
+    """Failed cleanup can be retried; successful cleanup remains idempotent."""
+    close_attempts = 0
+
+    async def trace(name, info):
+        nonlocal close_attempts
+        if name == "http11.response_closed.started":
+            close_attempts += 1
+            if close_attempts == 1:
+                raise RuntimeError("Interrupted cleanup")
+
+    origin = httpcore.Origin(b"http", b"example.com", 80)
+    stream = httpcore.AsyncMockStream(
+        [b"HTTP/1.1 200 OK\r\nContent-Length: 1\r\n\r\nx"]
+    )
+    async with httpcore.AsyncHTTP11Connection(origin, stream) as connection:
+        request = httpcore.Request(
+            "GET",
+            "http://example.com",
+            headers={"Host": "example.com"},
+            extensions={"trace": trace},
+        )
+        response = await connection.handle_async_request(request)
+        if read_body:
+            assert await response.aread() == b"x"
+        with pytest.raises(RuntimeError, match="Interrupted cleanup"):
+            await response.aclose()
+        await response.aclose()
+        await response.aclose()
+        assert close_attempts == 2
+        assert connection.is_idle() == read_body
+        assert connection.is_closed() == (not read_body)

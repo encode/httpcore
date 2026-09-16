@@ -378,3 +378,39 @@ def test_http11_header_sub_100kb():
         response = conn.request("GET", "https://example.com/")
         assert response.status == 200
         assert response.content == b""
+
+
+
+@pytest.mark.parametrize("read_body", [False, True])
+def test_http11_retry_response_close(read_body):
+    """Failed cleanup can be retried; successful cleanup remains idempotent."""
+    close_attempts = 0
+
+    def trace(name, info):
+        nonlocal close_attempts
+        if name == "http11.response_closed.started":
+            close_attempts += 1
+            if close_attempts == 1:
+                raise RuntimeError("Interrupted cleanup")
+
+    origin = httpcore.Origin(b"http", b"example.com", 80)
+    stream = httpcore.MockStream(
+        [b"HTTP/1.1 200 OK\r\nContent-Length: 1\r\n\r\nx"]
+    )
+    with httpcore.HTTP11Connection(origin, stream) as connection:
+        request = httpcore.Request(
+            "GET",
+            "http://example.com",
+            headers={"Host": "example.com"},
+            extensions={"trace": trace},
+        )
+        response = connection.handle_request(request)
+        if read_body:
+            assert response.read() == b"x"
+        with pytest.raises(RuntimeError, match="Interrupted cleanup"):
+            response.close()
+        response.close()
+        response.close()
+        assert close_attempts == 2
+        assert connection.is_idle() == read_body
+        assert connection.is_closed() == (not read_body)
