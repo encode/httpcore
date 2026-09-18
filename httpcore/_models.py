@@ -275,6 +275,10 @@ class URL:
         else:
             self.scheme = enforce_bytes(scheme, name="scheme")
             self.host = enforce_bytes(host, name="host")
+            # bool is a subclass of int; reject it so port=True does not become 1.
+            if port is not None and (isinstance(port, bool) or not isinstance(port, int)):
+                seen = type(port).__name__
+                raise TypeError(f"port must be int or None, but got {seen}.")
             self.port = port
             self.target = enforce_bytes(target, name="target")
 

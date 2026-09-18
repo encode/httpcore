@@ -187,3 +187,19 @@ async def test_response_async_streaming():
     with pytest.raises(RuntimeError):
         async for chunk in response.aiter_stream():
             pass  # pragma: nocover
+
+
+def test_url_rejects_bool_port():
+    # isinstance(True, int) is True; without an explicit check, port=True
+    # becomes port 1 in bytes(url) ("http://host:1/").
+    with pytest.raises(TypeError, match="port must be int or None"):
+        httpcore.URL(scheme=b"http", host=b"www.example.com", port=True, target=b"/")
+    with pytest.raises(TypeError, match="port must be int or None"):
+        httpcore.URL(scheme=b"http", host=b"www.example.com", port=False, target=b"/")
+
+
+def test_url_rejects_non_int_port():
+    with pytest.raises(TypeError, match="port must be int or None"):
+        httpcore.URL(scheme=b"http", host=b"www.example.com", port=1.5, target=b"/")  # type: ignore
+    with pytest.raises(TypeError, match="port must be int or None"):
+        httpcore.URL(scheme=b"http", host=b"www.example.com", port="80", target=b"/")  # type: ignore
