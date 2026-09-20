@@ -1,3 +1,4 @@
+import asyncio
 import typing
 
 import anyio
@@ -93,6 +94,68 @@ class SlowReadBackend(httpcore.AsyncNetworkBackend):
         socket_options: typing.Optional[typing.Iterable[httpcore.SOCKET_OPTION]] = None,
     ) -> httpcore.AsyncNetworkStream:
         return SlowReadStream(self._buffer)
+
+
+class InterruptibleCloseStream(SlowReadStream):
+    def __init__(self, buffer: typing.List[bytes]):
+        super().__init__(buffer)
+        self.close_calls = 0
+
+    async def aclose(self) -> None:
+        self.close_calls += 1
+        if self.close_calls == 1:
+            raise asyncio.CancelledError
+
+
+class InterruptibleCloseBackend(httpcore.AsyncNetworkBackend):
+    def __init__(self, buffer: typing.List[bytes]):
+        self.stream = InterruptibleCloseStream(buffer)
+
+    async def connect_tcp(
+        self,
+        host: str,
+        port: int,
+        timeout: typing.Optional[float] = None,
+        local_address: typing.Optional[str] = None,
+        socket_options: typing.Optional[typing.Iterable[httpcore.SOCKET_OPTION]] = None,
+    ) -> httpcore.AsyncNetworkStream:
+        return self.stream
+
+
+@pytest.mark.parametrize("read_body", [False, True])
+def test_connection_pool_retries_interrupted_response_close(read_body):
+    async def run_test() -> None:
+        network_backend = InterruptibleCloseBackend(
+            [
+                b"HTTP/1.1 200 OK\r\n",
+                b"Content-Length: 13\r\n",
+                b"\r\n",
+                b"Hello, world!",
+            ]
+        )
+        async with httpcore.AsyncConnectionPool(
+            network_backend=network_backend, max_keepalive_connections=0
+        ) as pool:
+            response = await pool.handle_async_request(
+                httpcore.Request(
+                    "GET", "http://example.com", headers={"Host": "example.com"}
+                )
+            )
+
+            if read_body:
+                await response.aread()
+
+            with pytest.raises(asyncio.CancelledError):
+                await response.aclose()
+
+            assert bool(pool.connections) is not read_body
+            await response.aclose()
+            assert not pool.connections
+            assert network_backend.stream.close_calls == 2
+            await response.aclose()
+            assert network_backend.stream.close_calls == 2
+
+    asyncio.run(run_test())
 
 
 @pytest.mark.anyio
