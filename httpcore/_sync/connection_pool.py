@@ -403,6 +403,7 @@ class PoolByteStream:
         self._pool = pool
         self._closed = False
         self._close_lock = Lock()
+        self._closing: list[ConnectionInterface] | None = None
 
     def __iter__(self) -> typing.Iterator[bytes]:
         try:
@@ -416,12 +417,17 @@ class PoolByteStream:
         with ShieldCancellation():
             with self._close_lock:
                 if not self._closed:
-                    if hasattr(self._stream, "close"):
-                        self._stream.close()
+                    if self._closing is None:
+                        if hasattr(self._stream, "close"):
+                            self._stream.close()
 
-                    with self._pool._optional_thread_lock:
-                        self._pool._requests.remove(self._pool_request)
-                        closing = self._pool._assign_requests_to_connections()
+                        with self._pool._optional_thread_lock:
+                            self._pool._requests.remove(self._pool_request)
+                            self._closing = self._pool._assign_requests_to_connections()
+
+                    # Retain detached connections until each close succeeds, so a
+                    # retry neither loses cleanup nor removes the request twice.
+                    while self._closing:
+                        self._pool._close_connections(self._closing[:1])
+                        del self._closing[0]
                     self._closed = True
-
-                    self._pool._close_connections(closing)

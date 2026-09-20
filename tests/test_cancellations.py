@@ -122,7 +122,8 @@ class InterruptibleCloseBackend(httpcore.AsyncNetworkBackend):
         return self.stream
 
 
-def test_connection_pool_retries_interrupted_response_close():
+@pytest.mark.parametrize("read_body", [False, True])
+def test_connection_pool_retries_interrupted_response_close(read_body):
     async def run_test() -> None:
         network_backend = InterruptibleCloseBackend(
             [
@@ -133,7 +134,7 @@ def test_connection_pool_retries_interrupted_response_close():
             ]
         )
         async with httpcore.AsyncConnectionPool(
-            network_backend=network_backend
+            network_backend=network_backend, max_keepalive_connections=0
         ) as pool:
             response = await pool.handle_async_request(
                 httpcore.Request(
@@ -141,12 +142,17 @@ def test_connection_pool_retries_interrupted_response_close():
                 )
             )
 
+            if read_body:
+                await response.aread()
+
             with pytest.raises(asyncio.CancelledError):
                 await response.aclose()
 
-            assert pool.connections
+            assert bool(pool.connections) is not read_body
             await response.aclose()
             assert not pool.connections
+            assert network_backend.stream.close_calls == 2
+            await response.aclose()
             assert network_backend.stream.close_calls == 2
 
     asyncio.run(run_test())

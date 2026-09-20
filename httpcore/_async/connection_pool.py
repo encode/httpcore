@@ -403,6 +403,7 @@ class PoolByteStream:
         self._pool = pool
         self._closed = False
         self._close_lock = AsyncLock()
+        self._closing: list[AsyncConnectionInterface] | None = None
 
     async def __aiter__(self) -> typing.AsyncIterator[bytes]:
         try:
@@ -416,12 +417,17 @@ class PoolByteStream:
         with AsyncShieldCancellation():
             async with self._close_lock:
                 if not self._closed:
-                    if hasattr(self._stream, "aclose"):
-                        await self._stream.aclose()
+                    if self._closing is None:
+                        if hasattr(self._stream, "aclose"):
+                            await self._stream.aclose()
 
-                    with self._pool._optional_thread_lock:
-                        self._pool._requests.remove(self._pool_request)
-                        closing = self._pool._assign_requests_to_connections()
+                        with self._pool._optional_thread_lock:
+                            self._pool._requests.remove(self._pool_request)
+                            self._closing = self._pool._assign_requests_to_connections()
+
+                    # Retain detached connections until each close succeeds, so a
+                    # retry neither loses cleanup nor removes the request twice.
+                    while self._closing:
+                        await self._pool._close_connections(self._closing[:1])
+                        del self._closing[0]
                     self._closed = True
-
-                    await self._pool._close_connections(closing)
