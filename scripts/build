@@ -11,5 +11,9 @@ fi
 set -x
 
 ${PREFIX}python -m build
-${PREFIX}twine check dist/*
+# twine>=7 (needed for Metadata-Version 2.5) requires Python 3.10+,
+# so only check the distribution where twine is installed.
+if ${PREFIX}python -c "import twine" 2>/dev/null; then
+    ${PREFIX}twine check dist/*
+fi
 ${PREFIX}mkdocs build

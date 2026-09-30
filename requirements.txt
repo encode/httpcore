@@ -10,7 +10,7 @@ jinja2==3.1.6
 
 # Packaging
 build==1.2.2.post1
-twine==6.1.0
+twine==7.0.0; python_version >= "3.10"  # twine 7 needs py3.10+ (Metadata-Version 2.5)
 
 # Tests & Linting
 coverage[toml]==7.5.4

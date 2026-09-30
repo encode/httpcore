@@ -60,6 +60,15 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         self._state_lock = AsyncLock()
         self._read_lock = AsyncLock()
         self._write_lock = AsyncLock()
+        # Guards the shared `h2` state machine on the send path, plus
+        # stream-ID allocation and the `_events` mapping. The same
+        # `HTTP2Connection` is handed to multiple threads by the connection
+        # pool (HTTP/2 multiplexing), and `h2` is not thread-safe: concurrent
+        # `send_headers` calls corrupt the HPACK encoder table ("deque mutated
+        # during iteration") and the streams dict ("dictionary changed size
+        # during iteration"), and concurrent `get_next_available_stream_id`
+        # calls can hand out duplicate stream IDs. (encode/httpx#3566)
+        self._send_lock = AsyncLock()
         self._sent_connection_init = False
         self._used_all_stream_ids = False
         self._connection_error = False
@@ -131,19 +140,27 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
         await self._max_streams_semaphore.acquire()
 
         try:
-            stream_id = self._h2_state.get_next_available_stream_id()
-            self._events[stream_id] = []
-        except h2.exceptions.NoAvailableStreamIDError:  # pragma: nocover
-            self._used_all_stream_ids = True
-            self._request_count -= 1
-            raise ConnectionNotAvailable()
-
-        try:
-            kwargs = {"request": request, "stream_id": stream_id}
-            async with Trace("send_request_headers", logger, request, kwargs):
-                await self._send_request_headers(request=request, stream_id=stream_id)
-            async with Trace("send_request_body", logger, request, kwargs):
-                await self._send_request_body(request=request, stream_id=stream_id)
+            # The send path mutates the shared `h2` state machine, which is
+            # not safe for concurrent use, so stream ID allocation and the
+            # send itself are serialized under a single lock. Note that h2
+            # requires `get_next_available_stream_id()` to be immediately
+            # followed by the matching `send_headers()` call, otherwise
+            # concurrent callers may be handed duplicate stream IDs. Without
+            # this, clients sharing one connection hit errors such as
+            # "deque mutated during iteration", "dictionary changed size
+            # during iteration", and `StreamIDTooLowError`.
+            # (encode/httpx#3566)
+            async with self._send_lock:
+                stream_id = self._h2_state.get_next_available_stream_id()
+                self._events[stream_id] = []
+                kwargs = {"request": request, "stream_id": stream_id}
+                async with Trace("send_request_headers", logger, request, kwargs):
+                    await self._send_request_headers(
+                        request=request,
+                        stream_id=stream_id,
+                    )
+                async with Trace("send_request_body", logger, request, kwargs):
+                    await self._send_request_body(request=request, stream_id=stream_id)
             async with Trace(
                 "receive_response_headers", logger, request, kwargs
             ) as trace:
@@ -162,6 +179,10 @@ class AsyncHTTP2Connection(AsyncConnectionInterface):
                     "stream_id": stream_id,
                 },
             )
+        except h2.exceptions.NoAvailableStreamIDError:  # pragma: nocover
+            self._used_all_stream_ids = True
+            self._request_count -= 1
+            raise ConnectionNotAvailable()
         except BaseException as exc:  # noqa: PIE786
             with AsyncShieldCancellation():
                 kwargs = {"stream_id": stream_id}
