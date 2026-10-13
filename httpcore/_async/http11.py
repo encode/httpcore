@@ -167,7 +167,8 @@ class AsyncHTTP11Connection(AsyncConnectionInterface):
             # See https://github.com/encode/httpx/issues/3597
             aclose = getattr(body, "aclose", None)
             if aclose is not None:
-                await aclose()
+                with AsyncShieldCancellation():
+                    await aclose()
 
         await self._send_event(h11.EndOfMessage(), timeout=timeout)
 
