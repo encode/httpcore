@@ -154,9 +154,20 @@ class HTTP11Connection(ConnectionInterface):
         timeout = timeouts.get("write", None)
 
         assert isinstance(request.stream, typing.Iterable)
-        for chunk in request.stream:
-            event = h11.Data(data=chunk)
-            self._send_event(event, timeout=timeout)
+        body = request.stream.__iter__()
+        try:
+            for chunk in body:
+                event = h11.Data(data=chunk)
+                self._send_event(event, timeout=timeout)
+        finally:
+            # If sending the body fails part-way through, for example with
+            # a `WriteError`, the async iterator would otherwise be abandoned
+            # mid-iteration, and then garbage collected without ever being
+            # exhausted, triggering `ResourceWarning`.
+            # See https://github.com/encode/httpx/issues/3597
+            close = getattr(body, "close", None)
+            if close is not None:
+                close()
 
         self._send_event(h11.EndOfMessage(), timeout=timeout)
 

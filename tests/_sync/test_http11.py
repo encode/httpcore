@@ -1,3 +1,5 @@
+import typing
+
 import pytest
 
 import httpcore
@@ -378,3 +380,60 @@ def test_http11_header_sub_100kb():
         response = conn.request("GET", "https://example.com/")
         assert response.status == 200
         assert response.content == b""
+
+
+
+def test_http11_write_error_closes_request_body():
+    """
+    If a `WriteError` occurs part-way through sending the request body,
+    the request body's async iterator must be closed rather than abandoned
+    mid-iteration. Otherwise it is garbage collected without ever being
+    exhausted, triggering `ResourceWarning`.
+    See https://github.com/encode/httpx/issues/3597.
+    """
+
+    class WriteErrorStream(httpcore.MockStream):
+        def __init__(self, buffer: typing.List[bytes], fail_after_writes: int) -> None:
+            super().__init__(buffer)
+            self._writes = 0
+            self._fail_after_writes = fail_after_writes
+
+        def write(
+            self, buffer: bytes, timeout: typing.Optional[float] = None
+        ) -> None:
+            self._writes += 1
+            if self._writes > self._fail_after_writes:
+                raise httpcore.WriteError("Simulated write failure")
+            super().write(buffer, timeout)
+
+    body_closed = False
+
+    def streaming_body() -> typing.Iterator[bytes]:
+        nonlocal body_closed
+        try:
+            for index in range(10):
+                yield b"chunk-%d" % index
+        except GeneratorExit:
+            body_closed = True
+            raise
+
+    origin = httpcore.Origin(b"https", b"example.com", 443)
+    # Two writes succeed: the request headers, then the first body chunk.
+    # The write of the second body chunk raises `WriteError`.
+    stream = WriteErrorStream(
+        [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Length: 0\r\n",
+            b"\r\n",
+        ],
+        fail_after_writes=2,
+    )
+    with httpcore.HTTP11Connection(origin=origin, stream=stream) as conn:
+        response = conn.request(
+            "POST", "https://example.com/", content=streaming_body()
+        )
+        # The `WriteError` is suppressed, and the response is still readable.
+        assert response.status == 200
+        assert response.content == b""
+
+    assert body_closed
